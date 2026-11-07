@@ -25,15 +25,25 @@ jobs:
           COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
           COUPANG_SUB_ID: sns
         run: PYTHONPATH=src python -m pipeline.drafts
-      - name: Open approval PR
+      - name: Auto-approve or open review PR
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           d=$(TZ=Asia/Seoul date +%F)
+          f=drafts/$d.md
+          [ -f "$f" ] || { echo "초안 없음"; exit 0; }
           git config user.name "drafts-bot"
           git config user.email "drafts-bot@users.noreply.github.com"
-          git checkout -b drafts/$d
-          git add drafts/
-          git commit -m "SNS 초안 $d" || exit 0
-          git push -u origin drafts/$d
-          gh pr create --title "[승인 대기] SNS 초안 $d" --body "검사 결과를 확인하고 머지하면 발행 대상이 됩니다." --base main
+          if grep -q "⛔" "$f"; then
+            # 검사 실패 항목이 있으면 사용자 검토용 PR
+            git checkout -b drafts/$d
+            git add drafts/
+            git commit -m "SNS 초안 $d (검토 필요)"
+            git push -u origin drafts/$d
+            gh pr create --title "[검토 필요] SNS 초안 $d" --body "준수 검사에서 차단된 초안이 있습니다. 고친 뒤 머지하세요." --base main
+          else
+            # 모든 초안이 검사를 통과하면 자동 승인(main에 바로 반영)
+            git add drafts/
+            git commit -m "SNS 초안 $d (자동 승인)" || exit 0
+            git push origin HEAD:main
+          fi

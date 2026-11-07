@@ -18,9 +18,10 @@ docs/             PLAN, AFFILIATES, CHANNELS, COMPLIANCE, DECISIONS
 쿠팡 Open API는 최종 승인 후 열립니다. 그 전에는 `config/products.csv`에 파트너스 사이트에서 직접 만든 링크를 넣으면 같은 흐름으로 초안이 만들어집니다. 키 Secret이 등록되면 자동으로 API 모드로 바뀝니다.
 
 ## 승인 흐름
-1. 매일 아침 Actions가 초안을 만들고 `[승인 대기]` PR을 연다.
-2. 검사 결과(✅/⛔)를 보고 고칠 것은 고친 뒤 머지한다.
-3. 머지된 초안만 발행 대상이 된다 (발행 자동화는 Phase 1에서 추가).
+1. 매일 07:00 KST Actions가 초안을 만든다.
+2. 모든 초안이 준수 검사(✅)를 통과하면 **자동 승인**되어 main의 `drafts/`에 바로 올라간다.
+3. 하나라도 차단(⛔)되면 `[검토 필요]` PR이 열리고 사용자가 고친 뒤 머지한다.
+4. 승인된 초안만 발행 대상이 된다 (SNS 자동 발행은 계정 API 연결 후 추가).
 
 ## 비밀값 (사용자가 직접 등록)
 Settings → Secrets and variables → Actions → New repository secret
