@@ -196,9 +196,40 @@ class InstagramClient:
     def __init__(self, token: str, user_id: str = "", call=_call):
         self.token, self.call = token, call
         self.base = ig_base(token)
-        if self.base == FB_API and not user_id:
-            raise RuntimeError("통합 로그인(시스템 사용자) 토큰은 저장소 변수 IG_USER_ID(인스타 계정 ID)가 필요함")
-        self.user = user_id or "me"
+        self.discovered = False
+        if user_id:
+            self.user = user_id
+        elif self.base == FB_API:
+            self.user = self.discover_user_id()
+            self.discovered = True
+        else:
+            self.user = "me"
+
+    def discover_user_id(self) -> str:
+        """통합 로그인 토큰에서 인스타 계정 ID를 찾는다 (IG_USER_ID 변수가 없을 때).
+
+        1) debug_token 의 granular_scopes: 토큰에 허용된 인스타 계정 ID(target_ids)
+        2) /me/accounts: 페이스북 페이지에 연결된 인스타 비즈니스 계정
+        """
+        ids: list[str] = []
+        try:
+            d = self.call("GET", f"{self.base}/debug_token",
+                          {"input_token": self.token, "access_token": self.token}).get("data", {})
+            for g in (d.get("granular_scopes", []) if isinstance(d, dict) else []):
+                if g.get("scope") in ("instagram_content_publish", "instagram_basic"):
+                    ids += [str(t) for t in g.get("target_ids", []) if str(t) not in ids]
+        except RuntimeError:
+            pass
+        if not ids:
+            try:
+                pages = self.call("GET", f"{self.base}/me/accounts",
+                                  {"fields": "instagram_business_account", "access_token": self.token}).get("data", [])
+                ids = [pg["instagram_business_account"]["id"] for pg in pages if pg.get("instagram_business_account")]
+            except RuntimeError:
+                pass
+        if not ids:
+            raise RuntimeError("토큰에서 인스타 계정 ID를 찾지 못함: 구성에 Instagram 계정 자산·권한이 들어갔는지 확인하거나 IG_USER_ID 변수를 넣으세요")
+        return ids[0]
 
     def whoami(self) -> str:
         return self.call("GET", f"{self.base}/{self.user}", {"fields": "username", "access_token": self.token}).get("username", "?")
@@ -243,6 +274,8 @@ def run(env: dict, now: dt.datetime, clients: dict | None = None, drafts_dir: pa
                 clients[channel] = (ThreadsClient(token, env.get("THREADS_USER_ID") or "me") if channel == "threads"
                                     else InstagramClient(token, env.get("IG_USER_ID") or ""))
                 out.append(f"{channel}: 연결 확인 @{clients[channel].whoami()}")
+                if getattr(clients[channel], "discovered", False):
+                    out.append(f"{channel}: 토큰에서 인스타 계정 ID 자동 확인 ({clients[channel].user})")
             except Exception as e:
                 out.append(f"{channel}: 연결 실패: {e}")
                 continue

@@ -51,7 +51,7 @@
 4. **리디렉션 URL은 비워 둡니다.** 다른 사람이 로그인하는 서비스용이라 내 계정에 게시할 때는 쓰지 않습니다. 저장이 안 되면 `https://localhost/` 를 넣으세요.
 5. 구성을 만든 뒤 나오는 **토큰 생성** 단계(또는 business.facebook.com **설정 → 사용자 → 시스템 사용자 → 토큰 생성**, 앱 선택 후 위 권한 체크)에서 토큰을 만듭니다. `EAA…`로 시작하는 긴 값입니다.
 6. 그 값을 바로 **GitHub Secret `IG_ACCESS_TOKEN`** 에 붙여넣습니다.
-7. **인스타 계정 ID** 찾기: business.facebook.com **설정 → 계정 → Instagram 계정 → 돈 줍는 삼촌 선택** → 이름 아래 `ID` 숫자(보통 `1784…`로 시작). 이 값을 **GitHub Variable `IG_USER_ID`** 에 넣습니다. 비밀값이 아니라 Variables 탭입니다.
+7. **인스타 계정 ID는 넣지 않아도 됩니다.** 실행할 때 토큰에서 자동으로 찾아 로그에 `토큰에서 인스타 계정 ID 자동 확인 (1784…)`로 보여 줍니다. 자동 확인이 실패할 때만 그 숫자를 Variable `IG_USER_ID`에 넣으세요 (business.facebook.com 설정 → 계정 → Instagram 계정에서도 볼 수 있지만, 포트폴리오 전체 권한이 필요합니다).
 8. 확인: publish 워크플로를 실행하면 로그에 `instagram: 연결 확인 @아이디`가 나옵니다. `연결 실패`면 ID나 권한을 다시 확인하세요.
 
 (예전 앱에서 "Instagram 로그인" 방식이 보이면 그 토큰(`IG…`로 시작)을 써도 되고, 이때는 `IG_USER_ID`가 필요 없습니다.)
@@ -63,7 +63,7 @@
 |---|---|---|---|
 | Secrets | `THREADS_ACCESS_TOKEN` | 2단계 토큰 | 스레드 쓰려면 |
 | Secrets | `IG_ACCESS_TOKEN` | 3단계 토큰 | 인스타 쓰려면 |
-| Variables | `IG_USER_ID` | 3단계 7번 인스타 계정 ID | 통합 로그인 토큰이면 필수 |
+| Variables | `IG_USER_ID` | 인스타 계정 ID (자동 확인 실패 시에만) | 선택 |
 | Secrets | `SECRETS_PAT` | 토큰 자동 갱신용 (아래 5단계) | 선택 |
 | Variables | `PUBLISH_ENABLED` | `true` (**dry-run 확인 후에**) | 실제 발행 시 |
 | Variables | `THREADS_DAILY_MAX` | 기본 3 | 선택 |
