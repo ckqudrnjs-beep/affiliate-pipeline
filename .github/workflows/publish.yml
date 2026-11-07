@@ -35,6 +35,7 @@ jobs:
           IG_DAILY_MAX: ${{ vars.IG_DAILY_MAX }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ vars.IG_USER_ID }}
         run: PYTHONPATH=src python -m pipeline.publish
       - name: Save publish log
         if: always()

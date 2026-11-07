@@ -47,6 +47,18 @@ class ParseTest(unittest.TestCase):
         self.assertTrue(cap.startswith("이 포스팅은 쿠팡 파트너스"))
 
 
+class IgTokenTest(unittest.TestCase):
+    def test_system_user_token_uses_facebook_graph_and_needs_id(self):
+        from pipeline.publish import FB_API, IG_API, InstagramClient
+        with self.assertRaises(RuntimeError):
+            InstagramClient("EAAxyz", "")
+        calls = []
+        c = InstagramClient("EAAxyz", "17841400000000000", call=lambda m, u, p: calls.append(u) or {"username": "donjupneun"})
+        self.assertEqual(c.whoami(), "donjupneun")
+        self.assertTrue(calls[0].startswith(FB_API + "/17841400000000000"))
+        self.assertEqual(InstagramClient("IGAAxyz").base, IG_API)
+
+
 class RunTest(unittest.TestCase):
     def test_promo_at_most_half_per_day(self):
         from pipeline.publish import pick

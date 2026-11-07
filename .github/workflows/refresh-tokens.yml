@@ -26,6 +26,7 @@ jobs:
           fail=0
           refresh() {  # $1=이름 $2=URL $3=현재 토큰
             [ -n "$3" ] || { echo "$1: 토큰 없음, 건너뜀"; return; }
+            case "$3" in EAA*) echo "$1: 시스템 사용자 토큰(만료 없음), 갱신 불필요"; return;; esac
             new=$(curl -fsS -G "$2" --data-urlencode "access_token=$3" | python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])') \
               || { echo "::error::$1 토큰 갱신 실패 (만료됐으면 docs/META_SETUP.md 대로 새로 발급)"; fail=1; return; }
             echo "::add-mask::$new"

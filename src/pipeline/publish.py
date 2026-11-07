@@ -30,7 +30,8 @@ DRAFTS = pathlib.Path("drafts")
 LOG = DRAFTS / "published.json"
 
 THREADS_API = "https://graph.threads.net/v1.0"
-IG_API = "https://graph.instagram.com/v21.0"
+IG_API = "https://graph.instagram.com/v21.0"   # "Instagram 로그인" 토큰 (IG로 시작, 기존 앱)
+FB_API = "https://graph.facebook.com/v21.0"    # "통합 로그인" 시스템 사용자 토큰 등 페이스북 계열 (EAA로 시작)
 THREADS_MAX_CHARS = 500
 IG_MAX_CHARS = 2200
 IG_LINK_NOTE = "🔗 구매 링크는 프로필 링크에서 확인하세요."
@@ -173,6 +174,9 @@ class ThreadsClient:
     def __init__(self, token: str, user_id: str = "me", call=_call):
         self.token, self.user, self.call = token, user_id, call
 
+    def whoami(self) -> str:
+        return self.call("GET", f"{THREADS_API}/{self.user}", {"fields": "username", "access_token": self.token}).get("username", "?")
+
     def publish(self, text: str) -> dict:
         c = self.call("POST", f"{THREADS_API}/{self.user}/threads",
                       {"media_type": "TEXT", "text": text, "access_token": self.token})
@@ -183,23 +187,35 @@ class ThreadsClient:
         return {"id": p["id"], "url": info.get("permalink", "")}
 
 
+def ig_base(token: str) -> str:
+    """토큰 종류로 API 주소를 고른다. 2026-11 이후 새 앱은 '통합 로그인'(시스템 사용자 토큰, EAA…)만 제공."""
+    return FB_API if token.startswith("EAA") else IG_API
+
+
 class InstagramClient:
-    def __init__(self, token: str, user_id: str = "me", call=_call):
-        self.token, self.user, self.call = token, user_id, call
+    def __init__(self, token: str, user_id: str = "", call=_call):
+        self.token, self.call = token, call
+        self.base = ig_base(token)
+        if self.base == FB_API and not user_id:
+            raise RuntimeError("통합 로그인(시스템 사용자) 토큰은 저장소 변수 IG_USER_ID(인스타 계정 ID)가 필요함")
+        self.user = user_id or "me"
+
+    def whoami(self) -> str:
+        return self.call("GET", f"{self.base}/{self.user}", {"fields": "username", "access_token": self.token}).get("username", "?")
 
     def publish(self, caption: str, image_url: str) -> dict:
-        c = self.call("POST", f"{IG_API}/{self.user}/media",
+        c = self.call("POST", f"{self.base}/{self.user}/media",
                       {"image_url": image_url, "caption": caption, "access_token": self.token})
         for _ in range(10):
-            st = self.call("GET", f"{IG_API}/{c['id']}", {"fields": "status_code", "access_token": self.token})
+            st = self.call("GET", f"{self.base}/{c['id']}", {"fields": "status_code", "access_token": self.token})
             if st.get("status_code") == "FINISHED":
                 break
             if st.get("status_code") == "ERROR":
                 raise RuntimeError("인스타 미디어 처리 실패 (이미지 URL·형식 확인: 공개 JPEG)")
             time.sleep(3)
-        p = self.call("POST", f"{IG_API}/{self.user}/media_publish",
+        p = self.call("POST", f"{self.base}/{self.user}/media_publish",
                       {"creation_id": c["id"], "access_token": self.token})
-        info = self.call("GET", f"{IG_API}/{p['id']}", {"fields": "permalink", "access_token": self.token})
+        info = self.call("GET", f"{self.base}/{p['id']}", {"fields": "permalink", "access_token": self.token})
         return {"id": p["id"], "url": info.get("permalink", "")}
 
 
@@ -221,6 +237,15 @@ def run(env: dict, now: dt.datetime, clients: dict | None = None, drafts_dir: pa
         if not token and channel not in clients:
             out.append(f"{channel}: 토큰 없음, 건너뜀")
             continue
+        if channel not in clients:
+            # 토큰·계정 연결 확인 (읽기 전용 호출). 실패하면 이 채널은 건너뛴다.
+            try:
+                clients[channel] = (ThreadsClient(token, env.get("THREADS_USER_ID") or "me") if channel == "threads"
+                                    else InstagramClient(token, env.get("IG_USER_ID") or ""))
+                out.append(f"{channel}: 연결 확인 @{clients[channel].whoami()}")
+            except Exception as e:
+                out.append(f"{channel}: 연결 실패: {e}")
+                continue
         post, notes = pick(candidates, log, channel, now, daily_max)
         out += notes
         if not post:
@@ -231,11 +256,9 @@ def run(env: dict, now: dt.datetime, clients: dict | None = None, drafts_dir: pa
             continue
         try:
             if channel == "threads":
-                client = clients.get("threads") or ThreadsClient(token, env.get("THREADS_USER_ID") or "me")
-                res = client.publish(threads_text(post))
+                res = clients["threads"].publish(threads_text(post))
             else:
-                client = clients.get("instagram") or InstagramClient(token, env.get("IG_USER_ID") or "me")
-                res = client.publish(instagram_caption(post), post["image"])
+                res = clients["instagram"].publish(instagram_caption(post), post["image"])
         except Exception as e:  # 한 채널 실패가 다른 채널을 막지 않게
             out.append(f"{channel}: {post['key']} 발행 실패: {e}")
             continue
@@ -254,7 +277,7 @@ def main() -> int:
     for line in lines:
         print(line)
     # 발행 실패가 있으면 워크플로를 실패로 표시해 GitHub 알림 메일이 가게 한다
-    return 1 if any("발행 실패" in l for l in lines) else 0
+    return 1 if any("발행 실패" in l or "연결 실패" in l for l in lines) else 0
 
 
 if __name__ == "__main__":
