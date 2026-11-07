@@ -28,8 +28,9 @@ def render_post(p: dict, today: dt.date) -> str:
     rocket = " · 로켓배송" if p.get("isRocket") else ""
     if p.get("priceDate"):
         today = dt.date.fromisoformat(p["priceDate"])
+    program = p.get("program") or "coupang"
     lines = [
-        DISCLOSURES["coupang"],
+        DISCLOSURES.get(program, DISCLOSURES["generic"]),
         "",
         f"💰 {BRAND}의 오늘 특가 줍기",
         f"{name}",
@@ -41,11 +42,11 @@ def render_post(p: dict, today: dt.date) -> str:
     return "\n".join(l for l in lines if l is not None)
 
 
-def build(products: list[dict], today: dt.date, n: int = 3) -> str:
+def build(products: list[dict], today: dt.date, n: int = 5) -> str:
     out = [f"# {today.isoformat()} SNS 초안 ({BRAND})", "", "승인하려면 이 PR을 머지하세요. 수정하려면 파일을 직접 고치세요.", ""]
     for i, p in enumerate(products[:n], 1):
         post = render_post(p, today)
-        problems = check(post, ["coupang"])
+        problems = check(post, [p.get("program") or "coupang"])
         status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
         out += [f"## 초안 {i} — {status}", "", "```text", post, "```", ""]
     return "\n".join(out)
@@ -65,17 +66,18 @@ def load_manual(path: str | pathlib.Path = "config/products.csv") -> list[dict]:
             "productUrl": r["productUrl"],
             "isRocket": r.get("isRocket", "").strip() in ("1", "true", "Y"),
             "priceDate": (r.get("priceDate") or "").strip() or None,
+            "program": (r.get("program") or "coupang").strip().lower(),
         })
     return rows
 
 
 def main() -> int:
     today = dt.datetime.now(KST).date()
+    products = load_manual() if pathlib.Path("config/products.csv").exists() else []
     if os.environ.get("COUPANG_ACCESS_KEY"):
         from .coupang import CoupangClient
-        products = CoupangClient().goldbox()
-    else:
-        products = load_manual()
+        api = CoupangClient().goldbox()
+        products = [x for x in products if x["program"] != "coupang"] + api
     if not products:
         print("상품이 없습니다. config/products.csv 에 링크를 추가하세요.")
         return 0

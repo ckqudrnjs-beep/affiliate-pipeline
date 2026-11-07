@@ -65,5 +65,14 @@ class ManualLinksTest(unittest.TestCase):
         self.assertTrue(rows[0]["isRocket"])
 
 
+class NaverTest(unittest.TestCase):
+    def test_naver_post_uses_naver_disclosure_and_passes(self):
+        p = {"program": "naver", "productName": "전기요", "productPrice": 39900,
+             "productUrl": "https://naver.me/abc", "priceDate": "2026-11-07"}
+        post = render_post(p, TODAY)
+        self.assertTrue(post.startswith(DISCLOSURES["naver"]))
+        self.assertEqual(check(post, ["naver"]), [])
+
+
 if __name__ == "__main__":
     unittest.main()
