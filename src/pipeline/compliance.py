@@ -30,16 +30,22 @@ BANNED_PATTERNS = [
 ]
 
 HEAD_LIMIT = 200
+NO_AFFILIATE = {"info"}
 
 
 def check(text: str, programs: list[str], has_usage_evidence: bool = False) -> list[str]:
     """위반 사유 목록을 돌려준다. 빈 목록이면 통과."""
     problems: list[str] = []
     head = text[:HEAD_LIMIT]
+    # 정보형(info): 제휴 링크가 없으므로 대가성 문구 불필요. 대신 링크가 있으면 차단.
+    if programs and all(p in NO_AFFILIATE for p in programs):
+        if re.search(r"https?://", text):
+            problems.append("정보형 글에 링크가 있음 (홍보형으로 분류하고 대가성 문구 필요)")
+        programs = []
 
     if "coupang" in programs and DISCLOSURES["coupang"] not in head:
         problems.append("첫 200자 안에 쿠팡 파트너스 대가성 문구가 없음")
-    if any(p != "coupang" for p in programs) and "수수료를 제공받습니다" not in head:
+    if any(p not in ("coupang",) for p in programs) and "수수료를 제공받습니다" not in head:
         problems.append("첫 200자 안에 제휴 대가성 문구가 없음")
 
     for url in re.findall(r"https?://[^\s)\]>]+", text):

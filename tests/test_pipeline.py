@@ -70,13 +70,22 @@ class MixTest(unittest.TestCase):
         tips = load_tips("config/tips.csv")
         self.assertGreaterEqual(len(tips), 5)
         md = build([PRODUCT, PRODUCT], TODAY, tips=tips)
-        self.assertEqual(md.count("[정보형]"), 2)
-        self.assertEqual(md.count("[홍보형]"), 2)
+        self.assertEqual(md.count("program=info"), 2)
+        self.assertEqual(md.count("program=coupang"), 2)
         self.assertNotIn("⛔", md)
 
     def test_all_tips_pass_compliance(self):
         for t in load_tips("config/tips.csv"):
-            self.assertEqual(check(t["text"], []), [], t["topic"])
+            self.assertEqual(check(t["text"], ["info"]), [], t["topic"])
+
+    def test_info_with_link_blocked(self):
+        self.assertTrue(check("팁 https://link.coupang.com/a/x", ["info"]))
+
+    def test_heading_matches_publisher_format(self):
+        import re
+        md = build([PRODUCT], TODAY, tips=load_tips("config/tips.csv"))
+        rx = re.compile(r"^## 초안 (\d+) — (.+?)\n(?:<!-- meta (.*?) -->\n)?\n```text\n(.*?)\n```", re.M | re.S)
+        self.assertEqual(len(rx.findall(md)), 3)
 
 
 class AliTest(unittest.TestCase):

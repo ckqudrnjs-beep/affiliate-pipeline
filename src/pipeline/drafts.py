@@ -67,18 +67,18 @@ def build(products: list[dict], today: dt.date, n: int = MAX_PROMO, tips: list[d
     infos = pick_tips(tips or [], today, max(len(promos), 2)) if tips else []
     out = [f"# {today.isoformat()} SNS 초안 ({BRAND})", "",
            f"정보형 {len(infos)}개 · 홍보형 {len(promos)}개. 검사를 모두 통과하면 자동 승인됩니다.", ""]
-    items: list[tuple[str, str, list[str]]] = []
+    items: list[tuple[str, str, str | None]] = []  # (program, text, image)
     for i in range(max(len(promos), len(infos))):
         if i < len(infos):
-            text = infos[i]["text"].strip()
-            items.append(("정보형", text, check(text, [])))
+            items.append(("info", infos[i]["text"].strip(), (infos[i].get("imageUrl") or "").strip() or None))
         if i < len(promos):
             p = promos[i]
-            post = render_post(p, today)
-            items.append(("홍보형", post, check(post, [p.get("program") or "coupang"])))
-    for i, (kind, text, problems) in enumerate(items, 1):
+            items.append((p.get("program") or "coupang", render_post(p, today), p.get("imageUrl")))
+    for i, (program, text, image) in enumerate(items, 1):
+        problems = check(text, [program])
         status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
-        out += [f"## 초안 {i} [{kind}] — {status}", "", "```text", text, "```", ""]
+        meta = f"program={program}" + (f" image={image}" if image else "")
+        out += [f"## 초안 {i} — {status}", f"<!-- meta {meta} -->", "", "```text", text, "```", ""]
     return "\n".join(out)
 
 

@@ -76,6 +76,6 @@ def to_draft_product(p: dict) -> dict:
         "productName": p.get("product_title", ""),
         "productPrice": price,
         "productUrl": p.get("promotion_link", ""),
-        "image": p.get("product_main_image_url", ""),
+        "imageUrl": p.get("product_main_image_url") or None,
         "isRocket": False,
     }
