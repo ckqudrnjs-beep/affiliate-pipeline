@@ -17,6 +17,14 @@ drafts/           날짜별 초안 (PR로 승인)
 docs/             PLAN, AFFILIATES, CHANNELS, COMPLIANCE, DECISIONS
 ```
 
+## 콘텐츠 비율
+매일 정보형(`config/tips.csv`)을 홍보형 이상으로 섞는다. 규칙은 [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+## 링크 자동 생성
+- 알리: Secrets `ALI_APP_KEY`, `ALI_APP_SECRET`, `ALI_TRACKING_ID` 등록 시 자동 (발급 방법 [docs/ALI_SETUP.md](docs/ALI_SETUP.md))
+- 쿠팡: 최종 승인 후 `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY` 등록 시 자동
+- 네이버: 수동 (`config/products.csv`)
+
 ## 최종 승인 전 (지금)
 쿠팡 Open API는 최종 승인 후 열립니다. 그 전에는 `config/products.csv`에 파트너스 사이트에서 직접 만든 링크를 넣으면 같은 흐름으로 초안이 만들어집니다. 키 Secret이 등록되면 자동으로 API 모드로 바뀝니다.
 

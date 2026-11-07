@@ -36,23 +36,49 @@ def render_post(p: dict, today: dt.date) -> str:
         f"{name}",
         f"{today.month}월 {today.day}일 기준 {won(price)}{rocket}" if price else "",
         "",
-        "구매 전 옵션·배송일 꼭 확인하세요.",
+        "해외배송이라 도착일을 꼭 확인하세요." if program == "aliexpress" else "구매 전 옵션·배송일 꼭 확인하세요.",
         url,
     ]
     return "\n".join(l for l in lines if l is not None)
 
 
-def build(products: list[dict], today: dt.date, n: int = 5) -> str:
-    out = [f"# {today.isoformat()} SNS 초안 ({BRAND})", "", "승인하려면 이 PR을 머지하세요. 수정하려면 파일을 직접 고치세요.", ""]
-    for i, p in enumerate(products[:n], 1):
-        post = render_post(p, today)
-        problems = check(post, [p.get("program") or "coupang"])
+MAX_PROMO = 3  # 하루 홍보형 최대 (docs/OPERATIONS.md: 홍보 50% 이하)
+
+
+def load_tips(path: str | pathlib.Path = "config/tips.csv") -> list[dict]:
+    p = pathlib.Path(path)
+    if not p.exists():
+        return []
+    with open(p, encoding="utf-8") as f:
+        return [r for r in csv.DictReader(f) if r.get("text")]
+
+
+def pick_tips(tips: list[dict], today: dt.date, k: int) -> list[dict]:
+    """날짜별로 돌아가며 k개 선택 (같은 글 반복 최소화)."""
+    if not tips:
+        return []
+    start = (today.toordinal() * k) % len(tips)
+    return [tips[(start + i) % len(tips)] for i in range(min(k, len(tips)))]
+
+
+def build(products: list[dict], today: dt.date, n: int = MAX_PROMO, tips: list[dict] | None = None) -> str:
+    """정보형을 홍보형 이상으로 섞어 초안 MD를 만든다. 순서: 정보형과 홍보형 번갈아."""
+    promos = products[:n]
+    infos = pick_tips(tips or [], today, max(len(promos), 2)) if tips else []
+    out = [f"# {today.isoformat()} SNS 초안 ({BRAND})", "",
+           f"정보형 {len(infos)}개 · 홍보형 {len(promos)}개. 검사를 모두 통과하면 자동 승인됩니다.", ""]
+    items: list[tuple[str, str, str | None]] = []  # (program, text, image)
+    for i in range(max(len(promos), len(infos))):
+        if i < len(infos):
+            items.append(("info", infos[i]["text"].strip(), (infos[i].get("imageUrl") or "").strip() or None))
+        if i < len(promos):
+            p = promos[i]
+            items.append((p.get("program") or "coupang", render_post(p, today), p.get("productImage") or p.get("imageUrl")))
+    for i, (program, text, image) in enumerate(items, 1):
+        problems = check(text, [program])
         status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
-        meta = f"program={p.get('program') or 'coupang'}"
-        image = p.get("productImage") or p.get("imageUrl")
-        if image:
-            meta += f" image={image}"
-        out += [f"## 초안 {i} — {status}", f"<!-- meta {meta} -->", "", "```text", post, "```", ""]
+        meta = f"program={program}" + (f" image={image}" if image else "")
+        out += [f"## 초안 {i} — {status}", f"<!-- meta {meta} -->", "", "```text", text, "```", ""]
     return "\n".join(out)
 
 
@@ -83,12 +109,20 @@ def main() -> int:
         from .coupang import CoupangClient
         api = CoupangClient().goldbox()
         products = [x for x in products if x["program"] != "coupang"] + api
-    if not products:
-        print("상품이 없습니다. config/products.csv 에 링크를 추가하세요.")
+    if os.environ.get("ALI_APP_KEY"):
+        from .aliexpress import AliExpressClient
+        kw = os.environ.get("ALI_KEYWORDS", "")
+        try:
+            products += [x for x in AliExpressClient().hot_products(kw, 5) if x["productUrl"]][:1]
+        except Exception as e:  # 알리 오류가 나도 나머지 초안은 계속 만든다
+            print(f"알리 API 실패, 건너뜀: {type(e).__name__}")
+    tips = load_tips()
+    if not products and not tips:
+        print("상품도 정보형 글도 없습니다. config/products.csv 또는 config/tips.csv 를 채우세요.")
         return 0
     path = pathlib.Path("drafts") / f"{today.isoformat()}.md"
     path.parent.mkdir(exist_ok=True)
-    path.write_text(build(products, today), encoding="utf-8")
+    path.write_text(build(products, today, tips=tips), encoding="utf-8")
     print(path)
     return 0
 
