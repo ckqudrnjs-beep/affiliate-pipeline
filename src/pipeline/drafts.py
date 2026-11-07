@@ -1,7 +1,7 @@
 """일일 SNS 초안 생성: 쿠팡 골드박스 → 스레드/인스타 캡션 초안(MD).
 
-초안은 drafts/YYYY-MM-DD.md 로 저장되고, GitHub Actions가 PR로 올린다.
-사용자가 PR을 승인(머지)해야 발행 단계로 넘어간다.
+초안은 drafts/YYYY-MM-DD.md 로 저장된다. 검사 통과 시 main에 자동 반영, 차단 시 검토 PR.
+main에 올라간 초안은 publish.py 가 스레드·인스타에 발행한다 (인스타는 이미지가 있는 초안만).
 """
 from __future__ import annotations
 
@@ -48,7 +48,11 @@ def build(products: list[dict], today: dt.date, n: int = 5) -> str:
         post = render_post(p, today)
         problems = check(post, [p.get("program") or "coupang"])
         status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
-        out += [f"## 초안 {i} — {status}", "", "```text", post, "```", ""]
+        meta = f"program={p.get('program') or 'coupang'}"
+        image = p.get("productImage") or p.get("imageUrl")
+        if image:
+            meta += f" image={image}"
+        out += [f"## 초안 {i} — {status}", f"<!-- meta {meta} -->", "", "```text", post, "```", ""]
     return "\n".join(out)
 
 
@@ -67,6 +71,7 @@ def load_manual(path: str | pathlib.Path = "config/products.csv") -> list[dict]:
             "isRocket": r.get("isRocket", "").strip() in ("1", "true", "Y"),
             "priceDate": (r.get("priceDate") or "").strip() or None,
             "program": (r.get("program") or "coupang").strip().lower(),
+            "imageUrl": (r.get("imageUrl") or "").strip() or None,
         })
     return rows
 

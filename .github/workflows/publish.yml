@@ -1,0 +1,48 @@
+name: publish
+
+# 승인된 초안(main의 drafts/)을 스레드·인스타에 발행.
+# 실행 1회당 채널별 최대 1개 → 하루 4번 실행으로 시간 간격을 둔다.
+# 저장소 변수 PUBLISH_ENABLED=true 를 사용자가 직접 켜기 전까지는 dry-run(발행 안 함).
+on:
+  schedule:
+    - cron: "0 0 * * *"    # 09:00 KST
+    - cron: "30 3 * * *"   # 12:30 KST
+    - cron: "30 9 * * *"   # 18:30 KST
+    - cron: "0 12 * * *"   # 21:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer   # 초안 커밋·발행 기록 커밋이 겹치지 않게
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: Publish
+        env:
+          PUBLISH_ENABLED: ${{ vars.PUBLISH_ENABLED }}
+          THREADS_DAILY_MAX: ${{ vars.THREADS_DAILY_MAX }}
+          IG_DAILY_MAX: ${{ vars.IG_DAILY_MAX }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: PYTHONPATH=src python -m pipeline.publish
+      - name: Save publish log
+        if: always()
+        run: |
+          [ -f drafts/published.json ] || exit 0
+          git config user.name "publish-bot"
+          git config user.email "publish-bot@users.noreply.github.com"
+          git add drafts/published.json
+          git commit -m "발행 기록 $(TZ=Asia/Seoul date '+%F %H:%M')" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
