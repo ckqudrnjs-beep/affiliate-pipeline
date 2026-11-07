@@ -1,0 +1,59 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Nanum+Gothic+Coding:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ddd;word-break:keep-all}
+.s{width:1080px;height:1350px;position:relative;overflow:hidden;font-family:'Noto Sans KR',sans-serif;box-sizing:border-box}
+/* 영수증 */
+.r{background:#2b2b2b;display:flex;align-items:center;justify-content:center}
+.paper{width:820px;background:#fbf8f1;padding:70px 70px 90px;font-family:'Nanum Gothic Coding',monospace;color:#222;font-size:34px;line-height:1.6;
+ -webkit-mask: radial-gradient(14px at 50% 100%,#0000 98%,#000) 0 0/40px 100% repeat-x; position:relative}
+.paper h1{font-family:'Noto Sans KR';font-weight:900;font-size:56px;text-align:center;margin:0 0 6px;letter-spacing:-1px}
+.paper .sub{text-align:center;font-size:28px;color:#666}
+.dash{border-top:4px dashed #999;margin:30px 0}
+.row{display:flex;justify-content:space-between}
+.tot{font-size:48px;font-weight:700}
+.tot .v{color:#d6452f}
+.note{font-size:24px;color:#777;line-height:1.5}
+.stamp{position:absolute;right:30px;top:40px;transform:rotate(12deg);border:6px solid #d6452f;color:#d6452f;font-family:'Noto Sans KR';font-weight:900;font-size:40px;padding:8px 22px;border-radius:12px;opacity:.85}
+.brand{position:absolute;left:0;right:0;bottom:44px;text-align:center;color:#bbb;font-size:26px;font-family:'Noto Sans KR'}
+/* 저울 */
+.w{background:#f4efe6;padding:80px 70px;color:#1f2a2e}
+.tag{display:inline-block;background:#1f2a2e;color:#f4efe6;font-weight:700;font-size:28px;padding:8px 20px;border-radius:40px}
+.w h2{font-size:64px;font-weight:900;line-height:1.25;margin:28px 0 50px;letter-spacing:-1.5px}
+.cols{display:flex;gap:30px}
+.c{flex:1;background:#fff;border-radius:28px;padding:40px 36px;font-size:30px;line-height:1.7}
+.c h3{margin:0 0 14px;font-size:40px}
+.c .big{font-size:60px;font-weight:900;margin-top:16px}
+.a .big{color:#d6452f}.b .big{color:#2f7d5b}
+.verdict{margin-top:44px;background:#1f2a2e;color:#fff;border-radius:28px;padding:36px 40px;font-size:34px;line-height:1.55}
+.verdict b{color:#ffd166}
+.foot{position:absolute;left:70px;right:70px;bottom:50px;font-size:23px;color:#6b6b6b;line-height:1.5}
+.uncle{position:absolute;right:60px;top:70px;font-size:26px;font-weight:700;color:#1f2a2e}
+</style></head><body>
+<div class="s r" id="s1"><div class="paper">
+<h1>삼촌 영수증</h1><div class="sub">셋톱박스 대기전력, 1년에 얼마?</div>
+<div class="dash"></div>
+<div class="row"><span>대기전력</span><span>약 10W</span></div>
+<div class="row"><span>× 하루</span><span>24시간</span></div>
+<div class="row"><span>× 1년</span><span>365일</span></div>
+<div class="row"><span>= 사용량</span><span>87.6kWh</span></div>
+<div class="row"><span>× 단가(가정)</span><span>150원/kWh</span></div>
+<div class="dash"></div>
+<div class="row tot"><span>합계</span><span class="v">13,140원</span></div>
+<div class="dash"></div>
+<div class="note">멀티탭 스위치 하나로 0원.<br>※ 기기·요금 구간마다 다름. 내 기기 W는 뒷면 라벨에서 확인</div>
+<div class="stamp">새는 돈</div>
+</div><div class="brand">돈 줍는 삼촌 · 계산식 공개</div></div>
+
+<div class="s w" id="s2">
+<div class="uncle">돈 줍는 삼촌</div>
+<span class="tag">살까 말까 저울</span>
+<h2>가습기,<br>살 때 가격보다<br>한 달 전기료부터</h2>
+<div class="cols">
+<div class="c a"><h3>가열식</h3>소비전력 약 300W<br>하루 8시간 × 30일<br>= 72kWh<div class="big">10,800원<small style="font-size:30px;font-weight:400"> / 월</small></div></div>
+<div class="c b"><h3>초음파식</h3>소비전력 약 30W<br>하루 8시간 × 30일<br>= 7.2kWh<div class="big">1,080원<small style="font-size:30px;font-weight:400"> / 월</small></div></div>
+</div>
+<div class="verdict">삼촌 결론: 위생이 1순위면 <b>가열식</b>, 오래 틀 거면 <b>초음파식 + 세척 습관</b>.<br>다음 장에서 세척 주기 정리해 둘게요 →</div>
+<div class="foot">예시 계산: 단가 kWh당 150원 가정. 실제 소비전력은 제품 라벨, 요금은 누진 구간에 따라 달라요.</div>
+</div>
+</body></html>
