@@ -1,0 +1,39 @@
+name: daily-drafts
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 매일 07:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drafts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: Generate drafts
+        env:
+          COUPANG_ACCESS_KEY: ${{ secrets.COUPANG_ACCESS_KEY }}
+          COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
+          COUPANG_SUB_ID: sns
+        run: PYTHONPATH=src python -m pipeline.drafts
+      - name: Open approval PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          d=$(TZ=Asia/Seoul date +%F)
+          git config user.name "drafts-bot"
+          git config user.email "drafts-bot@users.noreply.github.com"
+          git checkout -b drafts/$d
+          git add drafts/
+          git commit -m "SNS 초안 $d" || exit 0
+          git push -u origin drafts/$d
+          gh pr create --title "[승인 대기] SNS 초안 $d" --body "검사 결과를 확인하고 머지하면 발행 대상이 됩니다." --base main
