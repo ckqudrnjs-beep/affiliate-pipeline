@@ -18,7 +18,7 @@ docs/             PLAN, AFFILIATES, CHANNELS, COMPLIANCE, DECISIONS
 매일 정보형(`config/tips.csv`)을 홍보형 이상으로 섞는다. 규칙은 [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 ## 링크 자동 생성
-- 알리: Secrets `ALI_APP_KEY`, `ALI_APP_SECRET`, `ALI_TRACKING_ID` 등록 시 자동
+- 알리: Secrets `ALI_APP_KEY`, `ALI_APP_SECRET`, `ALI_TRACKING_ID` 등록 시 자동 (발급 방법 [docs/ALI_SETUP.md](docs/ALI_SETUP.md))
 - 쿠팡: 최종 승인 후 `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY` 등록 시 자동
 - 네이버: 수동 (`config/products.csv`)
 

@@ -27,6 +27,7 @@ jobs:
           ALI_APP_KEY: ${{ secrets.ALI_APP_KEY }}
           ALI_APP_SECRET: ${{ secrets.ALI_APP_SECRET }}
           ALI_TRACKING_ID: ${{ secrets.ALI_TRACKING_ID }}
+          ALI_KEYWORDS: ${{ vars.ALI_KEYWORDS }}
         run: PYTHONPATH=src python -m pipeline.drafts
       - name: Auto-approve or open review PR
         env:
