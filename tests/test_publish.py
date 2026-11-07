@@ -2,6 +2,7 @@ import datetime as dt
 import pathlib
 import tempfile
 import unittest
+import unittest.mock
 
 from pipeline.drafts import build
 from pipeline.publish import IG_LINK_NOTE, KST, instagram_caption, parse_drafts, run
@@ -47,6 +48,19 @@ class ParseTest(unittest.TestCase):
 
 
 class RunTest(unittest.TestCase):
+    def test_promo_at_most_half_per_day(self):
+        from pipeline.publish import pick
+        posts = [{"key": f"k{i}", "program": "coupang", "passed": True, "image": None,
+                  "text": f"{i}"} for i in range(3)]
+        log = {"threads": {"a": {"at": NOW.isoformat(), "promo": True, "hash": "x"}}}
+        post, notes = pick(posts, log, "threads", NOW, 10)
+        self.assertIsNone(post)
+        self.assertTrue(any("50%" in n for n in notes))
+        log["threads"]["b"] = {"at": NOW.isoformat(), "promo": False, "hash": "y"}
+        with unittest.mock.patch("pipeline.publish.problems_for", return_value=[]):
+            post, _ = pick(posts, log, "threads", NOW, 10)
+        self.assertEqual(post["key"], "k0")
+
     def test_dry_run_publishes_nothing(self):
         d = make_dir([P1])
         th, ig = Fake(), Fake()
@@ -61,12 +75,21 @@ class RunTest(unittest.TestCase):
         env = {"PUBLISH_ENABLED": "true", "THREADS_DAILY_MAX": "2"}
         for _ in range(4):
             run(env, NOW, {"threads": th, "instagram": ig}, d)
-        # 스레드: 하루 상한 2개, 차단 초안(#3) 제외
-        self.assertEqual(len(th.calls), 2)
-        # 인스타: 이미지 있는 초안 #1만. #4는 #1과 같은 내용이라 반복 게시 방지로 제외
+        # 광고 글만 있으면 정보 글이 없어 하루 1개에서 멈춘다 (광고 50% 이하)
+        self.assertEqual(len(th.calls), 1)
         self.assertEqual(len(ig.calls), 1)
         self.assertTrue(ig.calls[0][1].endswith(".jpg"))
+        self.assertNotIn("bit.ly", th.calls[0][0])
+
+    def test_no_duplicates_and_blocked_skipped_across_days(self):
+        d = make_dir([P1, P2, BAD, P1])
+        th = Fake()
+        env = {"PUBLISH_ENABLED": "true"}
+        for h in range(4):
+            run(env, NOW + dt.timedelta(days=h // 2, hours=h), {"threads": th, "instagram": Fake()}, d)
         texts = [c[0] for c in th.calls]
+        # 오늘·다음날 하루 1개씩: #1, #2 (차단 #3, 중복 #4 제외)
+        self.assertEqual(len(texts), 2)
         self.assertEqual(len(set(texts)), 2)
         self.assertNotIn("bit.ly", "".join(texts))
 

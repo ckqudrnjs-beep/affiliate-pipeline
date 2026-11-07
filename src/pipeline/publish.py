@@ -59,8 +59,8 @@ def parse_drafts(md: str, date: str) -> list[dict]:
 
 
 def guess_program(text: str) -> str:
-    for prog in ("coupang", "naver"):
-        if DISCLOSURES[prog] in text:
+    for prog in ("coupang", "naver", "aliexpress"):
+        if prog in DISCLOSURES and DISCLOSURES[prog] in text:
             return prog
     return "generic"
 
@@ -115,9 +115,16 @@ def save_log(log: dict, path: pathlib.Path = LOG) -> None:
     path.write_text(json.dumps(log, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def published_today(log: dict, channel: str, now: dt.datetime) -> int:
+def published_today(log: dict, channel: str, now: dt.datetime, promo: bool | None = None) -> int:
+    """오늘(KST) 발행 수. promo=True/False 로 광고/정보 글만 셀 수 있다."""
     day = now.astimezone(KST).date().isoformat()
-    return sum(1 for r in log.get(channel, {}).values() if r.get("at", "").startswith(day))
+    return sum(1 for r in log.get(channel, {}).values()
+               if r.get("at", "").startswith(day) and (promo is None or r.get("promo", True) == promo))
+
+
+def is_promo(post: dict) -> bool:
+    """제휴 링크 글이면 True. program=info 는 링크 없는 정보 글 (docs/OPERATIONS.md)."""
+    return post["program"] != "info"
 
 
 def pick(candidates: list[dict], log: dict, channel: str, now: dt.datetime, daily_max: int) -> tuple[dict | None, list[str]]:
@@ -127,11 +134,16 @@ def pick(candidates: list[dict], log: dict, channel: str, now: dt.datetime, dail
         return None, [f"{channel}: 오늘 상한 {daily_max}개 도달, 대기"]
     done = log.get(channel, {})
     seen = {r.get("hash") for r in done.values()}
+    # 광고 글은 채널별 하루 발행의 절반 이하: 오늘 광고 수가 정보 글 수보다 많아지지 않게
+    promo_ok = published_today(log, channel, now, promo=True) <= published_today(log, channel, now, promo=False)
     for post in candidates:
         if post["key"] in done:
             continue
         if text_hash(post) in seen:
             notes.append(f"{channel} {post['key']} 건너뜀: 같은 내용을 이미 발행함 (반복 게시 방지)")
+            continue
+        if is_promo(post) and not promo_ok:
+            notes.append(f"{channel} {post['key']} 대기: 오늘 광고 글 비율 50% 도달 (정보 글 먼저)")
             continue
         problems = problems_for(post, channel)
         if problems:
@@ -228,7 +240,8 @@ def run(env: dict, now: dt.datetime, clients: dict | None = None, drafts_dir: pa
             out.append(f"{channel}: {post['key']} 발행 실패: {e}")
             continue
         log.setdefault(channel, {})[post["key"]] = {
-            "at": now.astimezone(KST).isoformat(timespec="seconds"), "hash": text_hash(post), **res}
+            "at": now.astimezone(KST).isoformat(timespec="seconds"), "hash": text_hash(post),
+            "promo": is_promo(post), **res}
         changed = True
         out.append(f"{channel}: {post['key']} 발행 완료 {res.get('url', '')}")
     if changed:
