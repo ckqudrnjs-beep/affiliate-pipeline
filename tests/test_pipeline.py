@@ -3,7 +3,7 @@ import unittest
 
 from pipeline.compliance import DISCLOSURES, check
 from pipeline.coupang import sign
-from pipeline.drafts import build, load_manual, render_post
+from pipeline.drafts import build, load_manual, load_tips, render_post
 
 PRODUCT = {
     "productName": "무선 전기주전자 1.7L",
@@ -63,6 +63,36 @@ class ManualLinksTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["productPrice"], 39900)
         self.assertTrue(rows[0]["isRocket"])
+
+
+class MixTest(unittest.TestCase):
+    def test_info_posts_at_least_promo_and_pass(self):
+        tips = load_tips("config/tips.csv")
+        self.assertGreaterEqual(len(tips), 5)
+        md = build([PRODUCT, PRODUCT], TODAY, tips=tips)
+        self.assertEqual(md.count("[정보형]"), 2)
+        self.assertEqual(md.count("[홍보형]"), 2)
+        self.assertNotIn("⛔", md)
+
+    def test_all_tips_pass_compliance(self):
+        for t in load_tips("config/tips.csv"):
+            self.assertEqual(check(t["text"], []), [], t["topic"])
+
+
+class AliTest(unittest.TestCase):
+    def test_sign_is_upper_hex(self):
+        from pipeline.aliexpress import sign
+        s = sign({"b": "2", "a": "1"}, "secret")
+        self.assertEqual(len(s), 64)
+        self.assertEqual(s, s.upper())
+
+    def test_ali_product_passes(self):
+        from pipeline.aliexpress import to_draft_product
+        p = to_draft_product({"product_title": "USB 미니 가습기", "target_sale_price": "8900.00",
+                              "promotion_link": "https://s.click.aliexpress.com/e/_abc"})
+        post = render_post(p, TODAY)
+        self.assertTrue(post.startswith(DISCLOSURES["aliexpress"]))
+        self.assertEqual(check(post, ["aliexpress"]), [])
 
 
 class NaverTest(unittest.TestCase):
