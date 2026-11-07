@@ -47,6 +47,27 @@ class ParseTest(unittest.TestCase):
         self.assertTrue(cap.startswith("이 포스팅은 쿠팡 파트너스"))
 
 
+class IgTokenTest(unittest.TestCase):
+    def test_system_user_token_uses_facebook_graph_and_needs_id(self):
+        from pipeline.publish import FB_API, IG_API, InstagramClient
+        # IG_USER_ID 없으면 토큰의 granular_scopes 에서 찾는다
+        def fake(m, u, p):
+            if u.endswith("/debug_token"):
+                return {"data": {"granular_scopes": [{"scope": "instagram_basic", "target_ids": ["17841499999999999"]}]}}
+            return {"username": "donjupneun"}
+        auto = InstagramClient("EAAxyz", "", call=fake)
+        self.assertEqual(auto.user, "17841499999999999")
+        self.assertTrue(auto.discovered)
+        # 못 찾으면 분명한 오류
+        with self.assertRaises(RuntimeError):
+            InstagramClient("EAAxyz", "", call=lambda m, u, p: {"data": []})
+        calls = []
+        c = InstagramClient("EAAxyz", "17841400000000000", call=lambda m, u, p: calls.append(u) or {"username": "donjupneun"})
+        self.assertEqual(c.whoami(), "donjupneun")
+        self.assertTrue(calls[0].startswith(FB_API + "/17841400000000000"))
+        self.assertEqual(InstagramClient("IGAAxyz").base, IG_API)
+
+
 class RunTest(unittest.TestCase):
     def test_promo_at_most_half_per_day(self):
         from pipeline.publish import pick

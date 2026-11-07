@@ -1,6 +1,6 @@
 # 스레드·인스타 자동 발행 연결 가이드 (META_SETUP.md)
 
-> 최종 갱신: 2026-11-07 · 대상: "돈 줍는 삼촌" 스레드·인스타 계정 · 소요 약 30~40분
+> 최종 갱신: 2026-11-07 (인스타 통합 로그인 반영) · 대상: "돈 줍는 삼촌" 스레드·인스타 계정 · 소요 약 30~40분
 > 토큰은 **GitHub Secrets에만** 넣습니다. 채팅·파일·메모에 붙여넣지 마세요.
 > Meta 화면 메뉴 이름은 자주 바뀝니다. 이름이 조금 달라도 같은 위치를 찾으면 됩니다 (*화면 문구 확인 필요*).
 
@@ -9,7 +9,7 @@
 [main의 drafts/ 초안 (검사 통과)] → publish 워크플로 (하루 4번) → 스레드: 글+링크
                                                               → 인스타: 이미지+캡션 (이미지 있는 초안만)
 ```
-- 공식 API만 씁니다: **Threads API**, **Instagram API (Instagram 로그인 방식)**. 비공식 자동화·매크로는 쓰지 않습니다.
+- 공식 API만 씁니다: **Threads API**, **Instagram API (통합 로그인·시스템 사용자 토큰, 또는 기존 앱의 Instagram 로그인)**. 비공식 자동화·매크로는 쓰지 않습니다.
 - 앱은 "개발 모드" 그대로 둡니다. 본인 계정을 테스터로 넣으면 **앱 검수(App Review) 없이** 내 계정에 게시할 수 있습니다 (*Meta 정책 확인 필요*).
 - `PUBLISH_ENABLED` 변수를 직접 켜기 전까지는 실제로 올리지 않고 "무엇을 올릴지"만 로그에 찍습니다.
 
@@ -39,11 +39,22 @@
    앱 시크릿은 **앱 설정 → 기본 설정 → Threads 앱 시크릿**(또는 앱 시크릿)에 있습니다. 끝나면 브라우저 방문 기록에서 이 주소를 지워 두세요.
 6. 값을 바로 **GitHub Secret `THREADS_ACCESS_TOKEN`** 에 붙여넣습니다 (아래 4단계).
 
-## 3단계. 인스타 토큰 (10분)
-1. **사용 사례 → Instagram API → 맞춤 설정 → Instagram 로그인을 통한 API 설정**으로 이동.
-2. **앱 역할 → 역할 → 사람 추가 → Instagram 테스터**에 본인 인스타 사용자 이름 입력 → instagram.com 웹 **설정 → 앱 및 웹사이트 → 테스터 초대**에서 수락.
-3. API 설정 화면의 **"1. 액세스 토큰 생성" → 계정 추가** → 인스타 로그인 → 허용. 권한에 `instagram_business_basic`, `instagram_business_content_publish`가 포함되어야 합니다.
-4. 나온 토큰(장기 토큰, 60일)을 **GitHub Secret `IG_ACCESS_TOKEN`** 에 붙여넣습니다.
+## 3단계. 인스타 토큰: 통합 로그인 방식 (15분)
+> 2026-11 기준 새 앱에는 "Instagram 로그인을 통한 API 설정"이 없고 **"API setup with Unified login"(통합 로그인)** 만 나옵니다. 이 방식은 만료되지 않는 **시스템 사용자 토큰**을 줍니다. 페이스북 페이지는 필요 없고 **비즈니스 포트폴리오**(무료)가 필요합니다. 코드는 두 토큰 종류를 모두 지원합니다.
+
+1. **사용 사례 → Instagram API → 맞춤 설정 → API setup with Unified login** 화면에서 **"+ 비즈니스 포트폴리오"** 를 눌러 포트폴리오를 연결합니다. 없으면 만들기(이름: 돈 줍는 삼촌).
+2. [business.facebook.com](https://business.facebook.com) → **설정 → 계정 → Instagram 계정 → 추가** → 돈 줍는 삼촌 인스타로 로그인해 포트폴리오에 넣습니다.
+3. 다시 개발자 화면 **"1. 앱 구성" → 새로운 구성 만들기**:
+   - 액세스 토큰: **시스템 사용자 액세스 토큰(SUAT)**
+   - 비즈니스 자산: 돈 줍는 삼촌 **Instagram 계정** (광고 계정은 선택하지 않음)
+   - 권한: **`instagram_basic`, `instagram_content_publish`** 만 체크. `ads_*`, 메시지, 댓글 권한은 필요 없으니 빼세요 (가능하면).
+4. **리디렉션 URL은 비워 둡니다.** 다른 사람이 로그인하는 서비스용이라 내 계정에 게시할 때는 쓰지 않습니다. 저장이 안 되면 `https://localhost/` 를 넣으세요.
+5. 구성을 만든 뒤 나오는 **토큰 생성** 단계(또는 business.facebook.com **설정 → 사용자 → 시스템 사용자 → 토큰 생성**, 앱 선택 후 위 권한 체크)에서 토큰을 만듭니다. `EAA…`로 시작하는 긴 값입니다.
+6. 그 값을 바로 **GitHub Secret `IG_ACCESS_TOKEN`** 에 붙여넣습니다.
+7. **인스타 계정 ID는 넣지 않아도 됩니다.** 실행할 때 토큰에서 자동으로 찾아 로그에 `토큰에서 인스타 계정 ID 자동 확인 (1784…)`로 보여 줍니다. 자동 확인이 실패할 때만 그 숫자를 Variable `IG_USER_ID`에 넣으세요 (business.facebook.com 설정 → 계정 → Instagram 계정에서도 볼 수 있지만, 포트폴리오 전체 권한이 필요합니다).
+8. 확인: publish 워크플로를 실행하면 로그에 `instagram: 연결 확인 @아이디`가 나옵니다. `연결 실패`면 ID나 권한을 다시 확인하세요.
+
+(예전 앱에서 "Instagram 로그인" 방식이 보이면 그 토큰(`IG…`로 시작)을 써도 되고, 이때는 `IG_USER_ID`가 필요 없습니다.)
 
 ## 4단계. GitHub에 넣기 (5분)
 저장소 → **Settings → Secrets and variables → Actions**
@@ -52,6 +63,7 @@
 |---|---|---|---|
 | Secrets | `THREADS_ACCESS_TOKEN` | 2단계 토큰 | 스레드 쓰려면 |
 | Secrets | `IG_ACCESS_TOKEN` | 3단계 토큰 | 인스타 쓰려면 |
+| Variables | `IG_USER_ID` | 인스타 계정 ID (자동 확인 실패 시에만) | 선택 |
 | Secrets | `SECRETS_PAT` | 토큰 자동 갱신용 (아래 5단계) | 선택 |
 | Variables | `PUBLISH_ENABLED` | `true` (**dry-run 확인 후에**) | 실제 발행 시 |
 | Variables | `THREADS_DAILY_MAX` | 기본 3 | 선택 |
@@ -59,13 +71,13 @@
 
 ### 확인 순서
 1. 토큰 2개만 넣고 **Actions → publish → Run workflow**.
-2. 로그에 `[dry-run] … 발행 예정`이 나오면 연결 준비 완료. `토큰 없음`이면 Secret 이름 오타 확인.
+2. 로그에 `연결 확인 @아이디`와 `[dry-run] … 발행 예정`(또는 `올릴 초안 없음`)이 나오면 연결 완료. `토큰 없음`이면 Secret 이름 오타, `연결 실패`면 토큰·ID·권한 확인.
 3. 괜찮으면 Variables에 `PUBLISH_ENABLED=true` → 다시 Run workflow → 스레드·인스타에 실제로 올라갔는지 확인.
 4. 이후엔 하루 4번(09:00, 12:30, 18:30, 21:00 KST) 자동 실행. 실패하면 GitHub가 메일을 보냅니다.
 5. 멈추고 싶으면 `PUBLISH_ENABLED`를 `false`로 바꾸면 됩니다.
 
 ## 5단계. 토큰 만료 대비 (선택, 5분)
-- 장기 토큰은 약 60일 뒤 만료됩니다. `refresh-tokens` 워크플로가 매월 1일·15일에 갱신을 요청합니다.
+- 인스타 시스템 사용자 토큰(`EAA…`)은 만료되지 않아 갱신하지 않습니다. 스레드 장기 토큰은 약 60일 뒤 만료됩니다. `refresh-tokens` 워크플로가 매월 1일·15일에 갱신을 요청합니다.
 - 갱신 때 새 토큰 문자열이 오면 Secret을 바꿔야 하는데, 이를 자동으로 하려면:
   GitHub → 프로필 → **Settings → Developer settings → Fine-grained tokens → Generate** → 저장소: `affiliate-pipeline`만 → 권한 **Secrets: Read and write** 만 → 만료 1년 → 값을 Secret `SECRETS_PAT`에 저장.
 - 넣지 않으면 갱신이 필요할 때 워크플로가 실패로 표시되고 메일이 옵니다. 그때 2·3단계를 다시 하면 됩니다.
@@ -92,4 +104,5 @@
 
 ## 출처 (공식 문서, 세부 메뉴·버전은 확인 필요)
 - [Threads API 게시](https://developers.facebook.com/docs/threads/posts) · [토큰](https://developers.facebook.com/docs/threads/get-started/long-lived-tokens) · [게시 한도](https://developers.facebook.com/docs/threads/troubleshooting#rate-limiting)
+- 통합 로그인 전환 사례: [Postiz 이슈 #2350](https://github.com/gitroomhq/postiz-app/issues/2350) ("API setup with Instagram login is not available for newer apps")
 - [Instagram API (Instagram 로그인)](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login) · [콘텐츠 게시](https://developers.facebook.com/docs/instagram-platform/content-publishing)
