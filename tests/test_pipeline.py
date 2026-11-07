@@ -3,7 +3,7 @@ import unittest
 
 from pipeline.compliance import DISCLOSURES, check
 from pipeline.coupang import sign
-from pipeline.drafts import build, render_post
+from pipeline.drafts import build, load_manual, render_post
 
 PRODUCT = {
     "productName": "무선 전기주전자 1.7L",
@@ -49,6 +49,20 @@ class DraftTest(unittest.TestCase):
     def test_build_marks_status(self):
         md = build([PRODUCT], TODAY)
         self.assertIn("✅ 검사 통과", md)
+
+
+class ManualLinksTest(unittest.TestCase):
+    def test_csv_skips_comments_and_example(self):
+        import tempfile, os
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, encoding="utf-8") as f:
+            f.write("productName,productPrice,productUrl,isRocket,priceDate\n# 주석\n")
+            f.write("예시,1000,https://link.coupang.com/a/EXAMPLE,1,2026-11-07\n")
+            f.write("전기요,39900,https://link.coupang.com/a/real1,1,2026-11-07\n")
+        rows = load_manual(f.name)
+        os.unlink(f.name)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["productPrice"], 39900)
+        self.assertTrue(rows[0]["isRocket"])
 
 
 if __name__ == "__main__":

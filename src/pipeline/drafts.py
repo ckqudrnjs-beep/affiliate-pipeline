@@ -5,7 +5,9 @@
 """
 from __future__ import annotations
 
+import csv
 import datetime as dt
+import os
 import pathlib
 import sys
 
@@ -24,6 +26,8 @@ def render_post(p: dict, today: dt.date) -> str:
     price = p.get("productPrice")
     url = p.get("productUrl", "")
     rocket = " · 로켓배송" if p.get("isRocket") else ""
+    if p.get("priceDate"):
+        today = dt.date.fromisoformat(p["priceDate"])
     lines = [
         DISCLOSURES["coupang"],
         "",
@@ -47,11 +51,34 @@ def build(products: list[dict], today: dt.date, n: int = 3) -> str:
     return "\n".join(out)
 
 
-def main() -> int:
-    from .coupang import CoupangClient
+def load_manual(path: str | pathlib.Path = "config/products.csv") -> list[dict]:
+    """최종 승인 전(Open API 없음): 파트너스 사이트에서 직접 만든 링크 목록을 읽는다."""
+    rows = []
+    with open(path, encoding="utf-8") as f:
+        lines = [l for l in f if l.strip() and not l.lstrip().startswith("#")]
+    for r in csv.DictReader(lines):
+        if "EXAMPLE" in r.get("productUrl", ""):
+            continue
+        rows.append({
+            "productName": r["productName"],
+            "productPrice": int(r["productPrice"]) if r.get("productPrice") else None,
+            "productUrl": r["productUrl"],
+            "isRocket": r.get("isRocket", "").strip() in ("1", "true", "Y"),
+            "priceDate": (r.get("priceDate") or "").strip() or None,
+        })
+    return rows
 
+
+def main() -> int:
     today = dt.datetime.now(KST).date()
-    products = CoupangClient().goldbox()
+    if os.environ.get("COUPANG_ACCESS_KEY"):
+        from .coupang import CoupangClient
+        products = CoupangClient().goldbox()
+    else:
+        products = load_manual()
+    if not products:
+        print("상품이 없습니다. config/products.csv 에 링크를 추가하세요.")
+        return 0
     path = pathlib.Path("drafts") / f"{today.isoformat()}.md"
     path.parent.mkdir(exist_ok=True)
     path.write_text(build(products, today), encoding="utf-8")
