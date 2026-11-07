@@ -1,0 +1,5 @@
+program,productName,productPrice,productUrl,isRocket,priceDate
+# program: coupang 또는 naver. 쿠팡은 파트너스 "링크 생성", 네이버는 브랜드 커넥트에서 만든 링크를 붙여넣으세요.
+# 아래 예시 줄(EXAMPLE)은 무시됩니다.
+coupang,예시 무선 전기주전자 1.7L,23900,https://link.coupang.com/a/EXAMPLE,1,2026-11-07
+naver,예시 극세사 전기요,39900,https://naver.me/EXAMPLE,0,2026-11-07

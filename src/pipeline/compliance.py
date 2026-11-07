@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 DISCLOSURES = {
     "coupang": "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.",
+    "naver": "이 포스팅은 네이버 쇼핑 커넥트(브랜드 커넥트) 활동의 일환으로, 판매 발생 시 일정액의 수수료를 제공받습니다.",
     "generic": "[광고] 이 글에는 제휴 링크가 포함되어 있으며, 구매 시 작성자가 일정액의 수수료를 제공받습니다.",
 }
 
@@ -16,7 +17,8 @@ ALLOWED_LINK_HOSTS = {
     "link.coupang.com", "coupa.ng",
     "s.click.aliexpress.com",
     "click.linkprice.com", "linkmoa.kr",
-    "naver.me", "brandconnect.naver.com", "smartstore.naver.com",
+    # 네이버 브랜드 커넥트 링크 도메인은 실제 생성 링크로 확인 후 조정 (확인 필요)
+    "naver.me", "brandconnect.naver.com", "smartstore.naver.com", "brand.naver.com",
 }
 
 BANNED_PATTERNS = [

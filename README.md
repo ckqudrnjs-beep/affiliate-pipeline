@@ -14,6 +14,9 @@ drafts/           날짜별 초안 (PR로 승인)
 docs/             PLAN, AFFILIATES, CHANNELS, COMPLIANCE, DECISIONS
 ```
 
+## 최종 승인 전 (지금)
+쿠팡 Open API는 최종 승인 후 열립니다. 그 전에는 `config/products.csv`에 파트너스 사이트에서 직접 만든 링크를 넣으면 같은 흐름으로 초안이 만들어집니다. 키 Secret이 등록되면 자동으로 API 모드로 바뀝니다.
+
 ## 승인 흐름
 1. 매일 아침 Actions가 초안을 만들고 `[승인 대기]` PR을 연다.
 2. 검사 결과(✅/⛔)를 보고 고칠 것은 고친 뒤 머지한다.
