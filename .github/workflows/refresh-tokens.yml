@@ -1,0 +1,41 @@
+name: refresh-tokens
+
+# 스레드·인스타 장기 토큰은 약 60일 후 만료된다. 2주마다 갱신 요청을 보낸다.
+# 갱신으로 새 토큰 문자열이 오면, 사용자가 등록한 SECRETS_PAT(이 저장소 Secrets 쓰기 권한만 가진
+# fine-grained 토큰)이 있을 때만 Secret을 자동 교체한다. 없으면 실패로 표시해 알림 메일이 가게 한다.
+on:
+  schedule:
+    - cron: "0 1 1,15 * *"   # 매월 1일·15일 10:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh
+        env:
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.SECRETS_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -u
+          fail=0
+          refresh() {  # $1=이름 $2=URL $3=현재 토큰
+            [ -n "$3" ] || { echo "$1: 토큰 없음, 건너뜀"; return; }
+            new=$(curl -fsS -G "$2" --data-urlencode "access_token=$3" | python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])') \
+              || { echo "::error::$1 토큰 갱신 실패 (만료됐으면 docs/META_SETUP.md 대로 새로 발급)"; fail=1; return; }
+            echo "::add-mask::$new"
+            if [ "$new" = "$3" ]; then echo "$1: 갱신됨 (같은 토큰, 만료일 연장)"; return; fi
+            if [ -n "${GH_TOKEN:-}" ]; then
+              printf '%s' "$new" | gh secret set "$1" --repo "$REPO" && echo "$1: 새 토큰으로 Secret 교체"
+            else
+              echo "::error::$1 새 토큰이 발급됐지만 SECRETS_PAT가 없어 자동 교체 못 함"; fail=1
+            fi
+          }
+          refresh THREADS_ACCESS_TOKEN "https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token" "$THREADS_ACCESS_TOKEN"
+          refresh IG_ACCESS_TOKEN "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token" "$IG_ACCESS_TOKEN"
+          exit $fail
