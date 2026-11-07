@@ -9,6 +9,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: main-writer   # 발행 기록 커밋과 겹치지 않게
+  cancel-in-progress: false
+
 jobs:
   drafts:
     runs-on: ubuntu-latest

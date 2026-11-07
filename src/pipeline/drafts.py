@@ -1,7 +1,7 @@
 """일일 SNS 초안 생성: 쿠팡 골드박스 → 스레드/인스타 캡션 초안(MD).
 
-초안은 drafts/YYYY-MM-DD.md 로 저장되고, GitHub Actions가 PR로 올린다.
-사용자가 PR을 승인(머지)해야 발행 단계로 넘어간다.
+초안은 drafts/YYYY-MM-DD.md 로 저장된다. 검사 통과 시 main에 자동 반영, 차단 시 검토 PR.
+main에 올라간 초안은 publish.py 가 스레드·인스타에 발행한다 (인스타는 이미지가 있는 초안만).
 """
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def build(products: list[dict], today: dt.date, n: int = MAX_PROMO, tips: list[d
             items.append(("info", infos[i]["text"].strip(), (infos[i].get("imageUrl") or "").strip() or None))
         if i < len(promos):
             p = promos[i]
-            items.append((p.get("program") or "coupang", render_post(p, today), p.get("imageUrl")))
+            items.append((p.get("program") or "coupang", render_post(p, today), p.get("productImage") or p.get("imageUrl")))
     for i, (program, text, image) in enumerate(items, 1):
         problems = check(text, [program])
         status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
@@ -97,6 +97,7 @@ def load_manual(path: str | pathlib.Path = "config/products.csv") -> list[dict]:
             "isRocket": r.get("isRocket", "").strip() in ("1", "true", "Y"),
             "priceDate": (r.get("priceDate") or "").strip() or None,
             "program": (r.get("program") or "coupang").strip().lower(),
+            "imageUrl": (r.get("imageUrl") or "").strip() or None,
         })
     return rows
 
@@ -111,7 +112,10 @@ def main() -> int:
     if os.environ.get("ALI_APP_KEY"):
         from .aliexpress import AliExpressClient
         kw = os.environ.get("ALI_KEYWORDS", "")
-        products += [x for x in AliExpressClient().hot_products(kw, 5) if x["productUrl"]][:1]
+        try:
+            products += [x for x in AliExpressClient().hot_products(kw, 5) if x["productUrl"]][:1]
+        except Exception as e:  # 알리 오류가 나도 나머지 초안은 계속 만든다
+            print(f"알리 API 실패, 건너뜀: {type(e).__name__}")
     tips = load_tips()
     if not products and not tips:
         print("상품도 정보형 글도 없습니다. config/products.csv 또는 config/tips.csv 를 채우세요.")
