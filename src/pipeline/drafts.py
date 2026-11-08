@@ -162,6 +162,19 @@ def load_manual(path: str | pathlib.Path = "config/products.csv") -> list[dict]:
     return rows
 
 
+def parse_keywords(raw: str) -> list[str]:
+    """ALI_KEYWORDS: 쉼표나 줄바꿈으로 여러 개. 괄호 안 메모(한글 설명)는 무시한다.
+    예) "humidifier, electric blanket" 또는 "humidifier(가습기)\nelectric blanket(전기요)"
+    """
+    import re
+    out = []
+    for part in re.split(r"[,\n;]+", raw):
+        part = re.sub(r"\([^)]*\)", "", part).strip()
+        if part:
+            out.append(part)
+    return out
+
+
 def main() -> int:
     today = dt.datetime.now(KST).date()
     products = load_manual() if pathlib.Path("config/products.csv").exists() else []
@@ -171,7 +184,9 @@ def main() -> int:
         products = [x for x in products if x["program"] != "coupang"] + api
     if os.environ.get("ALI_APP_KEY"):
         from .aliexpress import AliExpressClient
-        kw = os.environ.get("ALI_KEYWORDS", "")
+        kws = parse_keywords(os.environ.get("ALI_KEYWORDS", ""))
+        kw = kws[today.toordinal() % len(kws)] if kws else ""  # 날마다 검색어 하나씩 돌아가며
+        print(f"알리 검색어: {kw or '(없음: 전체)'}")
         try:
             products += [x for x in AliExpressClient().hot_products(kw, 5) if x["productUrl"]][:1]
         except Exception as e:  # 알리 오류가 나도 나머지 초안은 계속 만든다

@@ -28,7 +28,7 @@
 | `ALI_APP_SECRET` | App Secret |
 | `ALI_TRACKING_ID` | 1단계 트래킹 ID |
 
-(선택) 같은 화면 **Variables** 탭 → `ALI_KEYWORDS` 에 영어 검색어 (예: `winter heater`). 비우면 전체 인기 상품.
+(선택) 같은 화면 **Variables** 탭 → `ALI_KEYWORDS` 에 영어 검색어. 여러 개는 쉼표로 (예: `humidifier, electric blanket`). 날마다 하나씩 돌아가며 쓴다. 괄호 안 한글 메모는 무시된다. 비우면 전체 판매량순.
 
 ## 5. 확인
 - **Actions → daily-drafts → Run workflow** 로 한 번 실행

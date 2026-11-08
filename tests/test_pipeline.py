@@ -148,5 +148,14 @@ class BlogTest(unittest.TestCase):
         self.assertEqual(md.count("## 글 "), 2)
 
 
+class KeywordTest(unittest.TestCase):
+    def test_parse_keywords(self):
+        from pipeline.drafts import parse_keywords
+        self.assertEqual(parse_keywords("humidifier(가습기)\r\nelectric blanket(전기요)(전기장판)"),
+                         ["humidifier", "electric blanket"])
+        self.assertEqual(parse_keywords("humidifier, electric blanket"), ["humidifier", "electric blanket"])
+        self.assertEqual(parse_keywords(""), [])
+
+
 if __name__ == "__main__":
     unittest.main()
