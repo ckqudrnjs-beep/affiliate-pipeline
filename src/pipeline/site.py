@@ -61,45 +61,76 @@ def calc(r: dict) -> dict:
 
 
 CSS = """
-:root{--paper:#f3f5f1;--card:#ffffff;--ink:#1c2420;--muted:#5d6a63;--line:#d6ddd7;--green:#17704a;--coin:#b98200;--coinbg:#fff4d6;
---display:"Do Hyeon","Apple SD Gothic Neo",sans-serif;--body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121714;--card:#1a211d;--ink:#e6ece8;--muted:#9aa9a1;--line:#2c3631;--green:#4cc28a;--coin:#f0c14b;--coinbg:#2e2714;color-scheme:dark}}
-:root[data-theme="dark"]{--paper:#121714;--card:#1a211d;--ink:#e6ece8;--muted:#9aa9a1;--line:#2c3631;--green:#4cc28a;--coin:#f0c14b;--coinbg:#2e2714;color-scheme:dark}
+/* 레이아웃: 흰 바탕 + 초록 첫 화면 띠 + 둥근 카드. 동전 노랑은 강조 한 곳에만 */
+:root{--bg:#f6f8f6;--card:#ffffff;--ink:#14201a;--muted:#5b6b62;--line:#e3e9e5;--green:#0e8a5f;--green-d:#0a6b49;--greenbg:#e7f5ee;
+--coin:#ffc531;--coin-ink:#5a4300;--hero:#0e8a5f;--hero-ink:#ffffff;--shadow:0 1px 2px rgba(20,32,26,.06),0 8px 24px rgba(20,32,26,.06);
+--display:"Jua","Apple SD Gothic Neo",sans-serif;--body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1512;--card:#17201b;--ink:#e8efe9;--muted:#9db0a5;--line:#26332c;--green:#3ccf8e;--green-d:#2fb37a;--greenbg:#173326;--coin:#ffcf4d;--coin-ink:#2b2000;--hero:#0d3a29;--hero-ink:#eafff4;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1512;--card:#17201b;--ink:#e8efe9;--muted:#9db0a5;--line:#26332c;--green:#3ccf8e;--green-d:#2fb37a;--greenbg:#173326;--coin:#ffcf4d;--coin-ink:#2b2000;--hero:#0d3a29;--hero-ink:#eafff4;--shadow:none;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 var(--body);word-break:keep-all;overflow-wrap:anywhere}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 var(--body);word-break:keep-all;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
 a{color:var(--green)}
-.wrap{max-width:860px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.ad{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--card)}
-header.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin:18px 0 8px}
-.logo{font:28px/1.1 var(--display);color:var(--ink);text-decoration:none}.logo b{color:var(--green);font-weight:400}
-.tag{font-size:14px;color:var(--muted)}
-h1{font:34px/1.2 var(--display);margin:24px 0 6px;text-wrap:balance;font-weight:400}
-h2{font:22px/1.3 var(--display);margin:32px 0 10px;font-weight:400}
+.wrap{max-width:960px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-block:8px 56px}
+.adbar{background:var(--card);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.5}
+.adbar .wrap{padding-block:7px}
+header.top{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:12px}
+.logo{display:flex;align-items:center;gap:10px;font:24px/1 var(--display);color:var(--ink);text-decoration:none}
+.logo i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--coin);color:var(--coin-ink);font:700 17px var(--body);font-style:normal;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.logo b{color:var(--green);font-weight:400}
+nav.menu{display:flex;gap:4px}nav.menu a{font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+nav.menu a:hover{background:var(--greenbg);color:var(--green)}
+@media (max-width:520px){nav.menu{display:none}}
+.hero{background:var(--hero);color:var(--hero-ink)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:28px;align-items:center;padding-block:44px}
+@media (max-width:760px){.hero .wrap{grid-template-columns:minmax(0,1fr);padding-block:32px;gap:20px}}
+.hero h1{font:44px/1.2 var(--display);margin:0 0 12px;text-wrap:balance;font-weight:400}
+.hero h1 em{font-style:normal;color:var(--coin)}
+.hero p{margin:0;opacity:.88;max-width:40ch;font-size:17px}
+.hero .cta{display:inline-block;margin-top:20px;background:var(--coin);color:var(--coin-ink);font-weight:700;padding:13px 22px;border-radius:12px;text-decoration:none}
+.hero .cta:focus-visible{outline:3px solid var(--hero-ink);outline-offset:3px}
+.demo{background:var(--card);color:var(--ink);border-radius:18px;padding:18px 20px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.demo .t{font-size:13px;color:var(--muted);margin-bottom:6px}
+.demo .r{display:flex;justify-content:space-between;font:15px/2 var(--mono);font-variant-numeric:tabular-nums}
+.demo .r.big{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;color:var(--green);font-weight:600;font-size:17px}
+h1{font:34px/1.25 var(--display);margin:28px 0 8px;text-wrap:balance;font-weight:400}
+h2{font:26px/1.3 var(--display);margin:44px 0 6px;font-weight:400;text-wrap:balance}
 .lede{color:var(--muted);max-width:62ch;margin:0}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
-.item{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;color:inherit;text-decoration:none}
-.item:hover,.item:focus-visible{border-color:var(--green);outline:none}
-.item .nm{font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px}
+.item{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;color:inherit;text-decoration:none;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+.item:hover,.item:focus-visible{border-color:var(--green);transform:translateY(-2px);outline:none}
+.item .nm{font-weight:700;font-size:17px;line-height:1.4}
 .row{display:flex;justify-content:space-between;font:14px/1.5 var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
-.save{font:15px/1.4 var(--mono);color:var(--green);font-variant-numeric:tabular-nums}
-.pill{align-self:flex-start;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--coinbg);color:var(--coin)}
-.pill.cp{background:transparent;border:1px solid var(--line);color:var(--muted)}
-.receipt{background:var(--card);border:1px dashed var(--line);border-radius:4px;padding:18px 20px;font:15px/1.9 var(--mono);font-variant-numeric:tabular-nums;max-width:520px}
-.receipt div{display:flex;justify-content:space-between;gap:12px}.receipt .sum{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;color:var(--green);font-weight:600}
-.verdict{font:24px/1.3 var(--display);margin:18px 0 4px}.verdict span{color:var(--green)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}.bar span{display:block;height:100%;background:var(--green);border-radius:99px}
+.save{font:600 15px/1.4 var(--mono);color:var(--green);font-variant-numeric:tabular-nums}
+.pill{align-self:flex-start;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--coin);color:var(--coin-ink)}
+.pill.cp{background:var(--greenbg);color:var(--green)}
+.receipt{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;font:15px/2 var(--mono);font-variant-numeric:tabular-nums;box-shadow:var(--shadow)}
+.receipt div{display:flex;justify-content:space-between;gap:12px}.receipt .sum{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;color:var(--green);font-weight:600;font-size:17px}
+.verdict{font:26px/1.3 var(--display);margin:20px 0 4px}.verdict span{color:var(--green)}
 .note{max-width:62ch}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 6px}
-.btn{padding:11px 18px;border-radius:6px;text-decoration:none;font-weight:600;border:1px solid var(--ink);color:var(--ink)}
-.btn.main{background:var(--ink);color:var(--paper)}
+.btn{padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:700;border:1.5px solid var(--green);color:var(--green)}
+.btn.main{background:var(--green);color:#fff}
 .btn:focus-visible{outline:3px solid var(--coin);outline-offset:2px}
 .small{font-size:13px;color:var(--muted)}
-nav.cats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}nav.cats a{font-size:14px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;color:var(--ink);text-decoration:none}
-footer{margin-top:48px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.ad{font-size:13px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+nav.cats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}nav.cats a{font-size:14px;font-weight:500;padding:6px 14px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--ink);text-decoration:none}
+footer{border-top:1px solid var(--line);background:var(--card);font-size:13px;color:var(--muted)}
+footer .wrap{padding-block:22px 32px}
+@media (prefers-reduced-motion:reduce){.item{transition:none}.item:hover{transform:none}}
 """
-FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;600&display=swap">'
+FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">'
+
+ICONS = {
+    "electric": '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+    "aliexpress": '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>',
+    "heater": '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 3-5 5-5 8 0 4 3 7 7 7z"/></svg>',
+}
 
 
-def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None) -> str:
+def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "") -> str:
     e = html.escape
     url = f"{BASE}/{path}"
     meta = "".join(f'<meta name="{n}" content="{e(CFG[k])}">' for n, k in
@@ -110,12 +141,13 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
             f'<meta property="og:locale" content="ko_KR">{meta}<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
-<meta name="description" content="{e(desc)}">{head}{FONTS}<style>{CSS}{CALC_CSS}</style></head><body><div class="wrap">
-<p class="ad">[광고] {DISCLOSURE}</p>
-<header class="top"><a class="logo" href="{root}index.html">돈 줍는 <b>삼촌</b></a><span class="tag">사기 전에 계산부터</span></header>
-{body}
-<footer><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</footer>
-</div></body></html>"""
+<meta name="description" content="{e(desc)}">{head}{FONTS}<style>{CSS}{CALC_CSS}</style></head><body>
+<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
+<header class="top"><div class="wrap"><a class="logo" href="{root}index.html"><i>₩</i>돈 줍는 <b>삼촌</b></a>
+<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}index.html#compare">알리 vs 쿠팡</a></nav></div></header>
+{hero}<main class="wrap">{body}</main>
+<footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
+</body></html>"""
 
 
 def card(p: dict, root: str = "") -> str:
@@ -123,7 +155,8 @@ def card(p: dict, root: str = "") -> str:
     pill = '<span class="pill">급하지 않으면 알리</span>' if p["aliWins"] else '<span class="pill cp">쿠팡이 낫다</span>'
     return f"""<a class="item" href="{root}p/{p['slug']}.html">{pill}<span class="nm">{e(p['name'])}</span>
 <span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>쿠팡 {won(int(p['coupangPrice']))}</span></span>
-<span class="save">차액 {won(p['diff'])} ({p['ratio']}%)</span></a>"""
+<span class="bar"><span style="width:{max(0, min(p['ratio'], 100))}%"></span></span>
+<span class="save">알리가 {won(p['diff'])} 싸요 ({p['ratio']}%)</span></a>"""
 
 
 def product_page(p: dict) -> str:
@@ -160,15 +193,21 @@ def index_page(products: list[dict]) -> str:
     secs = "".join(
         f'<section id="{k}"><h2>{v}</h2><div class="grid">{"".join(card(p) for p in products if p["category"] == k)}</div></section>'
         for k, v in CATEGORIES.items() if any(p["category"] == k for p in products))
-    tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{html.escape(c["h1"])}</b><span>{html.escape(c["title"])}</span></a>' for c in CALCS)
-    body = f"""<h1>사기 전에, 쓰기 전에 계산부터</h1>
-<p class="lede">전기요금, 직구 세금, 난방비를 삼촌이 대신 계산해 드립니다. 결과는 링크로 공유할 수 있어요.</p>
-<div class="calcs">{tools}</div>
-<h2>알리 vs 쿠팡 가격 계산</h2>
-<p class="lede">같은 종류 제품을 두 곳 가격으로 나란히 놓고 차액과 기다리는 값을 계산했습니다. 차액이 작으면 솔직하게 쿠팡을 권합니다.</p>
-<nav class="cats">{cats}</nav>{secs}"""
+    tools = "".join(f'<a class="tool" href="calc/{c["slug"]}.html"><i>{ICONS.get(c["slug"], "")}</i><b>{html.escape(c["h1"])}</b>'
+                    f'<span>{html.escape(c["lede"])}</span><u>계산하기 →</u></a>' for c in CALCS)
+    hero = """<section class="hero"><div class="wrap"><div><h1>사기 전에, 쓰기 전에<br><em>삼촌이 계산</em>해 줄게</h1>
+<p>전기요금, 직구 세금, 난방비. 숫자 몇 개만 넣으면 한 달에 얼마 아끼는지 바로 보여 드려요.</p>
+<a class="cta" href="calc/heater.html">난방비 계산해 보기</a></div>
+<div class="demo" aria-label="계산 예시"><div class="t">예시 · 하루 8시간, 한 달 30일, 평소 300kWh 쓰는 집</div>
+<div class="r"><span>온풍기 2,000W</span><span>169,790원</span></div><div class="r"><span>전기요 100W</span><span>6,180원</span></div>
+<div class="r big"><span>전기요로 바꾸면</span><span>163,610원 절약</span></div></div></div></section>"""
+    body = f"""<section id="calcs"><h2>무료 생활 계산기</h2><p class="lede">결과는 링크로 저장하고 가족·친구에게 보낼 수 있어요.</p>
+<div class="tools">{tools}</div></section>
+<section id="compare"><h2>알리 vs 쿠팡, 얼마 차이?</h2>
+<p class="lede">같은 종류 제품을 두 곳 가격으로 나란히 놓고 계산했어요. 차액이 작으면 솔직하게 쿠팡을 권해요.</p>
+<nav class="cats">{cats}</nav>{secs}</section>"""
     return page(f"{BRAND} | 생활 계산기와 알리·쿠팡 가격 비교", "전기요금, 알리 직구 세금, 난방비를 계산하고 알리와 쿠팡 가격 차이를 비교합니다.", body,
-                ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"})
+                ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
 
 def calc_page(c: dict, products: list[dict]) -> str:

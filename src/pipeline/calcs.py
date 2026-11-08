@@ -106,15 +106,19 @@ function run(){const hd=$('#h').value*$('#d').value/1000, base=+$('#base').value
 CALC_CSS = """
 .calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;margin-top:16px}
 @media (max-width:680px){.calc{grid-template-columns:minmax(0,1fr)}}
-.calc form{display:grid;gap:10px}
+.calc form{display:grid;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
 .calc label{display:grid;gap:4px;font-size:14px;color:var(--muted)}
-.calc input{font:16px var(--mono);padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);width:100%}
+.calc input{font:16px var(--mono);padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:100%}
 .calc input:focus-visible{outline:2px solid var(--green);outline-offset:1px}
 .cmp{font-weight:600;color:var(--green);margin:10px 0 0;max-width:62ch}
-#share{margin-top:12px;font:600 15px var(--body);padding:10px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer}
+#share{margin-top:14px;font:700 15px var(--body);padding:12px 20px;border-radius:12px;border:0;background:var(--coin);color:var(--coin-ink);cursor:pointer}
 #share:focus-visible{outline:3px solid var(--coin);outline-offset:2px}
-.calcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:14px}
-.calcs a{display:grid;gap:4px;padding:16px;border-radius:8px;background:var(--ink);color:var(--paper);text-decoration:none}
-.calcs a span{font-size:14px;opacity:.8}.calcs a b{font:20px/1.3 var(--display);font-weight:400}
-.calcs a:focus-visible{outline:3px solid var(--coin);outline-offset:2px}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px}
+.tool{display:flex;flex-direction:column;gap:8px;padding:22px;border-radius:18px;background:var(--card);border:1px solid var(--line);color:var(--ink);text-decoration:none;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+.tool:hover,.tool:focus-visible{border-color:var(--green);transform:translateY(-2px);outline:none}
+.tool i{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:var(--greenbg);color:var(--green)}
+.tool b{font:22px/1.3 var(--display);font-weight:400}
+.tool span{font-size:14px;color:var(--muted);line-height:1.6}
+.tool u{text-decoration:none;font-weight:700;color:var(--green);font-size:15px;margin-top:auto}
+@media (prefers-reduced-motion:reduce){.tool{transition:none}.tool:hover{transform:none}}
 """
