@@ -45,12 +45,23 @@ class AliExpressClient:
             return json.loads(resp.read().decode())
 
     def hot_products(self, keywords: str = "", page_size: int = 10) -> list[dict]:
-        """인기 상품 + 이미 제휴 링크(promotion_link)가 포함된 결과."""
-        r = self._call(
-            "aliexpress.affiliate.hotproduct.query",
-            keywords=keywords, page_size=page_size, target_currency="KRW",
-            target_language="KO", ship_to_country="KR", tracking_id=self.tracking_id,
-        )
+        """인기 상품 + 이미 제휴 링크(promotion_link)가 포함된 결과.
+
+        hotproduct.query 는 고급 API라 새 앱에는 권한이 없을 수 있다(2026-11-08 InsufficientPermission).
+        그때는 기본 API인 product.query 로 다시 조회한다.
+        """
+        biz = dict(keywords=keywords, page_size=page_size, target_currency="KRW",
+                   target_language="KO", ship_to_country="KR", tracking_id=self.tracking_id)
+        try:
+            return self._products("aliexpress.affiliate.hotproduct.query", **biz)
+        except RuntimeError as e:
+            if "InsufficientPermission" not in str(e):
+                raise
+            print("hotproduct.query 권한 없음 → product.query 로 조회")
+            return self._products("aliexpress.affiliate.product.query", sort="LAST_VOLUME_DESC", **biz)
+
+    def _products(self, method: str, **biz) -> list[dict]:
+        r = self._call(method, **biz)
         body = next(iter(r.values())) if r else {}
         if "error_response" in r or str(body.get("resp_result", {}).get("resp_code", "200")) != "200":
             err = r.get("error_response") or body.get("resp_result", {})

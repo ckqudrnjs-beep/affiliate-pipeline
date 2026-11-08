@@ -95,6 +95,22 @@ class AliTest(unittest.TestCase):
         self.assertEqual(len(s), 64)
         self.assertEqual(s, s.upper())
 
+    def test_falls_back_to_product_query_without_permission(self):
+        from pipeline.aliexpress import AliExpressClient
+        c = AliExpressClient("k", "s", "t")
+        calls = []
+        def fake(method, **biz):
+            calls.append(method)
+            if method.endswith("hotproduct.query"):
+                return {"error_response": {"code": "InsufficientPermission", "msg": "no"}}
+            return {"aliexpress_affiliate_product_query_response": {"resp_result": {"resp_code": 200, "result": {
+                "products": {"product": [{"product_title": "가습기", "target_sale_price": "9900",
+                                          "promotion_link": "https://s.click.aliexpress.com/e/_x"}]}}}}}
+        c._call = fake
+        items = c.hot_products()
+        self.assertEqual(calls[-1], "aliexpress.affiliate.product.query")
+        self.assertEqual(items[0]["productPrice"], 9900)
+
     def test_ali_product_passes(self):
         from pipeline.aliexpress import to_draft_product
         p = to_draft_product({"product_title": "USB 미니 가습기", "target_sale_price": "8900.00",

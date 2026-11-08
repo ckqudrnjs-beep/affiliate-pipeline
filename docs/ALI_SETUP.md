@@ -34,3 +34,6 @@
 - **Actions → daily-drafts → Run workflow** 로 한 번 실행
 - `drafts/blog/날짜.md` 에 `program=aliexpress` 블로그 초안이 생기면 성공 (2026-11-08부터 알리 상품은 블로그 초안으로만 만든다)
 - 실패하면 Actions 로그의 `알리 API 실패 … code=… msg=…` 줄을 알려주세요 (키 값은 로그에 나오지 않음)
+
+## 6. 자주 나는 오류
+- `code=InsufficientPermission msg=App does not have permission to access this api` (2026-11-08 실제 발생): 키·서명은 맞고, 호출한 API에 권한이 없다는 뜻. 인기 상품 API(`hotproduct.query`)는 고급 API라 새 앱엔 권한이 없을 수 있어서, 코드가 자동으로 기본 API(`product.query`)로 다시 조회한다. 기본 API까지 같은 오류면 App Console → Apply process → Process apply 에서 권한 신청 메뉴를 확인한다.

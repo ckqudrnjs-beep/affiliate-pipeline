@@ -38,7 +38,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           d=$(TZ=Asia/Seoul date +%F)
-          ls drafts/blog/$d.md drafts/manual/$d.md 2>/dev/null || { echo "초안 없음"; exit 0; }
+          [ -f drafts/blog/$d.md ] || [ -f drafts/manual/$d.md ] || { echo "초안 없음"; exit 0; }
           git config user.name "drafts-bot"
           git config user.email "drafts-bot@users.noreply.github.com"
           # 2026-11-08 결정: SNS 자동 게시 중단. 초안은 drafts/blog/, drafts/manual/ 에만 쓰므로 병합해도 게시되지 않는다.
