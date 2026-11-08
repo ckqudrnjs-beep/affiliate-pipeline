@@ -169,7 +169,10 @@ class SiteTest(unittest.TestCase):
         c = site.calc({"aliPrice": "4500", "coupangPrice": "12900", "shipDays": "9", "lifeMonths": "10"})
         self.assertEqual((c["diff"], c["ratio"], c["perDay"], c["aliWins"]), (8400, 65, 1050, True))
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(site.build(d + "/real"), 0)  # 예시 데이터는 실제 빌드에서 빠진다
+            site.build(d + "/real")  # 예시 데이터는 실제 빌드에서 빠진다
+            self.assertFalse((pathlib.Path(d) / "real/p/window-insulation-film.html").exists())
+            solo = site.calc({"aliPrice": "21450", "coupangPrice": "", "lifeMonths": "12"})
+            self.assertTrue(solo["solo"])
             n = site.build(d, allow_examples=True)
             self.assertGreater(n, 0)
             html = (pathlib.Path(d) / "index.html").read_text(encoding="utf-8")

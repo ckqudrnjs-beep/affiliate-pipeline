@@ -19,7 +19,7 @@ from . import news as N
 from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
-CATEGORIES = {"humidify": "겨울 가습", "heat": "겨울 난방·단열"}
+CATEGORIES = {"clean": "청소", "heat": "겨울 난방", "living": "생활·조명", "humidify": "겨울 가습"}
 # 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
 DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
@@ -78,8 +78,12 @@ def load(path="config/site_products.csv", allow_examples: bool = False, data_dir
 
 
 def calc(r: dict) -> dict:
-    ali, cp = int(r["aliPrice"]), int(r["coupangPrice"])
-    days, life = int(r["shipDays"]), max(int(r["lifeMonths"]), 1)
+    ali = int(r["aliPrice"])
+    days, life = int(r.get("shipDays") or 10), max(int(r.get("lifeMonths") or 12), 1)
+    if not str(r.get("coupangPrice") or "").strip():  # 쿠팡 비교 전: 알리 단독 소개
+        return {"solo": True, "diff": 0, "ratio": 0, "perDay": 0, "wait": days, "monthAli": ali // life, "monthCp": 0,
+                "aliWins": True, "verdict": "알리 단독 소개"}
+    cp = int(r["coupangPrice"])
     diff = cp - ali
     ratio = round(diff / cp * 100) if cp else 0
     wait = max(days - 1, 1)  # 쿠팡 로켓배송 하루 기준
@@ -87,7 +91,7 @@ def calc(r: dict) -> dict:
     ali_wins = diff >= 5000 and ratio >= 25
     return {"diff": diff, "ratio": ratio, "perDay": per_day, "wait": wait,
             "monthAli": ali // life, "monthCp": cp // life, "aliWins": ali_wins,
-            "verdict": ("급하지 않으면 알리" if ali_wins else "쿠팡이 낫다")}
+            "verdict": ("급하지 않으면 알리" if ali_wins else "쿠팡이 낫다"), "solo": False}
 
 
 CSS = """
@@ -133,7 +137,7 @@ footer a{display:inline-block;padding:8px 0}
 @media (max-width:720px){.pick.lead{grid-template-columns:minmax(0,1fr);gap:16px}}
 .ph{aspect-ratio:4/5;max-width:100%;background:var(--img);display:grid;place-items:center;overflow:hidden;position:relative}
 .pick.lead .ph{aspect-ratio:5/4}
-.ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.ph img,.ph video{width:100%;height:100%;object-fit:cover;transition:transform .6s}
 .pick:hover .ph img{transform:scale(1.03)}
 .ph em{font:500 15px var(--display);font-style:normal;color:var(--muted);padding:20px;text-align:center}
 @media (max-width:520px){.ph,.pick.lead .ph{aspect-ratio:1/1}.sechead span{display:none}}
@@ -208,19 +212,38 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 </body></html>"""
 
 
+def media(p: dict, root: str = "") -> str:
+    """10초 이내 사용 영상(videoUrl)이 있으면 소리 없이 반복 재생, 없으면 사진, 둘 다 없으면 이름."""
+    e = html.escape
+    img = e(p.get("imageUrl") or "")
+    if p.get("videoUrl"):
+        v = p["videoUrl"] if p["videoUrl"].startswith("http") else root + p["videoUrl"]
+        return (f'<video src="{e(v)}" poster="{img}" muted autoplay loop playsinline preload="metadata" '
+                f'aria-label="{e(p["name"])} 사용 영상"></video>')
+    return f'<img src="{img}" alt="{e(p["name"])}" loading="lazy">' if img else f'<em>{e(p["name"])}</em>'
+
+
+def price_line(p: dict) -> str:
+    if p.get("solo"):
+        return f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span class="v">해외 배송</span></span>'
+    return (f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span>쿠팡 <b>{won(int(p["coupangPrice"]))}</b></span>'
+            f'<span class="v">{p["verdict"]}</span></span>')
+
+
 def pick(p: dict, lead: bool = False) -> str:
     e = html.escape
     d = dt.date.fromisoformat(p["priceDate"])
-    img = (f'<img src="{e(p["imageUrl"])}" alt="{e(p["name"])}" loading="lazy">' if p.get("imageUrl")
-           else f'<em>{e(p["name"])}</em>')
-    return f"""<a class="pick{' lead' if lead else ''}" href="p/{p['slug']}.html"><div class="ph">{img}</div><div style="display:flex;flex-direction:column;gap:10px">
+    return f"""<a class="pick{' lead' if lead else ''}" href="p/{p['slug']}.html"><div class="ph">{media(p)}</div><div style="display:flex;flex-direction:column;gap:10px">
 <span class="cat">{e(CATEGORIES.get(p['category'], ''))}</span><span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
-<span class="price"><span>알리 <b>{won(int(p['aliPrice']))}</b></span><span>쿠팡 <b>{won(int(p['coupangPrice']))}</b></span><span class="v">{p['verdict']}</span></span>
-<span class="small">{d.month}월 {d.day}일 기준 · 기능이 비슷한 제품 비교</span><span class="more">계산 보기</span></div></a>"""
+{price_line(p)}
+<span class="small">{d.month}월 {d.day}일 기준{'' if p.get('solo') else ' · 기능이 비슷한 제품 비교'}</span><span class="more">{'자세히 보기' if p.get('solo') else '계산 보기'}</span></div></a>"""
 
 
 def card(p: dict, root: str = "") -> str:
     e = html.escape
+    if p.get("solo"):
+        return f"""<a class="item" href="{root}p/{p['slug']}.html"><span class="nm">{e(p['name'])}</span>
+<span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>해외 배송</span></span></a>"""
     pill = '<span class="pill">급하지 않으면 알리</span>' if p["aliWins"] else '<span class="pill cp">쿠팡이 낫다</span>'
     return f"""<a class="item" href="{root}p/{p['slug']}.html">{pill}<span class="nm">{e(p['name'])}</span>
 <span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>쿠팡 {won(int(p['coupangPrice']))}</span></span>
@@ -236,7 +259,22 @@ def product_page(p: dict) -> str:
     first, second = (("aliUrl", "알리에서 보기"), ("coupangUrl", "쿠팡에서 보기")) if p["aliWins"] else (("coupangUrl", "쿠팡에서 보기"), ("aliUrl", "알리에서 보기"))
     btns = "".join(f'<a class="btn{" main" if i == 0 else ""}" href="{e(p[k])}" rel="sponsored nofollow noopener" target="_blank">{t}</a>'
                    for i, (k, t) in enumerate((first, second)) if p.get(k))
-    body = f"""<p class="small"><a href="../index.html#{p['category']}">{e(cat)}</a></p>
+    if p.get("solo"):
+        head = f"""<h1>{e(p['name'])}</h1>
+<p class="lede">{when}. 알리익스프레스 가격입니다. 쿠팡 비교가는 확인되는 대로 더합니다.</p>
+<div class="ph" style="max-width:560px;margin-top:24px">{media(p, "../")}</div>
+<h2 style="margin-top:32px">삼촌의 계산</h2>
+<div class="receipt">
+<div><span>알리 (해외 배송)</span><span>{won(int(p['aliPrice']))}</span></div>
+{f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
+<div class="sum"><span>{p.get('lifeMonths') or 12}개월 쓰면 한 달에</span><span>{won(p['monthAli'])}</span></div>
+</div>"""
+    else:
+        head = None
+    if head:
+        top = f'<p class="small"><a href="../index.html#{p["category"]}">{e(cat)}</a></p>\n' + head + "\n"
+    else:
+        top = f"""<p class="small"><a href="../index.html#{p['category']}">{e(cat)}</a></p>
 <h1>{e(p['name'])}, 알리 vs 쿠팡 얼마 차이?</h1>
 <p class="lede">{when}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
 <h2>삼촌의 계산</h2>
@@ -249,12 +287,16 @@ def product_page(p: dict) -> str:
 <div><span>{p['lifeMonths']}개월 쓰면 한 달에</span><span>알리 {won(p['monthAli'])} / 쿠팡 {won(p['monthCp'])}</span></div>
 </div>
 <p class="verdict">결론: <span>{p['verdict']}</span></p>
-<p class="note">{e(p['note'])}</p>
+"""
+    body = top + f"""<p class="note">{e(p['note'])}</p>
 <p class="small">구매 전 확인: {e(p['check'])}</p>
 <p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
 <div class="btns">{btns}</div>
 <p><button type="button" class="zzim" id="zzimbtn" aria-pressed="false" data-item="{e(json.dumps({"slug": p["slug"], "name": p["name"], "price": int(p["aliPrice"]), "date": p["priceDate"]}, ensure_ascii=False))}">찜하기</button></p>
 <script>{N.PRODUCT_JS}</script>"""
+    if head:  # 알리 단독
+        return page(f"{p['name']} 가격·한 달 비용 | {BRAND}", f"{p['name']} 알리 {won(int(p['aliPrice']))} ({when}). {p['note'][:80]}",
+                    body, root="../", path=f"p/{p['slug']}.html")
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
                 f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
                 body, root="../", path=f"p/{p['slug']}.html")
@@ -262,7 +304,7 @@ def product_page(p: dict) -> str:
 
 def index_page(products: list[dict]) -> str:
     e = html.escape
-    ranked = sorted(products, key=lambda p: -p["diff"])
+    ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
     picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:7]))
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
     hero = """<section class="hero"><div class="wrap"><p class="eyebrow">CURATED BY 돈 줍는 삼촌</p>
