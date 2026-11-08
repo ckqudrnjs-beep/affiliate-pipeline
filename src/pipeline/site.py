@@ -86,7 +86,8 @@ header.top .wrap{display:flex;justify-content:space-between;align-items:center;g
 .logo small{display:block;font:500 10px/1 var(--body);letter-spacing:.32em;color:var(--muted);margin-top:6px}
 nav.menu{display:flex;gap:26px}nav.menu a{font-size:14px;color:var(--muted);text-decoration:none}
 nav.menu a:hover{color:var(--ink)}
-@media (max-width:560px){nav.menu{gap:14px}nav.menu a{font-size:13px}}
+.logo,nav.menu a{white-space:nowrap}
+@media (max-width:640px){header.top .wrap{flex-wrap:wrap;gap:4px;padding-block:16px 4px}nav.menu{width:100%;gap:20px;overflow-x:auto}nav.menu a{font-size:14px}}
 .hero .wrap{padding-block:72px 56px;text-align:left}
 @media (max-width:640px){.hero .wrap{padding-block:44px 36px}}
 .eyebrow{font-size:12px;letter-spacing:.24em;color:var(--green);font-weight:600;margin:0 0 14px}
@@ -96,6 +97,9 @@ h1{font:500 36px/1.3 var(--display);margin:40px 0 10px;text-wrap:balance;letter-
 h2{font:500 28px/1.3 var(--display);margin:0;letter-spacing:-.02em;text-wrap:balance}
 .sechead{display:flex;justify-content:space-between;align-items:end;gap:16px;border-top:1px solid var(--ink);padding-top:18px;margin:56px 0 28px}
 .sechead span{font-size:13px;color:var(--muted)}
+.sechead a{padding:10px 0}
+nav.menu a{padding:10px 0}
+footer a{display:inline-block;padding:8px 0}
 .lede{color:var(--muted);max-width:62ch;margin:0}
 .picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 28px}
 @media (max-width:860px){.picks{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -240,7 +244,8 @@ def index_page(products: list[dict]) -> str:
 <h1>좋은 물건을,<br>제값에.</h1>
 <p>삼촌이 가격을 나란히 놓고 계산해 본 뒤 고른 물건만 소개합니다. 차액이 작으면 빠른 배송을, 크면 기다림을 권합니다.</p></div></section>"""
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
-<div class="picks">{picks}</div></section>""" if products else ""
+<div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
+<p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
     news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     body = f"""{N.home_block(news, sales)}

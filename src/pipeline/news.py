@@ -24,7 +24,7 @@ NEWS_CSS = """
 .ndate{font-size:12px;color:var(--muted);margin-left:8px;font-variant-numeric:tabular-nums}
 .news h3{font:500 20px/1.45 var(--display);margin:6px 0 6px;letter-spacing:-.02em}
 .news p{margin:0;color:var(--muted);font-size:15px}
-.news a.go{display:inline-block;margin-top:8px;font-size:14px;font-weight:600;text-underline-offset:4px}
+.news a.go{display:inline-block;margin-top:2px;padding:10px 0;font-size:14px;font-weight:600;text-underline-offset:4px}
 .cal{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
 .cal li{display:grid;grid-template-columns:72px minmax(0,1fr);gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
 .dday{font:600 22px/1 var(--body);color:var(--green);font-variant-numeric:tabular-nums}
