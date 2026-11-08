@@ -34,3 +34,6 @@
 - **Actions → daily-drafts → Run workflow** 로 한 번 실행
 - `drafts/blog/날짜.md` 에 `program=aliexpress` 블로그 초안이 생기면 성공 (2026-11-08부터 알리 상품은 블로그 초안으로만 만든다)
 - 실패하면 Actions 로그의 `알리 API 실패 … code=… msg=…` 줄을 알려주세요 (키 값은 로그에 나오지 않음)
+
+## 6. 자주 나는 오류
+- `code=InsufficientPermission msg=App does not have permission to access this api` (2026-11-08 실제 발생): 키·서명은 맞고, 앱에 제휴 API 권한이 아직 없다는 뜻. open.aliexpress.com → App Console → 해당 앱 → **API 권한(Apply Online / Permission)** 에서 Affiliates API 권한을 신청하고 승인을 기다린다.
