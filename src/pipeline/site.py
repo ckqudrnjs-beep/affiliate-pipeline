@@ -9,9 +9,11 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import html
+import json
 import pathlib
 import sys
 
+from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
 from urllib.parse import urlparse
 
@@ -19,7 +21,10 @@ BRAND = "돈 줍는 삼촌"
 CATEGORIES = {"humidify": "겨울 가습", "heat": "겨울 난방·단열"}
 DISCLOSURE = ("이 사이트는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
-MIN_NOTE = 40  # 판단 글이 이보다 짧으면 페이지를 만들지 않는다
+MIN_NOTE = 40
+_cfg_path = pathlib.Path("config/site.json")
+CFG = json.loads(_cfg_path.read_text(encoding="utf-8")) if _cfg_path.exists() else {}
+BASE = CFG.get("baseUrl", "https://don3chon.com").rstrip("/")  # 판단 글이 이보다 짧으면 페이지를 만들지 않는다
 
 
 def won(n: int) -> str:
@@ -61,7 +66,8 @@ CSS = """
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121714;--card:#1a211d;--ink:#e6ece8;--muted:#9aa9a1;--line:#2c3631;--green:#4cc28a;--coin:#f0c14b;--coinbg:#2e2714;color-scheme:dark}}
 :root[data-theme="dark"]{--paper:#121714;--card:#1a211d;--ink:#e6ece8;--muted:#9aa9a1;--line:#2c3631;--green:#4cc28a;--coin:#f0c14b;--coinbg:#2e2714;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 var(--body)}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 var(--body);word-break:keep-all;overflow-wrap:anywhere}
+a{color:var(--green)}
 .wrap{max-width:860px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .ad{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--card)}
 header.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin:18px 0 8px}
@@ -93,15 +99,22 @@ footer{margin-top:48px;font-size:13px;color:var(--muted);border-top:1px solid va
 FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;600&display=swap">'
 
 
-def page(title: str, desc: str, body: str, root: str = "") -> str:
+def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None) -> str:
     e = html.escape
+    url = f"{BASE}/{path}"
+    meta = "".join(f'<meta name="{n}" content="{e(CFG[k])}">' for n, k in
+                   (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification")) if CFG.get(k))
+    ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
+    head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
+            f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
+            f'<meta property="og:locale" content="ko_KR">{meta}<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
-<meta name="description" content="{e(desc)}">{FONTS}<style>{CSS}</style></head><body><div class="wrap">
+<meta name="description" content="{e(desc)}">{head}{FONTS}<style>{CSS}{CALC_CSS}</style></head><body><div class="wrap">
 <p class="ad">[광고] {DISCLOSURE}</p>
 <header class="top"><a class="logo" href="{root}index.html">돈 줍는 <b>삼촌</b></a><span class="tag">사기 전에 계산부터</span></header>
 {body}
-<footer>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</footer>
+<footer><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</footer>
 </div></body></html>"""
 
 
@@ -139,7 +152,7 @@ def product_page(p: dict) -> str:
 <div class="btns">{btns}</div>"""
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
                 f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
-                body, root="../")
+                body, root="../", path=f"p/{p['slug']}.html")
 
 
 def index_page(products: list[dict]) -> str:
@@ -147,19 +160,59 @@ def index_page(products: list[dict]) -> str:
     secs = "".join(
         f'<section id="{k}"><h2>{v}</h2><div class="grid">{"".join(card(p) for p in products if p["category"] == k)}</div></section>'
         for k, v in CATEGORIES.items() if any(p["category"] == k for p in products))
-    body = f"""<h1>같은 물건, 알리에서 사면 얼마나 아낄까?</h1>
-<p class="lede">삼촌이 쿠팡 가격과 알리 가격을 나란히 놓고 차액, 기다리는 값, 한 달 비용을 계산합니다. 차액이 작으면 솔직하게 쿠팡을 권합니다.</p>
+    tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{html.escape(c["h1"])}</b><span>{html.escape(c["title"])}</span></a>' for c in CALCS)
+    body = f"""<h1>사기 전에, 쓰기 전에 계산부터</h1>
+<p class="lede">전기요금, 직구 세금, 난방비를 삼촌이 대신 계산해 드립니다. 결과는 링크로 공유할 수 있어요.</p>
+<div class="calcs">{tools}</div>
+<h2>알리 vs 쿠팡 가격 계산</h2>
+<p class="lede">같은 종류 제품을 두 곳 가격으로 나란히 놓고 차액과 기다리는 값을 계산했습니다. 차액이 작으면 솔직하게 쿠팡을 권합니다.</p>
 <nav class="cats">{cats}</nav>{secs}"""
-    return page(f"{BRAND} | 알리 vs 쿠팡 가격 계산", "같은 물건을 알리와 쿠팡에서 사면 얼마 차이 나는지 계산합니다.", body)
+    return page(f"{BRAND} | 생활 계산기와 알리·쿠팡 가격 비교", "전기요금, 알리 직구 세금, 난방비를 계산하고 알리와 쿠팡 가격 차이를 비교합니다.", body,
+                ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"})
+
+
+def calc_page(c: dict, products: list[dict]) -> str:
+    e = html.escape
+    rel = "".join(card(p, "../") for p in products if c["category"] and p["category"] == c["category"])[:20000]
+    rel = f'<h2>관련 상품 계산</h2><div class="grid">{rel}</div>' if rel else ""
+    ids = ",".join(f"'{i}'" for i in c["ids"])
+    body = f"""<p class="small"><a href="../index.html">계산기 모음</a></p>
+<h1>{e(c['h1'])}</h1><p class="lede">{e(c['lede'])}</p>
+<div class="calc"><form id="f" onsubmit="event.preventDefault()">{c['form']}</form>
+<div><div class="receipt" id="out" aria-live="polite"></div><p class="cmp" id="cmp"></p>
+<button type="button" id="share">결과 링크 복사</button><p class="small" id="shareMsg"></p></div></div>
+{c['body']}
+<p class="small">요금·세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 고지서·세관 부과액과 다를 수 있습니다.</p>
+{rel}
+<script>{COMMON_JS}{c['js']}
+const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',run);run();</script>"""
+    return page(f"{c['title']} | {BRAND}", c["lede"], body, root="../", path=f"calc/{c['slug']}.html",
+                ld={"@context": "https://schema.org", "@type": "WebApplication", "name": c["title"], "url": f"{BASE}/calc/{c['slug']}.html",
+                    "applicationCategory": "UtilitiesApplication", "operatingSystem": "Web", "inLanguage": "ko",
+                    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}})
+
+
+PRIVACY = """<h1>개인정보처리방침</h1>
+<p class="note">돈 줍는 삼촌(don3chon.com)은 회원가입이 없고 이름·연락처 같은 개인정보를 수집하지 않습니다. 계산기에 넣은 값은 브라우저 안에서만 계산되며 서버에 저장되지 않습니다.</p>
+<p class="note">이 사이트에는 쿠팡 파트너스와 알리익스프레스 어필리에이트 링크가 있습니다. 링크를 누르면 해당 쇼핑몰이 쿠키로 구매 여부를 확인할 수 있습니다. 앞으로 구글 애드센스 광고를 넣으면 구글이 광고 쿠키를 사용할 수 있으며, 그때 이 문서를 갱신합니다.</p>"""
 
 
 def build(out="site", src="config/site_products.csv") -> int:
     products = load(src)
     o = pathlib.Path(out)
     (o / "p").mkdir(parents=True, exist_ok=True)
+    (o / "calc").mkdir(exist_ok=True)
+    for c in CALCS:
+        (o / "calc" / f"{c['slug']}.html").write_text(calc_page(c, products), encoding="utf-8")
+    (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
     (o / "index.html").write_text(index_page(products), encoding="utf-8")
     for p in products:
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
+    urls = [""] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
+    today = dt.date.today().isoformat()
+    (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
+    (o / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n", encoding="utf-8")
     return len(products)
 
 
