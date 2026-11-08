@@ -15,6 +15,7 @@ import sys
 
 from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
+from . import news as N
 from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
@@ -169,10 +170,11 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
             f'<meta property="og:locale" content="ko_KR">{meta}<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
-<meta name="description" content="{e(desc)}">{head}{FONTS}<style>{CSS}{CALC_CSS}</style></head><body>
+<meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}index.html#how">고르는 기준</a></nav></div></header>
+<nav class="menu"><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}index.html#how">고르는 기준</a></nav></div></header>
 {hero}<main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 </body></html>"""
@@ -221,7 +223,9 @@ def product_page(p: dict) -> str:
 <p class="note">{e(p['note'])}</p>
 <p class="small">구매 전 확인: {e(p['check'])}</p>
 <p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
-<div class="btns">{btns}</div>"""
+<div class="btns">{btns}</div>
+<p><button type="button" class="zzim" id="zzimbtn" aria-pressed="false" data-item="{e(json.dumps({"slug": p["slug"], "name": p["name"], "price": int(p["aliPrice"]), "date": p["priceDate"]}, ensure_ascii=False))}">찜하기</button></p>
+<script>{N.PRODUCT_JS}</script>"""
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
                 f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
                 body, root="../", path=f"p/{p['slug']}.html")
@@ -237,13 +241,17 @@ def index_page(products: list[dict]) -> str:
 <p>삼촌이 가격을 나란히 놓고 계산해 본 뒤 고른 물건만 소개합니다. 차액이 작으면 빠른 배송을, 크면 기다림을 권합니다.</p></div></section>"""
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
 <div class="picks">{picks}</div></section>""" if products else ""
-    body = f"""{picks_sec}
+    news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
+    prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
+    body = f"""{N.home_block(news, sales)}
+{picks_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
 <div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
 <div><b>기다림에도 값을 매깁니다</b><p>해외 배송을 하루 더 기다릴 때마다 얼마를 아끼는지 보여 드립니다. 몇천 원 차이면 빠른 배송을 권합니다.</p></div>
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
-<div class="toolrow">{tools}</div></section>"""
+<div class="toolrow">{tools}</div></section>
+<script>window.PRICES={prices};{N.HOME_JS}</script>"""
     return page(f"{BRAND} | 계산해 보고 고른 물건", "삼촌이 알리와 쿠팡 가격을 계산해 보고 고른 물건을 소개합니다. 전기요금·직구 세금·난방비 계산기도 무료로 쓸 수 있어요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
@@ -285,7 +293,14 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "index.html").write_text(index_page(products), encoding="utf-8")
     for p in products:
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
-    urls = [""] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
+    news = N.load_json("data/news.json")
+    (o / "news.html").write_text(page(f"삼촌 소식 | {BRAND}", "계산해서 아끼는 살림 소식을 날짜별로 모았습니다.",
+        f'<h1>삼촌 소식</h1><p class="lede">세일 일정, 생활 요금 변화, 살림 계산 팁을 날짜별로 쌓아 둡니다.</p><div style="margin-top:32px">{N.news_items(news, "")}</div>',
+        path="news.html"), encoding="utf-8")
+    (o / "feed.xml").write_text(N.feed_xml(news, BASE, BRAND), encoding="utf-8")
+    (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
+    N.write_icons(o)
+    urls = ["", "news.html"] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
     today = dt.date.today().isoformat()
     (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
