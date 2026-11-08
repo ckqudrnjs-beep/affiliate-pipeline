@@ -180,7 +180,7 @@ class SiteTest(unittest.TestCase):
 class CurateTest(unittest.TestCase):
     def test_pick_candidates_filters_and_sorts(self):
         from pipeline.curate import pick_candidates, to_candidate
-        raw = [to_candidate({"product_id": i, "product_title": f"p{i}", "target_sale_price": "10000", "promotion_link": "https://s.click.aliexpress.com/e/x",
+        raw = [to_candidate({"product_id": i, "product_title": f"p{i}", "target_sale_price": "20000", "promotion_link": "https://s.click.aliexpress.com/e/x",
                              "commission_rate": c, "evaluate_rate": r, "lastest_volume": v})
                for i, c, r, v in [(1, "3.0%", "95%", 500), (2, "9.0%", "95%", 500), (3, "12.0%", "80%", 500), (4, "8.0%", "96%", 10)]]
         self.assertEqual([c["aliProductId"] for c in pick_candidates(raw)], ["2", "1"])
