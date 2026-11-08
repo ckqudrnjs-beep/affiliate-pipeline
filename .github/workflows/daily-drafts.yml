@@ -33,24 +33,23 @@ jobs:
           ALI_TRACKING_ID: ${{ secrets.ALI_TRACKING_ID }}
           ALI_KEYWORDS: ${{ vars.ALI_KEYWORDS }}
         run: PYTHONPATH=src python -m pipeline.drafts
-      - name: Open review PR (every draft needs user approval)
+      - name: Open review PR (블로그·수동 게시용 초안, 자동 게시 없음)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           d=$(TZ=Asia/Seoul date +%F)
-          f=drafts/$d.md
-          [ -f "$f" ] || { echo "초안 없음"; exit 0; }
+          ls drafts/blog/$d.md drafts/manual/$d.md 2>/dev/null || { echo "초안 없음"; exit 0; }
           git config user.name "drafts-bot"
           git config user.email "drafts-bot@users.noreply.github.com"
-          # 2026-11-07 결정: 검사 통과 여부와 관계없이 모든 초안은 사용자가 PR을 병합해야 게시된다.
-          # 발행기는 오늘·어제 초안만 올리므로, 다음 날까지 병합하지 않으면 그 초안은 게시되지 않는다.
-          if grep -q "⛔" "$f"; then tag="검토 필요: 차단 항목 있음"; else tag="검토 요청"; fi
-          git checkout -b drafts/$d
+          # 2026-11-08 결정: SNS 자동 게시 중단. 초안은 drafts/blog/, drafts/manual/ 에만 쓰므로 병합해도 게시되지 않는다.
+          b=drafts/$d
+          git ls-remote --exit-code --heads origin "$b" >/dev/null && b=drafts/$d-$(TZ=Asia/Seoul date +%H%M)
+          if grep -qs "⛔" drafts/blog/$d.md drafts/manual/$d.md; then tag="검토 필요: 차단 항목 있음"; else tag="초안"; fi
+          git checkout -b "$b"
           git add drafts/
-          git commit -m "SNS 초안 $d ($tag)" || exit 0
-          git push -u origin drafts/$d
-          { echo "인스타·스레드에 올라갈 초안입니다. 내용을 확인하고 **병합하면 게시 대기열에 들어갑니다.**"
-            echo "고칠 글은 이 PR에서 파일을 수정하거나, 빼고 싶은 초안 섹션을 지운 뒤 병합하세요. ⛔ 표시 초안은 발행기가 건너뜁니다."
-            echo "오늘·내일 안에 병합하지 않으면 이 초안은 게시되지 않습니다."
-            echo; cat "$f"; } > /tmp/body.md
-          gh pr create --title "[$tag] SNS 초안 $d" --body-file /tmp/body.md --base main
+          git commit -m "초안 $d ($tag)" || exit 0
+          git push -u origin "$b"
+          { echo "블로그 글 초안과 스레드·인스타 수동 게시용 글입니다. **자동으로 게시되지 않습니다.**"
+            echo "블로그 글은 괄호 안 안내를 채워 직접 올리고, 정보형 글은 앱에서 직접 올리세요. 병합은 기록용입니다."
+            for f in drafts/blog/$d.md drafts/manual/$d.md; do [ -f "$f" ] && { echo; cat "$f"; }; done; } > /tmp/body.md
+          gh pr create --title "[$tag] 블로그·수동 게시 초안 $d" --body-file /tmp/body.md --base main

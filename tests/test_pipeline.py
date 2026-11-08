@@ -113,5 +113,24 @@ class NaverTest(unittest.TestCase):
         self.assertEqual(check(post, ["naver"]), [])
 
 
+class BlogTest(unittest.TestCase):
+    def test_blog_draft_passes_and_starts_with_disclosure(self):
+        from pipeline.drafts import build_blog, render_blog
+        from pipeline.aliexpress import to_draft_product
+        ali = to_draft_product({"product_title": "USB 미니 가습기", "target_sale_price": "8900.00",
+                                "promotion_link": "https://s.click.aliexpress.com/e/_abc"})
+        for p, prog in ((PRODUCT, "coupang"), (ali, "aliexpress")):
+            text = render_blog(p, TODAY)
+            self.assertTrue(text.startswith(DISCLOSURES[prog]))
+            self.assertEqual(check(text, [prog]), [])
+        self.assertNotIn("⛔", build_blog([PRODUCT, ali], TODAY))
+
+    def test_manual_has_no_links(self):
+        from pipeline.drafts import build_manual
+        md = build_manual(load_tips("config/tips.csv"), TODAY)
+        self.assertNotIn("http", md)
+        self.assertEqual(md.count("## 글 "), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
