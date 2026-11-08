@@ -1,0 +1,126 @@
+"""수수료 높은 알리 상품 후보 수집 + 상품 원장 가격 이력 (2026-11-09, GitHub Actions 에서 매일 실행).
+
+- 후보: ALI_KEYWORDS 검색어별로 product.query 결과를 모아 평점·판매량으로 거르고 수수료율 순으로 정렬
+  → data/candidates/YYYY-MM-DD.json + 요약 MD. 사람이(또는 Claude가) 고르고 판단 글·쿠팡 비교가를 붙여야 사이트에 올라간다.
+- 가격 이력: data/products/*.json 중 aliProductId 가 있는 상품의 오늘 가격을 data/prices/YYYY-MM.csv 에 한 줄씩 추가.
+수수료는 후보 순서에만 쓰고 결론(알리냐 쿠팡이냐)은 계산으로만 정한다.
+"""
+from __future__ import annotations
+
+import csv
+import datetime as dt
+import json
+import os
+import pathlib
+
+from .aliexpress import AliExpressClient
+from .drafts import parse_keywords
+
+KST = dt.timezone(dt.timedelta(hours=9))
+MIN_RATING = 90.0   # evaluate_rate(긍정 평가율, %) 이상
+MIN_ORDERS = 50     # 최근 판매량 이상
+
+
+def pct(v) -> float:
+    try:
+        return float(str(v or "0").rstrip("%"))
+    except ValueError:
+        return 0.0
+
+
+def to_candidate(p: dict) -> dict:
+    price = p.get("target_sale_price") or p.get("sale_price")
+    try:
+        price = int(float(price)) if price else None
+    except ValueError:
+        price = None
+    return {
+        "aliProductId": str(p.get("product_id", "")),
+        "name": p.get("product_title", ""),
+        "aliPrice": price,
+        "aliUrl": p.get("promotion_link", ""),
+        "imageUrl": p.get("product_main_image_url") or "",
+        "commission": max(pct(p.get("commission_rate")), pct(p.get("hot_product_commission_rate"))),
+        "rating": pct(p.get("evaluate_rate")),
+        "orders": int(p.get("lastest_volume") or 0),
+    }
+
+
+def pick_candidates(raw: list[dict], k: int = 15) -> list[dict]:
+    seen, out = set(), []
+    for c in sorted(raw, key=lambda c: (-c["commission"], -c["orders"])):
+        if c["aliProductId"] in seen or not c["aliUrl"] or not c["aliPrice"]:
+            continue
+        if c["rating"] < MIN_RATING or c["orders"] < MIN_ORDERS:
+            continue
+        seen.add(c["aliProductId"])
+        out.append(c)
+    return out[:k]
+
+
+def fetch_raw(client: AliExpressClient, keywords: list[str]) -> list[dict]:
+    raw = []
+    for kw in keywords or [""]:
+        r = client._call("aliexpress.affiliate.product.query", keywords=kw, page_size=40, sort="LAST_VOLUME_DESC",
+                         target_currency="KRW", target_language="KO", ship_to_country="KR", tracking_id=client.tracking_id)
+        body = next(iter(r.values())) if r else {}
+        prods = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+        raw += [to_candidate(p) for p in prods]
+    return raw
+
+
+def summary_md(cands: list[dict], today: dt.date) -> str:
+    lines = [f"# 알리 후보 {today.isoformat()} (수수료 높은 순, 평점 {MIN_RATING:.0f}%↑·판매 {MIN_ORDERS}개↑)", "",
+             "| # | 상품 | 알리가 | 수수료 | 평점 | 판매 |", "|---|---|---|---|---|---|"]
+    for i, c in enumerate(cands, 1):
+        lines.append(f"| {i} | {c['name'][:40]} | {c['aliPrice']:,}원 | {c['commission']:.1f}% | {c['rating']:.0f}% | {c['orders']:,} |")
+    lines += ["", "사이트에 올리려면 data/products/ 에 파일을 만들고 쿠팡 비교가·판단 글(40자 이상)을 채운다."]
+    return "\n".join(lines) + "\n"
+
+
+def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path = pathlib.Path("data")) -> int:
+    ids = {}
+    for f in sorted((root / "products").glob("*.json")):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        if d.get("aliProductId") and d.get("status", "active") == "active":
+            ids[d["aliProductId"]] = d["slug"]
+    if not ids:
+        return 0
+    r = client._call("aliexpress.affiliate.productdetail.get", product_ids=",".join(list(ids)[:50]),
+                     target_currency="KRW", target_language="KO", country="KR", tracking_id=client.tracking_id)
+    body = next(iter(r.values())) if r else {}
+    prods = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+    path = root / "prices" / f"{today:%Y-%m}.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new = not path.exists()
+    n = 0
+    with open(path, "a", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(["date", "slug", "aliPrice", "coupangPrice"])
+        for p in prods:
+            c = to_candidate(p)
+            if c["aliProductId"] in ids and c["aliPrice"]:
+                w.writerow([today.isoformat(), ids[c["aliProductId"]], c["aliPrice"], ""])
+                n += 1
+    return n
+
+
+def main() -> int:
+    today = dt.datetime.now(KST).date()
+    client = AliExpressClient()
+    cands = pick_candidates(fetch_raw(client, parse_keywords(os.environ.get("ALI_KEYWORDS", ""))))
+    out = pathlib.Path("data/candidates")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / f"{today.isoformat()}.json").write_text(json.dumps(cands, ensure_ascii=False, indent=1), encoding="utf-8")
+    (out / f"{today.isoformat()}.md").write_text(summary_md(cands, today), encoding="utf-8")
+    print(f"후보 {len(cands)}개")
+    try:
+        print(f"가격 기록 {record_prices(client, today)}개")
+    except Exception as e:  # 가격 기록 실패가 후보 수집을 막지 않게
+        print(f"가격 기록 실패: {type(e).__name__}: {e}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

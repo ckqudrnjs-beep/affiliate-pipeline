@@ -175,3 +175,28 @@ class SiteTest(unittest.TestCase):
             html = (pathlib.Path(d) / "index.html").read_text(encoding="utf-8")
             body = html.split("<body>", 1)[1]
             self.assertIn("수수료를 제공받습니다", body[:400])
+
+
+class CurateTest(unittest.TestCase):
+    def test_pick_candidates_filters_and_sorts(self):
+        from pipeline.curate import pick_candidates, to_candidate
+        raw = [to_candidate({"product_id": i, "product_title": f"p{i}", "target_sale_price": "10000", "promotion_link": "https://s.click.aliexpress.com/e/x",
+                             "commission_rate": c, "evaluate_rate": r, "lastest_volume": v})
+               for i, c, r, v in [(1, "3.0%", "95%", 500), (2, "9.0%", "95%", 500), (3, "12.0%", "80%", 500), (4, "8.0%", "96%", 10)]]
+        self.assertEqual([c["aliProductId"] for c in pick_candidates(raw)], ["2", "1"])
+
+    def test_price_history_low30(self):
+        import tempfile, json
+        from pipeline import site
+        with tempfile.TemporaryDirectory() as d:
+            (pathlib.Path(d) / "prices").mkdir()
+            (pathlib.Path(d) / "products").mkdir()
+            rows = "date,slug,aliPrice,coupangPrice\n" + "".join(f"2026-11-{i:02d},t,{9000 + i * 10},\n" for i in range(1, 11))
+            (pathlib.Path(d) / "prices" / "2026-11.csv").write_text(rows, encoding="utf-8")
+            (pathlib.Path(d) / "products" / "t.json").write_text(json.dumps({"slug": "t", "category": "heat", "name": "테스트", "aliPrice": 1,
+                "aliUrl": "https://s.click.aliexpress.com/e/a", "shipDays": 10, "coupangPrice": 20000, "coupangUrl": "https://link.coupang.com/a/b",
+                "lifeMonths": 12, "priceDate": "2026-11-01", "note": "가" * 45, "check": "확인"}), encoding="utf-8")
+            empty = pathlib.Path(d) / "empty.csv"
+            empty.write_text("slug,category,name,aliPrice,aliUrl,shipDays,coupangPrice,coupangUrl,lifeMonths,priceDate,note,check\n", encoding="utf-8")
+            p = site.load(str(empty), data_dir=d)[0]
+            self.assertEqual((p["aliPrice"], p["priceDate"], p["low30"]), ("9100", "2026-11-10", "9010"))

@@ -33,11 +33,35 @@ def won(n: int) -> str:
     return f"{n:,}원"
 
 
-def load(path="config/site_products.csv", allow_examples: bool = False) -> list[dict]:
+def price_history(data_dir: str = "data") -> dict[str, list[tuple[str, int]]]:
+    hist: dict[str, list[tuple[str, int]]] = {}
+    for f in sorted(pathlib.Path(data_dir, "prices").glob("*.csv")):
+        with open(f, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                if row.get("aliPrice"):
+                    hist.setdefault(row["slug"], []).append((row["date"], int(row["aliPrice"])))
+    for v in hist.values():
+        v.sort()
+    return hist
+
+
+def load(path="config/site_products.csv", allow_examples: bool = False, data_dir: str = "data") -> list[dict]:
     with open(path, encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if r.get("slug") and not r["slug"].startswith("#")]
+    # 상품 원장: data/products/<slug>.json (상품당 파일 하나, 변경 이력은 Git). 판매 종료(status != active)는 뺀다.
+    for f in sorted(pathlib.Path(data_dir, "products").glob("*.json")):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        if d.get("status", "active") == "active":
+            rows.append({k: str(v) for k, v in d.items()})
+    hist = price_history(data_dir)
     out = []
     for r in rows:
+        h = hist.get(r["slug"])
+        if h:  # 가장 최근 기록 가격으로 갱신하고, 최근 30일 최저가를 붙인다
+            r["aliPrice"], r["priceDate"] = str(h[-1][1]), h[-1][0]
+            last30 = [pr for d, pr in h if dt.date.fromisoformat(d) >= dt.date.fromisoformat(h[-1][0]) - dt.timedelta(days=30)]
+            if len(last30) >= 7:
+                r["low30"] = str(min(last30))
         # 예시 줄(가짜 가격·링크)은 실제 사이트에 내보내지 않는다 (쿠팡 약관 8조 2항 19호, 표시광고법)
         if any("EXAMPLE" in (r.get(k) or "") for k in ("aliUrl", "coupangUrl")) and not allow_examples:
             print(f"건너뜀(예시 데이터): {r['slug']}", file=sys.stderr)
@@ -175,10 +199,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}index.html#how">고르는 기준</a></nav></div></header>
+<nav class="menu"><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 </body></html>"""
@@ -220,6 +244,7 @@ def product_page(p: dict) -> str:
 <div><span>쿠팡 (로켓배송 약 1일)</span><span>{won(int(p['coupangPrice']))}</span></div>
 <div><span>알리 (배송 약 {p['shipDays']}일)</span><span>{won(int(p['aliPrice']))}</span></div>
 <div class="sum"><span>차액</span><span>{won(p['diff'])} ({p['ratio']}%)</span></div>
+{f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
 <div><span>하루 더 기다릴 때마다</span><span>{won(p['perDay'])} 절약</span></div>
 <div><span>{p['lifeMonths']}개월 쓰면 한 달에</span><span>알리 {won(p['monthAli'])} / 쿠팡 {won(p['monthCp'])}</span></div>
 </div>
@@ -300,14 +325,21 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
     news = N.load_json("data/news.json")
     (o / "news.html").write_text(page(f"삼촌 소식 | {BRAND}", "계산해서 아끼는 살림 소식을 날짜별로 모았습니다.",
-        f'<h1>삼촌 소식</h1><p class="lede">세일 일정, 생활 요금 변화, 살림 계산 팁을 날짜별로 쌓아 둡니다.</p><div style="margin-top:32px">{N.news_items(news, "")}</div>',
-        path="news.html"), encoding="utf-8")
+        N.archive_body(news), path="news.html"), encoding="utf-8")
+    (o / "news").mkdir(exist_ok=True)
+    for n in news:
+        (o / "news" / f"{n['id']}.html").write_text(page(f"{n['title']} | {BRAND}", n["body"][:150], N.news_page_body(n), root="../",
+            path=f"news/{n['id']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": n["title"],
+            "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}}), encoding="utf-8")
+    faq = N.load_json("data/faq.json")
+    (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
+        N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
     (o / "feed.xml").write_text(N.feed_xml(news, BASE, BRAND), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
     for f in pathlib.Path("static").glob("*"):
         (o / f.name).write_bytes(f.read_bytes())
-    urls = ["", "news.html"] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
+    urls = ["", "news.html", "faq.html"] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
     today = dt.date.today().isoformat()
     (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")

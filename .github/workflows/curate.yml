@@ -1,0 +1,46 @@
+name: curate
+
+on:
+  schedule:
+    - cron: "30 21 * * *"   # 매일 06:30 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: 알리 후보 수집 + 가격 기록
+        env:
+          ALI_APP_KEY: ${{ secrets.ALI_APP_KEY }}
+          ALI_APP_SECRET: ${{ secrets.ALI_APP_SECRET }}
+          ALI_TRACKING_ID: ${{ secrets.ALI_TRACKING_ID }}
+          ALI_KEYWORDS: ${{ vars.ALI_KEYWORDS }}
+        run: PYTHONPATH=src python -m pipeline.curate
+      - name: 후보 PR 열기 (사이트에는 자동으로 올라가지 않음)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          d=$(TZ=Asia/Seoul date +%F)
+          git config user.name "curate-bot"
+          git config user.email "curate-bot@users.noreply.github.com"
+          b=curate/$d
+          git ls-remote --exit-code --heads origin "$b" >/dev/null && b=curate/$d-$(TZ=Asia/Seoul date +%H%M)
+          git checkout -b "$b"
+          git add data/
+          git commit -m "알리 후보·가격 기록 $d" || exit 0
+          git push -u origin "$b"
+          gh pr create --title "[후보] 수수료 높은 알리 상품 $d" --body-file data/candidates/$d.md --base main
