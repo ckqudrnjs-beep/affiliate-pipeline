@@ -19,7 +19,8 @@ from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
 CATEGORIES = {"humidify": "겨울 가습", "heat": "겨울 난방·단열"}
-DISCLOSURE = ("이 사이트는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
+# 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
+DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
 MIN_NOTE = 40
 _cfg_path = pathlib.Path("config/site.json")
