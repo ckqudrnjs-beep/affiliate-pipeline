@@ -19,6 +19,7 @@ from .drafts import parse_keywords
 KST = dt.timezone(dt.timedelta(hours=9))
 MIN_RATING = 90.0   # evaluate_rate(긍정 평가율, %) 이상
 MIN_ORDERS = 50     # 최근 판매량 이상
+MIN_PRICE = int(os.environ.get("ALI_MIN_PRICE", "15000"))  # 한 건 수수료가 의미 있는 가격 이상만 (원)
 
 
 def pct(v) -> float:
@@ -51,7 +52,7 @@ def pick_candidates(raw: list[dict], k: int = 15) -> list[dict]:
     for c in sorted(raw, key=lambda c: (-c["commission"], -c["orders"])):
         if c["aliProductId"] in seen or not c["aliUrl"] or not c["aliPrice"]:
             continue
-        if c["rating"] < MIN_RATING or c["orders"] < MIN_ORDERS:
+        if c["rating"] < MIN_RATING or c["orders"] < MIN_ORDERS or c["aliPrice"] < MIN_PRICE:
             continue
         seen.add(c["aliProductId"])
         out.append(c)
@@ -60,7 +61,7 @@ def pick_candidates(raw: list[dict], k: int = 15) -> list[dict]:
 
 def fetch_raw(client: AliExpressClient, keywords: list[str]) -> list[dict]:
     raw = []
-    for kw in keywords or [""]:
+    for kw in (keywords or [""])[:12]:  # 하루 호출 수를 적게 유지
         r = client._call("aliexpress.affiliate.product.query", keywords=kw, page_size=40, sort="LAST_VOLUME_DESC",
                          target_currency="KRW", target_language="KO", ship_to_country="KR", tracking_id=client.tracking_id)
         body = next(iter(r.values())) if r else {}
@@ -70,7 +71,7 @@ def fetch_raw(client: AliExpressClient, keywords: list[str]) -> list[dict]:
 
 
 def summary_md(cands: list[dict], today: dt.date) -> str:
-    lines = [f"# 알리 후보 {today.isoformat()} (수수료 높은 순, 평점 {MIN_RATING:.0f}%↑·판매 {MIN_ORDERS}개↑)", "",
+    lines = [f"# 알리 후보 {today.isoformat()} (수수료 높은 순, 평점 {MIN_RATING:.0f}%↑·판매 {MIN_ORDERS}개↑·{MIN_PRICE:,}원↑)", "",
              "| # | 상품 | 알리가 | 수수료 | 평점 | 판매 |", "|---|---|---|---|---|---|"]
     for i, c in enumerate(cands, 1):
         lines.append(f"| {i} | {c['name'][:40]} | {c['aliPrice']:,}원 | {c['commission']:.1f}% | {c['rating']:.0f}% | {c['orders']:,} |")
