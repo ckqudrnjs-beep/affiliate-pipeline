@@ -1,7 +1,8 @@
-"""일일 SNS 초안 생성: 쿠팡 골드박스 → 스레드/인스타 캡션 초안(MD).
+"""일일 초안 생성 (2026-11-08 개편: 블로그 중심, SNS 자동 게시 없음).
 
-초안은 drafts/YYYY-MM-DD.md 로 저장된다. 검사 통과 시 main에 자동 반영, 차단 시 검토 PR.
-main에 올라간 초안은 publish.py 가 스레드·인스타에 발행한다 (인스타는 이미지가 있는 초안만).
+- 제휴 상품(쿠팡·네이버·알리) → drafts/blog/YYYY-MM-DD.md : 블로그에 붙여 넣을 홍보 글 초안
+- 정보형 글 → drafts/manual/YYYY-MM-DD.md : 스레드·인스타 앱에서 사람이 직접 올리는 글 (링크 없음)
+두 경로 모두 publish.py 가 읽는 drafts/YYYY-MM-DD.md 가 아니므로 병합해도 자동 게시되지 않는다.
 """
 from __future__ import annotations
 
@@ -82,6 +83,65 @@ def build(products: list[dict], today: dt.date, n: int = MAX_PROMO, tips: list[d
     return "\n".join(out)
 
 
+def render_blog(p: dict, today: dt.date) -> str:
+    """블로그 글 한 편 초안. 대가성 문구가 맨 앞, 가격엔 기준일."""
+    name = p.get("productName", "").strip()
+    price = p.get("productPrice")
+    if p.get("priceDate"):
+        today = dt.date.fromisoformat(p["priceDate"])
+    program = p.get("program") or "coupang"
+    ship = ("해외배송이라 도착까지 1~3주 걸릴 수 있어요. 관세·반품 조건도 함께 확인하세요."
+            if program == "aliexpress" else "옵션별 가격과 배송일을 구매 전에 확인하세요.")
+    lines = [
+        DISCLOSURES.get(program, DISCLOSURES["generic"]),
+        "",
+        f"# {name} 살까 말까, 삼촌이 계산해 봤어요",
+        "",
+        "## 한 줄 요약",
+        "(아하 포인트: 의외의 숫자 하나. 예: 1년 쓰면 하루 몇 원인지)",
+        "",
+        "## 가격",
+        f"- {today.month}월 {today.day}일 기준 {won(price)}" if price else "- 가격: 링크에서 확인",
+        "- 1년 총비용 = 구매가 + (소모품·전기료 × 12) ← 숫자를 채워 넣기",
+        "",
+        "## 이런 분께 맞아요 / 안 맞아요",
+        "- 맞아요: ",
+        "- 안 맞아요: ",
+        "",
+        "## 구매 전 체크",
+        f"- {ship}",
+        "- 상세페이지의 소비전력(W)·용량·인증 표시를 확인하세요.",
+        "",
+        f"[{name} 보러 가기]({p.get('productUrl', '')})",
+    ]
+    return "\n".join(lines)
+
+
+def build_blog(products: list[dict], today: dt.date) -> str:
+    out = [f"# {today.isoformat()} 블로그 초안 ({BRAND})", "",
+           f"제휴 상품 {len(products)}개. 괄호 안 안내문을 채운 뒤 블로그에 직접 올리세요. 첫 줄 대가성 문구는 지우지 마세요.", ""]
+    for i, p in enumerate(products, 1):
+        program = p.get("program") or "coupang"
+        text = render_blog(p, today)
+        problems = check(text, [program])
+        status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
+        img = p.get("productImage") or p.get("imageUrl")
+        out += [f"## 블로그 {i} — {status}", f"<!-- meta program={program}" + (f" image={img}" if img else "") + " -->",
+                "", "```markdown", text, "```", ""]
+    return "\n".join(out)
+
+
+def build_manual(tips: list[dict], today: dt.date, k: int = 2) -> str:
+    out = [f"# {today.isoformat()} 스레드·인스타 수동 게시용 ({BRAND})", "",
+           "자동 게시하지 않습니다. 앱에서 직접 올리세요. 제휴 링크는 넣지 않습니다.", ""]
+    for i, t in enumerate(pick_tips(tips, today, k), 1):
+        text = t["text"].strip()
+        problems = check(text, ["info"])
+        status = "✅ 검사 통과" if not problems else "⛔ 차단: " + "; ".join(problems)
+        out += [f"## 글 {i} — {status}", "", "```text", text, "```", ""]
+    return "\n".join(out)
+
+
 def load_manual(path: str | pathlib.Path = "config/products.csv") -> list[dict]:
     """최종 승인 전(Open API 없음): 파트너스 사이트에서 직접 만든 링크 목록을 읽는다."""
     rows = []
@@ -115,17 +175,23 @@ def main() -> int:
         try:
             products += [x for x in AliExpressClient().hot_products(kw, 5) if x["productUrl"]][:1]
         except Exception as e:  # 알리 오류가 나도 나머지 초안은 계속 만든다
-            print(f"알리 API 실패, 건너뜀: {type(e).__name__}")
+            print(f"알리 API 실패, 건너뜀: {type(e).__name__}: {e}")
     tips = load_tips()
     if not products and not tips:
         print("상품도 정보형 글도 없습니다. config/products.csv 또는 config/tips.csv 를 채우세요.")
         return 0
-    path = pathlib.Path("drafts") / f"{today.isoformat()}.md"
-    path.parent.mkdir(exist_ok=True)
-    path.write_text(build(products, today, tips=tips), encoding="utf-8")
-    print(path)
+    print(f"제휴 상품 {len(products)}개 (" + ", ".join(sorted({p['program'] for p in products})) + ")")
+    if products:
+        path = pathlib.Path("drafts/blog") / f"{today.isoformat()}.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(build_blog(products[:MAX_PROMO], today), encoding="utf-8")
+        print(path)
+    if tips:
+        path = pathlib.Path("drafts/manual") / f"{today.isoformat()}.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(build_manual(tips, today), encoding="utf-8")
+        print(path)
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

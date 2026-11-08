@@ -32,5 +32,5 @@
 
 ## 5. 확인
 - **Actions → daily-drafts → Run workflow** 로 한 번 실행
-- 초안에 `program=aliexpress` 글이 생기면 성공
-- 실패하면 Actions 로그를 알려주세요 (키 값은 로그에 나오지 않음)
+- `drafts/blog/날짜.md` 에 `program=aliexpress` 블로그 초안이 생기면 성공 (2026-11-08부터 알리 상품은 블로그 초안으로만 만든다)
+- 실패하면 Actions 로그의 `알리 API 실패 … code=… msg=…` 줄을 알려주세요 (키 값은 로그에 나오지 않음)

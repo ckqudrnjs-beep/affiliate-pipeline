@@ -52,6 +52,10 @@ class AliExpressClient:
             target_language="KO", ship_to_country="KR", tracking_id=self.tracking_id,
         )
         body = next(iter(r.values())) if r else {}
+        if "error_response" in r or str(body.get("resp_result", {}).get("resp_code", "200")) != "200":
+            err = r.get("error_response") or body.get("resp_result", {})
+            # 키·서명 값은 찍지 않고 오류 코드와 메시지만 남긴다
+            raise RuntimeError(f"code={err.get('code') or err.get('resp_code')} msg={err.get('msg') or err.get('resp_msg')}")
         products = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
         return [to_draft_product(p) for p in products]
 
