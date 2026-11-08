@@ -80,8 +80,8 @@ def news_items(news: list[dict], root: str = "", limit: int | None = None) -> st
     for n in items:
         d = dt.date.fromisoformat(n["date"])
         go = f'<a class="go" href="{root}{e(n["link"])}">{e(n.get("linkText") or "자세히")}</a>' if n.get("link") else ""
-        out.append(f'<li id="n-{d.isoformat()}-{abs(hash(n["title"])) % 9999}"><span class="ntag">{e(n["type"])}</span><span class="ndate">{d.month}월 {d.day}일</span>'
-                   f'<h3>{e(n["title"])}</h3><p>{e(n["body"])}</p>{go}</li>')
+        out.append(f'<li data-type="{e(n["type"])}"><span class="ntag">{e(n["type"])}</span><span class="ndate">{d.month}월 {d.day}일</span>'
+                   f'<h3><a href="{root}news/{e(n["id"])}.html" style="text-decoration:none">{e(n["title"])}</a></h3><p>{e(n["body"])}</p>{go}</li>')
     return f'<ul class="news">{"".join(out)}</ul>'
 
 
@@ -104,7 +104,7 @@ def home_block(news: list[dict], sales: list[dict]) -> str:
 def feed_xml(news: list[dict], base: str, brand: str) -> str:
     e = html.escape
     items = "".join(
-        f"<item><title>{e(n['title'])}</title><link>{base}/news.html</link><guid isPermaLink=\"false\">{e(n['date'] + n['title'])}</guid>"
+        f"<item><title>{e(n['title'])}</title><link>{base}/news/{e(n['id'])}.html</link><guid isPermaLink=\"false\">{e(n['date'] + n['title'])}</guid>"
         f"<pubDate>{format_datetime(dt.datetime.fromisoformat(n['date'] + 'T07:00:00+09:00'))}</pubDate><description>{e(n['body'])}</description></item>"
         for n in sorted(news, key=lambda n: n["date"], reverse=True)[:30])
     return (f'<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel><title>{e(brand)} 소식</title><link>{base}/</link>'
@@ -130,3 +130,51 @@ def write_icons(out: pathlib.Path) -> None:
         d.line([c - r2 * .45, c - r2 * .35, c - r2 * .2, c + r2 * .4, c, c - r2 * .1, c + r2 * .2, c + r2 * .4, c + r2 * .45, c - r2 * .35], fill="#1f4d3a", width=w, joint="curve")
         d.line([c - r2 * .55, c, c + r2 * .55, c], fill="#1f4d3a", width=max(2, w // 2))
         im.save(out / ("apple-touch-icon.png" if size == 180 else f"icon-{size}.png"))
+
+
+ARCHIVE_CSS = """
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 8px}
+.filters button{font:600 14px var(--body);padding:9px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.month{font:500 15px var(--body);letter-spacing:.14em;color:var(--muted);margin:36px 0 12px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.faq details{border-bottom:1px solid var(--line);padding:16px 0}
+.faq summary{cursor:pointer;font:500 19px/1.5 var(--display);list-style:none}
+.faq summary::after{content:"+";float:right;color:var(--muted)}.faq details[open] summary::after{content:"−"}
+.faq p{color:var(--muted);margin:10px 0 0;max-width:62ch}
+"""
+
+
+def archive_body(news: list[dict]) -> str:
+    types = sorted({n["type"] for n in news})
+    btns = '<button type="button" aria-pressed="true" data-f="">전체</button>' + "".join(
+        f'<button type="button" aria-pressed="false" data-f="{html.escape(t)}">{html.escape(t)}</button>' for t in types)
+    months: dict[str, list[dict]] = {}
+    for n in sorted(news, key=lambda n: n["date"], reverse=True):
+        months.setdefault(n["date"][:7], []).append(n)
+    secs = "".join(f'<section class="msec"><p class="month">{k[:4]}년 {int(k[5:])}월</p>{news_items(v, "")}</section>' for k, v in months.items())
+    js = """<script>document.querySelectorAll('.filters button').forEach(b=>b.addEventListener('click',()=>{const f=b.dataset.f;
+document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+document.querySelectorAll('.news li').forEach(li=>li.hidden=!!f&&li.dataset.type!==f);
+document.querySelectorAll('.msec').forEach(s=>s.hidden=![...s.querySelectorAll('li')].some(li=>!li.hidden));}));</script>"""
+    return (f'<h1>삼촌 소식</h1><p class="lede">세일 일정, 생활 요금 변화, 살림 계산 팁을 날짜별로 쌓아 둡니다. 지난 소식도 지우지 않아요.</p>'
+            f'<div class="filters" role="group" aria-label="분류">{btns}</div>{secs}{js}')
+
+
+def news_page_body(n: dict) -> str:
+    e = html.escape
+    d = dt.date.fromisoformat(n["date"])
+    go = f'<p><a class="btn main" href="../{e(n["link"])}">{e(n.get("linkText") or "자세히")}</a></p>' if n.get("link") else ""
+    return (f'<p class="small"><a href="../news.html">삼촌 소식</a></p><p class="ntag" style="margin-top:28px">{e(n["type"])} · {d.year}년 {d.month}월 {d.day}일</p>'
+            f'<h1 style="margin-top:6px">{e(n["title"])}</h1><p class="note">{e(n["body"])}</p>{go}')
+
+
+def faq_body(faq: list[dict]) -> str:
+    e = html.escape
+    items = "".join(f'<details><summary>{e(f["q"])}</summary><p>{e(f["a"])}'
+                    + (f' <a href="{e(f["link"])}">계산해 보기</a>' if f.get("link") else "") + '</p></details>' for f in faq)
+    return f'<h1>삼촌에게 물어보세요</h1><p class="lede">자주 받는 질문을 모았어요. 새 질문은 계속 쌓아 둡니다.</p><div class="faq" style="margin-top:28px">{items}</div>'
+
+
+def faq_ld(faq: list[dict]) -> dict:
+    return {"@context": "https://schema.org", "@type": "FAQPage",
+            "mainEntity": [{"@type": "Question", "name": f["q"], "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in faq]}
