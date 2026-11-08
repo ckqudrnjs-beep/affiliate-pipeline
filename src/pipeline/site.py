@@ -19,7 +19,8 @@ from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
 CATEGORIES = {"humidify": "겨울 가습", "heat": "겨울 난방·단열"}
-DISCLOSURE = ("이 사이트는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
+# 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
+DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
 MIN_NOTE = 40
 _cfg_path = pathlib.Path("config/site.json")
@@ -31,11 +32,15 @@ def won(n: int) -> str:
     return f"{n:,}원"
 
 
-def load(path="config/site_products.csv") -> list[dict]:
+def load(path="config/site_products.csv", allow_examples: bool = False) -> list[dict]:
     with open(path, encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if r.get("slug") and not r["slug"].startswith("#")]
     out = []
     for r in rows:
+        # 예시 줄(가짜 가격·링크)은 실제 사이트에 내보내지 않는다 (쿠팡 약관 8조 2항 19호, 표시광고법)
+        if any("EXAMPLE" in (r.get(k) or "") for k in ("aliUrl", "coupangUrl")) and not allow_examples:
+            print(f"건너뜀(예시 데이터): {r['slug']}", file=sys.stderr)
+            continue
         if len((r.get("note") or "").strip()) < MIN_NOTE:
             print(f"건너뜀(판단 글 부족): {r['slug']}", file=sys.stderr)
             continue
@@ -144,7 +149,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <meta name="description" content="{e(desc)}">{head}{FONTS}<style>{CSS}{CALC_CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html"><i>₩</i>돈 줍는 <b>삼촌</b></a>
-<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}index.html#compare">알리 vs 쿠팡</a></nav></div></header>
+<nav class="menu"><a href="{root}index.html#calcs">계산기</a></nav></div></header>
 {hero}<main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 </body></html>"""
@@ -156,7 +161,7 @@ def card(p: dict, root: str = "") -> str:
     return f"""<a class="item" href="{root}p/{p['slug']}.html">{pill}<span class="nm">{e(p['name'])}</span>
 <span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>쿠팡 {won(int(p['coupangPrice']))}</span></span>
 <span class="bar"><span style="width:{max(0, min(p['ratio'], 100))}%"></span></span>
-<span class="save">알리가 {won(p['diff'])} 싸요 ({p['ratio']}%)</span></a>"""
+<span class="save">알리 쪽이 {won(p['diff'])} 낮음 ({p['ratio']}%)</span></a>"""
 
 
 def product_page(p: dict) -> str:
@@ -169,7 +174,7 @@ def product_page(p: dict) -> str:
                    for i, (k, t) in enumerate((first, second)) if p.get(k))
     body = f"""<p class="small"><a href="../index.html#{p['category']}">{e(cat)}</a></p>
 <h1>{e(p['name'])}, 알리 vs 쿠팡 얼마 차이?</h1>
-<p class="lede">{when}. 같은 종류 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다.</p>
+<p class="lede">{when}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
 <h2>삼촌의 계산</h2>
 <div class="receipt">
 <div><span>쿠팡 (로켓배송 약 1일)</span><span>{won(int(p['coupangPrice']))}</span></div>
@@ -201,11 +206,12 @@ def index_page(products: list[dict]) -> str:
 <div class="demo" aria-label="계산 예시"><div class="t">예시 · 하루 8시간, 한 달 30일, 평소 300kWh 쓰는 집</div>
 <div class="r"><span>온풍기 2,000W</span><span>169,790원</span></div><div class="r"><span>전기요 100W</span><span>6,180원</span></div>
 <div class="r big"><span>전기요로 바꾸면</span><span>163,610원 절약</span></div></div></div></section>"""
+    compare = f"""<section id="compare"><h2>알리 vs 쿠팡, 얼마 차이?</h2>
+<p class="lede">기능이 비슷한 제품의 두 곳 가격을 날짜 기준으로 나란히 놓고 계산했어요. 같은 제품이 아니라서 사양·구성은 다를 수 있어요. 차액이 작으면 쿠팡을 권해요.</p>
+<nav class="cats">{cats}</nav>{secs}</section>""" if products else ""
     body = f"""<section id="calcs"><h2>무료 생활 계산기</h2><p class="lede">결과는 링크로 저장하고 가족·친구에게 보낼 수 있어요.</p>
 <div class="tools">{tools}</div></section>
-<section id="compare"><h2>알리 vs 쿠팡, 얼마 차이?</h2>
-<p class="lede">같은 종류 제품을 두 곳 가격으로 나란히 놓고 계산했어요. 차액이 작으면 솔직하게 쿠팡을 권해요.</p>
-<nav class="cats">{cats}</nav>{secs}</section>"""
+{compare}"""
     return page(f"{BRAND} | 생활 계산기와 알리·쿠팡 가격 비교", "전기요금, 알리 직구 세금, 난방비를 계산하고 알리와 쿠팡 가격 차이를 비교합니다.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
@@ -236,8 +242,8 @@ PRIVACY = """<h1>개인정보처리방침</h1>
 <p class="note">이 사이트에는 쿠팡 파트너스와 알리익스프레스 어필리에이트 링크가 있습니다. 링크를 누르면 해당 쇼핑몰이 쿠키로 구매 여부를 확인할 수 있습니다. 앞으로 구글 애드센스 광고를 넣으면 구글이 광고 쿠키를 사용할 수 있으며, 그때 이 문서를 갱신합니다.</p>"""
 
 
-def build(out="site", src="config/site_products.csv") -> int:
-    products = load(src)
+def build(out="site", src="config/site_products.csv", allow_examples: bool = False) -> int:
+    products = load(src, allow_examples)
     o = pathlib.Path(out)
     (o / "p").mkdir(parents=True, exist_ok=True)
     (o / "calc").mkdir(exist_ok=True)
