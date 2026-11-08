@@ -1,3 +1,4 @@
+import pathlib
 import datetime as dt
 import unittest
 
@@ -159,3 +160,17 @@ class KeywordTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SiteTest(unittest.TestCase):
+    def test_calc_and_build(self):
+        import tempfile
+        from pipeline import site
+        c = site.calc({"aliPrice": "4500", "coupangPrice": "12900", "shipDays": "9", "lifeMonths": "10"})
+        self.assertEqual((c["diff"], c["ratio"], c["perDay"], c["aliWins"]), (8400, 65, 1050, True))
+        with tempfile.TemporaryDirectory() as d:
+            n = site.build(d)
+            self.assertGreater(n, 0)
+            html = (pathlib.Path(d) / "index.html").read_text(encoding="utf-8")
+            body = html.split("<body>", 1)[1]
+            self.assertIn("수수료를 제공받습니다", body[:400])
