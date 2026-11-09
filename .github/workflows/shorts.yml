@@ -1,12 +1,17 @@
 name: shorts
 
-# 매일 쇼츠 1개 자동 제작 (2026-11-09 BK 결정: 전부 자동).
-# 알리 후보 → 판매자 사진 → Claude 문구 → 7번 목소리 → 영상 → 사이트 상품 + 업로드 대기열에 추가.
+# 매일 쇼츠 1개 자동 제작 (2026-11-09 BK 결정: 전부 자동, 문구는 Claude 예약 작업).
+# 07:00 후보 고르기(data/shorts/next.json) → 07:40 Claude 예약 작업이 data/shorts/copy/ 에 문구 → (push로) 영상 제작
+# → 사이트 상품 + 업로드 대기열에 추가. 08:30 실행은 놓친 경우 다시 시도.
 # 업로드 대기가 SHORTS_BUFFER(기본 3)개 이상이면 쉰다. 업로드는 youtube 워크플로(10:00 KST)가 한다.
 # 저장소 변수 SHORTS_ENABLED=true 를 켜기 전까지는 돌지 않는다.
 on:
   schedule:
-    - cron: "30 23 * * *"   # 08:30 KST
+    - cron: "0 22 * * *"    # 07:00 KST 후보 고르기
+    - cron: "30 23 * * *"   # 08:30 KST 다시 시도
+  push:
+    branches: [main]
+    paths: ["data/shorts/copy/**"]
   workflow_dispatch:
 
 permissions:
@@ -48,7 +53,7 @@ jobs:
         run: |
           git config user.name "shorts-bot"
           git config user.email "shorts-bot@users.noreply.github.com"
-          git add data/products media/youtube config/youtube_queue.csv data/shorts
+          git add -A data/products media/youtube config/youtube_queue.csv data/shorts
           git commit -m "자동 쇼츠 $(TZ=Asia/Seoul date +%F)" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main

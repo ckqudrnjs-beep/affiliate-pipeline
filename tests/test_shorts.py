@@ -49,3 +49,30 @@ class ShortsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FlowTest(unittest.TestCase):
+    def setUp(self):
+        import pathlib, tempfile, os
+        self.old = os.getcwd()
+        self.tmp = tempfile.mkdtemp()
+        os.chdir(self.tmp)
+        pathlib.Path("data/products").mkdir(parents=True)
+
+    def tearDown(self):
+        import os
+        os.chdir(self.old)
+
+    def test_make_waits_for_copy_then_skips(self):
+        import json, os
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        cand = {"aliProductId": "1", "name": "x", "aliPrice": 10000}
+        s.NEXT.parent.mkdir(parents=True, exist_ok=True)
+        s.NEXT.write_text(json.dumps({"candidates": [cand]}))
+        self.assertEqual(s.make(), 0)
+        self.assertTrue(s.NEXT.exists())  # 문구가 없으면 기다린다
+        s.COPY_DIR.mkdir(parents=True)
+        (s.COPY_DIR / "1.json").write_text(json.dumps({"skip": "의약품"}))
+        s.make()
+        self.assertFalse(s.NEXT.exists())
+        self.assertIn("1", s.known_ids())
