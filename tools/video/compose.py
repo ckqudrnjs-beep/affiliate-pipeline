@@ -267,7 +267,7 @@ def compose(slug: str) -> None:
         ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
                                "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-i", str(audio),
                                "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-pix_fmt", "yuv420p",
-                               "-c:a", "aac", "-b:a", "96k", "-shortest", "-movflags", "+faststart", str(out)],
+                               "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", str(out)],
                               stdin=subprocess.PIPE)
         start = 0.0
         for sc in story["scenes"]:
@@ -340,7 +340,7 @@ def _narrate(story: dict, prefix: pathlib.Path) -> dict:
         if not sc.get("say"):
             continue
         g = sherpa_onnx.GenerationConfig()
-        g.sid, g.speed, g.num_steps, g.extra = int(story.get("voice", 0)), float(story.get("speed", 1.1)), 8, {"lang": "ko"}
+        g.sid, g.speed, g.num_steps, g.extra = int(story.get("voice", 0)), float(story.get("speed", 1.0)), int(story.get("steps", 32)), {"lang": "ko"}
         a = tts.generate(sc["say"], g)
         path = pathlib.Path(f"{prefix}_say{i}.wav")
         sf.write(str(path), a.samples, a.sample_rate)
