@@ -15,5 +15,13 @@
  "note": "알리 판매가 210,876원은 달러로 약 151달러라 면세 한도(150달러)를 살짝 넘습니다. 관세 8%와 부가세 10%를 더하면 약 4만 원이 붙을 수 있으니 결제 전에 직구 계산기로 꼭 확인하세요. 판매 1만 5천 개, 긍정 평가 97%입니다.",
  "check": "관부가세 포함 여부, 국내 A/S 가능 여부, 미홈 앱 한국 지역 지원",
  "commission": 7.0,
- "status": "active"
+ "status": "active",
+ "gallery": [
+  "https://ae-pic-a1.aliexpress-media.com/kf/S201aaa6cf3b14e68a19013b9b1289355A.png",
+  "https://ae-pic-a1.aliexpress-media.com/kf/S9fa6f0be710f45de9287ff56a98173e1W.png",
+  "https://ae-pic-a1.aliexpress-media.com/kf/S2e2da3a2990b4aa98d666018e256783aY.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/Sd7740abecf6e4ce0aceded6969db73ceO.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/S42ecb4ea7ac043b9b48560ee386a86549.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/S9c99c8d70e034bb4bffe39d0774580d8V.jpg"
+ ]
 }
