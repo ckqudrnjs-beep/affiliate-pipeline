@@ -30,17 +30,23 @@ jobs:
           ALI_TRACKING_ID: ${{ secrets.ALI_TRACKING_ID }}
           ALI_KEYWORDS: ${{ vars.ALI_KEYWORDS }}
         run: PYTHONPATH=src python -m pipeline.curate
-      - name: 후보 PR 열기 (사이트에는 자동으로 올라가지 않음)
+      - name: 가격·판매 상태는 바로 반영 (사이트 자동 재배포)
+        run: |
+          git config user.name "curate-bot"
+          git config user.email "curate-bot@users.noreply.github.com"
+          git add data/prices data/products data/news.json
+          git commit -m "알리 가격·판매 상태 갱신 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: 새 후보는 PR로 (검토 후에만 사이트에 올라감)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           d=$(TZ=Asia/Seoul date +%F)
-          git config user.name "curate-bot"
-          git config user.email "curate-bot@users.noreply.github.com"
           b=curate/$d
           git ls-remote --exit-code --heads origin "$b" >/dev/null && b=curate/$d-$(TZ=Asia/Seoul date +%H%M)
           git checkout -b "$b"
-          git add data/
-          git commit -m "알리 후보·가격 기록 $d" || exit 0
+          git add data/candidates
+          git commit -m "알리 후보 $d" || exit 0
           git push -u origin "$b"
           gh pr create --title "[후보] 수수료 높은 알리 상품 $d" --body-file data/candidates/$d.md --base main

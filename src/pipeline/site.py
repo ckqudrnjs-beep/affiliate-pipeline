@@ -33,6 +33,9 @@ def won(n: int) -> str:
     return f"{n:,}원"
 
 
+CHANGE_PCT = 10
+
+
 def price_history(data_dir: str = "data") -> dict[str, list[tuple[str, int]]]:
     hist: dict[str, list[tuple[str, int]]] = {}
     for f in sorted(pathlib.Path(data_dir, "prices").glob("*.csv")):
@@ -58,7 +61,12 @@ def load(path="config/site_products.csv", allow_examples: bool = False, data_dir
     for r in rows:
         h = hist.get(r["slug"])
         if h:  # 가장 최근 기록 가격으로 갱신하고, 최근 30일 최저가를 붙인다
+            base, base_date = r.get("aliPrice"), r.get("priceDate")
             r["aliPrice"], r["priceDate"] = str(h[-1][1]), h[-1][0]
+            if base and base.isdigit() and int(base) > 0:  # 소개 당시 가격과 10% 넘게 달라지면 표시
+                ch = round((h[-1][1] - int(base)) / int(base) * 100)
+                if abs(ch) >= CHANGE_PCT:
+                    r["change"], r["basePrice"], r["baseDate"] = str(ch), base, base_date or ""
             last30 = [pr for d, pr in h if dt.date.fromisoformat(d) >= dt.date.fromisoformat(h[-1][0]) - dt.timedelta(days=30)]
             if len(last30) >= 7:
                 r["low30"] = str(min(last30))
@@ -147,7 +155,7 @@ footer a{display:inline-block;padding:8px 0}
 .pick.lead .nm{font-size:clamp(26px,3.4vw,36px)}
 .why{color:var(--muted);font-size:15px;margin:0}
 .price{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:10px}
-.price b{font-weight:600}.price .v{color:var(--green);font-weight:600}
+.price b{font-weight:600}.chg{font-size:12px;font-weight:600;padding:1px 8px;border:1px solid currentColor}.chg.down{color:var(--green)}.chg.up{color:#8a4b2a}.price .v{color:var(--green);font-weight:600}
 .more{font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
 .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
 @media (max-width:720px){.principles{grid-template-columns:minmax(0,1fr)}}
@@ -224,9 +232,17 @@ def media(p: dict, root: str = "") -> str:
     return f'<img src="{img}" alt="{e(p["name"])}" loading="lazy">' if img else f'<em>{e(p["name"])}</em>'
 
 
+def change_badge(p: dict) -> str:
+    if not p.get("change"):
+        return ""
+    c = int(p["change"])
+    return (f'<span class="chg down">소개 때보다 {-c}% 내렸어요</span>' if c < 0
+            else f'<span class="chg up">소개 때보다 {c}% 올랐어요</span>')
+
+
 def price_line(p: dict) -> str:
     if p.get("solo"):
-        return f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span class="v">해외 배송</span></span>'
+        return f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span class="v">해외 배송</span>{change_badge(p)}</span>'
     return (f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span>쿠팡 <b>{won(int(p["coupangPrice"]))}</b></span>'
             f'<span class="v">{p["verdict"]}</span></span>')
 
@@ -267,6 +283,7 @@ def product_page(p: dict) -> str:
 <h2 style="margin-top:32px">삼촌의 계산</h2>
 <div class="receipt">
 <div><span>알리 (해외 배송)</span><span>{won(int(p['aliPrice']))}</span></div>
+{f'<div><span>소개 당시 가격 ({p["baseDate"]})</span><span>{won(int(p["basePrice"]))} · {change_badge(p)}</span></div>' if p.get("change") else ''}
 {f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
 <div class="sum"><span>{p.get('lifeMonths') or 12}개월 쓰면 한 달에</span><span>{won(p['monthAli'])}</span></div>
 </div>"""
