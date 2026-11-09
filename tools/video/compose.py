@@ -267,6 +267,8 @@ def compose(slug: str) -> None:
                                 "#b5432c" if light else "#ffd166")
                     text_center(dr, W // 2, cy + 70, story["disclosure"], font(36 if fmt == "shorts" else 26),
                                 "#6b6863" if light else "white")
+                    if fmt == "shorts":  # 쇼츠는 설명란 링크를 누를 수 없어서 사이트 주소를 화면에 적는다
+                        text_center(dr, W // 2, ay + ah + 90, "don3chon.com", font(60), "#e8e2d6")
                 elif caption and cap_k > 0:
                     if fmt == "shorts":
                         f = wrap_size(dr, caption, 66, W - 80)
