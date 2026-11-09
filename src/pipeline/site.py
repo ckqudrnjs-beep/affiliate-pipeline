@@ -33,6 +33,9 @@ def won(n: int) -> str:
     return f"{n:,}원"
 
 
+CHANGE_PCT = 10
+
+
 def price_history(data_dir: str = "data") -> dict[str, list[tuple[str, int]]]:
     hist: dict[str, list[tuple[str, int]]] = {}
     for f in sorted(pathlib.Path(data_dir, "prices").glob("*.csv")):
@@ -58,7 +61,12 @@ def load(path="config/site_products.csv", allow_examples: bool = False, data_dir
     for r in rows:
         h = hist.get(r["slug"])
         if h:  # 가장 최근 기록 가격으로 갱신하고, 최근 30일 최저가를 붙인다
+            base, base_date = r.get("aliPrice"), r.get("priceDate")
             r["aliPrice"], r["priceDate"] = str(h[-1][1]), h[-1][0]
+            if base and base.isdigit() and int(base) > 0:  # 소개 당시 가격과 10% 넘게 달라지면 표시
+                ch = round((h[-1][1] - int(base)) / int(base) * 100)
+                if abs(ch) >= CHANGE_PCT:
+                    r["change"], r["basePrice"], r["baseDate"] = str(ch), base, base_date or ""
             last30 = [pr for d, pr in h if dt.date.fromisoformat(d) >= dt.date.fromisoformat(h[-1][0]) - dt.timedelta(days=30)]
             if len(last30) >= 7:
                 r["low30"] = str(min(last30))
@@ -106,7 +114,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--body);w
 a{color:var(--ink)}
 .wrap{max-width:1080px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
 main.wrap{padding-block:8px 80px}
-.adbar{font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);line-height:1.5}
+/* 쿠팡 가이드(공지 160): 상단 표시는 본문보다 크거나 눈에 띄는 색. 본문 16px과 같은 크기 + 초록 강조 */
+.adbar{font-size:16px;font-weight:600;color:var(--green);background:var(--greenbg);border-bottom:1px solid var(--line);line-height:1.6}
 .adbar .wrap{padding-block:8px}
 header.top{border-bottom:1px solid var(--line);background:var(--bg)}
 header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px}
@@ -146,7 +155,7 @@ footer a{display:inline-block;padding:8px 0}
 .pick.lead .nm{font-size:clamp(26px,3.4vw,36px)}
 .why{color:var(--muted);font-size:15px;margin:0}
 .price{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:10px}
-.price b{font-weight:600}.price .v{color:var(--green);font-weight:600}
+.price b{font-weight:600}.chg{font-size:12px;font-weight:600;padding:1px 8px;border:1px solid currentColor}.chg.down{color:var(--green)}.chg.up{color:#8a4b2a}.price .v{color:var(--green);font-weight:600}
 .more{font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
 .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
 @media (max-width:720px){.principles{grid-template-columns:minmax(0,1fr)}}
@@ -176,7 +185,7 @@ footer a{display:inline-block;padding:8px 0}
 .btn.main{background:var(--ink);color:var(--bg)}
 .btn:focus-visible,.pick:focus-visible,.toolrow a:focus-visible{outline:2px solid var(--green);outline-offset:4px}
 .small{font-size:13px;color:var(--muted)}
-.ad{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding:4px 12px}
+.ad{font-size:16px;font-weight:600;color:var(--green);border-left:3px solid var(--green);padding:4px 12px}
 nav.cats{display:none}
 footer{border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 footer .wrap{padding-block:32px 48px}
@@ -223,9 +232,17 @@ def media(p: dict, root: str = "") -> str:
     return f'<img src="{img}" alt="{e(p["name"])}" loading="lazy">' if img else f'<em>{e(p["name"])}</em>'
 
 
+def change_badge(p: dict) -> str:
+    if not p.get("change"):
+        return ""
+    c = int(p["change"])
+    return (f'<span class="chg down">소개 때보다 {-c}% 내렸어요</span>' if c < 0
+            else f'<span class="chg up">소개 때보다 {c}% 올랐어요</span>')
+
+
 def price_line(p: dict) -> str:
     if p.get("solo"):
-        return f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span class="v">해외 배송</span></span>'
+        return f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span class="v">해외 배송</span>{change_badge(p)}</span>'
     return (f'<span class="price"><span>알리 <b>{won(int(p["aliPrice"]))}</b></span><span>쿠팡 <b>{won(int(p["coupangPrice"]))}</b></span>'
             f'<span class="v">{p["verdict"]}</span></span>')
 
@@ -266,6 +283,7 @@ def product_page(p: dict) -> str:
 <h2 style="margin-top:32px">삼촌의 계산</h2>
 <div class="receipt">
 <div><span>알리 (해외 배송)</span><span>{won(int(p['aliPrice']))}</span></div>
+{f'<div><span>소개 당시 가격 ({p["baseDate"]})</span><span>{won(int(p["basePrice"]))} · {change_badge(p)}</span></div>' if p.get("change") else ''}
 {f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
 <div class="sum"><span>{p.get('lifeMonths') or 12}개월 쓰면 한 달에</span><span>{won(p['monthAli'])}</span></div>
 </div>"""
@@ -379,8 +397,11 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "feed.xml").write_text(N.feed_xml(news, BASE, BRAND), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
-    for f in pathlib.Path("static").glob("*"):
-        (o / f.name).write_bytes(f.read_bytes())
+    for f in pathlib.Path("static").rglob("*"):  # 하위 폴더(video/ 등)도 그대로 복사
+        if f.is_file():
+            t = o / f.relative_to("static")
+            t.parent.mkdir(parents=True, exist_ok=True)
+            t.write_bytes(f.read_bytes())
     urls = ["", "news.html", "faq.html"] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
     today = dt.date.today().isoformat()
     (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

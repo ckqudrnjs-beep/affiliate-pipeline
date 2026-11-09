@@ -79,32 +79,71 @@ def summary_md(cands: list[dict], today: dt.date) -> str:
     return "\n".join(lines) + "\n"
 
 
+MISSING_DAYS = 3  # 사흘 연속 조회가 안 되면 판매 종료로 보고 사이트에서 내린다
+DROP_PCT = 10     # 하루 사이 10% 넘게 내리면 소식 게시판에 자동으로 알린다
+
+
+def last_prices(root: pathlib.Path) -> dict[str, int]:
+    last: dict[str, tuple[str, int]] = {}
+    for f in sorted((root / "prices").glob("*.csv")):
+        with open(f, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                if row.get("aliPrice") and (row["slug"] not in last or row["date"] >= last[row["slug"]][0]):
+                    last[row["slug"]] = (row["date"], int(row["aliPrice"]))
+    return {k: v[1] for k, v in last.items()}
+
+
 def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path = pathlib.Path("data")) -> int:
-    ids = {}
+    ids, files = {}, {}
     for f in sorted((root / "products").glob("*.json")):
         d = json.loads(f.read_text(encoding="utf-8"))
         if d.get("aliProductId") and d.get("status", "active") == "active":
-            ids[d["aliProductId"]] = d["slug"]
+            ids[str(d["aliProductId"])] = d["slug"]
+            files[d["slug"]] = (f, d)
     if not ids:
         return 0
     r = client._call("aliexpress.affiliate.productdetail.get", product_ids=",".join(list(ids)[:50]),
                      target_currency="KRW", target_language="KO", country="KR", tracking_id=client.tracking_id)
     body = next(iter(r.values())) if r else {}
     prods = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+    if not prods:  # 응답 자체가 비면 API 문제일 수 있으니 아무것도 바꾸지 않는다
+        return 0
+    prev = last_prices(root)
+    seen: dict[str, int] = {}
+    for p in prods:
+        c = to_candidate(p)
+        if str(c["aliProductId"]) in ids and c["aliPrice"]:
+            seen[ids[str(c["aliProductId"])]] = int(c["aliPrice"])
     path = root / "prices" / f"{today:%Y-%m}.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     new = not path.exists()
-    n = 0
     with open(path, "a", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         if new:
             w.writerow(["date", "slug", "aliPrice", "coupangPrice"])
-        for p in prods:
-            c = to_candidate(p)
-            if c["aliProductId"] in ids and c["aliPrice"]:
-                w.writerow([today.isoformat(), ids[c["aliProductId"]], c["aliPrice"], ""])
-                n += 1
-    return n
+        for slug, price in seen.items():
+            w.writerow([today.isoformat(), slug, price, ""])
+    news_path = root / "news.json"
+    news = json.loads(news_path.read_text(encoding="utf-8")) if news_path.exists() else []
+    for slug, (f, d) in files.items():
+        if slug in seen:
+            d.pop("missingDays", None)
+            old = prev.get(slug) or int(d.get("aliPrice") or 0)
+            price = seen[slug]
+            nid = f"drop-{slug}-{today.isoformat()}"
+            if old and (old - price) / old * 100 >= DROP_PCT and not any(n.get("id") == nid for n in news):
+                news.insert(0, {"date": today.isoformat(), "type": "가격", "id": nid,
+                                "title": f"{d['name']}, {round((old - price) / old * 100)}% 내렸어요",
+                                "body": f"알리 가격이 {old:,}원에서 {price:,}원으로 내렸어요. 알리 가격은 자주 바뀌니 판매 페이지에서 지금 가격을 꼭 확인하세요.",
+                                "link": f"p/{slug}.html", "linkText": "상품 계산 보기"})
+        else:
+            d["missingDays"] = int(d.get("missingDays", 0)) + 1
+            if d["missingDays"] >= MISSING_DAYS:
+                d["status"], d["endedDate"] = "ended", today.isoformat()
+                print(f"판매 종료로 내림: {slug}")
+        f.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    news_path.write_text(json.dumps(news, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return len(seen)
 
 
 def main() -> int:

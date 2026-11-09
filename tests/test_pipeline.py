@@ -203,3 +203,26 @@ class CurateTest(unittest.TestCase):
             empty.write_text("slug,category,name,aliPrice,aliUrl,shipDays,coupangPrice,coupangUrl,lifeMonths,priceDate,note,check\n", encoding="utf-8")
             p = site.load(str(empty), data_dir=d)[0]
             self.assertEqual((p["aliPrice"], p["priceDate"], p["low30"]), ("9100", "2026-11-10", "9010"))
+
+
+class PriceRefreshTest(unittest.TestCase):
+    def test_drop_news_and_auto_hide(self):
+        import tempfile, json, datetime as dt
+        from pipeline import curate
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "products").mkdir()
+            for slug, pid in (("a", "1"), ("b", "2")):
+                (root / "products" / f"{slug}.json").write_text(json.dumps({"slug": slug, "name": slug.upper(), "aliProductId": pid, "aliPrice": 10000, "status": "active"}), encoding="utf-8")
+
+            class C:
+                tracking_id = "t"
+                def _call(self, *a, **k):  # 상품 1만 조회되고 8,000원으로 내림
+                    return {"r": {"resp_result": {"result": {"products": {"product": [{"product_id": 1, "target_sale_price": "8000"}]}}}}}
+            for i in range(3):
+                curate.record_prices(C(), dt.date(2026, 11, 10 + i), root)
+            a = json.loads((root / "products/a.json").read_text(encoding="utf-8"))
+            b = json.loads((root / "products/b.json").read_text(encoding="utf-8"))
+            self.assertEqual((a["status"], b["status"]), ("active", "ended"))
+            news = json.loads((root / "news.json").read_text(encoding="utf-8"))
+            self.assertEqual([n["id"] for n in news], ["drop-a-2026-11-10"])  # 같은 가격이 이어지면 다시 알리지 않는다
