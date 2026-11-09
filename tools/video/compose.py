@@ -175,8 +175,30 @@ def studio_frame(sc: dict, imgs: dict, t: float, w: int, h: int) -> Image.Image:
     return out
 
 
+def card_frame(sc: dict, t: float, w: int, h: int) -> Image.Image:
+    """글자 카드 (질문·계산 결과). items: text, y(높이 비율), size(가로 비율), color, at(등장 초).
+    text 에 {n} 이 있으면 0 에서 n 까지 올라가며 센다."""
+    out = studio_bg(w, h).copy() if not sc.get("dark") else Image.new("RGB", (w, h), (28, 30, 32))
+    dr = ImageDraw.Draw(out)
+    for it in sc["items"]:
+        k = ease((t - it.get("at", 0)) / 0.35)
+        if k <= 0:
+            continue
+        txt = it["text"]
+        if "n" in it:
+            txt = txt.replace("{n}", f"{int(it['n'] * ease((t - it.get('at', 0)) / 0.9)):,}")
+        f = wrap_size(dr, txt, int(it.get("size", 0.06) * w), int(w * 0.9))
+        base = tuple(int(c[1:][i:i + 2], 16) for c in [it.get("color", "#2b2a28")] for i in (0, 2, 4))
+        bg = out.getpixel((w // 2, int(it["y"] * h)))
+        col = tuple(int(b + (c - b) * k) for b, c in zip(bg, base))
+        text_center(dr, w // 2, int(it["y"] * h + (1 - k) * h * 0.02), txt, f, col)
+    return out
+
+
 def scene_frame(sc: dict, imgs: dict, t: float, w: int, h: int) -> Image.Image:
     d = sc["dur"]
+    if sc["type"] == "card":
+        return card_frame(sc, t, w, h)
     if sc["type"] == "studio" or (sc["type"] == "end" and "cutout" in sc):
         return studio_frame(sc, imgs, t, w, h)
     zoom = 1 + sc.get("zoom", 0.06) * (t / d)
@@ -246,7 +268,7 @@ def compose(slug: str) -> None:
         start = 0.0
         for sc in story["scenes"]:
             sc = {**sc, **sc.get(fmt, {})}  # 형식별 덮어쓰기 (예: "site": {"x": 0.4})
-            full = fmt == "site" and "cutout" in sc  # 사이트용 스튜디오 장면은 화면 전체를 배경으로
+            full = fmt == "site" and ("cutout" in sc or sc["type"] == "card")  # 사이트용 스튜디오 장면은 화면 전체를 배경으로
             for i in range(round(sc["dur"] * FPS)):
                 t = i / FPS
                 canvas = Image.new("RGB", (W, H), BAR)
