@@ -1,0 +1,45 @@
+name: youtube
+
+# 쇼츠 예약 업로드. 매일 1번 돌고, 다음 공개일(기본 2일 간격, 19:00 KST)이 다가온 영상만 1개 올린다.
+# 비공개+예약 공개로 올라가므로, 공개 전에 BK가 Studio에서 '유료 프로모션 포함'을 체크한다.
+# 저장소 변수 YOUTUBE_ENABLED=true 를 사용자가 직접 켜기 전까지는 dry-run(업로드 안 함).
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 10:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: Upload
+        env:
+          YOUTUBE_ENABLED: ${{ vars.YOUTUBE_ENABLED }}
+          YT_INTERVAL_DAYS: ${{ vars.YT_INTERVAL_DAYS }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: PYTHONPATH=src python -m pipeline.youtube
+      - name: Save upload log
+        if: always()
+        run: |
+          [ -f data/youtube/uploaded.json ] || exit 0
+          git config user.name "youtube-bot"
+          git config user.email "youtube-bot@users.noreply.github.com"
+          git add data/youtube/uploaded.json
+          git commit -m "유튜브 업로드 기록 $(TZ=Asia/Seoul date '+%F %H:%M')" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
