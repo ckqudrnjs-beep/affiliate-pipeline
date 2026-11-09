@@ -144,12 +144,11 @@ footer a{display:inline-block;padding:8px 0}
 .pick{display:flex;flex-direction:column;gap:10px;color:inherit;text-decoration:none}
 .pick.lead{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:40px;align-items:center}
 @media (max-width:720px){.pick.lead{grid-template-columns:minmax(0,1fr);gap:16px}}
-.ph{aspect-ratio:4/5;max-width:100%;background:var(--img);display:grid;place-items:center;overflow:hidden;position:relative}
-.pick.lead .ph{aspect-ratio:5/4}
-.ph img,.ph video{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.ph{aspect-ratio:4/3;max-width:100%;background:var(--img);display:grid;place-items:center;overflow:hidden;position:relative}
+.ph img,.ph video{width:100%;height:100%;object-fit:contain;transition:transform .6s}
 .pick:hover .ph img{transform:scale(1.03)}
 .ph em{font:500 15px var(--display);font-style:normal;color:var(--muted);padding:20px;text-align:center}
-@media (max-width:520px){.ph,.pick.lead .ph{aspect-ratio:1/1}.sechead span{display:none}}
+@media (max-width:520px){.sechead span{display:none}}
 .cat{font-size:12px;letter-spacing:.18em;color:var(--muted)}
 .pick .nm{font:500 21px/1.4 var(--display);letter-spacing:-.02em}
 .pick.lead .nm{font-size:clamp(26px,3.4vw,36px)}
@@ -200,6 +199,16 @@ ICONS = {
 }
 
 
+# 상품 영상: PC는 마우스를 올린 카드만, 모바일은 화면 가운데 카드만 재생 (전부 동시에 움직이지 않게)
+VIDEO_JS = """(()=>{const vs=[...document.querySelectorAll('.ph video')];if(!vs.length)return;
+const play=v=>{v.play().catch(()=>{})},stop=v=>{v.pause();v.currentTime=0};
+if(matchMedia('(hover:hover)').matches){vs.forEach(v=>{const c=v.closest('.pick')||v.parentNode;
+c.addEventListener('mouseenter',()=>play(v));c.addEventListener('mouseleave',()=>stop(v))});return}
+if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+const io=new IntersectionObserver(es=>es.forEach(x=>x.isIntersecting?play(x.target):stop(x.target)),{rootMargin:'-40% 0px -40% 0px'});
+vs.forEach(v=>io.observe(v))})()"""
+
+
 def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "") -> str:
     e = html.escape
     url = f"{BASE}/{path}"
@@ -218,16 +227,17 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <nav class="menu"><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
+<script>{VIDEO_JS}</script>
 </body></html>"""
 
 
 def media(p: dict, root: str = "") -> str:
-    """10초 이내 사용 영상(videoUrl)이 있으면 소리 없이 반복 재생, 없으면 사진, 둘 다 없으면 이름."""
+    """10초 이내 사용 영상(videoUrl)이 있으면 마우스를 올린(모바일: 화면 가운데) 카드만 소리 없이 재생, 없으면 사진, 둘 다 없으면 이름."""
     e = html.escape
     img = e(p.get("imageUrl") or "")
     if p.get("videoUrl"):
         v = p["videoUrl"] if p["videoUrl"].startswith("http") else root + p["videoUrl"]
-        return (f'<video src="{e(v)}" poster="{img}" muted autoplay loop playsinline preload="metadata" '
+        return (f'<video src="{e(v)}" poster="{img}" muted loop playsinline preload="metadata" '
                 f'aria-label="{e(p["name"])} 사용 영상"></video>')
     return f'<img src="{img}" alt="{e(p["name"])}" loading="lazy">' if img else f'<em>{e(p["name"])}</em>'
 
