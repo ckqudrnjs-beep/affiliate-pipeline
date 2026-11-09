@@ -28,3 +28,9 @@ AI 영상 생성은 해상도·글자 깨짐·없는 버튼 생성 문제로 보
 2. `tools/video/stories/<slug>.json`에 장면(불 켜짐 reveal, 확대 push, 좌우 비교 wipe, 끝 화면 end)과 자막을 적는다. 자막은 상품명·판매자 표기에 있는 기능만, 건강 효능 표현 금지.
 3. `python tools/video/compose.py <slug>` → `video_work/compose/<slug>_site.mp4`(960×720), `_shorts.mp4`(1080×1920). 클라우드에서도 30초 안에 만들어진다.
 - 사진 속 판매자 영어 글자는 `fills`로 주변 벽 색을 이어 칠해 지운다. 상품이 있는 영역은 절대 칠하지 않는다.
+
+## 스튜디오 구도 (2026-11-09, BK 요청)
+상품만 오려 밝은 회색 배경에 세우고(바닥 반사·그림자), 불 켜짐 효과와 판매자 사진의 확대 원(힌지·받침 등)을 얹는다.
+1. `python tools/video/cutout.py <slug> <사진> --keep x,y [--erase 상자]` → `video_assets/<slug>/cutout.png`
+2. 스토리 JSON에 `"type": "studio"` 장면 (`cutout`, `light`(빛 나오는 선, cutout 좌표), `on_at`, `details`, `captions`), 형식별 위치는 `"site": {...}`로 덮어쓴다. 마지막 `end` 장면에 `cutout`을 주면 밝은 엔딩.
+3. 램프는 로고가 막대를 가려서 막대를 이어 그린 cutout.png를 커밋해 두었다.
