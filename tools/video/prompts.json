@@ -1,0 +1,29 @@
+{
+  "_note": "상품별 사용 장면 프롬프트. 상품 설명(data/products)에 있는 기능만 넣는다. 첫 프레임은 상품 공식 사진(흰 배경)이라 장면도 깨끗한 스튜디오로 맞춘다.",
+  "_negative": "changing shape, product morphing, extra parts, duplicated product, deformed hands, extra fingers, text, letters, logo, watermark, glowing effects, sparks, smoke, flicker, distortion, cartoon",
+  "_style": "Clean bright studio with a plain light background, static camera, realistic commercial product shot, natural slow motion, the product keeps exactly the same shape, color and details as in the first frame.",
+  "baseus-led-desk-lamp": {
+    "A": "A hand reaches in and lightly taps the touch control on the base of the desk lamp, and the lamp switches on with soft warm white light.",
+    "B": "The desk lamp is on and evenly lights an open notebook placed under it while a hand slowly writes with a pen."
+  },
+  "jonr-p20-pro-robot-vacuum": {
+    "A": "The round robot vacuum sits on a light wooden floor and slowly starts moving forward in a straight line.",
+    "B": "The robot vacuum slowly turns in place and glides a short distance along the floor near a white wall."
+  },
+  "cordless-stick-vacuum-dust-sensor": {
+    "A": "A hand holds the cordless stick vacuum upright and slowly lowers its floor head onto a light wooden floor.",
+    "B": "A hand slowly pushes the cordless stick vacuum forward and pulls it back over a light wooden floor."
+  },
+  "mijia-car-cordless-vacuum": {
+    "A": "A hand picks up the small handheld cordless vacuum from the table and slowly turns it to show its side.",
+    "B": "A hand slowly moves the handheld vacuum's nozzle along the seam of a grey car seat."
+  },
+  "window-cleaning-robot-5600pa": {
+    "A": "The square window cleaning robot is attached to a clear glass window and slowly moves sideways across the glass.",
+    "B": "The window cleaning robot slowly moves downward on the clear glass window."
+  },
+  "usb-heated-lap-blanket": {
+    "A": "A hand slowly unfolds the soft lap blanket and lays it flat, the fabric moving gently.",
+    "B": "The soft blanket is draped over a person's knees on an office chair, and a hand gently smooths the fabric."
+  }
+}
