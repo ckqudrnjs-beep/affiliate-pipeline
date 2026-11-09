@@ -1,0 +1,45 @@
+name: gallery
+
+# 사이트 상품의 알리 갤러리 사진을 공식 API로 받아 PR로 올린다 (영상 제작용). 손으로 실행.
+on:
+  workflow_dispatch:
+    inputs:
+      slugs:
+        description: "상품 slug (빈칸이면 전체, 여러 개는 공백)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  gallery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 갤러리 사진 수집
+        env:
+          ALI_APP_KEY: ${{ secrets.ALI_APP_KEY }}
+          ALI_APP_SECRET: ${{ secrets.ALI_APP_SECRET }}
+          ALI_TRACKING_ID: ${{ secrets.ALI_TRACKING_ID }}
+        run: PYTHONPATH=src python -m pipeline.ali_gallery ${{ inputs.slugs }}
+      - name: PR 열기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          b=gallery/$(TZ=Asia/Seoul date +%F-%H%M)
+          git config user.name "gallery-bot"
+          git config user.email "gallery-bot@users.noreply.github.com"
+          git checkout -b "$b"
+          git add data/products video_assets
+          git commit -m "알리 갤러리 사진 수집" || exit 0
+          git push -u origin "$b"
+          gh pr create --title "[영상 재료] 알리 갤러리 사진" --body "공식 제휴 API(productdetail.get) 응답의 사진만 받았습니다. 사이트에는 올라가지 않습니다(video_assets/)." --base main
