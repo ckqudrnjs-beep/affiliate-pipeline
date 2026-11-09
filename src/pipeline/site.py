@@ -288,7 +288,7 @@ def product_page(p: dict) -> str:
                    for i, (k, t) in enumerate((first, second)) if p.get(k))
     if p.get("solo"):
         head = f"""<h1>{e(p['name'])}</h1>
-<p class="lede">{when}. 알리익스프레스 가격입니다. 쿠팡 비교가는 확인되는 대로 더합니다.</p>
+<p class="lede">{when} 알리익스프레스 가격입니다.</p>
 <div class="ph" style="max-width:560px;margin-top:24px">{media(p, "../")}</div>
 <h2 style="margin-top:32px">삼촌의 계산</h2>
 <div class="receipt">
