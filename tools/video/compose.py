@@ -93,6 +93,7 @@ def studio_bg(w: int, h: int) -> Image.Image:
 def detail_disc(src: Image.Image, circle, d: int) -> Image.Image:
     """판매자 사진의 원형 확대 컷을 d×d 원으로 (흰 테두리 포함, RGBA)."""
     cx, cy, r = circle
+    cx, cy = min(max(cx, r), src.width - r), min(max(cy, r), src.height - r)  # 사진 밖으로 나가지 않게
     im = src.resize((d, d), Image.LANCZOS, box=(cx - r, cy - r, cx + r, cy + r)).convert("RGBA")
     m = Image.new("L", (d * 4, d * 4), 0)
     ImageDraw.Draw(m).ellipse((0, 0, d * 4 - 1, d * 4 - 1), fill=255)
@@ -112,7 +113,12 @@ def studio_frame(sc: dict, imgs: dict, t: float, w: int, h: int) -> Image.Image:
     s = sc.get("height", 0.72) * h / cut.height * zoom
     L = cut.resize((max(1, int(cut.width * s)), max(1, int(cut.height * s))), Image.BICUBIC)
     fx, fy = sc.get("x", 0.5) * w, sc.get("floor", 0.86) * h  # 상품 가운데 아래(바닥) 위치
-    lx, ly = int(fx - L.width / 2), int(fy - L.height)
+    enter = 1.0 if "on_at" in sc or sc["type"] == "end" else ease(t / 0.7)  # 불 켜짐이 없으면 살짝 떠오르며 등장
+    if enter < 1:
+        a = np.array(L).astype(np.float32)
+        a[:, :, 3] *= enter
+        L = Image.fromarray(a.astype("uint8"))
+    lx, ly = int(fx - L.width / 2), int(fy - L.height + (1 - enter) * h * 0.03)
     out = studio_bg(w, h).copy()
     # 바닥 그림자
     sh = Image.new("L", (w, h), 0)
@@ -163,7 +169,7 @@ def studio_frame(sc: dict, imgs: dict, t: float, w: int, h: int) -> Image.Image:
         out.paste(disc, (int(cx - disc.width / 2), int(cy - disc.height / 2)), disc)
         if det.get("label"):
             dr = ImageDraw.Draw(out)
-            f = font(max(14, int(w * 0.034)))
+            f = font(max(14, int(min(w, h) * 0.034)))
             c = tuple(int(255 - (255 - v) * k) for v in (60, 58, 54))
             text_center(dr, int(cx), int(cy + disc.height / 2 + h * 0.012), det["label"], f, c)
     return out
