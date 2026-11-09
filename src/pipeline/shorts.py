@@ -4,7 +4,9 @@
 1. 업로드 대기열(config/youtube_queue.csv)에 아직 안 올린 영상이 SHORTS_BUFFER(기본 3)개 이상이면 쉰다.
 2. 알리 공식 제휴 API로 후보를 받아(curate 와 같은 기준: 평점·판매량·가격) 사이트에 없는 상품 1개를 고른다.
 3. 판매자 사진을 공식 API(productdetail.get)로 받는다. 크롤링하지 않는다.
-4. Claude API가 상품명(판매자 표기)만 보고 짧은 이름·소개 글·질문·자막·계산 조건을 JSON으로 쓴다.
+4. Claude 예약 작업(매일 07:40 KST, BK 요금제)이 data/shorts/next.json 의 프롬프트대로
+   data/shorts/copy/<aliProductId>.json 을 main에 올린다 (ANTHROPIC_API_KEY 가 있으면 API로 대신).
+   문구는 상품명(판매자 표기)만 보고 짧은 이름·소개 글·질문·자막·계산 조건을 JSON으로 쓴다.
    계산 숫자는 코드가 낸다. 문구는 준수 검사(compliance.BANNED_PATTERNS)를 통과해야 한다.
 5. Supertonic 3 (MIT / OpenRAIL-M) 7번 목소리(M2)로 내레이션, Pillow+ffmpeg로 1080×1920 영상.
    구성: 질문 → 상품 사진·자막 → 계산 카드 → 이름·가격·don3chon.com. 화면 위에 늘 "광고 · 알리익스프레스 제휴 링크".
@@ -168,11 +170,10 @@ PROMPT = """너는 생활용품 소개 쇼츠 채널 "돈 줍는 삼촌"의 작�
 
 
 def write_copy(cand: dict, today: dt.date) -> dict:
+    """ANTHROPIC_API_KEY 가 있을 때만 쓰는 대안 경로. 기본은 Claude 예약 작업이 copy 파일을 쓴다."""
     key = os.environ["ANTHROPIC_API_KEY"]
     body = {"model": ANTHROPIC_MODEL, "max_tokens": 1200,
-            "messages": [{"role": "user", "content": PROMPT.format(
-                title=cand["name"], price=cand["aliPrice"], date=f"{today:%m/%d}", orders=cand.get("orders", 0),
-                rating=cand.get("rating", 0), cats=", ".join(CATEGORIES))}]}
+            "messages": [{"role": "user", "content": prompt_for(cand, today)}]}
     req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(), headers={
         "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
     with urllib.request.urlopen(req, timeout=120) as r:
@@ -408,32 +409,78 @@ def product_json(spec: dict, cand: dict, today: dt.date, gallery: list[str]) -> 
             "status": "active", "gallery": gallery, "source": "shorts-auto"}
 
 
-def main() -> int:
+NEXT = pathlib.Path("data/shorts/next.json")  # 오늘 문구를 기다리는 후보 (최대 3개)
+COPY_DIR = pathlib.Path("data/shorts/copy")  # <aliProductId>.json: Claude 예약 작업이 쓴 문구 (또는 {"skip": "이유"})
+
+
+def prompt_for(cand: dict, today: dt.date) -> str:
+    return PROMPT.format(title=cand["name"], price=cand["aliPrice"], date=f"{today:%m/%d}", orders=cand.get("orders", 0),
+                         rating=cand.get("rating", 0), cats=", ".join(CATEGORIES))
+
+
+def pick() -> int:
+    """문구를 받을 후보를 data/shorts/next.json 에 둔다 (대기열이 차 있거나 이미 있으면 쉼)."""
     from .aliexpress import AliExpressClient
     from .curate import fetch_raw, pick_candidates
     from .drafts import parse_keywords
-    today = dt.datetime.now(KST).date()
     buffer = int(os.environ.get("SHORTS_BUFFER") or 3)
-    if pending_count() >= buffer:
-        print(f"업로드 대기 {pending_count()}개 ≥ {buffer}, 오늘은 만들지 않음")
+    if NEXT.exists():
+        print("문구를 기다리는 후보가 이미 있음")
         return 0
-    cli = AliExpressClient()
+    if pending_count() >= buffer:
+        print(f"업로드 대기 {pending_count()}개 ≥ {buffer}, 오늘은 후보를 고르지 않음")
+        return 0
     known = known_ids()
-    cands = [c for c in pick_candidates(fetch_raw(cli, parse_keywords(os.environ.get("ALI_KEYWORDS", ""))), k=40)
-             if c["aliProductId"] not in known]
-    for cand in cands[:5]:  # 부적합 판정이 나오면 다음 후보
-        spec = write_copy(cand, today)
+    cands = [c for c in pick_candidates(fetch_raw(AliExpressClient(), parse_keywords(os.environ.get("ALI_KEYWORDS", ""))), k=40)
+             if c["aliProductId"] not in known][:3]
+    if not cands:
+        print("::warning::새 후보 없음")
+        return 0
+    NEXT.parent.mkdir(parents=True, exist_ok=True)
+    today = dt.datetime.now(KST).date()
+    NEXT.write_text(json.dumps({"date": today.isoformat(), "candidates": cands,
+                                "prompts": [prompt_for(c, today) for c in cands]}, ensure_ascii=False, indent=1) + "\n",
+                    encoding="utf-8")
+    print(f"후보 {len(cands)}개 → {NEXT}")
+    return 0
+
+
+def get_copy(cand: dict, today: dt.date) -> dict | None:
+    f = COPY_DIR / f"{cand['aliProductId']}.json"
+    if f.exists():
+        return json.loads(f.read_text(encoding="utf-8"))
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return write_copy(cand, today)
+    return None
+
+
+def make() -> int:
+    from .aliexpress import AliExpressClient
+    if not NEXT.exists():
+        print("만들 후보 없음")
+        return 0
+    nxt = json.loads(NEXT.read_text(encoding="utf-8"))
+    today = dt.datetime.now(KST).date()
+    cli = None
+    for cand in nxt["candidates"]:
+        if cand["aliProductId"] in known_ids():
+            continue
+        spec = get_copy(cand, today)
+        if spec is None:
+            print(f"문구 대기 중: {cand['aliProductId']} (Claude 예약 작업이 data/shorts/copy/ 에 쓰면 만든다)")
+            return 0
         if spec.get("skip"):
             print(f"건너뜀 {cand['aliProductId']}: {spec['skip']}")
             remember_skip(cand["aliProductId"])
             continue
-        errs = check_copy(spec)
         if (PRODUCTS / f"{spec.get('slug')}.json").exists():
             spec["slug"] = f"{spec['slug']}-{cand['aliProductId'][-4:]}"
+        errs = check_copy(spec)
         if errs:
-            print(f"문구 검사 실패 {cand['aliProductId']}: {errs}")
+            print(f"::warning::문구 검사 실패 {cand['aliProductId']}: {errs}")
             remember_skip(cand["aliProductId"])
             continue
+        cli = cli or AliExpressClient()
         photos, gallery = fetch_images(cli, cand["aliProductId"], spec["slug"])
         if len(photos) < 2:
             print(f"사진 부족 {cand['aliProductId']}")
@@ -455,6 +502,7 @@ def main() -> int:
             json.dumps(product_json(spec, cand, today, gallery), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         order = max([int(r["order"]) for r in load_queue(QUEUE)] or [0]) + 1
         append_queue(queue_row(spec, order, today))
+        NEXT.unlink()
         summary = (f"새 쇼츠: {spec['name']} ({total:.1f}초, {out.stat().st_size / 1e6:.1f}MB)\n"
                    f"- 제목: [광고] {spec['title']}\n- 내레이션: {' / '.join(lines)}\n- 사이트 소개: {spec['note']}")
         print(summary)
@@ -462,9 +510,19 @@ def main() -> int:
             with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
                 f.write(summary + "\n")
         return 0
-    print("::warning::오늘 만들 수 있는 후보가 없음")
+    NEXT.unlink()  # 후보 모두 부적합 → 다음 실행에서 새로 고른다
+    print("::warning::후보가 모두 부적합, 다음에 새로 고름")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    cmd = argv[0] if argv else "all"
+    if cmd in ("pick", "all"):
+        pick()
+    if cmd in ("make", "all"):
+        return make()
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
