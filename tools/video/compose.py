@@ -246,18 +246,22 @@ def compose(slug: str) -> None:
     story = json.loads((ROOT / "tools" / "video" / "stories" / f"{slug}.json").read_text(encoding="utf-8"))
     names = {sc[k] for sc in story["scenes"] for k in ("image", "image2") if k in sc}
     names |= {d["image"] for sc in story["scenes"] for d in sc.get("details", [])}
-    imgs = {n: load(slug, n, story.get("fills", {}).get(n, [])) for n in names}
+    aslug = story.get("assets", slug)  # 다른 상품 폴더의 사진을 쓰는 스토리 (예: 유튜브용 <slug>-yt)
+    imgs = {n: load(aslug, n, story.get("fills", {}).get(n, [])) for n in names}
     for sc in story["scenes"]:
         if "cutout" in sc:  # 배경을 지운 상품 사진 (tools/video/cutout.py 로 만든 RGBA png)
-            imgs[sc["cutout"]] = Image.open(ROOT / "video_assets" / slug / sc["cutout"]).convert("RGBA")
+            imgs[sc["cutout"]] = Image.open(ROOT / "video_assets" / aslug / sc["cutout"]).convert("RGBA")
     label = story.get("label", "광고 · 판매자 제공 사진으로 편집")
-    total = sum(sc["dur"] for sc in story["scenes"])
     out_dir = ROOT / "video_work" / "compose"
     out_dir.mkdir(parents=True, exist_ok=True)
+    voices = _narrate(story, out_dir / slug) if any(sc.get("say") for sc in story["scenes"]) else {}
+    total = sum(sc["dur"] for sc in story["scenes"])
     audio = out_dir / f"{slug}_click.wav"
     clicks = [sum(s["dur"] for s in story["scenes"][:i]) + sc.get("on_at", 0.6)
               for i, sc in enumerate(story["scenes"]) if sc["type"] in ("reveal", "studio") and "on_at" in sc]
     _click_track(audio, total, clicks)
+    if voices:
+        _mix_voice(audio, story, voices)
     for fmt, ((W, H), (ax, ay, aw, ah)) in FORMATS.items():
         out = out_dir / f"{slug}_{fmt}.mp4"
         ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
@@ -316,6 +320,51 @@ def compose(slug: str) -> None:
         if ff.wait():
             raise RuntimeError("ffmpeg 실패")
         print(f"{out} ({out.stat().st_size / 1e6:.2f}MB, {total:.1f}초)")
+
+
+def _narrate(story: dict, prefix: pathlib.Path) -> dict:
+    """장면별 "say" 문장을 무료 TTS(Supertonic 3, 모델 OpenRAIL-M·코드 MIT)로 읽는다.
+    말이 장면보다 길면 장면을 늘린다. VIDEO_TTS_DIR = sherpa-onnx supertonic 모델 폴더."""
+    import sherpa_onnx
+    import soundfile as sf
+    d = pathlib.Path(os.environ.get("VIDEO_TTS_DIR", "/tmp/tts/sherpa-onnx-supertonic-3-tts-int8-2026-05-11"))
+    f = lambda n: str(next(d.glob(n)))
+    cfg = sherpa_onnx.OfflineTtsSupertonicModelConfig(
+        duration_predictor=f("duration_predictor*.onnx"), text_encoder=f("text_encoder*.onnx"),
+        vector_estimator=f("vector_estimator*.onnx"), vocoder=f("vocoder*.onnx"),
+        tts_json=f("tts.json"), unicode_indexer=f("unicode_indexer.bin"), voice_style=f("voice.bin"))
+    tts = sherpa_onnx.OfflineTts(sherpa_onnx.OfflineTtsConfig(
+        model=sherpa_onnx.OfflineTtsModelConfig(supertonic=cfg, num_threads=4)))
+    out = {}
+    for i, sc in enumerate(story["scenes"]):
+        if not sc.get("say"):
+            continue
+        g = sherpa_onnx.GenerationConfig()
+        g.sid, g.speed, g.num_steps, g.extra = int(story.get("voice", 0)), float(story.get("speed", 1.1)), 8, {"lang": "ko"}
+        a = tts.generate(sc["say"], g)
+        path = pathlib.Path(f"{prefix}_say{i}.wav")
+        sf.write(str(path), a.samples, a.sample_rate)
+        sec = len(a.samples) / a.sample_rate
+        sc["dur"] = max(sc["dur"], round(sec + 0.45, 2))
+        out[i] = path
+    return out
+
+
+def _mix_voice(track: pathlib.Path, story: dict, voices: dict) -> None:
+    """효과음 트랙에 장면 시작 0.15초 뒤부터 내레이션을 얹는다."""
+    import numpy as np
+    import soundfile as sf
+    base, sr = sf.read(str(track), always_2d=False)
+    base = base if base.ndim == 1 else base.mean(1)
+    for i, path in voices.items():
+        v, vsr = sf.read(str(path), always_2d=False)
+        v = v if v.ndim == 1 else v.mean(1)
+        if vsr != sr:
+            v = np.interp(np.arange(0, len(v) * sr / vsr) * vsr / sr, np.arange(len(v)), v)
+        st = int((sum(s["dur"] for s in story["scenes"][:i]) + 0.15) * sr)
+        n = min(len(v), len(base) - st)
+        base[st:st + n] += v[:n] * 0.9
+    sf.write(str(track), np.clip(base, -1, 1), sr)
 
 
 def _click_track(path: pathlib.Path, total: float, clicks: list[float]) -> None:
