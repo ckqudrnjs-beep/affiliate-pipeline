@@ -201,7 +201,7 @@ ICONS = {
 
 # 상품 영상: PC는 마우스를 올린 카드만, 모바일은 화면 가운데 카드만 재생 (전부 동시에 움직이지 않게)
 VIDEO_JS = """(()=>{const vs=[...document.querySelectorAll('.ph video')];if(!vs.length)return;
-const play=v=>{v.play().catch(()=>{})},stop=v=>{v.pause();v.currentTime=0};
+const play=v=>{v.play().catch(()=>{})},stop=v=>{v.pause();v.load()};
 if(matchMedia('(hover:hover)').matches){vs.forEach(v=>{const c=v.closest('.pick')||v.parentNode;
 c.addEventListener('mouseenter',()=>play(v));c.addEventListener('mouseleave',()=>stop(v))});return}
 if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
