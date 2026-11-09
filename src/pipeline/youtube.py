@@ -4,7 +4,7 @@
 - 실행 1회당 최대 1개. 다음 공개 시각(19:00 KST)이 LEAD_DAYS 안에 들어올 때만 올린다.
   올릴 때는 '비공개 + 예약 공개(publishAt)' 로 올려, BK가 공개 전에 YouTube Studio에서
   '유료 프로모션 포함' 칸을 체크할 시간을 남긴다 (이 항목은 API로 설정할 수 없음).
-- 공개 간격: YT_INTERVAL_DAYS (기본 2일). 저작권 신고가 와도 1건에서 멈추게 천천히.
+- 공개 간격: YT_INTERVAL_DAYS (기본 1일, 2026-11-09 BK 결정: 하루 1개).
 - 기록: data/youtube/uploaded.json (중복 업로드 방지)
 - 안전장치: YOUTUBE_ENABLED=true 가 아니면 무엇을 올릴지만 출력한다(dry-run).
 - 준수 검사: 제목은 [광고]로 시작, 설명 첫 줄은 광고 문구. 아니면 올리지 않는다.
@@ -150,7 +150,7 @@ def summary(text: str) -> None:
 def main(now: dt.datetime | None = None) -> int:
     now = now or dt.datetime.now(KST)
     enabled = os.environ.get("YOUTUBE_ENABLED", "").lower() == "true"
-    interval = int(os.environ.get("YT_INTERVAL_DAYS") or 2)
+    interval = int(os.environ.get("YT_INTERVAL_DAYS") or 1)
     lead = int(os.environ.get("YT_LEAD_DAYS") or 2)
 
     log = load_log()
