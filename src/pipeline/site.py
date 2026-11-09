@@ -106,7 +106,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--body);w
 a{color:var(--ink)}
 .wrap{max-width:1080px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
 main.wrap{padding-block:8px 80px}
-.adbar{font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);line-height:1.5}
+/* 쿠팡 가이드(공지 160): 상단 표시는 본문보다 크거나 눈에 띄는 색. 본문 16px과 같은 크기 + 초록 강조 */
+.adbar{font-size:16px;font-weight:600;color:var(--green);background:var(--greenbg);border-bottom:1px solid var(--line);line-height:1.6}
 .adbar .wrap{padding-block:8px}
 header.top{border-bottom:1px solid var(--line);background:var(--bg)}
 header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px}
@@ -176,7 +177,7 @@ footer a{display:inline-block;padding:8px 0}
 .btn.main{background:var(--ink);color:var(--bg)}
 .btn:focus-visible,.pick:focus-visible,.toolrow a:focus-visible{outline:2px solid var(--green);outline-offset:4px}
 .small{font-size:13px;color:var(--muted)}
-.ad{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding:4px 12px}
+.ad{font-size:16px;font-weight:600;color:var(--green);border-left:3px solid var(--green);padding:4px 12px}
 nav.cats{display:none}
 footer{border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 footer .wrap{padding-block:32px 48px}

@@ -119,7 +119,7 @@ def render_blog(p: dict, today: dt.date) -> str:
 
 def build_blog(products: list[dict], today: dt.date) -> str:
     out = [f"# {today.isoformat()} 블로그 초안 ({BRAND})", "",
-           f"제휴 상품 {len(products)}개. 괄호 안 안내문을 채운 뒤 블로그에 직접 올리세요. 첫 줄 대가성 문구는 지우지 마세요.", ""]
+           f"제휴 상품 {len(products)}개. 괄호 안 안내문을 채운 뒤 블로그에 직접 올리세요. 제목 앞에 [광고]를 붙이고, 첫 줄 대가성 문구는 지우지 말고 굵게+색으로 강조하세요(쿠팡 가이드: 태그·이미지 아래 금지).", ""]
     for i, p in enumerate(products, 1):
         program = p.get("program") or "coupang"
         text = render_blog(p, today)
