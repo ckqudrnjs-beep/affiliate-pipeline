@@ -397,8 +397,11 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "feed.xml").write_text(N.feed_xml(news, BASE, BRAND), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
-    for f in pathlib.Path("static").glob("*"):
-        (o / f.name).write_bytes(f.read_bytes())
+    for f in pathlib.Path("static").rglob("*"):  # 하위 폴더(video/ 등)도 그대로 복사
+        if f.is_file():
+            t = o / f.relative_to("static")
+            t.parent.mkdir(parents=True, exist_ok=True)
+            t.write_bytes(f.read_bytes())
     urls = ["", "news.html", "faq.html"] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
     today = dt.date.today().isoformat()
     (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

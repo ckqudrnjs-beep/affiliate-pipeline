@@ -6,7 +6,7 @@
  "aliPrice": 25850,
  "aliUrl": "https://s.click.aliexpress.com/s/pyFri10M6ltAv61YZY9TfrxiDaaFXRreuZWJMeLtD8jig1wPxn51K2eq59ds8iT5Wl5L3w5KJyrl7SjOO3B0oJ0Xjwnc7n8AQA7gf5qnT4sCyU05LNms9JvyWQNFHNKtzBcoBpSguMg3UBR1FOODkmGTloXosMhqhnKgzzuJPYPxewVvzupiAiKSJA5SK0iQRxmaQ7UPG0AP2HC7uLitVpvXIfjMl7RnsnN7B8FrGfP9TWP7emQeaXV90Bp9fLEiLeKHsRf9R2jgKD32Axm5na4bRJdkhGVyv3GcDgMjmYrrZWinWctR9gnPwA4mkyLPWjnBq0UGCTXHpOKwVJjSb7pwS0v0j7trhybH8poAKpD5j7tCM3yzIlQySx8yzq6v18t6EKLGUHCwt7ya4v3u8W0eTYFf2LhD5W3Int8n1fiUNmXrYJS93tCK34xgYH3yZd9Bch0RorycLVYH7L38j9NzeplWG5ZBib2odIzX0im8eoifiVhMpk3MZRytd0t0XynpqE1L9jAIJUnSp8mDJfa0iqCwMezxxMDKniWewXZ9Qb8ZYD0zuUhzIFriKYr0KOIGThrbdARW4C1vTuS0poGaSfRmrXM8HsXAQTX8ecFxucwESQ0Bvpodmb3euOUWC2ttBiscNRbo8ceaXFJuRsGhK6wtOwB81uIsBnxzY3OqmP4Ci3bGIadFDBaN5yv9PhYNyqLS6qKNOEivt9UxFb7H2HcVIGqrIpq6aeuqKeCi3ynXG4uvqc03yQsPu2lkLBZyDoajoN52VrGjFvmXGoHEVxIJDaMeNGvxDfNHK0vYH4llJbwJZMpigH0HRTNK4Y0mIxYDRf0EnNld8OX4QW7WRUgjC6ITEvFm0VgKbn7tz6ZFG9Y2gCAbBu8a4s53SV4LUL07RHNPq1Uq1rUSofoJW2IGNx7SOk3oOLulNizYNH66g0fRokamFFca0ddIeQLllHerzFJb5D89rSSJlaBcZbgqKMmpHiGSXUDOm7dJuzYVwXw4oFgAnD0J4omxGdPhzRrI",
  "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/S27d5086d8cb84ff1855da6ce2951613e6.jpg",
- "videoUrl": "",
+ "videoUrl": "video/baseus-led-desk-lamp.mp4",
  "coupangPrice": "",
  "coupangUrl": "",
  "shipDays": "",
@@ -15,5 +15,13 @@
  "note": "밝기가 자동으로 조절되는 접이식 책상 램프로 25,850원입니다. LED 책상 램프는 보통 10W 안팎이라 하루 5시간 켜도 한 달 전기요금이 몇백 원 수준이에요. 긍정 평가 98%입니다.",
  "check": "전원 방식(USB 전원·충전식), 색온도 조절 범위",
  "commission": 7.0,
- "status": "active"
+ "status": "active",
+ "gallery": [
+  "https://ae-pic-a1.aliexpress-media.com/kf/S27d5086d8cb84ff1855da6ce2951613e6.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/H7d718c7aa2794f04984b9f0065a69d05F.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/H3e7236d322114c7f8a36133f6a29916b3.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/H80195fe41f10452abcda0f8ebd4805a1C.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/H6a0862fb65804751b70a1b1ef2bd9245y.jpg",
+  "https://ae-pic-a1.aliexpress-media.com/kf/S15a94aff9ad5430182a3c30aa6942181m.jpg"
+ ]
 }
