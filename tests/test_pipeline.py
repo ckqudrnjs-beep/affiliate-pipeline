@@ -249,3 +249,16 @@ class ArticleDataTest(unittest.TestCase):
         self.assertEqual(len(slugs), len(set(slugs)), "slug 중복")
         for a in arts:
             self.assertEqual(articles.validate(a, prods, {c["slug"] for c in calcs.CALCS}, set(slugs)), [], a["slug"])
+
+
+class ImitationFilterTest(unittest.TestCase):
+    def test_filter(self):
+        from pipeline.curate import imitation_reason as r
+        self.assertTrue(r("마키타 정품 DDF487 18V 브러시리스 전동 드라이버"))
+        self.assertTrue(r("DEWALT DCD805 20V 무선 임팩트 드릴"))
+        self.assertTrue(r("미지아 차량용 무선 청소기 21kPa"))
+        self.assertTrue(r("럭셔리 가방 레플리카"))
+        self.assertEqual(r("UGREEN 마그네틱 보조배터리 (아이폰 17용 Magsafe 지원)"), "")
+        self.assertEqual(r("Baseus 무선 충전기 AirPods 호환"), "")
+        self.assertEqual(r("샤오미 MIJIA 전동칫솔 프로"), "")
+        self.assertEqual(r("Baseus 100W 보조베터리 MacBook iPhone Samsung Xiaomi"), "")
