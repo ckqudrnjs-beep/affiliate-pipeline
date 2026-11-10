@@ -61,7 +61,7 @@ def pick_candidates(raw: list[dict], k: int = 15) -> list[dict]:
 
 def fetch_raw(client: AliExpressClient, keywords: list[str]) -> list[dict]:
     raw = []
-    for kw in (keywords or [""])[:12]:  # 하루 호출 수를 적게 유지
+    for kw in (keywords or [""])[:int(os.environ.get("CURATE_MAX_KW") or 12)]:  # 하루 호출 수를 적게 유지
         r = client._call("aliexpress.affiliate.product.query", keywords=kw, page_size=40, sort="LAST_VOLUME_DESC",
                          target_currency="KRW", target_language="KO", ship_to_country="KR", tracking_id=client.tracking_id)
         body = next(iter(r.values())) if r else {}
@@ -149,12 +149,14 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
 def main() -> int:
     today = dt.datetime.now(KST).date()
     client = AliExpressClient()
-    cands = pick_candidates(fetch_raw(client, parse_keywords(os.environ.get("ALI_KEYWORDS", ""))))
+    cands = pick_candidates(fetch_raw(client, parse_keywords(os.environ.get("ALI_KEYWORDS", ""))), int(os.environ.get("CURATE_K") or 15))
     out = pathlib.Path("data/candidates")
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{today.isoformat()}.json").write_text(json.dumps(cands, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / f"{today.isoformat()}.md").write_text(summary_md(cands, today), encoding="utf-8")
     print(f"후보 {len(cands)}개")
+    if os.environ.get("CANDIDATES_ONLY"):  # 수동 검색어 실행: 후보만 모으고 가격·상태는 건드리지 않는다
+        return 0
     try:
         print(f"가격 기록 {record_prices(client, today)}개")
     except Exception as e:  # 가격 기록 실패가 후보 수집을 막지 않게
