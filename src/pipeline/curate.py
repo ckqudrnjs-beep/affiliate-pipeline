@@ -47,12 +47,43 @@ def to_candidate(p: dict) -> dict:
     }
 
 
+# 가품·이미테이션 위험 거르기 (네이버·쿠팡·알리 정책: 이미테이션 홍보 금지)
+IMITATION_WORDS = ("레플리카", "replica", "이미테이션", "imitation", "짝퉁", "미러급", "정품급", "1:1", "aaa급", "aaa+", "st 스타일",
+                   "스타일 디자인", "inspired", "dupe", "듀프", "카피", "copy", "fake", "oem 정품", "정품 아님", "로고 없음 정품")
+# 알리에서 이름만 빌린 저가품이 흔한 브랜드. '○○용', '○○ 호환', 'for ○○'(호환 액세서리)는 허용한다.
+RISKY_BRANDS = ("dyson", "다이슨", "makita", "마키타", "dewalt", "디월트", "bosch", "보쉬", "milwaukee", "밀워키", "theragun", "테라건",
+                "hyperice", "airpods", "에어팟", "apple watch", "애플워치", "bose", "보스 ", "sony", "소니", "jbl", "marshall", "마샬",
+                "beats", "비츠", "stanley", "스탠리", "yeti", "예티", "nike", "나이키", "adidas", "아디다스", "chanel", "샤넬", "gucci", "구찌",
+                "louis vuitton", "루이비통", "rolex", "롤렉스", "lego", "레고", "nintendo", "닌텐도", "pokemon", "포켓몬", "disney", "디즈니",
+                "garmin", "가민", "amazfit", "어메이즈핏", "t-rex", "balmuda", "발뮤다", "philips", "필립스", "braun", "브라운", "tesla", "테슬라",
+                "미지아", "mijia", "휴비딕")
+OFFICIAL_OK = ("샤오미 mijia", "xiaomi mijia", "샤오미 미지아", "xiaomi 미지아")
+
+
+def imitation_reason(title: str) -> str:
+    t = (title or "").lower()
+    for w in IMITATION_WORDS:
+        if w in t:
+            return f"이미테이션 표현: {w}"
+    for b in RISKY_BRANDS:
+        i = t.find(b)
+        if i < 0 or any(o in t for o in OFFICIAL_OK):
+            continue
+        after, before = t[i + len(b):i + len(b) + 6], t[max(0, i - 5):i]
+        if after.lstrip().startswith(("용", "호환")) or before.rstrip().endswith("for"):
+            continue
+        return f"가품 위험 브랜드: {b}"
+    return ""
+
+
 def pick_candidates(raw: list[dict], k: int = 15) -> list[dict]:
     seen, out = set(), []
     for c in sorted(raw, key=lambda c: (-c["commission"], -c["orders"])):
         if c["aliProductId"] in seen or not c["aliUrl"] or not c["aliPrice"]:
             continue
         if c["rating"] < MIN_RATING or c["orders"] < MIN_ORDERS or c["aliPrice"] < MIN_PRICE:
+            continue
+        if imitation_reason(c["name"]):
             continue
         seen.add(c["aliProductId"])
         out.append(c)
@@ -102,10 +133,15 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
             files[d["slug"]] = (f, d)
     if not ids:
         return 0
-    r = client._call("aliexpress.affiliate.productdetail.get", product_ids=",".join(list(ids)[:50]),
-                     target_currency="KRW", target_language="KO", country="KR", tracking_id=client.tracking_id)
-    body = next(iter(r.values())) if r else {}
-    prods = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+    prods, all_ids = [], list(ids)
+    for i in range(0, len(all_ids), 20):  # API 한 번에 조회 가능한 수가 제한돼 있어 나눠서 조회한다
+        r = client._call("aliexpress.affiliate.productdetail.get", product_ids=",".join(all_ids[i:i + 20]),
+                         target_currency="KRW", target_language="KO", country="KR", tracking_id=client.tracking_id)
+        body = next(iter(r.values())) if r else {}
+        got = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+        if not got:  # 한 묶음이라도 응답이 통째로 비면 API 문제일 수 있으니 오늘은 아무것도 바꾸지 않는다
+            return 0
+        prods += got
     if not prods:  # 응답 자체가 비면 API 문제일 수 있으니 아무것도 바꾸지 않는다
         return 0
     prev = last_prices(root)

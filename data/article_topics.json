@@ -1,242 +1,377 @@
 [
  {
   "q": "전기장판 한 달 전기요금",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "전기요와 전기장판 차이와 전기요금",
-  "done": false
+  "done": false,
+  "format": "비교"
+ },
+ {
+  "q": "삼촌의 일기: 첫 고지서 받고 전기 먹는 가전 찾기",
+  "done": false,
+  "format": "일기"
  },
  {
   "q": "온수매트 전기요금 vs 전기장판",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "겨울 실내 적정 습도와 가습기 고르는 법",
-  "done": false
+  "done": false,
+  "format": "비교"
+ },
+ {
+  "q": "삼촌의 일기: 베란다 결로와 한 판 붙은 주말",
+  "done": false,
+  "format": "일기"
  },
  {
   "q": "가습기 전기요금 (초음파·가열식·복합식)",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "제습기 전기요금 한 달",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "삼촌의 일기: 알리 장바구니 정리하다 깨달은 것",
+  "done": false,
+  "format": "일기"
  },
  {
   "q": "알리 직구 관세 150달러 기준 정리",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "알리 합배송 관세 합산 기준",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "삼촌의 일기: 조카가 물어본 '보조배터리 몇 번 충전돼요?'",
+  "done": false,
+  "format": "일기"
  },
  {
   "q": "해외직구 부가세 계산법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "전기히터 vs 온풍기 vs 라디에이터 전기요금",
-  "done": false
+  "done": false,
+  "format": "비교"
+ },
+ {
+  "q": "삼촌의 일기: 겨울 아침 시동이 안 걸릴 때 할 일",
+  "done": false,
+  "format": "일기"
  },
  {
   "q": "보일러 난방비 아끼는 법 (외출 모드 vs 끄기)",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "전기요금 누진제 400kWh 넘으면 얼마",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "겨울 차박 여행 준비 메모 (난방·전기·안전)",
+  "done": false,
+  "format": "여행"
  },
  {
   "q": "대기전력 한 달 전기요금",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "공기청정기 전기요금 24시간",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "겨울 국내 여행 짐 싸기: 충전기 하나로 끝내는 법",
+  "done": false,
+  "format": "여행"
  },
  {
   "q": "로봇청소기 전기요금과 소모품 비용",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "무선청소기 배터리 수명과 교체 비용",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "해외여행 전 챙길 전자기기와 전압·플러그 체크",
+  "done": false,
+  "format": "여행"
  },
  {
   "q": "보조배터리 용량 표기와 실제 충전 횟수",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "보조배터리 비행기 반입 기준 (Wh 계산)",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "캠핑장 전기 사이트 쓸 때 몇 W까지 되나",
+  "done": false,
+  "format": "여행"
  },
  {
   "q": "블랙박스 주차 녹화 배터리 방전",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "겨울 타이어 공기압 얼마로 맞추나",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "장거리 귀성길 운전 전날 준비 메모",
+  "done": false,
+  "format": "여행"
  },
  {
   "q": "자동차 배터리 방전 점프스타터 사용법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "LED 조명 전기요금 vs 형광등",
-  "done": false
+  "done": false,
+  "format": "비교"
+ },
+ {
+  "q": "독자 질문: 전기장판 켜 두고 자도 요금 괜찮을까요?",
+  "done": false,
+  "format": "질문 답장"
  },
  {
   "q": "전기포트 한 번 끓일 때 전기요금",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "노트북 충전기 W 수와 보조배터리 고르기",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "독자 질문: 직구로 산 제품 고장 나면 어떡하죠?",
+  "done": false,
+  "format": "질문 답장"
  },
  {
   "q": "무선 이어폰 노이즈캔슬링 필요할까",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "USB 담요 전기요금",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "독자 질문: 가습기 대신 빨래 널면 습도 얼마나 오를까요?",
+  "done": false,
+  "format": "질문 답장"
  },
  {
   "q": "외풍 막는 법과 난방비",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "창문 단열 뽁뽁이 효과",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "12월에 미리 할 겨울 살림 점검 체크리스트",
+  "done": false,
+  "format": "체크리스트"
  },
  {
   "q": "결로 생기는 습도와 막는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "전동칫솔 칫솔모 교체 비용 1년",
-  "done": false
+  "done": false,
+  "format": "정보"
+ },
+ {
+  "q": "연말 정리: 올해 우리 집 전기요금 돌아보는 법",
+  "done": false,
+  "format": "일기"
  },
  {
   "q": "자취 첫 살림 필수템 체크리스트",
-  "done": false
+  "done": false,
+  "format": "체크리스트"
  },
  {
   "q": "캠핑 초보 겨울 캠핑 준비물",
-  "done": false
+  "done": false,
+  "format": "체크리스트"
  },
  {
   "q": "차박 겨울 난방 안전하게 하는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "장거리 운전 전 자동차 점검 리스트",
-  "done": false
+  "done": false,
+  "format": "체크리스트"
  },
  {
   "q": "출장 가방 싸는 법 (충전기·보조배터리)",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "재택근무 책상 세팅 (조명·스피커·허브)",
-  "done": false
+  "done": false,
+  "format": "체크리스트"
  },
  {
   "q": "핸드드립 커피 입문 도구와 비용",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "집에서 셀프 이발 하는 법과 도구",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "옷 주름 빨리 펴는 법 (스티머 vs 다리미)",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "수납 정리 라벨링 하는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "겨울철 정전기 줄이는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "창문 청소 쉽게 하는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "겨울 빨래 실내건조 냄새 없이 말리기",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "아이 방 겨울 습도·온도 관리",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "자전거 겨울 보관과 타이어 관리",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "블루투스 스피커 고르는 법 (W·방수 등급)",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "무선 이어폰 오픈형 vs 커널형",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "차량용 휴대폰 거치대 종류별 장단점",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "무선 카플레이 어댑터 설치와 주의점",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "가구 조립 쉽게 하는 도구",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "겨울 난방비 아끼는 생활 습관 10가지",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "1인 가구 한 달 전기요금 평균과 줄이는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "해외직구 처음 하는 법 (알리 주문부터 통관까지)",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "알리 11.11·블랙프라이데이 직구 체크리스트",
-  "done": false
+  "done": false,
+  "format": "체크리스트"
  },
  {
   "q": "직구 제품 A/S와 반품 현실",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "전기 콘센트 멀티탭 용량 계산 (화재 예방)",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "스마트플러그로 대기전력 끊는 법",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "겨울 결로·곰팡이 생기는 집 체크",
-  "done": false
+  "done": false,
+  "format": "정보"
  },
  {
   "q": "로봇청소기 고르는 법 (물걸레·흡입력)",
-  "done": false
+  "done": false,
+  "format": "비교"
  },
  {
   "q": "창문 로봇청소기 써 볼 만한가",
-  "done": false
+  "done": false,
+  "format": "정보"
  }
 ]
