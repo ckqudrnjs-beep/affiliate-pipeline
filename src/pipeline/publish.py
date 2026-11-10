@@ -261,8 +261,11 @@ def run(env: dict, now: dt.datetime, clients: dict | None = None, drafts_dir: pa
     clients = clients or {}
     channels = {
         "threads": (env.get("THREADS_ACCESS_TOKEN"), int(env.get("THREADS_DAILY_MAX") or 3)),
-        "instagram": (env.get("IG_ACCESS_TOKEN"), int(env.get("IG_DAILY_MAX") or 2)),
     }
+    # 인스타는 2026-11-10부터 생활 팁 전용(instagram.py, instagram 워크플로). 제휴 초안은 인스타에 올리지 않는다.
+    # (테스트처럼 clients 로 직접 넘긴 경우만 예전 동작 유지)
+    if "instagram" in clients:
+        channels["instagram"] = (None, int(env.get("IG_DAILY_MAX") or 2))
     changed = False
     for channel, (token, daily_max) in channels.items():
         if not token and channel not in clients:

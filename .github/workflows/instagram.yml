@@ -1,0 +1,77 @@
+name: instagram
+
+# 인스타 하루 1개 자동 게시 (BK 승인 2026-11-10: 게시마다 승인 없이, 추가 비용 없이).
+# 공식 Instagram Graph API만 사용. 생활 팁만 (판매·특가·제휴 문구·링크 금지, 코드가 검사).
+# 1) 다음 글(data/instagram/posts/, 없으면 config/tips.csv)을 릴스 영상/카드뉴스 JPEG로 렌더링
+# 2) static/ig/<slug>/ 로 커밋 → Cloudflare Pages가 don3chon.com/ig/<slug>/ 에 공개
+# 3) 반영되면 인스타 API로 게시, 기록(data/instagram/published.json) 남기고 미디어 삭제
+# 토큰(Secret IG_ACCESS_TOKEN)이 없으면 렌더링만 하고 미리보기 파일을 Actions 아티팩트로 남긴다.
+# 멈추려면 저장소 변수 INSTAGRAM_ENABLED=false.
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 12:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_USER_ID: ${{ vars.IG_USER_ID }}
+      INSTAGRAM_ENABLED: ${{ vars.INSTAGRAM_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+          pip install -q pillow
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: Prepare
+        id: prep
+        run: PYTHONPATH=src python -m pipeline.instagram prepare
+      - name: Mode
+        id: mode
+        run: |
+          if [ -n "$IG_ACCESS_TOKEN" ] && [ "${INSTAGRAM_ENABLED,,}" != "false" ]; then echo "live=true" >> "$GITHUB_OUTPUT"
+          else echo "live=false" >> "$GITHUB_OUTPUT"; echo "::notice::IG_ACCESS_TOKEN 없음 또는 INSTAGRAM_ENABLED=false → 미리보기만 (게시 안 함)"; fi
+      - name: Preview
+        if: steps.prep.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: instagram-preview
+          path: static/ig/
+          retention-days: 7
+      - name: Push media
+        if: steps.prep.outputs.ready == 'true' && steps.mode.outputs.live == 'true'
+        run: |
+          git config user.name "instagram-bot"
+          git config user.email "instagram-bot@users.noreply.github.com"
+          git add -A static/ig data/instagram
+          git commit -m "인스타 게시 준비 $(TZ=Asia/Seoul date '+%F')" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Post
+        if: steps.prep.outputs.ready == 'true' && steps.mode.outputs.live == 'true'
+        run: PYTHONPATH=src python -m pipeline.instagram post
+      - name: Save log
+        if: always() && steps.mode.outputs.live == 'true'
+        run: |
+          git config user.name "instagram-bot"
+          git config user.email "instagram-bot@users.noreply.github.com"
+          git add -A static/ig data/instagram
+          # [skip ci]: 기록만 바뀌는 커밋은 사이트를 다시 빌드하지 않는다 (지운 미디어는 다음 배포 때 사라짐)
+          git commit -m "인스타 게시 기록 $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
