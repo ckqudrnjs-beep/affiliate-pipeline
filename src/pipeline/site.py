@@ -422,9 +422,11 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "guide").mkdir(exist_ok=True)
     (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 직구 세금, 난방비처럼 사기 전에 궁금한 것을 계산으로 답합니다.",
         A.list_body(arts), path="guide.html"), encoding="utf-8")
+    naver = A.load_naver()
     for a in arts:
         cards = "".join(card(by_slug[s], "../") for s in a.get("products", [])[:2] if s in by_slug)
-        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards), root="../",
+        nv = A.naver_box(A.naver_for(a, naver))
+        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv), root="../",
             path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE)), encoding="utf-8")
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",

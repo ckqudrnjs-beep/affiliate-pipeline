@@ -20,6 +20,8 @@ CSS = """
 .article th,.article td{word-break:keep-all;border-bottom:1px solid var(--line);padding:10px 8px;text-align:left}.article th{font-weight:600}
 .article .meta{color:var(--muted);font-size:14px}
 .alist{list-style:none;padding:0;margin:0}.alist li{border-bottom:1px solid var(--line);padding:22px 0}
+.naverbox ul{list-style:none;padding:0}.naverbox li{border-bottom:1px solid var(--line);padding:14px 0}
+.naverbox li a{font-weight:600}.naverbox li span{display:block;color:var(--muted);font-size:15px;margin-top:4px}
 .alist a{color:inherit;text-decoration:none}.alist b{font:500 21px/1.45 var(--display);display:block}.alist span{color:var(--muted);font-size:15px}
 """
 
@@ -69,14 +71,42 @@ def render(body: str, root: str = "../") -> str:
     return "\n".join(out)
 
 
-def page_body(a: dict, cards: str) -> str:
+NAVER_DISCLOSURE = "이 포스팅은 네이버 쇼핑 커넥트 활동의 일환으로, 판매 발생 시 수수료를 제공받습니다."
+
+
+def load_naver(path: str = "data/naver_products.json") -> list[dict]:
+    f = pathlib.Path(path)
+    return json.loads(f.read_text(encoding="utf-8")).get("items", []) if f.exists() else []
+
+
+def naver_for(a: dict, items: list[dict]) -> list[dict]:
+    """글에 붙일 네이버 상품(최대 2개). 글에 naver 목록이 있으면 그것만, 없으면 제목·키워드로 고른다."""
+    by_id = {i["id"]: i for i in items}
+    if "naver" in a:
+        return [by_id[x] for x in a["naver"][:2] if x in by_id]
+    text = a.get("title", "") + " " + " ".join(a.get("keywords", []))
+    return [i for i in items if any(m in text for m in i.get("match", []))][:2]
+
+
+def naver_box(picks: list[dict]) -> str:
+    """국내 구매 칸. 알리 카드와 섞지 않고, 가격 숫자 없이 고른 이유만 적는다. 링크는 받은 그대로, 클릭할 때만 연결."""
+    if not picks:
+        return ""
+    e = html.escape
+    li = "".join(f'<li><a href="{e(i["url"])}" target="_blank" rel="sponsored nofollow noopener">{e(i["name"])}</a>'
+                 f'<span>{e(i["why"])}</span></li>' for i in picks)
+    return (f'<section class="naverbox"><h2>국내에서 바로 산다면</h2><p class="ad">{NAVER_DISCLOSURE}</p>'
+            f'<p class="small">인증·A/S·빠른 배송이 중요한 물건은 국내 판매처를 권해요. 가격은 판매처에서 확인하세요.</p><ul>{li}</ul></section>')
+
+
+def page_body(a: dict, cards: str, naver: str = "") -> str:
     e = html.escape
     d = dt.date.fromisoformat(a["date"])
     ad = (f'<h2>삼촌이 고른 물건</h2><p class="ad">[광고] 아래 상품은 제휴 링크로 연결됩니다. 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다.</p>'
           f'<div class="grid">{cards}</div>') if cards else ""
     return (f'<article class="article"><p class="small"><a href="../guide.html">삼촌의 글</a></p><h1>{e(a["title"])}</h1>'
             f'<p class="meta">{d.year}년 {d.month}월 {d.day}일 · 돈 줍는 삼촌</p><p class="lede">{e(a["desc"])}</p>'
-            f'{render(a["body"])}{ad}</article>')
+            f'{render(a["body"])}{ad}{naver}</article>')
 
 
 def list_body(arts: list[dict]) -> str:
@@ -124,6 +154,8 @@ def validate(a: dict, product_slugs: set[str], calc_slugs: set[str], article_slu
         ok = m and (m.group(2) in {"calc": calc_slugs, "p": product_slugs, "guide": article_slugs}[m.group(1)])
         if not ok:
             err.append(f"없는 내부 링크: {path}")
+    if len(a.get("naver", [])) > 2:
+        err.append("네이버 상품은 2개까지")
     if len(a.get("products", [])) > 2:
         err.append("상품은 2개까지")
     for s in a.get("products", []):

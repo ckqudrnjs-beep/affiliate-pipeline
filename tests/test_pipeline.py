@@ -280,3 +280,23 @@ class PriceBatchTest(unittest.TestCase):
                     return {"r": {"resp_result": {"result": {"products": {"product": [{"product_id": int(i), "target_sale_price": "10000"} for i in ids]}}}}}
             self.assertEqual(curate.record_prices(C(), dt.date(2026, 11, 11), root), 55)
             self.assertEqual(calls, [20, 20, 15])
+
+
+class NaverBoxTest(unittest.TestCase):
+    def test_box_has_exact_disclosure_and_unmodified_links(self):
+        from pipeline import articles as A
+        items = A.load_naver(str(pathlib.Path(__file__).resolve().parent.parent / "data" / "naver_products.json"))
+        ids = [i["id"] for i in items]
+        self.assertEqual(len(ids), len(set(ids)))
+        for i in items:
+            self.assertRegex(i["url"], r"^https://naver\.me/\w+$")
+            for w in ("전자파", "살균", "신생아", "최저가", "특가"):
+                self.assertNotIn(w, i["name"] + i["why"])
+        picks = A.naver_for({"title": "온풍기 전기요금", "keywords": []}, items)
+        self.assertTrue(1 <= len(picks) <= 2)
+        h = A.naver_box(picks)
+        self.assertIn(A.NAVER_DISCLOSURE, h)
+        self.assertIn('rel="sponsored nofollow noopener"', h)
+        self.assertNotIn("prefetch", h)
+        self.assertEqual(A.naver_box([]), "")
+        self.assertEqual(A.naver_for({"title": "온풍기", "naver": []}, items), [])
