@@ -28,3 +28,8 @@ BK: "영상은 손이 많이 가고 비효율적, 문제없다면 알리·쿠팡
 - `data/news.json`: 삼촌 소식(id, date, type, title, body, link). news.html(월별·분류 필터), news/<id>.html, feed.xml.
 - `data/faq.json`: 자주 묻는 질문 → faq.html(FAQPage 구조화 데이터).
 - `data/sales.json`: 공식 공개된 세일 일정만.
+
+## 삼촌의 글 (2026-11-10)
+- `data/articles/<slug>.json` → `guide.html`, `guide/<slug>.html` (src/pipeline/articles.py). 메뉴 맨 앞 "글", 홈에 최신 3개.
+- 원칙: 검색 질문에 답하는 글(답·계산 80% 이상), 본문 600자 미만은 싣지 않음, 본문 링크는 사이트 안 경로만, 상품 카드는 끝에 최대 2개 + [광고] 문구. 근거 숫자는 계산기와 같은 기준(한전 누진 구간 등).
+- 첫 글: 온풍기 전기요금(누진제 계산). 자동 작성: 하루 1편 승인 없이 main 바로 반영 (BK 2026-11-10). 규칙·순서는 docs/ARTICLES_AUTO.md, 주제 목록 data/article_topics.json.
