@@ -16,6 +16,7 @@ import sys
 from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
+from . import articles as A
 from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
@@ -228,10 +229,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}faq.html">질문</a></nav></div></header>
+<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
@@ -358,6 +359,7 @@ def index_page(products: list[dict]) -> str:
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     body = f"""{N.home_block(news, sales)}
 {picks_sec}
+{A.home_block(A.load())}
 {all_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
 <div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
@@ -415,6 +417,15 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "news" / f"{n['id']}.html").write_text(page(f"{n['title']} | {BRAND}", n["body"][:150], N.news_page_body(n), root="../",
             path=f"news/{n['id']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": n["title"],
             "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}}), encoding="utf-8")
+    arts = A.load()
+    by_slug = {p["slug"]: p for p in products}
+    (o / "guide").mkdir(exist_ok=True)
+    (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 직구 세금, 난방비처럼 사기 전에 궁금한 것을 계산으로 답합니다.",
+        A.list_body(arts), path="guide.html"), encoding="utf-8")
+    for a in arts:
+        cards = "".join(card(by_slug[s], "../") for s in a.get("products", [])[:2] if s in by_slug)
+        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards), root="../",
+            path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE)), encoding="utf-8")
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
@@ -426,7 +437,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             t = o / f.relative_to("static")
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_bytes(f.read_bytes())
-    urls = ["", "news.html", "faq.html"] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
+    urls = ["", "guide.html", "news.html", "faq.html"] + [f"guide/{a['slug']}.html" for a in arts] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
     today = dt.date.today().isoformat()
     (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")

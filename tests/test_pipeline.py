@@ -226,3 +226,13 @@ class PriceRefreshTest(unittest.TestCase):
             self.assertEqual((a["status"], b["status"]), ("active", "ended"))
             news = json.loads((root / "news.json").read_text(encoding="utf-8"))
             self.assertEqual([n["id"] for n in news], ["drop-a-2026-11-10"])  # 같은 가격이 이어지면 다시 알리지 않는다
+
+
+class ArticleTest(unittest.TestCase):
+    def test_render_internal_links_only(self):
+        from pipeline import articles
+        h = articles.render("## 제목\n[계산기](calc/electric.html) [밖](https://evil.example)\n- 가\n| a | b |\n|---|---|\n| 1 | 2 |")
+        self.assertIn('<a href="../calc/electric.html">계산기</a>', h)
+        self.assertNotIn("evil.example\">", h)
+        self.assertIn("<table>", h)
+        self.assertIn("<h2>제목</h2>", h)
