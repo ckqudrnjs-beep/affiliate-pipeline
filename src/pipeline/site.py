@@ -11,12 +11,14 @@ import datetime as dt
 import html
 import json
 import pathlib
+import re
 import sys
 
 from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
 from . import articles as A
+from . import prices as PR
 from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
@@ -28,6 +30,8 @@ DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이�
 MIN_NOTE = 40
 _cfg_path = pathlib.Path("config/site.json")
 CFG = json.loads(_cfg_path.read_text(encoding="utf-8")) if _cfg_path.exists() else {}
+# 애드센스 심사: 제휴 링크 위주의 짧은 상품 페이지는 검색 색인·사이트맵에서 빼고 광고도 넣지 않는다 (config 로 끌 수 있음)
+PRODUCT_NOINDEX = bool(CFG.get("productNoindex", True))
 BASE = CFG.get("baseUrl", "https://don3chon.com").rstrip("/")  # 판단 글이 이보다 짧으면 페이지를 만들지 않는다
 
 
@@ -196,6 +200,8 @@ footer a{display:inline-block;padding:8px 0}
 nav.cats{display:none}
 footer{border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 footer .wrap{padding-block:32px 48px}
+.adfit{display:flex;justify-content:center;margin:32px 0 0}
+footer .foot{margin-bottom:8px;color:var(--ink)}
 @media (prefers-reduced-motion:reduce){.ph img{transition:none}}
 """
 FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap">'
@@ -217,24 +223,48 @@ const io=new IntersectionObserver(es=>es.forEach(x=>x.isIntersecting?play(x.targ
 vs.forEach(v=>io.observe(v))})()"""
 
 
-def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "") -> str:
+def adsense_client() -> str:
+    """config/site.json 의 adsensePublisherId (pub-… 또는 ca-pub-…) → ca-pub-… . 비어 있으면 광고 코드를 넣지 않는다."""
+    pid = (CFG.get("adsensePublisherId") or "").strip()
+    if not re.fullmatch(r"(ca-)?pub-\d{10,20}", pid):
+        return ""
+    return pid if pid.startswith("ca-") else "ca-" + pid
+
+
+def adfit_slot(ads: bool) -> str:
+    """config/site.json 의 adfitUnit (카카오 애드핏 광고 단위 ID, DAN-…) 이 있으면 본문 아래 배너 1개. 상품 페이지(ads=False)는 제외."""
+    unit = (CFG.get("adfitUnit") or "").strip()
+    if not ads or not re.fullmatch(r"DAN-[A-Za-z0-9]{6,40}", unit):
+        return ""
+    return (f'<div class="adfit"><ins class="kakao_ad_area" style="display:none" data-ad-unit="{unit}" data-ad-width="320" data-ad-height="100"></ins>'
+            '<script async src="https://t1.daumcdn.net/kas/static/ba.min.js"></script></div>')
+
+
+def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "",
+         ads: bool = True, noindex: bool = False) -> str:
+    """ads=False: 애드센스 코드 제외(상품 페이지). noindex=True: 검색 색인 제외(제휴 위주 얇은 페이지)."""
     e = html.escape
+    client = adsense_client()
     url = f"{BASE}/{path}"
     meta = "".join(f'<meta name="{n}" content="{e(CFG[k])}">' for n, k in
                    (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification")) if CFG.get(k))
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
-            f'<meta property="og:locale" content="ko_KR">{meta}<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
+            f'<meta property="og:locale" content="ko_KR">{meta}'
+            + (f'<meta name="google-adsense-account" content="{client}">' if client else "")
+            + ('<meta name="robots" content="noindex,follow">' if noindex else "")
+            + (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={client}" crossorigin="anonymous"></script>' if client and ads else "")
+            + f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}faq.html">질문</a></nav></div></header>
-{hero}<main class="wrap">{body}</main>
-<footer><div class="wrap"><a href="{root}privacy.html">개인정보처리방침</a> · 가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
+<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}faq.html">질문</a></nav></div></header>
+{hero}<main class="wrap">{body}{adfit_slot(ads)}</main>
+<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
 </body></html>"""
 
@@ -324,7 +354,7 @@ def product_page(p: dict) -> str:
 </div>
 <p class="verdict">결론: <span>{p['verdict']}</span></p>
 """
-    body = top + f"""<p class="note">{e(p['note'])}</p>
+    body = top + PR.product_block(HIST.get(p["slug"])) + f"""<p class="note">{e(p['note'])}</p>
 <p class="small">구매 전 확인: {e(p['check'])}</p>
 <p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
 <div class="btns">{btns}</div>
@@ -332,10 +362,10 @@ def product_page(p: dict) -> str:
 <script>{N.PRODUCT_JS}</script>"""
     if head:  # 알리 단독
         return page(f"{p['name']} 가격·한 달 비용 | {BRAND}", f"{p['name']} 알리 {won(int(p['aliPrice']))} ({when}). {p['note'][:80]}",
-                    body, root="../", path=f"p/{p['slug']}.html")
+                    body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
                 f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
-                body, root="../", path=f"p/{p['slug']}.html")
+                body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
 
 
 def index_page(products: list[dict]) -> str:
@@ -394,18 +424,75 @@ const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',ru
 
 
 PRIVACY = """<h1>개인정보처리방침</h1>
-<p class="note">돈 줍는 삼촌(don3chon.com)은 회원가입이 없고 이름·연락처 같은 개인정보를 수집하지 않습니다. 계산기에 넣은 값은 브라우저 안에서만 계산되며 서버에 저장되지 않습니다.</p>
-<p class="note">이 사이트에는 쿠팡 파트너스와 알리익스프레스 어필리에이트 링크가 있습니다. 링크를 누르면 해당 쇼핑몰이 쿠키로 구매 여부를 확인할 수 있습니다. 앞으로 구글 애드센스 광고를 넣으면 구글이 광고 쿠키를 사용할 수 있으며, 그때 이 문서를 갱신합니다.</p>"""
+<p class="small">시행일: 2026년 11월 11일</p>
+<h2>1. 수집하는 개인정보</h2>
+<p class="note">돈 줍는 삼촌(don3chon.com, 이하 '사이트')은 회원가입·댓글·결제 기능이 없으며 이름·전화번호 같은 개인정보를 직접 수집하지 않습니다. 계산기에 넣은 값과 '찜하기' 목록은 이용자의 브라우저(localStorage)에만 저장되고 서버로 전송되지 않습니다.</p>
+<h2>2. 쿠키와 광고</h2>
+<p class="note">이 사이트는 Google AdSense와 카카오 애드핏 광고를 게재할 수 있습니다. Google을 포함한 제3자 광고 사업자는 쿠키를 사용해 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 보여 줄 수 있습니다. Google은 광고 쿠키를 사용해 이용자에게 맞춤 광고를 제공합니다.</p>
+<p class="note">이 사이트는 카카오 애드핏 광고도 게재할 수 있으며, 카카오도 광고 제공을 위해 쿠키 등 행태정보를 사용할 수 있습니다. 카카오의 맞춤형 광고는 <a href="https://info.ad.daum.net/optout.html" rel="noopener" target="_blank">카카오 광고 설정</a>에서 끌 수 있습니다.</p>
+<p class="note">맞춤 광고는 <a href="https://adssettings.google.com" rel="noopener" target="_blank">Google 광고 설정</a>에서 끌 수 있고, 제3자 사업자의 맞춤 광고 쿠키는 <a href="https://www.aboutads.info/choices/" rel="noopener" target="_blank">aboutads.info</a>에서 끌 수 있습니다. Google이 데이터를 사용하는 방식은 <a href="https://policies.google.com/technologies/partner-sites?hl=ko" rel="noopener" target="_blank">Google 파트너 사이트 정책</a>에서 볼 수 있습니다. 브라우저 설정에서 쿠키를 차단할 수도 있습니다.</p>
+<h2>3. 제휴 링크</h2>
+<p class="note">사이트에는 쿠팡 파트너스, 알리익스프레스 어필리에이트, 네이버 쇼핑 커넥트 제휴 링크가 있습니다. 링크를 누르면 해당 쇼핑몰이 쿠키로 구매 여부를 확인하며, 구매가 일어나면 사이트 운영자가 수수료를 받습니다. 이용자가 내는 가격은 같습니다.</p>
+<h2>4. 방문 통계</h2>
+<p class="note">사이트는 Cloudflare Web Analytics로 방문 수를 집계합니다. 이 도구는 쿠키를 쓰지 않고 개인을 식별하지 않는 형태로 페이지 조회 수만 셉니다.</p>
+<h2>5. 문의</h2>
+<p class="note">개인정보 관련 문의는 <a href="contact.html">문의 페이지</a>의 연락처로 보내 주세요. 이 방침이 바뀌면 이 페이지에 시행일과 함께 알립니다.</p>"""
+
+ABOUT = """<h1>돈 줍는 삼촌 소개</h1>
+<p class="lede">사기 전에 한 번 계산해 보는 살림 사이트입니다.</p>
+<h2>어떤 사이트인가요</h2>
+<p class="note">'돈 줍는 삼촌'은 가전 전기요금, 해외 직구 세금, 난방비처럼 물건을 사기 전에 궁금한 것을 숫자로 풀어 보는 개인 사이트입니다. 같은 돈을 써도 덜 새게 쓰는 방법을 조카에게 알려 주듯 쉽게 적는 것이 목표예요.</p>
+<h2>여기서 할 수 있는 것</h2>
+<ul class="note">
+<li><a href="guide.html">삼촌의 글</a>: 생활비·가전·직구에 관한 계산 글</li>
+<li><a href="index.html#calcs">무료 계산기</a>: 전기요금, 알리 직구 실제가, 난방기기 비교, 대기전력</li>
+<li><a href="prices.html">알리 가격 기록</a>: 소개한 물건의 가격을 매일 기록하고, 지금이 싼 편인지 판정</li>
+<li><a href="news.html">삼촌 소식</a>: 날짜별 살림 소식</li>
+<li><a href="index.html#picks">삼촌의 선택</a>: 가격을 계산해 보고 고른 물건</li>
+</ul>
+<h2>글을 쓰는 원칙</h2>
+<ul class="note">
+<li>숫자는 출처(한전 요금표, 관세청 기준, 판매 페이지 가격)와 기준 날짜를 함께 적습니다.</li>
+<li>직접 써 보지 않은 물건을 써 본 것처럼 쓰지 않습니다.</li>
+<li>가격은 바뀌므로 구매 전 판매 페이지에서 최종 가격을 확인하도록 안내합니다.</li>
+</ul>
+<h2>광고와 제휴</h2>
+<p class="note">사이트 운영비는 광고와 제휴 수수료로 충당합니다. 상품 링크는 쿠팡 파트너스·알리익스프레스 어필리에이트·네이버 쇼핑 커넥트 제휴 링크이며, 링크가 있는 곳에는 [광고] 표시를 붙입니다. 수수료를 받는다고 추천 순서나 계산 결과를 바꾸지 않습니다.</p>
+<h2>운영자</h2>
+<p class="note">돈 줍는 삼촌 (사업자 운영). 유튜브·인스타그램에서도 같은 이름으로 활동합니다. 문의는 <a href="contact.html">문의 페이지</a>로 보내 주세요.</p>"""
+
+
+def contact_body() -> str:
+    email = (CFG.get("contactEmail") or "").strip()
+    line = (f'<a href="mailto:{html.escape(email)}">{html.escape(email)}</a>' if email else "이메일 주소 준비 중")
+    return f"""<h1>문의</h1>
+<p class="lede">글 내용의 오류, 계산기 문제, 제휴·광고 문의를 받습니다.</p>
+<h2>이메일</h2>
+<p class="note">{line}</p>
+<p class="note">보통 2~3일 안에 답장드립니다. 잘못된 숫자나 바뀐 가격을 알려 주시면 확인 후 글을 고치고 고친 날짜를 적어 둡니다.</p>
+<h2>참고</h2>
+<p class="note">이 사이트는 물건을 직접 팔지 않습니다. 주문·배송·환불은 구매하신 쇼핑몰(쿠팡, 알리익스프레스, 네이버) 고객센터로 문의해 주세요.</p>"""
+
+
+HIST: dict = {}
 
 
 def build(out="site", src="config/site_products.csv", allow_examples: bool = False) -> int:
     products = load(src, allow_examples)
+    HIST.clear(); HIST.update(price_history())
     o = pathlib.Path(out)
     (o / "p").mkdir(parents=True, exist_ok=True)
     (o / "calc").mkdir(exist_ok=True)
     for c in CALCS:
         (o / "calc" / f"{c['slug']}.html").write_text(calc_page(c, products), encoding="utf-8")
     (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
+    (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
+        PR.page_body(products, HIST), path="prices.html"), encoding="utf-8")
+    (o / "about.html").write_text(page(f"소개 | {BRAND}", "돈 줍는 삼촌은 사기 전에 한 번 계산해 보는 살림 사이트입니다. 운영 원칙과 광고·제휴 안내.", ABOUT, path="about.html"), encoding="utf-8")
+    (o / "contact.html").write_text(page(f"문의 | {BRAND}", "돈 줍는 삼촌에 글 오류, 계산기 문제, 제휴 문의를 보내는 방법.", contact_body(), path="contact.html"), encoding="utf-8")
+    client = adsense_client()
+    if client:  # ads.txt: 게시자 ID 가 있을 때만
+        (o / "ads.txt").write_text(f"google.com, {client.removeprefix('ca-')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     (o / "index.html").write_text(index_page(products), encoding="utf-8")
     for p in products:
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
@@ -439,7 +526,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             t = o / f.relative_to("static")
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_bytes(f.read_bytes())
-    urls = ["", "guide.html", "news.html", "faq.html"] + [f"guide/{a['slug']}.html" for a in arts] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + [f"p/{p['slug']}.html" for p in products] + ["privacy.html"]
+    urls = ["", "guide.html", "news.html", "prices.html", "faq.html"] + [f"guide/{a['slug']}.html" for a in arts] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + ([] if PRODUCT_NOINDEX else [f"p/{p['slug']}.html" for p in products]) + ["about.html", "contact.html", "privacy.html"]
     today = dt.date.today().isoformat()
     (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
