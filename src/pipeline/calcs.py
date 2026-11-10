@@ -101,6 +101,34 @@ function run(){const hd=$('#h').value*$('#d').value/1000, base=+$('#base').value
 <p>난방기기는 누진 구간을 넘기기 쉬운 가전입니다. 겨울에 사용량이 400kWh를 넘기면 넘는 부분은 1kWh에 307원이 됩니다. 전기 안전을 위해 KC 인증 제품을 쓰고, 멀티탭 하나에 여러 난방기기를 꽂지 마세요.</p>""",
         "category": "heat",
     },
+    {
+        "slug": "standby",
+        "title": "대기전력 전기요금 계산기 (꽂아만 둔 가전)",
+        "h1": "꽂아만 둔 가전, 1년에 얼마 샐까?",
+        "lede": "끄고 꽂아 둔 가전의 대기전력을 넣으면, 우리 집 누진 구간에서 한 달·1년 요금이 얼마인지 계산합니다.",
+        "form": """
+<label>가전 1 대기전력 (W, 예: 셋톱박스)<input id="a" type="number" inputmode="decimal" value="10" min="0" step="0.1"></label>
+<label>가전 2 대기전력 (W, 예: 컴퓨터·모니터)<input id="b" type="number" inputmode="decimal" value="3" min="0" step="0.1"></label>
+<label>가전 3 대기전력 (W, 예: 꽂아 둔 충전기 여러 개)<input id="c" type="number" inputmode="decimal" value="2" min="0" step="0.1"></label>
+<label>하루에 꺼져 있는 시간<input id="off" type="number" inputmode="decimal" value="20" min="0" max="24" step="0.5"></label>
+<label>우리 집 평소 월 사용량 (kWh, 고지서)<input id="base" type="number" inputmode="numeric" value="300" min="0"></label>""",
+        "ids": ["a", "b", "c", "off", "base"],
+        "js": """
+function run(){const w=(+$('#a').value)+(+$('#b').value)+(+$('#c').value), kwh=w*$('#off').value*30/1000, base=+$('#base').value;
+ const month=bill(base)-bill(Math.max(0,base-kwh)), year=month*12;
+ $('#out').innerHTML=`<div><span>대기전력 합계</span><span>${w.toFixed(1)} W</span></div>
+ <div><span>한 달 대기 사용량</span><span>${kwh.toFixed(1)} kWh</span></div>
+ <div><span>한 달 대기 요금</span><span>${fmt(month)}</span></div>
+ <div class="sum"><span>1년이면</span><span>${fmt(year)}</span></div>`;
+ $('#cmp').textContent= base>200&&base-kwh<=200?`대기전력만 줄여도 첫 구간(200kWh 이하)으로 내려갈 수 있어요. 그러면 전체 단가가 낮아집니다.`
+  : w>=10?`대기전력 ${w.toFixed(0)}W는 전구 하나를 1년 내내 켜 둔 것과 비슷한 수준이에요. 개별 스위치 멀티탭으로 끄면 이만큼 아낍니다.`
+  :'대기전력이 크지 않은 편이에요. 오래 안 쓰는 가전만 플러그를 뽑아도 충분합니다.';}""",
+        "body": """<h2>삼촌의 설명</h2>
+<p>대기전력은 가전을 껐는데도 플러그가 꽂혀 있어서 새는 전기입니다. 리모컨 신호를 기다리는 TV·셋톱박스, 시계가 켜진 전자레인지, 꽂아 둔 충전기가 대표적이에요. 한 대에 몇 와트라 작아 보여도 하루 20시간, 1년 내내 새기 때문에 합치면 눈에 띕니다.</p>
+<p>대기전력은 제품마다 크게 달라서 직접 재 보는 게 가장 정확합니다. 전력량을 보여 주는 스마트 플러그나 전력 측정기를 콘센트와 가전 사이에 끼우고, 가전을 끈 상태의 숫자를 적어 넣으세요. 측정기가 없으면 제품 설명서의 '대기전력' 항목을 보면 됩니다. 위에 들어 있는 값은 계산을 보여 주기 위한 예시입니다.</p>
+<p>누진제 때문에 같은 1kWh라도 집마다 값이 다릅니다. 이 계산기는 평소 사용량에서 대기전력만큼을 뺐을 때 요금이 얼마나 줄어드는지로 계산합니다.</p>""",
+        "category": "living",
+    },
 ]
 
 CALC_CSS = """

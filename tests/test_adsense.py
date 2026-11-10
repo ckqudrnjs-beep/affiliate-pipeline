@@ -26,6 +26,17 @@ class AdsenseTest(unittest.TestCase):
         finally:
             S.CFG.clear(); S.CFG.update(old)
 
+    def test_adfit(self):
+        old = dict(S.CFG)
+        try:
+            S.CFG["adfitUnit"] = "DAN-abc123XYZ"
+            self.assertIn('data-ad-unit="DAN-abc123XYZ"', S.page("t", "d", "b"))
+            self.assertNotIn("kakao_ad_area", S.page("t", "d", "b", ads=False))
+            S.CFG["adfitUnit"] = "bad\"x"
+            self.assertNotIn("kakao_ad_area", S.page("t", "d", "b"))
+        finally:
+            S.CFG.clear(); S.CFG.update(old)
+
 
 if __name__ == "__main__":
     unittest.main()
