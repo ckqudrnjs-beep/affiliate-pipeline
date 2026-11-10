@@ -102,7 +102,12 @@ def access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
         return json.load(r)["access_token"]
 
 
-def video_body(row: dict, description: str, publish_at: dt.datetime) -> dict:
+def video_body(row: dict, description: str, publish_at: dt.datetime | None) -> dict:
+    """publish_at 이 None 이면 바로 공개 (수동 실행 YT_NOW=true)."""
+    status = ({"privacyStatus": "public"} if publish_at is None else {
+        "privacyStatus": "private",  # publishAt 은 private 일 때만 설정 가능
+        "publishAt": publish_at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    })
     return {
         "snippet": {
             "title": row["title"].strip(),
@@ -113,8 +118,7 @@ def video_body(row: dict, description: str, publish_at: dt.datetime) -> dict:
             "defaultAudioLanguage": "ko",
         },
         "status": {
-            "privacyStatus": "private",  # publishAt 은 private 일 때만 설정 가능
-            "publishAt": publish_at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            **status,
             "selfDeclaredMadeForKids": False,
             "containsSyntheticMedia": False,  # 실제 상품 사진 편집 + 일반 AI 내레이션
             "embeddable": True,
@@ -153,13 +157,20 @@ def main(now: dt.datetime | None = None) -> int:
     interval = int(os.environ.get("YT_INTERVAL_DAYS") or 1)
     lead = int(os.environ.get("YT_LEAD_DAYS") or 2)
 
+    publish_now = os.environ.get("YT_NOW", "").lower() == "true"  # 수동 실행: 지금 바로 공개
+    want = os.environ.get("YT_SLUG", "").strip()
+
     log = load_log()
-    row = pick(load_queue(), log)
+    queue = load_queue()
+    if want:
+        row = next((r for r in queue if r["slug"] == want and want not in log), None)
+    else:
+        row = pick(queue, log)
     if row is None:
-        summary("유튜브: 대기열에 올릴 영상 없음")
+        summary(f"유튜브: 대기열에 올릴 영상 없음 {want}")
         return 0
-    slot = next_slot(log, now, interval)
-    if slot - now > dt.timedelta(days=lead):
+    slot = now if publish_now else next_slot(log, now, interval)
+    if not publish_now and slot - now > dt.timedelta(days=lead):
         summary(f"유튜브: 다음 영상 {row['slug']} 은 {slot:%m/%d %H:%M} 공개 예정, 아직 올릴 때가 아님")
         return 0
 
@@ -180,7 +191,7 @@ def main(now: dt.datetime | None = None) -> int:
     try:
         token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
                              os.environ["YT_REFRESH_TOKEN"])
-        res = upload(token, video_body(row, description, slot), video)
+        res = upload(token, video_body(row, description, None if publish_now else slot), video)
     except KeyError as e:
         summary(f"::error::Secret 없음: {e.args[0]} (docs/YOUTUBE_SETUP.md)")
         return 1
