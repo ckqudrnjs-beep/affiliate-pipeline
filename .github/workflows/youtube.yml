@@ -7,6 +7,15 @@ on:
   schedule:
     - cron: "0 1 * * *"   # 10:00 KST
   workflow_dispatch:
+    inputs:
+      slug:
+        description: "올릴 영상 slug (비우면 대기열 순서대로)"
+        required: false
+        default: ""
+      now:
+        description: "true 면 예약 없이 바로 공개"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -29,6 +38,8 @@ jobs:
         env:
           YOUTUBE_ENABLED: ${{ vars.YOUTUBE_ENABLED }}
           YT_INTERVAL_DAYS: ${{ vars.YT_INTERVAL_DAYS }}
+          YT_SLUG: ${{ inputs.slug }}
+          YT_NOW: ${{ inputs.now }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
