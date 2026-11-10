@@ -133,10 +133,15 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
             files[d["slug"]] = (f, d)
     if not ids:
         return 0
-    r = client._call("aliexpress.affiliate.productdetail.get", product_ids=",".join(list(ids)[:50]),
-                     target_currency="KRW", target_language="KO", country="KR", tracking_id=client.tracking_id)
-    body = next(iter(r.values())) if r else {}
-    prods = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+    prods, all_ids = [], list(ids)
+    for i in range(0, len(all_ids), 20):  # API 한 번에 조회 가능한 수가 제한돼 있어 나눠서 조회한다
+        r = client._call("aliexpress.affiliate.productdetail.get", product_ids=",".join(all_ids[i:i + 20]),
+                         target_currency="KRW", target_language="KO", country="KR", tracking_id=client.tracking_id)
+        body = next(iter(r.values())) if r else {}
+        got = (body.get("resp_result", {}).get("result", {}).get("products", {}) or {}).get("product", [])
+        if not got:  # 한 묶음이라도 응답이 통째로 비면 API 문제일 수 있으니 오늘은 아무것도 바꾸지 않는다
+            return 0
+        prods += got
     if not prods:  # 응답 자체가 비면 API 문제일 수 있으니 아무것도 바꾸지 않는다
         return 0
     prev = last_prices(root)
