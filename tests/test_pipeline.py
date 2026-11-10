@@ -236,3 +236,16 @@ class ArticleTest(unittest.TestCase):
         self.assertNotIn("evil.example\">", h)
         self.assertIn("<table>", h)
         self.assertIn("<h2>제목</h2>", h)
+
+
+class ArticleDataTest(unittest.TestCase):
+    def test_all_articles_valid(self):  # 자동 작성 글은 이 검사를 통과해야만 main에 올라간다
+        import json
+        from pipeline import articles, calcs
+        root = pathlib.Path(__file__).resolve().parent.parent / "data"
+        prods = {json.loads(f.read_text(encoding="utf-8"))["slug"] for f in (root / "products").glob("*.json")}
+        arts = [json.loads(f.read_text(encoding="utf-8")) for f in (root / "articles").glob("*.json")]
+        slugs = [a["slug"] for a in arts]
+        self.assertEqual(len(slugs), len(set(slugs)), "slug 중복")
+        for a in arts:
+            self.assertEqual(articles.validate(a, prods, {c["slug"] for c in calcs.CALCS}, set(slugs)), [], a["slug"])

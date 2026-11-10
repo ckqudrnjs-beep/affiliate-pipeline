@@ -98,3 +98,35 @@ def ld(a: dict, base: str) -> dict:
     return {"@context": "https://schema.org", "@type": "Article", "headline": a["title"], "description": a["desc"],
             "datePublished": a["date"], "dateModified": a.get("updated", a["date"]), "inLanguage": "ko",
             "author": {"@type": "Organization", "name": "돈 줍는 삼촌"}, "mainEntityOfPage": f"{base}/guide/{a['slug']}.html"}
+
+
+BANNED = ("최저가 보장", "무조건", "100% 효과", "완치", "치료", "부작용 없", "역대급 할인", "지금 안 사면")
+
+
+def validate(a: dict, product_slugs: set[str], calc_slugs: set[str], article_slugs: set[str]) -> list[str]:
+    """자동 작성 글이 바로 올라가도 되는지 검사한다. 빈 목록이면 통과."""
+    err = []
+    for k in ("slug", "date", "title", "desc", "body"):
+        if not a.get(k):
+            err.append(f"{k} 없음")
+    body = a.get("body", "")
+    if len(body) < MIN_BODY:
+        err.append(f"본문 {len(body)}자 (최소 {MIN_BODY})")
+    if body.count("## ") < 2:
+        err.append("소제목 2개 이상 필요")
+    if re.search(r"https?://", body):
+        err.append("본문에 외부 링크 금지")
+    for w in BANNED:
+        if w in body or w in a.get("title", ""):
+            err.append(f"금지 표현: {w}")
+    for path in re.findall(r"\]\(([^)]+)\)", body):
+        m = re.fullmatch(r"(calc|p|guide)/([\w-]+)\.html(#[\w-]*)?", path)
+        ok = m and (m.group(2) in {"calc": calc_slugs, "p": product_slugs, "guide": article_slugs}[m.group(1)])
+        if not ok:
+            err.append(f"없는 내부 링크: {path}")
+    if len(a.get("products", [])) > 2:
+        err.append("상품은 2개까지")
+    for s in a.get("products", []):
+        if s not in product_slugs:
+            err.append(f"없는 상품: {s}")
+    return err
