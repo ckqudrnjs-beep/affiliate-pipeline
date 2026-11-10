@@ -100,7 +100,7 @@ def ld(a: dict, base: str) -> dict:
             "author": {"@type": "Organization", "name": "돈 줍는 삼촌"}, "mainEntityOfPage": f"{base}/guide/{a['slug']}.html"}
 
 
-BANNED = ("최저가 보장", "무조건", "100% 효과", "완치", "치료", "부작용 없", "역대급 할인", "지금 안 사면")
+BANNED = ("직접 써 봤", "직접 사용해 보니", "써 보니 효과", "실사용 후기", "내돈내산", "최저가 보장", "무조건", "100% 효과", "완치", "치료", "부작용 없", "역대급 할인", "지금 안 사면")
 
 
 def validate(a: dict, product_slugs: set[str], calc_slugs: set[str], article_slugs: set[str]) -> list[str]:
