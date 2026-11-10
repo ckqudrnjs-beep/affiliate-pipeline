@@ -6,8 +6,9 @@
  },
  {
   "q": "전기요와 전기장판 차이와 전기요금",
-  "done": false,
-  "format": "비교"
+  "done": true,
+  "format": "비교",
+  "slug": "electric-blanket-vs-mat-bill"
  },
  {
   "q": "삼촌의 일기: 첫 고지서 받고 전기 먹는 가전 찾기",
