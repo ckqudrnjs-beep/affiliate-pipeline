@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
 CATEGORIES = {"clean": "청소", "heat": "겨울 난방", "living": "생활·조명", "humidify": "겨울 가습",
-              "kitchen": "주방", "digital": "IT·디지털", "goods": "생활 잡화"}
+              "kitchen": "주방", "digital": "IT·디지털", "goods": "생활 잡화", "car": "자동차", "humidity": "습도 관리"}
 # 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
 DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
@@ -156,6 +156,12 @@ footer a{display:inline-block;padding:8px 0}
 .why{color:var(--muted);font-size:15px;margin:0}
 .price{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:10px}
 .price b{font-weight:600}.chg{font-size:12px;font-weight:600;padding:1px 8px;border:1px solid currentColor}.chg.down{color:var(--green)}.chg.up{color:#8a4b2a}.price .v{color:var(--green);font-weight:600}
+.picks.compact{grid-template-columns:repeat(4,minmax(0,1fr));gap:32px 20px}
+@media (max-width:960px){.picks.compact{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){.picks.compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px}}
+.picks.compact .why,.picks.compact .cat{display:none}.picks.compact .nm{font-size:17px}.picks.compact .price{font-size:13px;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.chips a{padding:8px 14px;border:1px solid var(--line);color:inherit;text-decoration:none;font-size:14px}.chips a:hover{border-color:var(--ink)}
+.catgroup{padding-top:28px;scroll-margin-top:16px}.catgroup h3{font:500 20px/1.4 var(--display);margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .more{font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
 .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
 @media (max-width:720px){.principles{grid-template-columns:minmax(0,1fr)}}
@@ -334,7 +340,13 @@ def product_page(p: dict) -> str:
 def index_page(products: list[dict]) -> str:
     e = html.escape
     ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
-    picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:7]))
+    picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:4]))
+    cats = [c for c in CATEGORIES if any(p["category"] == c for p in products)]
+    chips = "".join(f'<a href="#{c}">{e(CATEGORIES[c])}</a>' for c in cats)
+    groups = "".join(f'<div class="catgroup" id="{c}"><h3>{e(CATEGORIES[c])}</h3><div class="picks compact">'
+                     + "".join(pick(p) for p in ranked if p["category"] == c) + "</div></div>" for c in cats)
+    all_sec = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
+<nav class="chips" aria-label="분야">{chips}</nav>{groups}</section>""" if products else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
     hero = """<section class="hero"><div class="wrap"><p class="eyebrow">CURATED BY 돈 줍는 삼촌</p>
 <h1>좋은 물건을,<br>제값에.</h1>
@@ -346,6 +358,7 @@ def index_page(products: list[dict]) -> str:
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     body = f"""{N.home_block(news, sales)}
 {picks_sec}
+{all_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
 <div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
 <div><b>기다림에도 값을 매깁니다</b><p>해외 배송을 하루 더 기다릴 때마다 얼마를 아끼는지 보여 드립니다. 몇천 원 차이면 빠른 배송을 권합니다.</p></div>
