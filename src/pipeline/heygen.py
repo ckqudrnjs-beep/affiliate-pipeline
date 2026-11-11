@@ -48,21 +48,48 @@ def summary(text: str) -> None:
 
 
 def list_choices() -> int:
-    out = ["## 한국어 음성 (남성)", "| voice_id | 이름 | 미리듣기 |", "|---|---|---|"]
-    v = call("GET", "/v3/models/audio/voices?type=public&language=ko&gender=male&limit=50")
-    for x in v.get("data", []):
-        out.append(f"| `{x.get('voice_id')}` | {x.get('name')} | {x.get('preview_audio_url', '')} |")
-    out += ["", "## 공개 아바타 (남성)", "| avatar_id | 이름 | 종류 | 미리보기 |", "|---|---|---|---|"]
-    token, n = "", 0
-    while n < 4:
+    """남성 공개 아바타를 사람별 1장씩 모아 번호 붙인 사진표(data/heygen/avatars.png)와 한국어 음성 목록을 만든다. 무료 조회만."""
+    from PIL import Image, ImageDraw
+    from .shorts import font
+    out_dir = pathlib.Path("data/heygen")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    v = call("GET", "/v3/models/audio/voices?type=public&language=ko&limit=50")
+    voices = [{"n": i + 1, "voice_id": x.get("voice_id"), "name": x.get("name"), "gender": x.get("gender"),
+               "preview": x.get("preview_audio_url")} for i, x in enumerate(v.get("data", []))]
+    people, token = {}, ""
+    for _ in range(30):
         r = call("GET", "/v3/avatars/looks?ownership=public&limit=50" + (f"&token={token}" if token else ""))
         for a in r.get("data", []):
-            if (a.get("gender") or "").lower() == "male":
-                out.append(f"| `{a.get('id')}` | {a.get('name')} | {a.get('avatar_type')} | ![]({a.get('preview_image_url')}) |")
-        token, n = r.get("next_token") or "", n + 1
+            if (a.get("gender") or "").lower() != "male":
+                continue
+            who = (a.get("name") or "?").split(" ")[0]
+            people.setdefault(who, []).append({"id": a.get("id"), "name": a.get("name"), "type": a.get("avatar_type"),
+                                               "img": a.get("preview_image_url"), "tags": a.get("tags")})
+        token = r.get("next_token") or ""
         if not r.get("has_more") or not token:
             break
-    summary("\n".join(out))
+    avatars = []
+    for who, looks in people.items():
+        avatars.append({"n": len(avatars) + 1, "person": who, "looks": looks})
+    (out_dir / "choices.json").write_text(json.dumps({"voices": voices, "avatars": avatars}, ensure_ascii=False, indent=1), encoding="utf-8")
+    cols, cw, ch = 6, 300, 380
+    rows = (len(avatars) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * cw, max(1, rows) * ch), "white")
+    d = ImageDraw.Draw(sheet)
+    for i, a in enumerate(avatars):
+        x, y = (i % cols) * cw, (i // cols) * ch
+        try:
+            req = urllib.request.Request(a["looks"][0]["img"], headers={"User-Agent": "Mozilla/5.0"})
+            im = Image.open(__import__("io").BytesIO(urllib.request.urlopen(req, timeout=30).read())).convert("RGB")
+            im.thumbnail((cw - 10, ch - 60))
+            sheet.paste(im, (x + (cw - im.width) // 2, y + 5))
+        except Exception as e:
+            d.text((x + 10, y + 100), f"사진 실패 {e}"[:30], font=font(18), fill="red")
+        d.text((x + cw // 2, y + ch - 30), f"{a['n']}. {a['person']} ({len(a['looks'])})", font=font(26), fill="black", anchor="mm")
+    sheet.save(out_dir / "avatars.png")
+    lines = ["# HeyGen 한국어 음성", ""] + [f"{x['n']}. {x['name']} ({x['gender']}) `{x['voice_id']}` {x['preview']}" for x in voices]
+    (out_dir / "voices.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    summary(f"남성 아바타 {len(avatars)}명, 한국어 음성 {len(voices)}개 → data/heygen/ (heygen-list 브랜치)")
     return 0
 
 
