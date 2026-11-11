@@ -397,7 +397,7 @@ def queue_row(spec: dict, order: int, today: dt.date) -> dict:
 
 def append_queue(row: dict) -> None:
     with QUEUE.open("a", encoding="utf-8", newline="") as f:
-        csv.DictWriter(f, fieldnames=["order", "slug", "title", "intro", "price_date"]).writerow(row)
+        csv.DictWriter(f, fieldnames=["order", "slug", "title", "intro", "price_date", "synthetic"], restval="").writerow(row)
 
 
 def product_json(spec: dict, cand: dict, today: dt.date, gallery: list[str]) -> dict:

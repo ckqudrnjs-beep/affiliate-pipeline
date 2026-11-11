@@ -1,0 +1,57 @@
+name: heygen
+
+# HeyGen 가상 인물 쇼츠 (손으로 실행). docs/HEYGEN.md
+# list: 고를 수 있는 남성 아바타·한국어 음성 목록을 실행 요약에 표시
+# make: config/heygen/<이름>.json 으로 영상을 만들어 PR로 올림 (BK가 보고 병합하면 업로드 대기열에 들어감)
+on:
+  workflow_dispatch:
+    inputs:
+      cmd:
+        description: "list 또는 make"
+        required: true
+        default: "list"
+      names:
+        description: "make 할 설정 이름 (config/heygen/ 파일명, 공백으로 여러 개)"
+        required: false
+        default: ""
+      force:
+        description: "이미 만든 영상을 다시 만들기 (요금 듦)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  heygen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+          pip install -q pillow numpy
+      - name: 실행
+        env:
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          HEYGEN_AVATAR_ID: ${{ vars.HEYGEN_AVATAR_ID }}
+          HEYGEN_VOICE_ID: ${{ vars.HEYGEN_VOICE_ID }}
+          HEYGEN_FORCE: ${{ inputs.force }}
+        run: PYTHONPATH=src python -m pipeline.heygen ${{ inputs.cmd }} ${{ inputs.names }}
+      - name: 미리보기 PR
+        if: inputs.cmd == 'make'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          b=heygen/$(TZ=Asia/Seoul date +%F-%H%M)
+          git config user.name "heygen-bot"
+          git config user.email "heygen-bot@users.noreply.github.com"
+          git checkout -b "$b"
+          git add media/youtube config/youtube_queue.csv
+          git commit -m "HeyGen 쇼츠 ${{ inputs.names }}" || exit 0
+          git push -u origin "$b"
+          gh pr create --base main --title "[HeyGen 쇼츠] ${{ inputs.names }}" --body "영상 파일(media/youtube/)을 내려받아 확인하고, 괜찮으면 병합하세요. 병합하면 업로드 대기열에 들어갑니다 (하루 1개, 19:00 KST). 공개 전 Studio에서 유료 프로모션 체크."
