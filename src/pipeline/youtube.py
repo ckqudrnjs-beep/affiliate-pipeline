@@ -49,13 +49,18 @@ def load_log(path: pathlib.Path = LOG) -> dict:
     return {}
 
 
+def is_synthetic(row: dict) -> bool:
+    """HeyGen 같은 사실적인 AI 인물 영상 (대기열 synthetic 열 = 1)."""
+    return str(row.get("synthetic") or "").strip() == "1"
+
+
 def build_description(row: dict) -> str:
     return "\n".join([
         DISCLOSURE,
         row["intro"].strip(),
         f"가격은 {row['price_date'].strip()} 기준이며 바뀔 수 있어요. 비교·계산은 don3chon.com",
         "",
-        "내레이션: AI 음성",
+        "AI로 만든 가상 인물이 등장하는 영상입니다." if is_synthetic(row) else "내레이션: AI 음성",
         "#Shorts #돈줍는삼촌",
     ])
 
@@ -120,7 +125,7 @@ def video_body(row: dict, description: str, publish_at: dt.datetime | None) -> d
         "status": {
             **status,
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": False,  # 실제 상품 사진 편집 + 일반 AI 내레이션
+            "containsSyntheticMedia": is_synthetic(row),  # AI 가상 인물이면 True, 상품 사진 편집 + AI 내레이션은 False
             "embeddable": True,
         },
     }

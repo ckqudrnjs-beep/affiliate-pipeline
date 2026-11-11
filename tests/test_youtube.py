@@ -43,3 +43,12 @@ class YoutubeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SyntheticTest(unittest.TestCase):
+    def test_synthetic_row(self):
+        row = {"title": "[광고] x", "intro": "y", "price_date": "11/11", "synthetic": "1"}
+        body = yt.video_body(row, yt.build_description(row), None)
+        self.assertTrue(body["status"]["containsSyntheticMedia"])
+        self.assertIn("가상 인물", yt.build_description(row))
+        self.assertFalse(yt.is_synthetic({"synthetic": None}))
