@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       cmd:
-        description: "list 또는 make"
+        description: "list, photo(삼촌 사진 → 아바타) 또는 make"
         required: true
         default: "list"
       names:
@@ -51,6 +51,15 @@ jobs:
           git add data/heygen
           git commit -m "HeyGen 아바타·음성 목록"
           git push -f origin heygen-list
+      - name: 아바타 저장 (main)
+        if: inputs.cmd == 'photo'
+        run: |
+          git config user.name "heygen-bot"
+          git config user.email "heygen-bot@users.noreply.github.com"
+          git add config/heygen/avatar.json
+          git commit -m "HeyGen 사진 아바타 (돈 줍는 삼촌)" || exit 0
+          git pull --rebase -q origin main
+          git push origin HEAD:main
       - name: 미리보기 PR
         if: inputs.cmd == 'make'
         env:

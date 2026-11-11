@@ -15,3 +15,9 @@ HeyGen API v3만 쓴다 (v1/v2 2026-10-31 종료). 영상 생성은 API 선불(5
 - 화면: 위 "광고 · 알리익스프레스 제휴 링크", 아래 "AI로 만든 가상 인물", 끝 2.5초 상품·가격·don3chon.com 카드
 - 업로드 시 `containsSyntheticMedia=true` 자동, 유료 프로모션 체크는 BK가 Studio에서
 - HeyGen 약관: 유료 사용분은 상업 이용 가능, AI 표기 필요, 실존 인물 사진 아바타는 본인 허락 필요 → 공개(스톡) 아바타 사용
+
+## 2026-11-11 결정: 한국인 삼촌 사진 아바타
+- 공개 아바타는 한국인으로 보이는 사람이 없어(동양인 2명뿐) BK가 **AI로 만든 한국인 삼촌 사진(Canva 시안 5번, 채널 로고처럼 갈색 모자·올리브 조끼·동전)** 을 골랐다. 실존 인물 아님.
+- 사진은 `config/heygen/uncle.jpg`. `heygen` 워크플로 cmd=`photo` → HeyGen 사진 아바타 생성 → `config/heygen/avatar.json` (avatar_id, voice_id) 을 main에 저장.
+- 목소리 기본값: 한국어 남성 Ben (langdesign). 저장소 변수 HEYGEN_AVATAR_ID / HEYGEN_VOICE_ID 가 있으면 그것이 우선.
+- 이후 make 는 avatar.json 을 쓴다. 담요 1편만 먼저 만들어 BK 확인 후 유리창 로봇.
