@@ -27,8 +27,9 @@
  },
  {
   "q": "삼촌의 일기: 베란다 결로와 한 판 붙은 주말",
-  "done": false,
-  "format": "일기"
+  "done": true,
+  "format": "일기",
+  "slug": "veranda-condensation-diary"
  },
  {
   "q": "가습기 전기요금 (초음파·가열식·복합식)",
