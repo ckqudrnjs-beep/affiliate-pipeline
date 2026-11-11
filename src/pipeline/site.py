@@ -515,7 +515,7 @@ ABOUT = """<h1>돈 줍는 삼촌 소개</h1>
 <h2>여기서 할 수 있는 것</h2>
 <ul class="note">
 <li><a href="guide.html">삼촌의 글</a>: 생활비·가전·직구에 관한 계산 글</li>
-<li><a href="index.html#calcs">무료 계산기</a>: 전기요금, 알리 직구 실제가, 난방기기 비교, 대기전력</li>
+<li><a href="index.html#calcs">무료 계산기</a>: 전기요금, 알리 직구 실제가, 난방기기 비교, 대기전력, 가습기 종류별 요금</li>
 <li><a href="prices.html">알리 가격 기록</a>: 소개한 물건의 가격을 매일 기록하고, 지금이 싼 편인지 판정</li>
 <li><a href="news.html">삼촌 소식</a>: 날짜별 살림 소식</li>
 <li><a href="index.html#picks">삼촌의 선택</a>: 가격을 계산해 보고 고른 물건</li>

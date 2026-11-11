@@ -129,6 +129,31 @@ function run(){const w=(+$('#a').value)+(+$('#b').value)+(+$('#c').value), kwh=w
 <p>누진제 때문에 같은 1kWh라도 집마다 값이 다릅니다. 이 계산기는 평소 사용량에서 대기전력만큼을 뺐을 때 요금이 얼마나 줄어드는지로 계산합니다.</p>""",
         "category": "living",
     },
+    {
+        "slug": "humidifier",
+        "title": "가습기 종류별 전기요금 비교 계산기",
+        "h1": "초음파 vs 가열식 vs 복합식, 가습기 전기요금은?",
+        "lede": "가습기는 방식에 따라 소비전력이 열 배 넘게 차이 납니다. 우리 집 누진 구간에서 한 달 요금을 나란히 비교합니다.",
+        "form": """
+<label>하루 사용 시간<input id="h" type="number" inputmode="decimal" value="10" min="0" max="24" step="0.5"></label>
+<label>한 달 사용 일수<input id="d" type="number" inputmode="numeric" value="30" min="0" max="31"></label>
+<label>우리 집 평소 월 사용량 (kWh)<input id="base" type="number" inputmode="numeric" value="300" min="0"></label>
+<label>초음파식 (W)<input id="w1" type="number" inputmode="numeric" value="30" min="0"></label>
+<label>가열식 (W)<input id="w2" type="number" inputmode="numeric" value="300" min="0"></label>
+<label>복합식 (W, 평균)<input id="w3" type="number" inputmode="numeric" value="120" min="0"></label>""",
+        "ids": ["h", "d", "base", "w1", "w2", "w3"],
+        "js": """
+function run(){const hd=$('#h').value*$('#d').value/1000, base=+$('#base').value, b0=bill(base);
+ const rows=[['초음파식',+$('#w1').value],['가열식',+$('#w2').value],['복합식',+$('#w3').value]].map(([n,w])=>[n,bill(base+w*hd)-b0,w*hd]);
+ $('#out').innerHTML=rows.map(([n,c,k])=>`<div><span>${n} (${k.toFixed(0)} kWh)</span><span>${fmt(c)}</span></div>`).join('');
+ const lo=rows.reduce((a,b)=>a[1]<b[1]?a:b), hi=rows.reduce((a,b)=>a[1]>b[1]?a:b);
+ $('#cmp').textContent=`${hi[0]} 대신 ${lo[0]}을 쓰면 한 달 ${fmt(hi[1]-lo[1])} 덜 냅니다. 대신 방식마다 세척 방법과 소음이 달라요.`;}""",
+        "body": """<h2>삼촌의 설명</h2>
+<p>가습기 전기요금은 물을 어떻게 수증기로 만드느냐에 달려 있습니다. 초음파식은 진동으로 물을 잘게 쪼개서 소비전력이 수십 와트 수준이고, 가열식은 물을 끓여서 수백 와트를 씁니다. 복합식은 물을 살짝 데운 뒤 초음파로 뿜는 방식이라 그 중간이에요.</p>
+<p>위에 들어 있는 소비전력은 계산을 보여 주기 위한 예시입니다. 가지고 있거나 보고 있는 제품의 상세페이지에서 '정격 소비전력'을 찾아 바꿔 넣으세요. 가열식은 물이 끓기 시작한 뒤에는 전력을 조금 덜 쓰는 제품도 있어서 실제 요금은 계산보다 적을 수 있습니다.</p>
+<p>요금만 보면 초음파식이 가장 싸지만, 물통과 진동판을 자주 씻어야 하고 수돗물 속 성분이 하얀 가루로 내려앉을 수 있습니다. 가열식은 요금이 더 나오는 대신 끓인 수증기를 내보냅니다. 겨울 내내 켜 둘 가습기라면 요금과 관리 시간을 같이 따져 보세요.</p>""",
+        "category": "humidify",
+    },
 ]
 
 CALC_CSS = """
