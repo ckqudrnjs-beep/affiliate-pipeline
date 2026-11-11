@@ -1,0 +1,11 @@
+{
+ "_note": "삼촌 표정 영상 (2026-11-11 BK): HeyGen으로 한 번만 만들어 media/uncle/<이름>.mp4 로 두고 영상마다 골라 섞어 쓴다. 목소리는 7번(Supertonic M2). 이름 앞부분(intro/react/outro)이 쓰임새.",
+ "intro-excited": {"say": "조카야, 삼촌이 오늘 하나 건졌다!", "motion": "Excited and cheerful, leans slightly toward the camera with a big smile and raised eyebrows."},
+ "intro-curious": {"say": "조카야, 이거 한번 볼래?", "motion": "Curious friendly look, tilts head slightly and gestures toward the viewer."},
+ "react-surprised": {"say": "어? 이게 이 가격이라고?", "motion": "Genuinely surprised, eyes widen and eyebrows go up, slight lean back."},
+ "react-laugh": {"say": "허허, 이거 물건이네.", "motion": "Warm hearty laugh, nods while smiling broadly."},
+ "react-think": {"say": "흠, 근데 이건 꼭 확인해.", "motion": "Thoughtful, slightly frowns and raises one finger as a gentle warning."},
+ "react-nod": {"say": "그치, 이거면 충분해.", "motion": "Calm confident nod with a satisfied smile."},
+ "outro-1": {"say": "광고 링크라 삼촌한테 수수료가 조금 와. 비교는 돈 줍는 삼촌 닷컴에서!", "motion": "Friendly and honest, small shrug then a warm smile and a light wave."},
+ "outro-2": {"say": "링크는 광고라 삼촌한테 수수료가 조금 와. 계산은 돈 줍는 삼촌 닷컴에서 해 봐!", "motion": "Relaxed smile, points down toward the screen bottom, then a thumbs-up."}
+}

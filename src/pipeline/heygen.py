@@ -49,7 +49,7 @@ DEFAULT_VOICE = "07ca39b243184dbcb82e7e0f0e524b21"  # 한국어 남성 Ben (lang
 def upload_asset(path: pathlib.Path) -> str:
     """POST /v3/assets (multipart). 무료."""
     boundary = "----don3chon" + hashlib.sha1(path.name.encode()).hexdigest()[:16]
-    ctype = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
+    ctype = {".png": "image/png", ".wav": "audio/wav", ".mp3": "audio/mpeg"}.get(path.suffix.lower(), "image/jpeg")
     body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{path.name}\"\r\n"
             f"Content-Type: {ctype}\r\n\r\n").encode() + path.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
     req = urllib.request.Request(API + "/v3/assets", method="POST", data=body, headers={
@@ -198,6 +198,32 @@ def finish(raw: pathlib.Path, out: pathlib.Path, p: dict, note: str) -> None:
                         "-movflags", "+faststart", str(out)], check=True)
 
 
+def wait_video(vid: str) -> dict:
+    """완성될 때까지 상태 조회 (무료). 실패해도 다시 만들지 않는다."""
+    for _ in range(120):  # 최대 30분
+        time.sleep(15)
+        s = call("GET", f"/v3/videos/{vid}")["data"]
+        if s["status"] == "completed":
+            return s
+        if s["status"] == "failed":
+            raise SystemExit(f"HeyGen 실패: {s.get('failure_code')} {s.get('failure_message')}")
+    raise SystemExit("HeyGen 30분 초과")
+
+
+def add_queue(cfg: dict, p: dict) -> None:
+    """업로드 대기열에 synthetic=1 로 추가 (이미 있으면 그대로)."""
+    rows = load_queue(QUEUE)
+    if any(r["slug"] == cfg["slug"] for r in rows):
+        return
+    order = max([int(r["order"]) for r in rows] or [0]) + 1
+    d = p.get("priceDate", "")
+    with QUEUE.open("a", encoding="utf-8", newline="") as f:
+        csv.DictWriter(f, fieldnames=["order", "slug", "title", "intro", "price_date", "synthetic"]).writerow({
+            "order": order, "slug": cfg["slug"], "title": cfg["title"],
+            "intro": f"{cfg['intro']} ({int(p['aliPrice']):,}원)",
+            "price_date": f"{d[5:7].lstrip('0')}/{d[8:10].lstrip('0')}", "synthetic": "1"})
+
+
 def make(name: str) -> None:
     cfg = json.loads((CFG / f"{name}.json").read_text(encoding="utf-8"))
     p = json.loads((PRODUCTS / f"{cfg['product']}.json").read_text(encoding="utf-8"))
@@ -215,30 +241,14 @@ def make(name: str) -> None:
              idem=f"{cfg['slug']}-{hashlib.sha1(cfg['script'].encode()).hexdigest()[:12]}")
     vid = r["data"]["video_id"]
     print(f"{name}: HeyGen 영상 {vid} 만드는 중")
-    for _ in range(120):  # 최대 30분
-        time.sleep(15)
-        s = call("GET", f"/v3/videos/{vid}")["data"]
-        if s["status"] == "completed":
-            break
-        if s["status"] == "failed":
-            raise SystemExit(f"HeyGen 실패: {s.get('failure_code')} {s.get('failure_message')}")
-    else:
-        raise SystemExit("HeyGen 30분 초과")
+    s = wait_video(vid)
     with tempfile.TemporaryDirectory() as tmp:
         raw = pathlib.Path(tmp) / "raw.mp4"
         raw.write_bytes(urllib.request.urlopen(s["video_url"], timeout=300).read())
         MEDIA.mkdir(parents=True, exist_ok=True)
         out = MEDIA / f"{cfg['slug']}.mp4"
         finish(raw, out, p, cfg.get("end_note", ""))
-    rows = load_queue(QUEUE)
-    if not any(r["slug"] == cfg["slug"] for r in rows):
-        order = max([int(r["order"]) for r in rows] or [0]) + 1
-        d = p.get("priceDate", "")
-        with QUEUE.open("a", encoding="utf-8", newline="") as f:
-            csv.DictWriter(f, fieldnames=["order", "slug", "title", "intro", "price_date", "synthetic"]).writerow({
-                "order": order, "slug": cfg["slug"], "title": cfg["title"],
-                "intro": f"{cfg['intro']} ({int(p['aliPrice']):,}원)",
-                "price_date": f"{d[5:7].lstrip('0')}/{d[8:10].lstrip('0')}", "synthetic": "1"})
+    add_queue(cfg, p)
     summary(f"완성: {out} (HeyGen {vid}, {s.get('duration')}초 + 끝 카드 2.5초)")
 
 

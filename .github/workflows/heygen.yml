@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       cmd:
-        description: "list, photo(삼촌 사진 → 아바타) 또는 make"
+        description: "clips(삼촌 표정 영상, 요금 듦) / mix(절약형 쇼츠, 무료) / photo / make / list"
         required: true
         default: "list"
       names:
@@ -34,14 +34,22 @@ jobs:
       - name: 준비
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
-          pip install -q pillow numpy
+          pip install -q pillow numpy supertonic==1.3.1
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/supertonic3
+          key: supertonic-3-v1
       - name: 실행
         env:
           HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
           HEYGEN_AVATAR_ID: ${{ vars.HEYGEN_AVATAR_ID }}
           HEYGEN_VOICE_ID: ${{ vars.HEYGEN_VOICE_ID }}
           HEYGEN_FORCE: ${{ inputs.force }}
-        run: PYTHONPATH=src python -m pipeline.heygen ${{ inputs.cmd }} ${{ inputs.names }}
+        run: |
+          case "${{ inputs.cmd }}" in
+            clips|mix) PYTHONPATH=src python -m pipeline.uncle ${{ inputs.cmd }} ${{ inputs.names }} ;;
+            *) PYTHONPATH=src python -m pipeline.heygen ${{ inputs.cmd }} ${{ inputs.names }} ;;
+          esac
       - name: 목록 저장 (heygen-list 브랜치)
         if: inputs.cmd == 'list'
         run: |
@@ -51,17 +59,17 @@ jobs:
           git add data/heygen
           git commit -m "HeyGen 아바타·음성 목록"
           git push -f origin heygen-list
-      - name: 아바타 저장 (main)
-        if: inputs.cmd == 'photo'
+      - name: 아바타·삼촌 표정 영상 저장 (main)
+        if: inputs.cmd == 'photo' || inputs.cmd == 'clips'
         run: |
           git config user.name "heygen-bot"
           git config user.email "heygen-bot@users.noreply.github.com"
-          git add config/heygen/avatar.json
-          git commit -m "HeyGen 사진 아바타 (돈 줍는 삼촌)" || exit 0
+          for x in config/heygen/avatar.json media/uncle; do if [ -e "$x" ]; then git add "$x"; fi; done
+          git commit -m "HeyGen ${{ inputs.cmd }} (돈 줍는 삼촌)" || exit 0
           git pull --rebase -q origin main
           git push origin HEAD:main
       - name: 미리보기 PR
-        if: inputs.cmd == 'make'
+        if: inputs.cmd == 'make' || inputs.cmd == 'mix'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
