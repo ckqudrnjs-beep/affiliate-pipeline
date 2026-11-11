@@ -57,3 +57,41 @@ class SyntheticTest(unittest.TestCase):
         self.assertTrue(body["status"]["containsSyntheticMedia"])
         self.assertIn("가상 인물", yt.build_description(row))
         self.assertFalse(yt.is_synthetic({"synthetic": None}))
+
+
+class PaidPromotionGuardTest(unittest.TestCase):
+    def test_not_published_when_paid_promotion_cannot_be_set(self):
+        calls = []
+
+        def fake_api(token, method, url, body=None):
+            calls.append((method, url))
+            if method == "PUT":
+                raise RuntimeError("forbidden")
+            return {"items": [{"status": {"privacyStatus": "private"}, "paidProductPlacementDetails": {"hasPaidProductPlacement": False}}]}
+
+        orig = yt.api
+        yt.api = fake_api
+        try:
+            self.assertFalse(yt.guard("t", "vid", None))
+        finally:
+            yt.api = orig
+        self.assertFalse(any("part=status" in u for m, u in calls if m == "PUT"))
+
+    def test_published_only_after_verified(self):
+        state = {"paid": False, "status": None}
+
+        def fake_api(token, method, url, body=None):
+            if method == "PUT" and "paidProductPlacementDetails" in url:
+                state["paid"] = True
+            elif method == "PUT":
+                state["status"] = body["status"]
+            return {"items": [{"status": {"privacyStatus": "private", "embeddable": True},
+                               "paidProductPlacementDetails": {"hasPaidProductPlacement": state["paid"]}}]}
+
+        orig = yt.api
+        yt.api = fake_api
+        try:
+            self.assertTrue(yt.guard("t", "vid", None))
+        finally:
+            yt.api = orig
+        self.assertEqual(state["status"]["privacyStatus"], "public")

@@ -42,3 +42,9 @@
   "비공개로 잠김"으로 나오면 `YOUTUBE_ENABLED`를 끄고 알려 줄 것 (API 감사 신청 또는 수동 공개로 전환).
 - 새 영상 추가: `media/youtube/<slug>.mp4` + `config/youtube_queue.csv` 한 줄(제목은 반드시 [광고]로 시작).
 - 가격이 바뀌면 큐의 intro·price_date 와 영상 끝 가격을 함께 고친다.
+
+
+## 2026-11-11 BK 규칙: 유료 프로모션이 자동으로 안 켜지면 게시하지 않는다
+- 업로드는 먼저 **비공개(예약 없음)**. 유료 프로모션(paidProductPlacementDetails)을 켜고 다시 읽어 확인될 때만 예약 공개로 바꾼다.
+- 확인 안 되면 비공개 그대로 두고 실행 요약에 경고 + Studio 링크. BK가 체크 후 직접 예약 공개.
+- API 문서상 이 항목은 insert/update 에서 쓰기 가능 목록에 없다 → 실패할 가능성이 큼. 시도하려면 토큰 범위가 `https://www.googleapis.com/auth/youtube.force-ssl` 이어야 한다 (지금 토큰은 youtube.upload 만이라 수정·조회 불가 → 항상 비공개로 남음).

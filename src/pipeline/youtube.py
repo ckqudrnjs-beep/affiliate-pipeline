@@ -7,6 +7,10 @@
 - 공개 간격: YT_INTERVAL_DAYS (기본 1일, 2026-11-09 BK 결정: 하루 1개).
 - 기록: data/youtube/uploaded.json (중복 업로드 방지)
 - 안전장치: YOUTUBE_ENABLED=true 가 아니면 무엇을 올릴지만 출력한다(dry-run).
+- 유료 프로모션 (2026-11-11 BK 규칙): 자동으로 켜지지 않으면 게시하지 않는다.
+  일단 '비공개(예약 없음)'로 올리고, paidProductPlacementDetails 를 켠 뒤 다시 읽어 true 가 확인될 때만
+  예약 공개(또는 바로 공개)로 바꾼다. 확인이 안 되면 비공개로 두고 BK에게 알린다.
+  (API 문서상 이 항목은 쓰기 불가로 나와 있어 실패할 수 있음. 토큰 범위는 youtube.force-ssl 필요)
 - 준수 검사: 제목은 [광고]로 시작, 설명 첫 줄은 광고 문구. 아니면 올리지 않는다.
 
 인증: GitHub Secrets YT_CLIENT_ID / YT_CLIENT_SECRET / YT_REFRESH_TOKEN 에서만 읽고 로그에 찍지 않는다.
@@ -31,6 +35,7 @@ LOG = pathlib.Path("data/youtube/uploaded.json")
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
+VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 
 PUBLISH_HOUR = 19  # KST, 퇴근 후 시청 시간대
 DISCLOSURE = "광고 · 알리익스프레스 제휴 링크가 포함된 콘텐츠로, 구매 시 일정액의 수수료를 받습니다."
@@ -109,9 +114,9 @@ def access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
         return json.load(r)["access_token"]
 
 
-def video_body(row: dict, description: str, publish_at: dt.datetime | None) -> dict:
-    """publish_at 이 None 이면 바로 공개 (수동 실행 YT_NOW=true)."""
-    status = ({"privacyStatus": "public"} if publish_at is None else {
+def video_body(row: dict, description: str, publish_at: dt.datetime | None, private: bool = False) -> dict:
+    """publish_at 이 None 이면 바로 공개 (수동 실행 YT_NOW=true). private=True 면 예약 없는 비공개."""
+    status = ({"privacyStatus": "private"} if private else {"privacyStatus": "public"} if publish_at is None else {
         "privacyStatus": "private",  # publishAt 은 private 일 때만 설정 가능
         "publishAt": publish_at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     })
@@ -148,6 +153,50 @@ def upload(token: str, body: dict, video: pathlib.Path) -> dict:
     })
     with urllib.request.urlopen(put, timeout=600) as r:
         return json.load(r)
+
+
+def api(token: str, method: str, url: str, body: dict | None = None) -> dict:
+    req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body else None, headers={
+        "Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=UTF-8"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.load(r)
+
+
+def get_video(token: str, vid: str) -> dict:
+    r = api(token, "GET", f"{VIDEOS_URL}?part=status,paidProductPlacementDetails&id={vid}")
+    return (r.get("items") or [{}])[0]
+
+
+def paid_promotion_on(token: str, vid: str) -> bool:
+    """유료 프로모션을 켜 보고, 다시 읽어 true 일 때만 True. 어떤 오류든 False."""
+    try:
+        if get_video(token, vid).get("paidProductPlacementDetails", {}).get("hasPaidProductPlacement"):
+            return True
+        api(token, "PUT", f"{VIDEOS_URL}?part=paidProductPlacementDetails",
+            {"id": vid, "paidProductPlacementDetails": {"hasPaidProductPlacement": True}})
+        return bool(get_video(token, vid).get("paidProductPlacementDetails", {}).get("hasPaidProductPlacement"))
+    except Exception as e:  # noqa: BLE001 - 실패하면 게시하지 않는 쪽으로
+        detail = e.read().decode("utf-8", "replace")[:300] if hasattr(e, "read") else str(e)
+        print(f"유료 프로모션 자동 설정 실패: {detail}")
+        return False
+
+
+def set_visibility(token: str, vid: str, publish_at: dt.datetime | None) -> None:
+    """확인된 영상만: 예약 공개(publish_at) 또는 바로 공개(None)."""
+    st = get_video(token, vid)["status"]
+    keep = {k: st[k] for k in ("embeddable", "license", "publicStatsViewable", "selfDeclaredMadeForKids",
+                               "containsSyntheticMedia") if k in st}
+    status = {"privacyStatus": "public"} if publish_at is None else {
+        "privacyStatus": "private", "publishAt": publish_at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    api(token, "PUT", f"{VIDEOS_URL}?part=status", {"id": vid, "status": {**keep, **status}})
+
+
+def guard(token: str, vid: str, publish_at: dt.datetime | None) -> bool:
+    """유료 프로모션이 켜졌을 때만 공개 일정을 건다. 아니면 비공개 그대로."""
+    if not paid_promotion_on(token, vid):
+        return False
+    set_visibility(token, vid, publish_at)
+    return True
 
 
 def summary(text: str) -> None:
@@ -198,7 +247,8 @@ def main(now: dt.datetime | None = None) -> int:
     try:
         token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
                              os.environ["YT_REFRESH_TOKEN"])
-        res = upload(token, video_body(row, description, None if publish_now else slot), video)
+        res = upload(token, video_body(row, description, None, private=True), video)  # 먼저 비공개로
+        ok = guard(token, res["id"], None if publish_now else slot)
     except KeyError as e:
         summary(f"::error::Secret 없음: {e.args[0]} (docs/YOUTUBE_SETUP.md)")
         return 1
@@ -208,11 +258,15 @@ def main(now: dt.datetime | None = None) -> int:
         return 1
 
     vid = res["id"]
-    log[row["slug"]] = {"video_id": vid, "publish_at": slot.isoformat(), "uploaded_at": now.isoformat(timespec="seconds")}
+    log[row["slug"]] = {"video_id": vid, "publish_at": slot.isoformat(), "uploaded_at": now.isoformat(timespec="seconds"),
+                        "paid_promotion": ok}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    summary(f"업로드 완료: {row['title']}\n- {slot:%m/%d %H:%M} KST 공개 예약\n"
-            f"- 공개 전에 유료 프로모션 체크: https://studio.youtube.com/video/{vid}/edit")
+    if ok:
+        summary(f"업로드 완료: {row['title']}\n- 유료 프로모션 자동 설정 확인\n- {slot:%m/%d %H:%M} KST 공개")
+    else:
+        summary(f"::warning::업로드는 했지만 유료 프로모션을 자동으로 켜지 못해 **비공개**로 둠: {row['title']}\n"
+                f"- BK가 Studio에서 유료 프로모션 체크 후 {slot:%m/%d %H:%M} KST 예약 공개: https://studio.youtube.com/video/{vid}/edit")
     return 0
 
 
