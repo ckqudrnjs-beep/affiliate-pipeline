@@ -99,7 +99,7 @@ def calc(r: dict) -> dict:
                 "aliWins": True, "verdict": "알리 단독 소개"}
     cp = int(r["coupangPrice"])
     diff = cp - ali
-    ratio = round(diff / cp * 100) if cp else 0
+    ratio = round(diff / (cp if diff >= 0 else ali) * 100) if cp and ali else 0  # 비싼 쪽 대비 %
     wait = max(days - 1, 1)  # 쿠팡 로켓배송 하루 기준
     per_day = diff // wait
     ali_wins = diff >= 5000 and ratio >= 25
@@ -336,13 +336,15 @@ def card(p: dict, root: str = "") -> str:
     return f"""<a class="item" href="{root}p/{p['slug']}.html">{pill}<span class="nm">{e(p['name'])}</span>
 <span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>쿠팡 {won(int(p['coupangPrice']))}</span></span>
 <span class="bar"><span style="width:{max(0, min(p['ratio'], 100))}%"></span></span>
-<span class="save">알리 쪽이 {won(p['diff'])} 낮음 ({p['ratio']}%)</span></a>"""
+<span class="save">{'알리' if p['diff'] >= 0 else '쿠팡'} 쪽이 {won(abs(p['diff']))} 낮음 ({abs(p['ratio'])}%)</span></a>"""
 
 
 def product_page(p: dict) -> str:
     e = html.escape
     d = dt.date.fromisoformat(p["priceDate"])
     when = f"{d.month}월 {d.day}일 기준"
+    cd = dt.date.fromisoformat(p.get("coupangPriceDate") or p["priceDate"])
+    cpwhen = f"{cd.month}월 {cd.day}일 기준 (쿠팡 가격은 수시로 바뀝니다)"
     cat = CATEGORIES.get(p["category"], p["category"])
     first, second = (("aliUrl", "알리에서 보기"), ("coupangUrl", "쿠팡에서 보기")) if p["aliWins"] else (("coupangUrl", "쿠팡에서 보기"), ("aliUrl", "알리에서 보기"))
     btns = "".join(f'<a class="btn{" main" if i == 0 else ""}" href="{e(p[k])}" rel="sponsored nofollow noopener" target="_blank">{t}</a>'
@@ -365,14 +367,15 @@ def product_page(p: dict) -> str:
     else:
         top = f"""<p class="small"><a class="backall" href="../index.html#all-{p['category']}">← {e(cat)} 물건 모두 보기</a></p>
 <h1>{e(p['name'])}, 알리 vs 쿠팡 얼마 차이?</h1>
-<p class="lede">{when}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
-<h2>삼촌의 계산</h2>
+<p class="lede">알리 {when}, 쿠팡 {cpwhen}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
+<div class="ph" style="max-width:560px;margin-top:24px">{media(p, "../")}</div>
+<h2 style="margin-top:32px">삼촌의 계산</h2>
 <div class="receipt">
-<div><span>쿠팡 (로켓배송 약 1일)</span><span>{won(int(p['coupangPrice']))}</span></div>
+<div><span>쿠팡{f' · {e(p["coupangName"])}' if p.get("coupangName") else ''}</span><span>{won(int(p['coupangPrice']))}</span></div>
 <div><span>알리 (배송 약 {p['shipDays']}일)</span><span>{won(int(p['aliPrice']))}</span></div>
-<div class="sum"><span>차액</span><span>{won(p['diff'])} ({p['ratio']}%)</span></div>
+<div class="sum"><span>차액</span><span>{'알리' if p['diff'] >= 0 else '쿠팡'}이 {won(abs(p['diff']))} 쌈 ({abs(p['ratio'])}%)</span></div>
 {f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
-<div><span>하루 더 기다릴 때마다</span><span>{won(p['perDay'])} 절약</span></div>
+{f'<div><span>하루 더 기다릴 때마다 (쿠팡 하루 배송 가정)</span><span>{won(p["perDay"])} 절약</span></div>' if p['diff'] > 0 else '<div><span>기다릴 이유</span><span>없음 (쿠팡이 더 쌈)</span></div>'}
 <div><span>{p['lifeMonths']}개월 쓰면 한 달에</span><span>알리 {won(p['monthAli'])} / 쿠팡 {won(p['monthCp'])}</span></div>
 </div>
 <p class="verdict">결론: <span>{p['verdict']}</span></p>
@@ -387,7 +390,7 @@ def product_page(p: dict) -> str:
         return page(f"{p['name']} 가격·한 달 비용 | {BRAND}", f"{p['name']} 알리 {won(int(p['aliPrice']))} ({when}). {p['note'][:80]}",
                     body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
-                f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
+                f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(abs(p['diff']))}, 결론: {p['verdict']}.",
                 body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
 
 
