@@ -167,6 +167,30 @@ footer a{display:inline-block;padding:8px 0}
 .picks.compact .why,.picks.compact .cat{display:none}.picks.compact .nm{font-size:17px}.picks.compact .price{font-size:13px;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.chips a{padding:8px 14px;border:1px solid var(--line);color:inherit;text-decoration:none;font-size:14px}.chips a:hover{border-color:var(--ink)}
 .catgroup{padding-top:28px;scroll-margin-top:16px}.catgroup h3{font:500 20px/1.4 var(--display);margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+/* 모바일 홈: 섹션 접고 펴기. 내용은 HTML에 그대로 있고(검색·광고 크롤러가 읽음) 화면에서만 접는다. JS가 없으면 모두 펼쳐진 채로 보인다. */
+.foldbtn{display:none}
+@media (max-width:720px){
+.fold>.sechead{cursor:pointer;margin:0;padding:16px 0;align-items:center;border-top:1px solid var(--line);-webkit-tap-highlight-color:transparent}
+.fold:first-of-type>.sechead,section.fold#picks>.sechead{border-top-color:var(--ink)}
+.fold>.sechead h2{font-size:21px;flex:1;min-width:0}
+.fold>.sechead span:not(.foldbtn){display:none}
+#all.fold>.sechead span:not(.foldbtn){display:inline;font-size:12px;white-space:nowrap}
+.fold>.sechead>a.small{display:none}
+.fold .foldbtn{display:grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:50%;background:none;transition:transform .2s}
+.fold .foldbtn::before{content:"";width:8px;height:8px;border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);transform:translateY(-2px) rotate(45deg)}
+.fold.open>.sechead .foldbtn{transform:rotate(180deg)}
+section.fold:not(.open)>:not(.sechead){display:none}
+.fold.open>.sechead{margin-bottom:20px}
+.fold.open>.sechead>a.small{display:inline}
+.fold.open{padding-bottom:12px}
+.catgroup.fold>h3{cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin:0;padding:14px 0;font-size:18px}
+.catgroup.fold{padding-top:0}
+.catgroup.fold>h3 .foldbtn{width:28px;height:28px}
+.catgroup.fold.open>h3{margin-bottom:16px}
+.catgroup.fold.open>h3 .foldbtn{transform:rotate(180deg)}
+.catgroup.fold:not(.open)>:not(h3){display:none}
+#all.fold .chips{display:none}
+}
 .more{font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
 .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
 @media (max-width:720px){.principles{grid-template-columns:minmax(0,1fr)}}
@@ -368,6 +392,25 @@ def product_page(p: dict) -> str:
                 body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
 
 
+# 모바일(720px 이하) 홈에서만 섹션을 접는다. 첫 화면엔 "이번 주 삼촌의 선택"만 펼침.
+# 메뉴의 #picks·#calcs 같은 주소로 들어오면 그 섹션을 펼친다. 상태는 저장하지 않는다.
+FOLD_JS = r"""(function(){
+var mq=window.matchMedia('(max-width:720px)');if(!mq.matches)return;
+function setup(el,head,open){el.classList.add('fold');if(open)el.classList.add('open');
+var b=document.createElement('span');b.className='foldbtn';b.setAttribute('aria-hidden','true');head.appendChild(b);
+head.setAttribute('role','button');head.setAttribute('tabindex','0');head.setAttribute('aria-expanded',open?'true':'false');
+function t(e){if(e&&e.target.closest('a'))return;var o=el.classList.toggle('open');head.setAttribute('aria-expanded',o?'true':'false');}
+head.addEventListener('click',t);head.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});}
+document.querySelectorAll('main>section').forEach(function(s){var h=s.querySelector(':scope>.sechead');if(h&&!s.hidden)setup(s,h,s.id==='picks');});
+document.querySelectorAll('#all .catgroup').forEach(function(g){var h=g.querySelector(':scope>h3');if(h)setup(g,h,false);});
+function openTo(id){var el=id&&document.getElementById(id);if(!el)return;
+for(var n=el;n;n=n.parentElement){if(n.classList&&n.classList.contains('fold')&&!n.classList.contains('open')){n.classList.add('open');var h=n.querySelector(':scope>.sechead,:scope>h3');if(h)h.setAttribute('aria-expanded','true');}}
+el.scrollIntoView();}
+openTo(decodeURIComponent(location.hash.slice(1)));
+window.addEventListener('hashchange',function(){openTo(decodeURIComponent(location.hash.slice(1)));});
+})();"""
+
+
 def index_page(products: list[dict]) -> str:
     e = html.escape
     ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
@@ -397,7 +440,8 @@ def index_page(products: list[dict]) -> str:
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
 <div class="toolrow">{tools}</div></section>
-<script>window.PRICES={prices};{N.HOME_JS}</script>"""
+<script>window.PRICES={prices};{N.HOME_JS}</script>
+<script>{FOLD_JS}</script>"""
     return page(f"{BRAND} | 계산해 보고 고른 물건", "삼촌이 알리와 쿠팡 가격을 계산해 보고 고른 물건을 소개합니다. 전기요금·직구 세금·난방비 계산기도 무료로 쓸 수 있어요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
