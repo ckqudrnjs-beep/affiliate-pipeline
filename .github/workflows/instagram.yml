@@ -7,9 +7,8 @@ name: instagram
 # 3) 반영되면 인스타 API로 게시, 기록(data/instagram/published.json) 남기고 미디어 삭제
 # 토큰(Secret IG_ACCESS_TOKEN)이 없으면 렌더링만 하고 미리보기 파일을 Actions 아티팩트로 남긴다.
 # 멈추려면 저장소 변수 INSTAGRAM_ENABLED=false.
+# 2026-11-11 BK: API 게시 안 함(수동 게시). 매일 실행은 끔. 미리보기가 필요할 때만 손으로 실행.
 on:
-  schedule:
-    - cron: "0 3 * * *"   # 12:00 KST
   workflow_dispatch:
 
 permissions:
