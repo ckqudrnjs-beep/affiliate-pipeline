@@ -42,6 +42,15 @@ jobs:
           HEYGEN_VOICE_ID: ${{ vars.HEYGEN_VOICE_ID }}
           HEYGEN_FORCE: ${{ inputs.force }}
         run: PYTHONPATH=src python -m pipeline.heygen ${{ inputs.cmd }} ${{ inputs.names }}
+      - name: 목록 저장 (heygen-list 브랜치)
+        if: inputs.cmd == 'list'
+        run: |
+          git config user.name "heygen-bot"
+          git config user.email "heygen-bot@users.noreply.github.com"
+          git checkout -b heygen-list
+          git add data/heygen
+          git commit -m "HeyGen 아바타·음성 목록"
+          git push -f origin heygen-list
       - name: 미리보기 PR
         if: inputs.cmd == 'make'
         env:
