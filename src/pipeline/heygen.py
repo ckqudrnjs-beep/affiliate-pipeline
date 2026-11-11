@@ -1,9 +1,11 @@
 """HeyGen 가상 인물 쇼츠 (2026-11-11, BK 요청). HeyGen API v3 (v1/v2는 2026-10-31 종료).
 
     python -m pipeline.heygen list                 # 공개 남성 아바타·한국어 음성 목록 → Actions 요약 (고르기용)
+    python -m pipeline.heygen photo [사진 경로]       # 삼촌 사진(config/heygen/uncle.jpg) → 사진 아바타 → config/heygen/avatar.json
     python -m pipeline.heygen make <설정 이름>...   # config/heygen/<이름>.json → media/youtube/<slug>.mp4
 
-- 아바타·음성: 저장소 변수 HEYGEN_AVATAR_ID, HEYGEN_VOICE_ID (list 결과에서 BK가 고름).
+- 아바타·음성: config/heygen/avatar.json (2026-11-11 BK: AI로 만든 한국인 삼촌 사진 5번 → 사진 아바타).
+  저장소 변수 HEYGEN_AVATAR_ID, HEYGEN_VOICE_ID 가 있으면 그것이 우선.
 - 영상 위에 늘 "광고 · 알리익스프레스 제휴 링크", 아래에 "AI로 만든 가상 인물". 끝에 상품 사진·가격·don3chon.com 카드 2.5초.
 - 업로드 대기열에 synthetic=1 로 넣어 YouTube "변경되거나 합성된 콘텐츠"를 켠다.
 - 키는 GitHub Secret HEYGEN_API_KEY 에서만 읽는다.
@@ -38,6 +40,51 @@ def call(method: str, path: str, body: dict | None = None, idem: str = "") -> di
     req = urllib.request.Request(API + path, method=method, data=json.dumps(body).encode() if body else None, headers=headers)
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.load(r)
+
+
+AVATAR = CFG / "avatar.json"
+DEFAULT_VOICE = "07ca39b243184dbcb82e7e0f0e524b21"  # 한국어 남성 Ben (langdesign), BK가 바꿀 수 있음
+
+
+def upload_asset(path: pathlib.Path) -> str:
+    """POST /v3/assets (multipart). 무료."""
+    boundary = "----don3chon" + hashlib.sha1(path.name.encode()).hexdigest()[:16]
+    ctype = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
+    body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{path.name}\"\r\n"
+            f"Content-Type: {ctype}\r\n\r\n").encode() + path.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
+    req = urllib.request.Request(API + "/v3/assets", method="POST", data=body, headers={
+        "X-Api-Key": os.environ["HEYGEN_API_KEY"], "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        d = json.load(r).get("data", {})
+    return d.get("asset_id") or d.get("id")
+
+
+def photo_avatar(src: str = "") -> int:
+    """삼촌 사진 1장으로 사진 아바타를 만든다 (POST /v3/avatars type=photo). 이미 있으면 다시 만들지 않는다."""
+    if AVATAR.exists() and os.environ.get("HEYGEN_FORCE") != "true":
+        summary(f"이미 아바타가 있음: {AVATAR.read_text(encoding='utf-8')}")
+        return 0
+    path = pathlib.Path(src) if src else next((CFG / f"uncle{e}" for e in (".jpg", ".jpeg", ".png") if (CFG / f"uncle{e}").exists()), None)
+    if not path or not path.exists():
+        raise SystemExit("삼촌 사진이 없음: config/heygen/uncle.jpg")
+    asset = upload_asset(path)
+    r = call("POST", "/v3/avatars", {"type": "photo", "name": "돈 줍는 삼촌", "file": {"type": "asset_id", "asset_id": asset}},
+             idem="uncle-" + hashlib.sha1(path.read_bytes()).hexdigest()[:12])["data"]
+    item = r.get("avatar_item") or {}
+    look = item.get("id")
+    for _ in range(60):  # 최대 15분
+        s = call("GET", f"/v3/avatars/looks/{look}")["data"]
+        if s.get("status") not in ("processing", "pending"):
+            break
+        time.sleep(15)
+    if s.get("status") == "failed":
+        raise SystemExit(f"사진 아바타 실패: {s.get('error')}")
+    AVATAR.write_text(json.dumps({"avatar_id": look, "group_id": (r.get("avatar_group") or {}).get("id"),
+                                  "voice_id": DEFAULT_VOICE, "photo": path.name,
+                                  "engines": s.get("supported_api_engines")}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    summary(f"사진 아바타 완성: {look} ({s.get('status')}) → {AVATAR}")
+    return 0
 
 
 def summary(text: str) -> None:
@@ -158,9 +205,11 @@ def make(name: str) -> None:
         raise SystemExit("제목은 [광고]로 시작해야 함")
     if (MEDIA / f"{cfg['slug']}.mp4").exists() and os.environ.get("HEYGEN_FORCE") != "true":
         raise SystemExit(f"{cfg['slug']}: 이미 만든 영상이 있어 다시 만들지 않음 (요금 보호). 다시 만들려면 force=true")
-    avatar, voice = os.environ.get("HEYGEN_AVATAR_ID"), os.environ.get("HEYGEN_VOICE_ID")
+    saved = json.loads(AVATAR.read_text(encoding="utf-8")) if AVATAR.exists() else {}
+    avatar = os.environ.get("HEYGEN_AVATAR_ID") or saved.get("avatar_id")
+    voice = os.environ.get("HEYGEN_VOICE_ID") or saved.get("voice_id")
     if not avatar or not voice:
-        raise SystemExit("저장소 변수 HEYGEN_AVATAR_ID, HEYGEN_VOICE_ID 를 먼저 정하세요 (list 결과에서)")
+        raise SystemExit("아바타가 없음: 먼저 photo 실행 (또는 저장소 변수 HEYGEN_AVATAR_ID, HEYGEN_VOICE_ID)")
     r = call("POST", "/v3/videos", {"type": "avatar", "avatar_id": avatar, "voice_id": voice, "script": cfg["script"],
                                     "resolution": "1080p", "aspect_ratio": "9:16", "output_format": "mp4"},
              idem=f"{cfg['slug']}-{hashlib.sha1(cfg['script'].encode()).hexdigest()[:12]}")
@@ -197,5 +246,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if not args or args[0] == "list":
         sys.exit(list_choices())
+    if args[0] == "photo":
+        sys.exit(photo_avatar(args[1] if len(args) > 1 else ""))
     for n in args[1:]:
         make(n)
