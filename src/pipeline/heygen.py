@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import pathlib
@@ -135,7 +136,7 @@ def make(name: str) -> None:
         raise SystemExit("저장소 변수 HEYGEN_AVATAR_ID, HEYGEN_VOICE_ID 를 먼저 정하세요 (list 결과에서)")
     r = call("POST", "/v3/videos", {"type": "avatar", "avatar_id": avatar, "voice_id": voice, "script": cfg["script"],
                                     "resolution": "1080p", "aspect_ratio": "9:16", "output_format": "mp4"},
-             idem=f"{cfg['slug']}-{abs(hash(cfg['script'])) % 10**8}")
+             idem=f"{cfg['slug']}-{hashlib.sha1(cfg['script'].encode()).hexdigest()[:12]}")
     vid = r["data"]["video_id"]
     print(f"{name}: HeyGen 영상 {vid} 만드는 중")
     for _ in range(120):  # 최대 30분
