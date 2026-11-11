@@ -55,3 +55,11 @@ BK: "영상은 손이 많이 가고 비효율적, 문제없다면 알리·쿠팡
 - 메뉴의 #picks·#calcs 처럼 섹션 주소로 들어오면 그 섹션을 자동으로 펼친다. 코드: `src/pipeline/site.py` 의 `FOLD_JS` 와 CSS `.fold`.
 - 홈 길이(아이폰 기준): 약 15,500px → 약 3,800px.
 - 홈 "모든 물건" (2026-11-11): 분야 버튼이 위에 붙어 따라오고(전체/분야별 거르기, 주소 #all-<분야>), 상품을 보고 뒤로 가거나 상품 페이지의 "← 분야 물건 모두 보기"를 누르면 고른 분야·보던 위치로 돌아온다. 모바일에서 분야 그룹 접기는 없앰(분야 버튼으로 대체).
+
+## 검색·공유 보강 (2026-11-11, 유입 계획 plan/TRAFFIC.md)
+- 공유 썸네일: `static/og/<종류>-<slug>.png` (1200x630). `PYTHONPATH=src python -m pipeline.seo og` 가 빠진 것만 만든다(`--all` 전부). 없으면 `og/default.png`.
+- 사이트맵 lastmod: 글은 `updated`/`date`, 소식은 날짜, 고정 페이지는 site.py 의 `SITE_PAGES` 날짜. 고정 페이지를 고치면 그 날짜도 바꾼다.
+- RSS(feed.xml): 삼촌의 글 + 소식 합쳐 최근 40개. 네이버 서치어드바이저에 제출.
+- BreadcrumbList JSON-LD: 글·소식·계산기·질문 페이지.
+- 주제 묶음 `seo.CLUSTER_KEYS` (가습기·난방·대기전력·직구·전기요금): 글 끝에 관련 계산기 + 같은 묶음 글/질문, 계산기 페이지에 관련 질문·글.
+- 계산기 질문 페이지 `q/<slug>.html` ← `data/calc_questions.json`. 숫자는 빌드 때 bill()로 계산, 페이지마다 설명·팁·FAQ를 따로 쓴다(검사: questions.validate, 고유 글 250자 이상). 홈 계산기 칸 아래 "많이 묻는 계산"에 목록.

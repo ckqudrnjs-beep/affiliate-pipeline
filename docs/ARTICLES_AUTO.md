@@ -6,7 +6,7 @@ BK 결정 2026-11-10: 하루 1편을 사람 승인 없이 main에 바로 올린�
 1. `data/article_topics.json`에서 `done:false`인 첫 질문을 고른다(형식은 `format`). 다 썼으면 기존 글·상품·계산기를 보고 검색 수요가 있는 새 질문을 하나 만든다(기존 글과 겹치지 않게).
 2. `data/articles/<slug>.json` 작성. 필드: slug(영문 소문자-하이픈), date(오늘 KST), title, desc(160자 안팎, 답이 들어간 한 문장), keywords, body, products(0~2개, data/products의 slug), status "published".
 3. `data/article_topics.json`의 해당 항목을 `done:true`, `slug` 추가.
-4. `PYTHONPATH=src python -m unittest discover -s tests` 통과 + `PYTHONPATH=src python -m pipeline.site /tmp/site` 성공 확인 후 main에 커밋·푸시. 실패하면 고쳐서 다시, 그래도 안 되면 올리지 않는다.
+4. `PYTHONPATH=src python -m pipeline.seo og` 로 새 글 공유 썸네일(static/og/guide-<slug>.png)을 만들고(한글 글꼴 없으면 건너뜀, 기본 썸네일로 대체), `PYTHONPATH=src python -m unittest discover -s tests` 통과 + `PYTHONPATH=src python -m pipeline.site /tmp/site` 성공 확인 후 main에 커밋·푸시. 실패하면 고쳐서 다시, 그래도 안 되면 올리지 않는다.
 
 
 ## 사람이 쓴 것처럼 (BK 2026-11-10)

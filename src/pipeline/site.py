@@ -19,9 +19,18 @@ from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
 from . import articles as A
 from . import prices as PR
+from . import questions as Q
+from . import seo as S
 from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
+SEO_CSS = """.related{margin-top:36px}.related h2{font:500 22px/1.4 var(--display);margin:0 0 6px}
+.trycalc p{font-size:16px}.qhead{font:500 18px/1.4 var(--display);margin:28px 0 8px}
+.qlist{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 18px}
+.qlist li{border-bottom:1px solid var(--line);padding:10px 0}.qlist a{color:inherit;text-decoration:none;font-size:15px}
+.qlist a:hover,.qlist a:focus-visible{color:var(--green);text-decoration:underline}
+.article h3{font-size:17px;margin:22px 0 4px}
+"""
 CATEGORIES = {"clean": "청소", "heat": "겨울 난방", "living": "생활·조명", "humidify": "겨울 가습",
               "kitchen": "주방", "digital": "IT·디지털", "goods": "생활 잡화", "car": "자동차", "humidity": "습도 관리", "tools": "공구"}
 # 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
@@ -264,7 +273,7 @@ def adfit_slot(ads: bool) -> str:
 
 
 def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "",
-         ads: bool = True, noindex: bool = False) -> str:
+         ads: bool = True, noindex: bool = False, og: str = "og/default.png", crumbs: list[tuple[str, str]] | None = None) -> str:
     """ads=False: 애드센스 코드 제외(상품 페이지). noindex=True: 검색 색인 제외(제휴 위주 얇은 페이지)."""
     e = html.escape
     client = adsense_client()
@@ -272,17 +281,19 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     meta = "".join(f'<meta name="{n}" content="{e(CFG[k])}">' for n, k in
                    (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification")) if CFG.get(k))
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
+    lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
-            f'<meta property="og:locale" content="ko_KR">{meta}'
+            f'<meta property="og:locale" content="ko_KR"><meta property="og:image" content="{BASE}/{og}"><meta property="og:image:width" content="1200">'
+            f'<meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">{meta}'
             + (f'<meta name="google-adsense-account" content="{client}">' if client else "")
             + ('<meta name="robots" content="noindex,follow">' if noindex else "")
             + (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={client}" crossorigin="anonymous"></script>' if client and ads else "")
-            + f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
+            + "".join(f'<script type="application/ld+json">{json.dumps(x, ensure_ascii=False)}</script>' for x in lds))
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
 <nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}faq.html">질문</a></nav></div></header>
@@ -452,6 +463,8 @@ def index_page(products: list[dict]) -> str:
                      + "".join(pick(p) for p in ranked if p["category"] == c) + "</div></div>" for c in cats)
     all_sec = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
 <nav class="chips" aria-label="분야">{chips}</nav>{groups}</section>""" if products else ""
+    qrow = "".join(f'<li><a href="q/{q["slug"]}.html">{e(q["h1"])}</a></li>' for q in Q.load())
+    qrow = f'<h3 class="qhead">많이 묻는 계산</h3><ul class="qlist">{qrow}</ul>' if qrow else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
     hero = """<section class="hero"><div class="wrap"><p class="eyebrow">CURATED BY 돈 줍는 삼촌</p>
 <h1>좋은 물건을,<br>제값에.</h1>
@@ -470,29 +483,48 @@ def index_page(products: list[dict]) -> str:
 <div><b>기다림에도 값을 매깁니다</b><p>해외 배송을 하루 더 기다릴 때마다 얼마를 아끼는지 보여 드립니다. 몇천 원 차이면 빠른 배송을 권합니다.</p></div>
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
-<div class="toolrow">{tools}</div></section>
+<div class="toolrow">{tools}</div>{qrow}</section>
 <script>window.PRICES={prices};{N.HOME_JS}</script>
 <script>{FOLD_JS}{ALL_JS}</script>"""
     return page(f"{BRAND} | 계산해 보고 고른 물건", "삼촌이 알리와 쿠팡 가격을 계산해 보고 고른 물건을 소개합니다. 전기요금·직구 세금·난방비 계산기도 무료로 쓸 수 있어요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
 
-def calc_page(c: dict, products: list[dict]) -> str:
+def link_list(title: str, items: list[tuple[str, str, str]]) -> str:
+    """[(경로, 제목, 설명)] → 관련 링크 목록. 경로는 페이지 기준 상대 경로."""
+    if not items:
+        return ""
+    e = html.escape
+    li = "".join(f'<li><a href="{e(u)}"><b>{e(t)}</b><span>{e(d)}</span></a></li>' for u, t, d in items)
+    return f'<section class="related"><h2>{e(title)}</h2><ul class="alist">{li}</ul></section>'
+
+
+def calc_widget(c: dict, values: dict | None = None) -> str:
+    """계산기 폼+결과. values 가 있으면 그 값으로 미리 채운다(주소 ?값 이 있으면 그게 우선)."""
+    ids = ",".join(f"'{i}'" for i in c["ids"])
+    pre = f"const pre={json.dumps(values or {})};for(const k in pre){{const el=$('#'+k);if(el)el.value=pre[k];}}" if values else ""
+    return f"""<div class="calc"><form id="f" onsubmit="event.preventDefault()">{c['form']}</form>
+<div><div class="receipt" id="out" aria-live="polite"></div><p class="cmp" id="cmp"></p>
+<button type="button" id="share">결과 링크 복사</button><p class="small" id="shareMsg"></p></div></div>
+<script>{COMMON_JS}{c['js']}
+{pre}const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',run);run();</script>"""
+
+
+def calc_page(c: dict, products: list[dict], arts: list[dict] | None = None, qs: list[dict] | None = None) -> str:
     e = html.escape
     rel = "".join(card(p, "../") for p in products if c["category"] and p["category"] == c["category"])[:20000]
     rel = f'<h2>관련 상품 계산</h2><div class="grid">{rel}</div>' if rel else ""
-    ids = ",".join(f"'{i}'" for i in c["ids"])
-    body = f"""<p class="small"><a href="../index.html">계산기 모음</a></p>
+    qlinks = link_list("계산해 본 질문", [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in (qs or []) if c["slug"] in (Q.calc_of(q), Q.cluster(q))])
+    alinks = link_list("관련 글", [(f"../guide/{a['slug']}.html", a["title"], a["desc"]) for a in (arts or []) if S.article_cluster(a) == c["slug"]][:5])
+    body = f"""<p class="small"><a href="../index.html#calcs">계산기 모음</a></p>
 <h1>{e(c['h1'])}</h1><p class="lede">{e(c['lede'])}</p>
-<div class="calc"><form id="f" onsubmit="event.preventDefault()">{c['form']}</form>
-<div><div class="receipt" id="out" aria-live="polite"></div><p class="cmp" id="cmp"></p>
-<button type="button" id="share">결과 링크 복사</button><p class="small" id="shareMsg"></p></div></div>
+{calc_widget(c)}
 {c['body']}
 <p class="small">요금·세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 고지서·세관 부과액과 다를 수 있습니다.</p>
-{rel}
-<script>{COMMON_JS}{c['js']}
-const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',run);run();</script>"""
+{qlinks}{alinks}
+{rel}"""
     return page(f"{c['title']} | {BRAND}", c["lede"], body, root="../", path=f"calc/{c['slug']}.html",
+                og=S.og_path("calc", c["slug"]), crumbs=[("계산기", "index.html#calcs"), (c["title"], f"calc/{c['slug']}.html")],
                 ld={"@context": "https://schema.org", "@type": "WebApplication", "name": c["title"], "url": f"{BASE}/calc/{c['slug']}.html",
                     "applicationCategory": "UtilitiesApplication", "operatingSystem": "Web", "inLanguage": "ko",
                     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}})
@@ -558,8 +590,21 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     o = pathlib.Path(out)
     (o / "p").mkdir(parents=True, exist_ok=True)
     (o / "calc").mkdir(exist_ok=True)
+    arts = A.load()
+    qs = Q.load()
+    calc_by = {c["slug"]: c for c in CALCS}
     for c in CALCS:
-        (o / "calc" / f"{c['slug']}.html").write_text(calc_page(c, products), encoding="utf-8")
+        (o / "calc" / f"{c['slug']}.html").write_text(calc_page(c, products, arts, qs), encoding="utf-8")
+    (o / "q").mkdir(exist_ok=True)
+    for q in qs:
+        c = calc_by[Q.calc_of(q)]
+        cl = Q.cluster(q)
+        rel = link_list("같이 보면 좋은 글", [(f"../guide/{a['slug']}.html", a["title"], a["desc"]) for a in arts if S.article_cluster(a) == cl][:3]
+                        + [(f"../q/{x['slug']}.html", x["h1"], x["title"]) for x in qs if x is not q and Q.cluster(x) == cl][:3])
+        (o / "q" / f"{q['slug']}.html").write_text(page(f"{q['title']} | {BRAND}", Q.computed(q)["desc"],
+            Q.body(q, c, calc_widget(c, Q.preset(q)), rel), root="../", path=f"q/{q['slug']}.html", ld=Q.faq_ld(q),
+            og=S.og_path("q", q["slug"]), crumbs=[("계산기", "index.html#calcs"), (c["title"], f"calc/{c['slug']}.html"), (q["h1"], f"q/{q['slug']}.html")]),
+            encoding="utf-8")
     (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
     (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
         PR.page_body(products, HIST), path="prices.html"), encoding="utf-8")
@@ -578,8 +623,8 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     for n in news:
         (o / "news" / f"{n['id']}.html").write_text(page(f"{n['title']} | {BRAND}", n["body"][:150], N.news_page_body(n), root="../",
             path=f"news/{n['id']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": n["title"],
-            "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}}), encoding="utf-8")
-    arts = A.load()
+            "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
+            crumbs=[("삼촌 소식", "news.html"), (n["title"], f"news/{n['id']}.html")]), encoding="utf-8")
     by_slug = {p["slug"]: p for p in products}
     (o / "guide").mkdir(exist_ok=True)
     (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 직구 세금, 난방비처럼 사기 전에 궁금한 것을 계산으로 답합니다.",
@@ -588,12 +633,23 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     for a in arts:
         cards = "".join(card(by_slug[s], "../") for s in a.get("products", [])[:2] if s in by_slug)
         nv = A.naver_box(A.naver_for(a, naver))
-        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv), root="../",
-            path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE)), encoding="utf-8")
+        cl = S.article_cluster(a)
+        more = ""
+        if cl:
+            c = calc_by[cl]
+            more += (f'<section class="related trycalc"><h2>우리 집 숫자로 계산해 보기</h2><p><a href="../calc/{cl}.html"><b>{html.escape(c["title"])}</b></a>'
+                     f' · 고지서 사용량만 넣으면 바로 나와요.</p></section>')
+        same = [x for x in arts if x is not a and S.article_cluster(x) == cl] if cl else []
+        others = same + [x for x in arts if x is not a and x not in same]
+        more += link_list("같이 보면 좋은 글", [(f"{x['slug']}.html", x["title"], x["desc"]) for x in others[:3]]
+                          + [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in qs if cl and Q.cluster(q) == cl][:2])
+        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + more, root="../",
+            path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
+            crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
-    (o / "feed.xml").write_text(N.feed_xml(news, BASE, BRAND), encoding="utf-8")
+    (o / "feed.xml").write_text(S.feed(BASE, BRAND, news, arts), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
     for f in pathlib.Path("static").rglob("*"):  # 하위 폴더(video/ 등)도 그대로 복사
@@ -601,10 +657,19 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             t = o / f.relative_to("static")
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_bytes(f.read_bytes())
-    urls = ["", "guide.html", "news.html", "prices.html", "faq.html"] + [f"guide/{a['slug']}.html" for a in arts] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + ([] if PRODUCT_NOINDEX else [f"p/{p['slug']}.html" for p in products]) + ["about.html", "contact.html", "privacy.html"]
     today = dt.date.today().isoformat()
-    (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
+    SITE_PAGES = "2026-11-11"  # 소개·문의·개인정보·계산기 틀을 마지막으로 고친 날 (고치면 같이 바꾼다)
+    adate = {a["slug"]: a.get("updated", a["date"]) for a in arts}
+    newest_a = max(adate.values(), default=SITE_PAGES)
+    newest_n = max((n["date"] for n in news), default=SITE_PAGES)
+    entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES)]
+               + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
+               + [(f"news/{n['id']}.html", n["date"]) for n in news]
+               + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS]
+               + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
+               + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
+               + [("about.html", SITE_PAGES), ("contact.html", SITE_PAGES), ("privacy.html", SITE_PAGES)])
+    (o / "sitemap.xml").write_text(S.sitemap(BASE, entries), encoding="utf-8")
     (o / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n", encoding="utf-8")
     return len(products)
 
