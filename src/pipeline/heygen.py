@@ -29,9 +29,12 @@ ASSETS = pathlib.Path("video_assets")
 W, H = 1080, 1920
 
 
-def call(method: str, path: str, body: dict | None = None) -> dict:
-    req = urllib.request.Request(API + path, method=method, data=json.dumps(body).encode() if body else None, headers={
-        "X-Api-Key": os.environ["HEYGEN_API_KEY"], "Content-Type": "application/json", "Accept": "application/json"})
+def call(method: str, path: str, body: dict | None = None, idem: str = "") -> dict:
+    """요금이 드는 건 POST /v3/videos 하나뿐. 실패해도 자동으로 다시 만들지 않는다 (목록·상태 조회는 무료)."""
+    headers = {"X-Api-Key": os.environ["HEYGEN_API_KEY"], "Content-Type": "application/json", "Accept": "application/json"}
+    if idem:
+        headers["Idempotency-Key"] = idem  # 같은 요청이 두 번 가도 영상은 한 번만
+    req = urllib.request.Request(API + path, method=method, data=json.dumps(body).encode() if body else None, headers=headers)
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.load(r)
 
@@ -125,11 +128,14 @@ def make(name: str) -> None:
     p = json.loads((PRODUCTS / f"{cfg['product']}.json").read_text(encoding="utf-8"))
     if not cfg["title"].startswith("[광고]"):
         raise SystemExit("제목은 [광고]로 시작해야 함")
+    if (MEDIA / f"{cfg['slug']}.mp4").exists() and os.environ.get("HEYGEN_FORCE") != "true":
+        raise SystemExit(f"{cfg['slug']}: 이미 만든 영상이 있어 다시 만들지 않음 (요금 보호). 다시 만들려면 force=true")
     avatar, voice = os.environ.get("HEYGEN_AVATAR_ID"), os.environ.get("HEYGEN_VOICE_ID")
     if not avatar or not voice:
         raise SystemExit("저장소 변수 HEYGEN_AVATAR_ID, HEYGEN_VOICE_ID 를 먼저 정하세요 (list 결과에서)")
     r = call("POST", "/v3/videos", {"type": "avatar", "avatar_id": avatar, "voice_id": voice, "script": cfg["script"],
-                                    "resolution": "1080p", "aspect_ratio": "9:16", "output_format": "mp4"})
+                                    "resolution": "1080p", "aspect_ratio": "9:16", "output_format": "mp4"},
+             idem=f"{cfg['slug']}-{abs(hash(cfg['script'])) % 10**8}")
     vid = r["data"]["video_id"]
     print(f"{name}: HeyGen 영상 {vid} 만드는 중")
     for _ in range(120):  # 최대 30분
