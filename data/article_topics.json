@@ -22,8 +22,9 @@
  },
  {
   "q": "겨울 실내 적정 습도와 가습기 고르는 법",
-  "done": false,
-  "format": "비교"
+  "done": true,
+  "format": "비교",
+  "slug": "winter-humidity-humidifier-types"
  },
  {
   "q": "삼촌의 일기: 베란다 결로와 한 판 붙은 주말",
