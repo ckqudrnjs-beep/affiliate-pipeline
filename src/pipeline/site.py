@@ -278,8 +278,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     e = html.escape
     client = adsense_client()
     url = f"{BASE}/{path}"
-    meta = "".join(f'<meta name="{n}" content="{e(CFG[k])}">' for n, k in
-                   (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification")) if CFG.get(k))
+    # 값 하나 또는 목록 (네이버에 https·http 두 사이트를 따로 등록하면 확인 값이 둘이다)
+    meta = "".join(f'<meta name="{n}" content="{e(v)}">' for n, k in
+                   (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification"))
+                   for v in ([CFG[k]] if isinstance(CFG.get(k), str) else CFG.get(k) or []) if v)
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
     lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
