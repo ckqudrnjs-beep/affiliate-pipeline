@@ -64,7 +64,7 @@ jobs:
         run: |
           git config user.name "heygen-bot"
           git config user.email "heygen-bot@users.noreply.github.com"
-          for x in config/heygen/avatar.json media/uncle; do [ -e "$x" ] && git add "$x"; done
+          for x in config/heygen/avatar.json media/uncle; do if [ -e "$x" ]; then git add "$x"; fi; done
           git commit -m "HeyGen ${{ inputs.cmd }} (돈 줍는 삼촌)" || exit 0
           git pull --rebase -q origin main
           git push origin HEAD:main
