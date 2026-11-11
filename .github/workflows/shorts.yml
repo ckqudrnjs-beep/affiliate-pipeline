@@ -5,13 +5,8 @@ name: shorts
 # → 사이트 상품 + 업로드 대기열에 추가. 08:30 실행은 놓친 경우 다시 시도.
 # 업로드 대기가 SHORTS_BUFFER(기본 3)개 이상이면 쉰다. 업로드는 youtube 워크플로(10:00 KST)가 한다.
 # 저장소 변수 SHORTS_ENABLED=true 를 켜기 전까지는 돌지 않는다.
+# 2026-11-11: 새 기획(episodes 워크플로)으로 바뀌어 자동 실행은 멈춤. 손으로만 실행 가능.
 on:
-  schedule:
-    - cron: "0 22 * * *"    # 07:00 KST 후보 고르기
-    - cron: "30 23 * * *"   # 08:30 KST 다시 시도
-  push:
-    branches: [main]
-    paths: ["data/shorts/copy/**"]
   workflow_dispatch:
 
 permissions:

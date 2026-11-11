@@ -1,0 +1,48 @@
+import datetime as dt
+import json
+import pathlib
+import unittest
+
+from pipeline import episodes as ep
+from pipeline import youtube as yt
+
+
+class EpisodeCheckTest(unittest.TestCase):
+    def test_samples_pass(self):
+        for p in ep.ep_files():
+            self.assertEqual(ep.check(json.loads(p.read_text(encoding="utf-8"))), [], p)
+
+    def test_rules(self):
+        bad = {"date": "2026-11-20", "kind": "short", "title": "온풍기 얘기", "product": "usb-heated-lap-blanket",
+               "description": "x", "scenes": [{"type": "end", "say": "써 봤는데 좋아"}]}
+        errs = " ".join(ep.check(bad))
+        self.assertIn("[광고]", errs)
+        self.assertIn("첫 장면은 hook", errs)
+        self.assertIn("금지 표현", errs)
+
+    def test_weekday_formats(self):
+        self.assertEqual(ep.SHORT_FORMATS[dt.date(2026, 11, 16).weekday()][0], "quiz")  # 월
+        self.assertEqual(sorted(ep.LONG_FORMATS), [2, 5])  # 수·토
+
+
+class EpisodeUploadTest(unittest.TestCase):
+    def test_non_ad_row_has_no_ad_rules(self):
+        row = {"title": "보일러 외출 모드, 진짜 아낄까", "intro": "계산", "price_date": "", "ad": "0", "kind": "short"}
+        d = yt.build_description(row)
+        self.assertEqual(yt.check(row, d), [])
+        self.assertNotIn("광고", d.splitlines()[0])
+
+    def test_dated_row_uses_its_date(self):
+        q = [{"slug": "e1", "title": "[광고] x", "intro": "x", "price_date": "", "date": "2026-11-16", "kind": "short"},
+             {"slug": "l1", "title": "[광고] y", "intro": "y", "price_date": "", "date": "2026-11-18", "kind": "long"}]
+        now = dt.datetime(2026, 11, 15, 10, 0, tzinfo=yt.KST)
+        due = yt.due_rows(q, {}, now, 1, 2)
+        self.assertEqual([(r["slug"], s.hour) for r, s in due], [("e1", 19)])
+        now = dt.datetime(2026, 11, 16, 10, 0, tzinfo=yt.KST)  # 롱폼(11/18 20:00)은 2일 넘게 남아 아직
+        self.assertEqual([r["slug"] for r, s in yt.due_rows(q, {}, now, 1, 2)], ["e1"])
+        now = dt.datetime(2026, 11, 17, 10, 0, tzinfo=yt.KST)
+        self.assertEqual([(r["slug"], s.hour) for r, s in yt.due_rows(q, {}, now, 1, 2)], [("l1", 20)])
+
+
+if __name__ == "__main__":
+    unittest.main()
