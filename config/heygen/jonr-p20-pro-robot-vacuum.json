@@ -1,0 +1,36 @@
+{
+ "_note": "절약형 삼촌 쇼츠 (사진 넘기기 영상 대체, 2026-11-11)",
+ "product": "jonr-p20-pro-robot-vacuum",
+ "slug": "uncle-jonr-p20-pro-robot-vacuum",
+ "title": "[광고] 물걸레가 모서리까지 뻗는 로봇청소기",
+ "intro": "4L 물통·3L 먼지봉투 스테이션, 털 엉킴 방지 브러시",
+ "end_note": "관부가세 약 4만 원 가능 · 국내 A/S 확인",
+ "mix": {
+  "intro": "intro-excited",
+  "scenes": [
+   {
+    "photo": "04.jpg",
+    "say": "로봇청소기 물걸레, 모서리는 늘 남지? 이건 걸레가 모서리까지 뻗어 나와.",
+    "cap": "물걸레가 모서리까지"
+   },
+   {
+    "photo": "03.jpg",
+    "say": "스테이션에 4리터 물통이랑 3리터 먼지봉투가 있고.",
+    "cap": "4L 물통 · 3L 먼지봉투"
+   },
+   {
+    "photo": "05.jpg",
+    "say": "털 엉킴 방지 브러시도 달렸어.",
+    "cap": "털 엉킴 방지 브러시"
+   }
+  ],
+  "react": "react-think",
+  "react_after": {
+   "photo": "06.jpg",
+   "say": "가격이 면세 한도를 살짝 넘어서, 관부가세 사만 원쯤 붙을 수 있어.",
+   "cap": "관부가세 약 4만 원 확인"
+  },
+  "price_say": "알리에서 이십일만 원대야.",
+  "outro": "outro-1"
+ }
+}

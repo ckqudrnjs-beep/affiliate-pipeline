@@ -28,6 +28,11 @@ class YoutubeTest(unittest.TestCase):
         log = {"a": {"publish_at": "2026-11-10T19:00:00+09:00"}}
         self.assertEqual(yt.next_slot(log, now, 2), dt.datetime(2026, 11, 12, 19, 0, tzinfo=KST))
 
+    def test_slot_after_publish_now_is_next_evening(self):
+        now = dt.datetime(2026, 11, 11, 19, 50, tzinfo=KST)
+        log = {"a": {"publish_at": "2026-11-11T19:48:00+09:00"}}
+        self.assertEqual(yt.next_slot(log, now, 1), dt.datetime(2026, 11, 12, 19, 0, tzinfo=KST))
+
     def test_pick_skips_uploaded(self):
         q = [{"slug": "a"}, {"slug": "b"}]
         self.assertEqual(yt.pick(q, {"a": {}})["slug"], "b")

@@ -8,7 +8,7 @@ from pipeline import uncle
 class PlanTest(unittest.TestCase):
     def test_order_and_clips_exist_in_config(self):
         clips = json.loads(uncle.CLIPS.read_text(encoding="utf-8"))
-        for name in ("usb-heated-lap-blanket", "window-cleaning-robot-5600pa"):
+        for name in ("usb-heated-lap-blanket", "window-cleaning-robot-5600pa", "cordless-stick-vacuum-dust-sensor", "jonr-p20-pro-robot-vacuum"):
             cfg = json.loads((uncle.CFG / f"{name}.json").read_text(encoding="utf-8"))
             seq = uncle.plan(cfg)
             self.assertEqual(seq[0][0], "uncle")

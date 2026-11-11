@@ -88,7 +88,9 @@ def next_slot(log: dict, now: dt.datetime, interval_days: int) -> dt.datetime:
     times = [dt.datetime.fromisoformat(v["publish_at"]) for v in log.values()]
     if not times:
         return tomorrow
-    return max(tomorrow, max(times) + dt.timedelta(days=interval_days))
+    nxt = (max(times) + dt.timedelta(days=interval_days)).astimezone(KST)
+    # 바로 공개(YT_NOW)한 영상은 19:00 이 아닐 수 있어, 다음 영상은 그 날짜의 19:00 으로 맞춘다
+    return max(tomorrow, nxt.replace(hour=PUBLISH_HOUR, minute=0, second=0, microsecond=0))
 
 
 def pick(queue: list[dict], log: dict) -> dict | None:

@@ -1,0 +1,31 @@
+{
+ "_note": "절약형 삼촌 쇼츠 (사진 넘기기 영상 대체, 2026-11-11)",
+ "product": "cordless-stick-vacuum-dust-sensor",
+ "slug": "uncle-cordless-stick-vacuum",
+ "title": "[광고] 먼지 양 보고 알아서 세지는 무선 청소기",
+ "intro": "먼지 센서로 흡입력 자동 조절, LED 헤드, 면세 한도 안",
+ "end_note": "국내 A/S 어려움 · 충전기 플러그(220V) 확인",
+ "mix": {
+  "intro": "intro-curious",
+  "scenes": [
+   {
+    "photo": "05.jpg",
+    "say": "어두운 구석 먼지, 잘 안 보이지?",
+    "cap": "구석 먼지, 보여?"
+   },
+   {
+    "photo": "03.jpg",
+    "say": "먼지 센서가 먼지 양을 보고 흡입력을 알아서 바꿔.",
+    "cap": "먼지 양 보고 자동 조절"
+   },
+   {
+    "photo": "02.jpg",
+    "say": "화면에 배터리랑 먼지 상태가 나오고.",
+    "cap": "터치 화면에 상태 표시"
+   }
+  ],
+  "react": "react-laugh",
+  "price_say": "알리에서 십이만 칠천 원대, 면세 한도 안이야.",
+  "outro": "outro-2"
+ }
+}
