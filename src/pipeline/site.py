@@ -165,8 +165,8 @@ footer a{display:inline-block;padding:8px 0}
 @media (max-width:960px){.picks.compact{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:720px){.picks.compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px}}
 .picks.compact .why,.picks.compact .cat{display:none}.picks.compact .nm{font-size:17px}.picks.compact .price{font-size:13px;gap:8px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.chips a{padding:8px 14px;border:1px solid var(--line);color:inherit;text-decoration:none;font-size:14px}.chips a:hover{border-color:var(--ink)}
-.catgroup{padding-top:28px;scroll-margin-top:16px}.catgroup h3{font:500 20px/1.4 var(--display);margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.chips{display:flex;gap:8px;margin:0 0 8px;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;overflow-x:auto;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chips a{flex:none;white-space:nowrap;padding:8px 14px;border:1px solid var(--line);color:inherit;text-decoration:none;font-size:14px;background:var(--bg)}.chips a:hover{border-color:var(--ink)}.chips a[aria-current=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.catgroup{padding-top:28px;scroll-margin-top:64px}.catgroup h3{font:500 20px/1.4 var(--display);margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 /* 모바일 홈: 섹션 접고 펴기. 내용은 HTML에 그대로 있고(검색·광고 크롤러가 읽음) 화면에서만 접는다. JS가 없으면 모두 펼쳐진 채로 보인다. */
 .foldbtn{display:none}
 @media (max-width:720px){
@@ -189,7 +189,6 @@ section.fold:not(.open)>:not(.sechead){display:none}
 .catgroup.fold.open>h3{margin-bottom:16px}
 .catgroup.fold.open>h3 .foldbtn{transform:rotate(180deg)}
 .catgroup.fold:not(.open)>:not(h3){display:none}
-#all.fold .chips{display:none}
 }
 .more{font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
 .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
@@ -362,9 +361,9 @@ def product_page(p: dict) -> str:
     else:
         head = None
     if head:
-        top = f'<p class="small"><a href="../index.html#{p["category"]}">{e(cat)}</a></p>\n' + head + "\n"
+        top = f'<p class="small"><a class="backall" href="../index.html#all-{p["category"]}">← {e(cat)} 물건 모두 보기</a></p>\n' + head + "\n"
     else:
-        top = f"""<p class="small"><a href="../index.html#{p['category']}">{e(cat)}</a></p>
+        top = f"""<p class="small"><a class="backall" href="../index.html#all-{p['category']}">← {e(cat)} 물건 모두 보기</a></p>
 <h1>{e(p['name'])}, 알리 vs 쿠팡 얼마 차이?</h1>
 <p class="lede">{when}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
 <h2>삼촌의 계산</h2>
@@ -383,13 +382,18 @@ def product_page(p: dict) -> str:
 <p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
 <div class="btns">{btns}</div>
 <p><button type="button" class="zzim" id="zzimbtn" aria-pressed="false" data-item="{e(json.dumps({"slug": p["slug"], "name": p["name"], "price": int(p["aliPrice"]), "date": p["priceDate"]}, ensure_ascii=False))}">찜하기</button></p>
-<script>{N.PRODUCT_JS}</script>"""
+<script>{N.PRODUCT_JS}{BACK_JS}</script>"""
     if head:  # 알리 단독
         return page(f"{p['name']} 가격·한 달 비용 | {BRAND}", f"{p['name']} 알리 {won(int(p['aliPrice']))} ({when}). {p['note'][:80]}",
                     body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
                 f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
                 body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
+
+
+BACK_JS = r"""(function(){var a=document.querySelector('a.backall');if(!a)return;
+a.addEventListener('click',function(e){try{var r=new URL(document.referrer);
+if(r.origin===location.origin&&/\/(index\.html)?$/.test(r.pathname)&&history.length>1){e.preventDefault();history.back();}}catch(x){}});})();"""
 
 
 # 모바일(720px 이하) 홈에서만 섹션을 접는다. 첫 화면엔 "이번 주 삼촌의 선택"만 펼침.
@@ -402,7 +406,6 @@ head.setAttribute('role','button');head.setAttribute('tabindex','0');head.setAtt
 function t(e){if(e&&e.target.closest('a'))return;var o=el.classList.toggle('open');head.setAttribute('aria-expanded',o?'true':'false');}
 head.addEventListener('click',t);head.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});}
 document.querySelectorAll('main>section').forEach(function(s){var h=s.querySelector(':scope>.sechead');if(h&&!s.hidden)setup(s,h,s.id==='picks');});
-document.querySelectorAll('#all .catgroup').forEach(function(g){var h=g.querySelector(':scope>h3');if(h)setup(g,h,false);});
 function openTo(id){var el=id&&document.getElementById(id);if(!el)return;
 for(var n=el;n;n=n.parentElement){if(n.classList&&n.classList.contains('fold')&&!n.classList.contains('open')){n.classList.add('open');var h=n.querySelector(':scope>.sechead,:scope>h3');if(h)h.setAttribute('aria-expanded','true');}}
 el.scrollIntoView();}
@@ -411,12 +414,35 @@ window.addEventListener('hashchange',function(){openTo(decodeURIComponent(locati
 })();"""
 
 
+# "모든 물건": 분야 버튼은 화면 위에 붙어 따라오고, 누르면 그 분야만 보여 준다.
+# 상품을 보러 갔다가 돌아오면(뒤로 가기·분야 링크) 고른 분야와 보던 위치로 돌아온다.
+ALL_JS = r"""(function(){
+var all=document.getElementById('all');if(!all)return;
+var bar=all.querySelector('.chips'),groups=all.querySelectorAll('.catgroup');
+function show(cat,scroll){groups.forEach(function(g){g.hidden=!!cat&&g.id!==cat;});
+bar.querySelectorAll('a').forEach(function(a){var on=a.dataset.cat===(cat||'');a.setAttribute('aria-current',on?'true':'false');if(on)bar.scrollLeft=a.offsetLeft-bar.clientWidth/2+a.offsetWidth/2;});
+if(all.classList.contains('fold'))all.classList.add('open');
+history.replaceState(null,'',cat?'#all-'+cat:'#all');
+if(scroll)window.scrollTo(0,all.getBoundingClientRect().top+window.scrollY-8);}
+bar.addEventListener('click',function(e){var a=e.target.closest('a[data-cat]');if(!a)return;e.preventDefault();show(a.dataset.cat,true);});
+all.addEventListener('click',function(e){if(!e.target.closest('a.pick'))return;
+try{sessionStorage.setItem('allPos',JSON.stringify({cat:(location.hash.match(/^#all-(.+)$/)||[])[1]||'',y:window.scrollY}));}catch(x){}});
+function restore(){var h=decodeURIComponent(location.hash.slice(1)),saved=null;
+try{saved=JSON.parse(sessionStorage.getItem('allPos')||'null');sessionStorage.removeItem('allPos');}catch(x){}
+var m=h.match(/^all-(.+)$/),cat=m?m[1]:(document.getElementById(h)&&document.getElementById(h).classList.contains('catgroup')?h:null);
+if(saved&&(h==='all'||m||!h)){show(saved.cat,false);window.scrollTo(0,saved.y);return;}
+if(cat||h==='all')show(cat||'',true);}
+restore();window.addEventListener('pageshow',function(e){if(e.persisted)restore();});
+})();"""
+
+
 def index_page(products: list[dict]) -> str:
     e = html.escape
     ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
     picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:4]))
     cats = [c for c in CATEGORIES if any(p["category"] == c for p in products)]
-    chips = "".join(f'<a href="#{c}">{e(CATEGORIES[c])}</a>' for c in cats)
+    chips = '<a href="#all" data-cat="" aria-current="true">전체</a>' + "".join(
+        f'<a href="#all-{c}" data-cat="{c}">{e(CATEGORIES[c])}</a>' for c in cats)
     groups = "".join(f'<div class="catgroup" id="{c}"><h3>{e(CATEGORIES[c])}</h3><div class="picks compact">'
                      + "".join(pick(p) for p in ranked if p["category"] == c) + "</div></div>" for c in cats)
     all_sec = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
@@ -441,7 +467,7 @@ def index_page(products: list[dict]) -> str:
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
 <div class="toolrow">{tools}</div></section>
 <script>window.PRICES={prices};{N.HOME_JS}</script>
-<script>{FOLD_JS}</script>"""
+<script>{FOLD_JS}{ALL_JS}</script>"""
     return page(f"{BRAND} | 계산해 보고 고른 물건", "삼촌이 알리와 쿠팡 가격을 계산해 보고 고른 물건을 소개합니다. 전기요금·직구 세금·난방비 계산기도 무료로 쓸 수 있어요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
