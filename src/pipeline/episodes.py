@@ -8,7 +8,8 @@
     python -m pipeline.episodes check <파일>    # 대본 검사 (빈 목록이면 통과)
     python -m pipeline.episodes render [파일..] # 영상으로 (인자 없으면 아직 안 만든 것 모두)
 
-장면(scenes) 종류: hook, photo, calc, versus, countdown, ox, counter, list, bars, chapter, uncle, end
+장면(scenes) 종류: hook, photo, calc, versus, countdown, ox, counter, list, bars, chapter, uncle, skit, end
+(skit = 삼촌 vs 조카 만화 상황극, pipeline/skit.py. 쇼츠 전용)
 """
 from __future__ import annotations
 
@@ -34,23 +35,29 @@ SR = 44100
 AD_LABEL = "광고 · 알리익스프레스 제휴 링크"
 
 # 요일(월=0) → 쇼츠 형식
+SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 = 첫 1초 안에 숫자가 보이는 질문·상황(cap 에 숫자), "
+             "2줄 = 조카의 그럴듯한 오답·고집, 3줄 = sfx buzz + big(반전 숫자) + sub(가정), 이후 해결·펀치라인. "
+             "상품은 마지막 1~2줄에만 prop product 로, 그 뒤 end. 조카는 시청자 대신 묻는 역할, 삼촌은 계산으로 답한다. "
+             "마지막 줄은 웃기거나 첫 줄로 이어지게(다시 보게). ")
+# 요일(월=0) → 쇼츠 형식. 2026-11-11 BK "지루하지 않게": 만화 상황극(조회수 10배)을 월·목·토, 사이 날은 카드형으로 번갈아.
 SHORT_FORMATS = {
-    0: ("quiz", "얼마게? 퀴즈", True,
-        "A vs B 중 1년(또는 한 달) 돈이 더 드는 쪽을 맞히는 퀴즈. hook(질문) → versus(두 후보, 값은 숨김 hide=true) → "
-        "countdown(3초 고민) → versus(정답 공개) → calc(왜 그런지) → (선택) uncle 반응 → 상품이 답이면 photo 1~2장 → end."),
+    0: ("skit-quiz", "삼촌 vs 조카 얼마게?", True,
+        SKIT_RULE + "주제: A vs B 중 돈이 더 드는 쪽 맞히기 (예: 온풍기 vs 담요). 조카가 틀리고 삼촌이 숫자로 뒤집는다."),
     1: ("leak", "돈 새는 구멍", False,
         "상품 없음. 생활 속에서 모르고 새는 돈 1가지(대기전력, 구독료, 보일러 설정, 통신비 등)를 1년 금액으로. "
-        "hook → photo 대신 list 또는 calc 2~3장 → counter(1년 금액) → end(사이트 계산기 안내). 시리즈 번호 series_no."),
+        "hook → list 또는 calc 2~3장 → counter(1년 금액) → end(사이트 계산기 안내). 시리즈 번호 series_no. "
+        "중간에 2줄짜리 skit(조카: \"그게 얼마나 된다고?\")를 넣어도 된다."),
     2: ("teaser", "롱폼 예고", True,
         "이번 주 수요일 롱폼(살까 말까 저울)의 핵심 계산 하나만 쇼츠로. hook → versus 또는 bars → calc → uncle 반응 → "
         "end(\"전체 비교는 채널 롱폼에서\"). 롱폼 주제와 같은 상품."),
-    3: ("dont", "사지 마 시리즈", True,
-        "추천이 아니라 '이런 사람은 사지 마'. hook(\"이거 사기 전에 3초만\") → list(사지 말아야 할 사람 2~3) → "
-        "list(이런 사람만 사) → photo 1~2 → uncle(react-think 또는 react-nod) → end. 정직함이 핵심."),
+    3: ("skit-dont", "조카야 그거 사지 마", True,
+        SKIT_RULE + "주제: 조카가 충동구매하려는 물건을 삼촌이 '이런 사람은 사지 마' 계산으로 말리고, 이런 사람만 사라고 정리. "
+        "정직함이 핵심(단점·조건을 note·check 에서)."),
     4: ("ox", "착각 vs 현실 O/X", False,
         "상품 없음. 흔한 믿음 1개(예: 전기장판이 히터보다 무조건 싸다?) → ox(정답 공개) → calc로 반전 계산 → end."),
-    5: ("teaser2", "롱폼 예고 2", True,
-        "이번 주 토요일 롱폼(생활비 점검)의 계산 하나. 형식은 teaser 와 같음. 상품이 없으면 product 비움."),
+    5: ("skit-life", "삼촌 vs 조카 생활비", False,
+        SKIT_RULE + "주제: 이번 주 토요일 롱폼(생활비 점검) 중 하나를 생활 상황극으로 (예: 조카가 배달 앱을 켜는 순간). "
+        "상품 없이 해도 되고, 있으면 1개."),
     6: ("bank", "1년 뒤 통장", False,
         "상품 없음(또는 1개). '매일 ○○ 대신 △△ 하면 1년 뒤?' → counter(0에서 1년 금액까지 올라감) → calc(근거) → "
         "uncle(react-surprised) → end. 숫자는 보수적으로."),
@@ -136,7 +143,7 @@ def clips_cfg() -> dict:
 
 
 # ---------- 검사 ----------
-TYPES = {"hook", "photo", "calc", "versus", "countdown", "ox", "counter", "list", "bars", "chapter", "uncle", "end"}
+TYPES = {"hook", "photo", "calc", "versus", "countdown", "ox", "counter", "list", "bars", "chapter", "uncle", "skit", "end"}
 BANNED = ["써 봤", "써봤", "직접 사용", "무조건", "100%", "최고의", "완치", "효능"]
 
 
@@ -160,10 +167,10 @@ def check(spec: dict) -> list[str]:
     if "<" in title or ">" in title:
         e.append("제목에 < > 불가")
     scenes = spec.get("scenes") or []
-    lim = (5, 14) if kind == "short" else (25, 120)
+    lim = (2, 14) if kind == "short" else (25, 120)
     if not lim[0] <= len(scenes) <= lim[1]:
         e.append(f"장면 수 {lim[0]}~{lim[1]}")
-    if scenes and scenes[0].get("type") not in ("hook", "chapter", "ox", "versus"):
+    if scenes and scenes[0].get("type") not in ("hook", "chapter", "ox", "versus", "skit"):
         e.append("첫 장면은 hook (인사·로고로 시작 금지)")
     clips = clips_cfg()
     for p in [spec.get("product")] + list(spec.get("products") or []):
@@ -178,6 +185,18 @@ def check(spec: dict) -> list[str]:
         if t == "uncle":
             if s.get("clip") not in clips:
                 e.append(f"장면 {i}: 삼촌 영상 이름 {s.get('clip')}")
+            continue
+        if t == "skit":
+            from .skit import check_lines
+            if kind != "short":
+                e.append(f"장면 {i}: skit 은 쇼츠 전용")
+            e.extend(f"장면 {i}: {x}" for x in check_lines(s.get("lines")))
+            if any(ln.get("prop") == "product" for ln in s.get("lines") or []) and not spec.get("product"):
+                e.append(f"장면 {i}: prop product 는 상품이 있어야")
+            words += sum(len(ln.get("say", "")) for ln in s.get("lines") or [])
+            for b in BANNED:
+                if b in json.dumps(s, ensure_ascii=False):
+                    e.append(f"장면 {i}: 금지 표현 '{b}'")
             continue
         say = s.get("say", "")
         if not say and t not in ("countdown",):
@@ -401,7 +420,7 @@ def end_card_img(cv: Canvas, spec: dict):
     else:
         im.paste(fit(photo_of(p["slug"], 1), 700, 700), ((W - 700) // 2, 300) if not cv.long else (130, 200))
     cx, y = (W / 2, 1060) if not cv.long else (1400, 300)
-    _center(dr, cx, y, p["name"][:22], _font(58), "white")
+    _center(dr, cx, y, p["name"].split(" (")[0][:22], _font(58), "white")
     _center(dr, cx, y + 110, won(p["aliPrice"]), _font(110), "#ffd166")
     d = p.get("priceDate", "")
     _center(dr, cx, y + 250, f"{d[5:7].lstrip('0')}월 {d[8:10].lstrip('0')}일 기준 알리익스프레스 가격", _font(34), "#cfe0d8")
@@ -499,14 +518,14 @@ def render(path: pathlib.Path) -> pathlib.Path:
     # 연속된 일반 장면은 한 덩어리, 삼촌 장면은 따로
     groups: list[tuple[str, list[dict]]] = []
     for s in spec["scenes"]:
-        k = "uncle" if s["type"] == "uncle" else "scene"
+        k = s["type"] if s["type"] in ("uncle", "skit") else "scene"
         if k == "scene" and groups and groups[-1][0] == "scene":
             groups[-1][1].append(s)
         else:
             groups.append((k, [s]))
-    lines = [s.get("say", "") for s in spec["scenes"] if s["type"] != "uncle"]
+    lines = [s.get("say", "") for s in spec["scenes"] if s["type"] not in ("uncle", "skit")]
     voices = iter(tts(lines))
-    est = sum(1 for s in spec["scenes"] if s["type"] != "uncle") * 4.0 + sum(3.5 for s in spec["scenes"] if s["type"] == "uncle")
+    est = sum({"uncle": 3.5, "skit": 3.0 * len(s.get("lines") or [])}.get(s["type"], 4.0) for s in spec["scenes"])
     slug = spec.get("slug") or f"ep-{path.stem}"
     out = MEDIA / f"{slug}.mp4"
     MEDIA.mkdir(parents=True, exist_ok=True)
@@ -521,6 +540,10 @@ def render(path: pathlib.Path) -> pathlib.Path:
                 dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                             str(part)], capture_output=True, text=True).stdout.strip() or 3)
                 t_acc += dur
+            elif k == "skit":
+                from .skit import render_part
+                img = photo_of(product, ss[0].get("photo", 1)) if product else None
+                t_acc += render_part(ss[0]["lines"], ad, part, tmp, img, progress=lambda x, t0=t_acc: min(1.0, (t0 + x) / est))
             else:
                 before = len(ctx["durs"])
                 vs = [next(voices) for _ in ss]

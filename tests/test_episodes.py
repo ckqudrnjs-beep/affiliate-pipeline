@@ -21,7 +21,7 @@ class EpisodeCheckTest(unittest.TestCase):
         self.assertIn("금지 표현", errs)
 
     def test_weekday_formats(self):
-        self.assertEqual(ep.SHORT_FORMATS[dt.date(2026, 11, 16).weekday()][0], "quiz")  # 월
+        self.assertEqual(ep.SHORT_FORMATS[dt.date(2026, 11, 16).weekday()][0], "skit-quiz")  # 월
         self.assertEqual(sorted(ep.LONG_FORMATS), [2, 5])  # 수·토
 
 
@@ -46,3 +46,20 @@ class EpisodeUploadTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SkitCheckTest(unittest.TestCase):
+    def test_skit_lines(self):
+        from pipeline.skit import check_lines
+        ok = [{"who": "u", "say": "조카야 얼마게?", "cap": ["얼마게?"]}, {"who": "n", "n": "shock", "say": "헐"}]
+        self.assertEqual(check_lines(ok), [])
+        self.assertTrue(check_lines(ok[:1]))
+        self.assertTrue(check_lines([{"who": "x", "say": "가"}, {"who": "u", "say": "나" * 43}]))
+        self.assertTrue(check_lines([{"who": "u", "say": "가", "u": "dance"}, {"who": "n", "say": "나", "prop": "cat"}]))
+
+    def test_sample_skit_episode(self):
+        import json, pathlib
+        spec = json.loads(pathlib.Path("data/episodes/2026-11-16-skit-quiz.json").read_text(encoding="utf-8"))
+        self.assertEqual(ep.check(spec), [])
+        spec["kind"] = "long"
+        self.assertTrue(any("쇼츠 전용" in x for x in ep.check(spec)))

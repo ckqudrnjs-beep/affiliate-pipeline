@@ -1,6 +1,6 @@
 # 새 기획 영상 대본 규칙 (EPISODES.md)
 
-2026-11-11 BK 확정. 쇼츠 매일(요일별 형식) + 롱폼 주 2개(수·토). 계획은 plan/YOUTUBE_PLAN.md 맨 위.
+2026-11-11 BK 확정. 쇼츠 매일(요일별 형식, 월·목·토 = 삼촌 vs 조카 만화 상황극) + 롱폼 주 2개(수·토). 계획은 plan/YOUTUBE_PLAN.md 맨 위.
 Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.json` 대본을 쓰면, `episodes` 워크플로가 무료로 영상을 만든다
 (7번 목소리 + 사진·카드 + 재사용 삼촌 표정 영상). 쇼츠는 바로 업로드 대기, 롱폼은 미리보기 PR → BK 병합.
 
@@ -14,7 +14,7 @@ Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.js
 ## 2. 대본 형식
 ```json
 {
- "date": "2026-11-16", "kind": "short" 또는 "long", "format": "quiz", "format_name": "얼마게? 퀴즈",
+ "date": "2026-11-16", "kind": "short" 또는 "long", "format": "skit-quiz", "format_name": "삼촌 vs 조카 얼마게?",
  "series_no": 3,                       // 돈 새는 구멍·1년 뒤 통장처럼 번호 시리즈일 때만
  "slug": "ep-2026-11-16-quiz",
  "title": "[광고] ... (상품이 나오면 [광고]로 시작, 없으면 [광고] 없이)",
@@ -38,14 +38,18 @@ Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.js
 | bars | title, items[{label,value,text?}], say | 막대그래프 (롱폼 비교) |
 | chapter | no, text, say | 롱폼 챕터 제목 (설명란 목차가 자동으로 생김) |
 | uncle | clip (config/heygen/clips.json 이름) | 삼촌 표정 영상(대사 고정) |
+| skit | lines[2~8] {who u/n, u 포즈, n 포즈, cap[1~2줄], say, big?, sub?, sfx? buzz/ding, prop? product/heater}, photo? | 삼촌 vs 조카 만화 상황극 (쇼츠 전용). 삼촌 7번 목소리, 조카 F2 |
 | end | say, text(상품 없는 편) | 상품 편: 상품·가격·don3chon.com / 없는 편: 사이트 안내 |
 
 삼촌 영상 대사(고정): intro-excited "조카야, 삼촌이 오늘 하나 건졌다!", intro-curious "조카야, 이거 한번 볼래?",
 react-surprised "어? 이게 이 가격이라고?", react-laugh "허허, 이거 물건이네.", react-think "흠, 근데 이건 꼭 확인해.",
 react-nod "그치, 이거면 충분해.", outro-1/outro-2 (광고 링크·수수료 고지 + don3chon.com). 대사가 앞뒤 맥락에 맞을 때만 넣는다.
 
+만화 상황극(skit): 포즈 삼촌 talk/wow/point, 조카 talk/shock/cold(덜덜)/happy. big = 노란 반전 숫자(띵 소리), sfx buzz = 오답.
+공식: 숫자 질문(cap 에 숫자) → 조카 오답 → buzz + big + sub(가정) → 조카 걱정 → 삼촌 해결(prop product) → 펀치라인. 예: data/episodes/2026-11-16-skit-quiz.json
+
 ## 3. 공통 규칙
-- 첫 장면은 hook (인사·로고로 시작 금지). 쇼츠 15~30초(장면 6~10개), 2~3초마다 화면이 바뀌게.
+- 첫 장면은 hook 또는 skit (인사·로고로 시작 금지). 쇼츠 15~30초(장면 6~10개), 2~3초마다 화면이 바뀌게.
 - 계산은 보수적으로, 가정은 sub 에 적는다 (전기요금 kWh당 200원 단순, 누진제 제외 등).
 - 판매자 표기·상품 note 에 있는 사실만. 써 봤다는 말·효능·"무조건/100%/최고" 금지.
 - 상품 편: 제목 [광고] + 마지막 end. 같은 상품은 2주 안에 다시 쓰지 않는다 (`recent_products`).
