@@ -1,7 +1,10 @@
 {
   "baseUrl": "https://don3chon.com",
   "googleSiteVerification": "",
-  "naverSiteVerification": "385ee13a7f8217a5d9ae744f20be48abc0f095b8",
+  "naverSiteVerification": [
+    "385ee13a7f8217a5d9ae744f20be48abc0f095b8",
+    "ca7fa2e33b907e7e887f937445aec9d07467cc53"
+  ],
   "adsensePublisherId": "",
   "contactEmail": "don3chon.official@gmail.com",
   "productNoindex": true,

@@ -19,9 +19,18 @@ from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
 from . import articles as A
 from . import prices as PR
+from . import questions as Q
+from . import seo as S
 from urllib.parse import urlparse
 
 BRAND = "돈 줍는 삼촌"
+SEO_CSS = """.related{margin-top:36px}.related h2{font:500 22px/1.4 var(--display);margin:0 0 6px}
+.trycalc p{font-size:16px}.qhead{font:500 18px/1.4 var(--display);margin:28px 0 8px}
+.qlist{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 18px}
+.qlist li{border-bottom:1px solid var(--line);padding:10px 0}.qlist a{color:inherit;text-decoration:none;font-size:15px}
+.qlist a:hover,.qlist a:focus-visible{color:var(--green);text-decoration:underline}
+.article h3{font-size:17px;margin:22px 0 4px}
+"""
 CATEGORIES = {"clean": "청소", "heat": "겨울 난방", "living": "생활·조명", "humidify": "겨울 가습",
               "kitchen": "주방", "digital": "IT·디지털", "goods": "생활 잡화", "car": "자동차", "humidity": "습도 관리", "tools": "공구"}
 # 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
@@ -99,7 +108,7 @@ def calc(r: dict) -> dict:
                 "aliWins": True, "verdict": "알리 단독 소개"}
     cp = int(r["coupangPrice"])
     diff = cp - ali
-    ratio = round(diff / cp * 100) if cp else 0
+    ratio = round(diff / (cp if diff >= 0 else ali) * 100) if cp and ali else 0  # 비싼 쪽 대비 %
     wait = max(days - 1, 1)  # 쿠팡 로켓배송 하루 기준
     per_day = diff // wait
     ali_wins = diff >= 5000 and ratio >= 25
@@ -264,25 +273,29 @@ def adfit_slot(ads: bool) -> str:
 
 
 def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "",
-         ads: bool = True, noindex: bool = False) -> str:
+         ads: bool = True, noindex: bool = False, og: str = "og/default.png", crumbs: list[tuple[str, str]] | None = None) -> str:
     """ads=False: 애드센스 코드 제외(상품 페이지). noindex=True: 검색 색인 제외(제휴 위주 얇은 페이지)."""
     e = html.escape
     client = adsense_client()
     url = f"{BASE}/{path}"
-    meta = "".join(f'<meta name="{n}" content="{e(CFG[k])}">' for n, k in
-                   (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification")) if CFG.get(k))
+    # 값 하나 또는 목록 (네이버에 https·http 두 사이트를 따로 등록하면 확인 값이 둘이다)
+    meta = "".join(f'<meta name="{n}" content="{e(v)}">' for n, k in
+                   (("google-site-verification", "googleSiteVerification"), ("naver-site-verification", "naverSiteVerification"))
+                   for v in ([CFG[k]] if isinstance(CFG.get(k), str) else CFG.get(k) or []) if v)
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
+    lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
-            f'<meta property="og:locale" content="ko_KR">{meta}'
+            f'<meta property="og:locale" content="ko_KR"><meta property="og:image" content="{BASE}/{og}"><meta property="og:image:width" content="1200">'
+            f'<meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">{meta}'
             + (f'<meta name="google-adsense-account" content="{client}">' if client else "")
             + ('<meta name="robots" content="noindex,follow">' if noindex else "")
             + (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={client}" crossorigin="anonymous"></script>' if client and ads else "")
-            + f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
+            + "".join(f'<script type="application/ld+json">{json.dumps(x, ensure_ascii=False)}</script>' for x in lds))
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND} 소식" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
 <nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}faq.html">질문</a></nav></div></header>
@@ -322,7 +335,7 @@ def pick(p: dict, lead: bool = False) -> str:
     e = html.escape
     d = dt.date.fromisoformat(p["priceDate"])
     return f"""<a class="pick{' lead' if lead else ''}" href="p/{p['slug']}.html"><div class="ph">{media(p)}</div><div style="display:flex;flex-direction:column;gap:10px">
-<span class="cat">{e(CATEGORIES.get(p['category'], ''))}</span><span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
+<span class="cat">{e(CATEGORIES.get(p['category'], ''))}</span>{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
 {price_line(p)}
 <span class="small">{d.month}월 {d.day}일 기준{'' if p.get('solo') else ' · 기능이 비슷한 제품 비교'}</span><span class="more">{'자세히 보기' if p.get('solo') else '계산 보기'}</span></div></a>"""
 
@@ -330,19 +343,21 @@ def pick(p: dict, lead: bool = False) -> str:
 def card(p: dict, root: str = "") -> str:
     e = html.escape
     if p.get("solo"):
-        return f"""<a class="item" href="{root}p/{p['slug']}.html"><span class="nm">{e(p['name'])}</span>
+        return f"""<a class="item" href="{root}p/{p['slug']}.html">{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span>
 <span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>해외 배송</span></span></a>"""
     pill = '<span class="pill">급하지 않으면 알리</span>' if p["aliWins"] else '<span class="pill cp">쿠팡이 낫다</span>'
-    return f"""<a class="item" href="{root}p/{p['slug']}.html">{pill}<span class="nm">{e(p['name'])}</span>
+    return f"""<a class="item" href="{root}p/{p['slug']}.html">{pill}{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span>
 <span class="row"><span>알리 {won(int(p['aliPrice']))}</span><span>쿠팡 {won(int(p['coupangPrice']))}</span></span>
 <span class="bar"><span style="width:{max(0, min(p['ratio'], 100))}%"></span></span>
-<span class="save">알리 쪽이 {won(p['diff'])} 낮음 ({p['ratio']}%)</span></a>"""
+<span class="save">{'알리' if p['diff'] >= 0 else '쿠팡'} 쪽이 {won(abs(p['diff']))} 낮음 ({abs(p['ratio'])}%)</span></a>"""
 
 
 def product_page(p: dict) -> str:
     e = html.escape
     d = dt.date.fromisoformat(p["priceDate"])
     when = f"{d.month}월 {d.day}일 기준"
+    cd = dt.date.fromisoformat(p.get("coupangPriceDate") or p["priceDate"])
+    cpwhen = f"{cd.month}월 {cd.day}일 기준 (쿠팡 가격은 수시로 바뀝니다)"
     cat = CATEGORIES.get(p["category"], p["category"])
     first, second = (("aliUrl", "알리에서 보기"), ("coupangUrl", "쿠팡에서 보기")) if p["aliWins"] else (("coupangUrl", "쿠팡에서 보기"), ("aliUrl", "알리에서 보기"))
     btns = "".join(f'<a class="btn{" main" if i == 0 else ""}" href="{e(p[k])}" rel="sponsored nofollow noopener" target="_blank">{t}</a>'
@@ -351,6 +366,7 @@ def product_page(p: dict) -> str:
         head = f"""<h1>{e(p['name'])}</h1>
 <p class="lede">{when} 알리익스프레스 가격입니다.</p>
 <div class="ph" style="max-width:560px;margin-top:24px">{media(p, "../")}</div>
+{PR.buy_box(HIST.get(p["slug"]))}
 <h2 style="margin-top:32px">삼촌의 계산</h2>
 <div class="receipt">
 <div><span>알리 (해외 배송)</span><span>{won(int(p['aliPrice']))}</span></div>
@@ -365,14 +381,16 @@ def product_page(p: dict) -> str:
     else:
         top = f"""<p class="small"><a class="backall" href="../index.html#all-{p['category']}">← {e(cat)} 물건 모두 보기</a></p>
 <h1>{e(p['name'])}, 알리 vs 쿠팡 얼마 차이?</h1>
-<p class="lede">{when}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
-<h2>삼촌의 계산</h2>
+<p class="lede">알리 {when}, 쿠팡 {cpwhen}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
+<div class="ph" style="max-width:560px;margin-top:24px">{media(p, "../")}</div>
+{PR.buy_box(HIST.get(p["slug"]))}
+<h2 style="margin-top:32px">삼촌의 계산</h2>
 <div class="receipt">
-<div><span>쿠팡 (로켓배송 약 1일)</span><span>{won(int(p['coupangPrice']))}</span></div>
+<div><span>쿠팡{f' · {e(p["coupangName"])}' if p.get("coupangName") else ''}</span><span>{won(int(p['coupangPrice']))}</span></div>
 <div><span>알리 (배송 약 {p['shipDays']}일)</span><span>{won(int(p['aliPrice']))}</span></div>
-<div class="sum"><span>차액</span><span>{won(p['diff'])} ({p['ratio']}%)</span></div>
+<div class="sum"><span>차액</span><span>{'알리' if p['diff'] >= 0 else '쿠팡'}이 {won(abs(p['diff']))} 쌈 ({abs(p['ratio'])}%)</span></div>
 {f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
-<div><span>하루 더 기다릴 때마다</span><span>{won(p['perDay'])} 절약</span></div>
+{f'<div><span>하루 더 기다릴 때마다 (쿠팡 하루 배송 가정)</span><span>{won(p["perDay"])} 절약</span></div>' if p['diff'] > 0 else '<div><span>기다릴 이유</span><span>없음 (쿠팡이 더 쌈)</span></div>'}
 <div><span>{p['lifeMonths']}개월 쓰면 한 달에</span><span>알리 {won(p['monthAli'])} / 쿠팡 {won(p['monthCp'])}</span></div>
 </div>
 <p class="verdict">결론: <span>{p['verdict']}</span></p>
@@ -387,7 +405,7 @@ def product_page(p: dict) -> str:
         return page(f"{p['name']} 가격·한 달 비용 | {BRAND}", f"{p['name']} 알리 {won(int(p['aliPrice']))} ({when}). {p['note'][:80]}",
                     body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
     return page(f"{p['name']} 알리 vs 쿠팡 가격 계산 | {BRAND}",
-                f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(p['diff'])}, 결론: {p['verdict']}.",
+                f"{p['name']} 알리 {won(int(p['aliPrice']))}, 쿠팡 {won(int(p['coupangPrice']))}. 차액 {won(abs(p['diff']))}, 결론: {p['verdict']}.",
                 body, root="../", path=f"p/{p['slug']}.html", ads=False, noindex=PRODUCT_NOINDEX)
 
 
@@ -447,10 +465,12 @@ def index_page(products: list[dict]) -> str:
                      + "".join(pick(p) for p in ranked if p["category"] == c) + "</div></div>" for c in cats)
     all_sec = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
 <nav class="chips" aria-label="분야">{chips}</nav>{groups}</section>""" if products else ""
+    qrow = "".join(f'<li><a href="q/{q["slug"]}.html">{e(q["h1"])}</a></li>' for q in Q.load())
+    qrow = f'<h3 class="qhead">많이 묻는 계산</h3><ul class="qlist">{qrow}</ul>' if qrow else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
     hero = """<section class="hero"><div class="wrap"><p class="eyebrow">CURATED BY 돈 줍는 삼촌</p>
 <h1>좋은 물건을,<br>제값에.</h1>
-<p>삼촌이 가격을 나란히 놓고 계산해 본 뒤 고른 물건만 소개합니다. 차액이 작으면 빠른 배송을, 크면 기다림을 권합니다.</p></div></section>"""
+<p>삼촌이 가격을 나란히 놓고 계산해 본 뒤 고른 물건만 소개합니다. 차액이 작으면 빠른 배송을, 크면 기다림을 권합니다. 매일 가격을 적어 두고 지금 사도 되는지, 기다리는 게 나은지도 알려 드립니다.</p></div></section>"""
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
 <div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
 <p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
@@ -465,29 +485,48 @@ def index_page(products: list[dict]) -> str:
 <div><b>기다림에도 값을 매깁니다</b><p>해외 배송을 하루 더 기다릴 때마다 얼마를 아끼는지 보여 드립니다. 몇천 원 차이면 빠른 배송을 권합니다.</p></div>
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
-<div class="toolrow">{tools}</div></section>
+<div class="toolrow">{tools}</div>{qrow}</section>
 <script>window.PRICES={prices};{N.HOME_JS}</script>
 <script>{FOLD_JS}{ALL_JS}</script>"""
     return page(f"{BRAND} | 계산해 보고 고른 물건", "삼촌이 알리와 쿠팡 가격을 계산해 보고 고른 물건을 소개합니다. 전기요금·직구 세금·난방비 계산기도 무료로 쓸 수 있어요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
 
-def calc_page(c: dict, products: list[dict]) -> str:
+def link_list(title: str, items: list[tuple[str, str, str]]) -> str:
+    """[(경로, 제목, 설명)] → 관련 링크 목록. 경로는 페이지 기준 상대 경로."""
+    if not items:
+        return ""
+    e = html.escape
+    li = "".join(f'<li><a href="{e(u)}"><b>{e(t)}</b><span>{e(d)}</span></a></li>' for u, t, d in items)
+    return f'<section class="related"><h2>{e(title)}</h2><ul class="alist">{li}</ul></section>'
+
+
+def calc_widget(c: dict, values: dict | None = None) -> str:
+    """계산기 폼+결과. values 가 있으면 그 값으로 미리 채운다(주소 ?값 이 있으면 그게 우선)."""
+    ids = ",".join(f"'{i}'" for i in c["ids"])
+    pre = f"const pre={json.dumps(values or {})};for(const k in pre){{const el=$('#'+k);if(el)el.value=pre[k];}}" if values else ""
+    return f"""<div class="calc"><form id="f" onsubmit="event.preventDefault()">{c['form']}</form>
+<div><div class="receipt" id="out" aria-live="polite"></div><p class="cmp" id="cmp"></p>
+<button type="button" id="share">결과 링크 복사</button><p class="small" id="shareMsg"></p></div></div>
+<script>{COMMON_JS}{c['js']}
+{pre}const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',run);run();</script>"""
+
+
+def calc_page(c: dict, products: list[dict], arts: list[dict] | None = None, qs: list[dict] | None = None) -> str:
     e = html.escape
     rel = "".join(card(p, "../") for p in products if c["category"] and p["category"] == c["category"])[:20000]
     rel = f'<h2>관련 상품 계산</h2><div class="grid">{rel}</div>' if rel else ""
-    ids = ",".join(f"'{i}'" for i in c["ids"])
-    body = f"""<p class="small"><a href="../index.html">계산기 모음</a></p>
+    qlinks = link_list("계산해 본 질문", [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in (qs or []) if c["slug"] in (Q.calc_of(q), Q.cluster(q))])
+    alinks = link_list("관련 글", [(f"../guide/{a['slug']}.html", a["title"], a["desc"]) for a in (arts or []) if S.article_cluster(a) == c["slug"]][:5])
+    body = f"""<p class="small"><a href="../index.html#calcs">계산기 모음</a></p>
 <h1>{e(c['h1'])}</h1><p class="lede">{e(c['lede'])}</p>
-<div class="calc"><form id="f" onsubmit="event.preventDefault()">{c['form']}</form>
-<div><div class="receipt" id="out" aria-live="polite"></div><p class="cmp" id="cmp"></p>
-<button type="button" id="share">결과 링크 복사</button><p class="small" id="shareMsg"></p></div></div>
+{calc_widget(c)}
 {c['body']}
 <p class="small">요금·세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 고지서·세관 부과액과 다를 수 있습니다.</p>
-{rel}
-<script>{COMMON_JS}{c['js']}
-const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',run);run();</script>"""
+{qlinks}{alinks}
+{rel}"""
     return page(f"{c['title']} | {BRAND}", c["lede"], body, root="../", path=f"calc/{c['slug']}.html",
+                og=S.og_path("calc", c["slug"]), crumbs=[("계산기", "index.html#calcs"), (c["title"], f"calc/{c['slug']}.html")],
                 ld={"@context": "https://schema.org", "@type": "WebApplication", "name": c["title"], "url": f"{BASE}/calc/{c['slug']}.html",
                     "applicationCategory": "UtilitiesApplication", "operatingSystem": "Web", "inLanguage": "ko",
                     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}})
@@ -515,7 +554,7 @@ ABOUT = """<h1>돈 줍는 삼촌 소개</h1>
 <h2>여기서 할 수 있는 것</h2>
 <ul class="note">
 <li><a href="guide.html">삼촌의 글</a>: 생활비·가전·직구에 관한 계산 글</li>
-<li><a href="index.html#calcs">무료 계산기</a>: 전기요금, 알리 직구 실제가, 난방기기 비교, 대기전력</li>
+<li><a href="index.html#calcs">무료 계산기</a>: 전기요금, 알리 직구 실제가, 난방기기 비교, 대기전력, 가습기 종류별 요금</li>
 <li><a href="prices.html">알리 가격 기록</a>: 소개한 물건의 가격을 매일 기록하고, 지금이 싼 편인지 판정</li>
 <li><a href="news.html">삼촌 소식</a>: 날짜별 살림 소식</li>
 <li><a href="index.html#picks">삼촌의 선택</a>: 가격을 계산해 보고 고른 물건</li>
@@ -553,8 +592,21 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     o = pathlib.Path(out)
     (o / "p").mkdir(parents=True, exist_ok=True)
     (o / "calc").mkdir(exist_ok=True)
+    arts = A.load()
+    qs = Q.load()
+    calc_by = {c["slug"]: c for c in CALCS}
     for c in CALCS:
-        (o / "calc" / f"{c['slug']}.html").write_text(calc_page(c, products), encoding="utf-8")
+        (o / "calc" / f"{c['slug']}.html").write_text(calc_page(c, products, arts, qs), encoding="utf-8")
+    (o / "q").mkdir(exist_ok=True)
+    for q in qs:
+        c = calc_by[Q.calc_of(q)]
+        cl = Q.cluster(q)
+        rel = link_list("같이 보면 좋은 글", [(f"../guide/{a['slug']}.html", a["title"], a["desc"]) for a in arts if S.article_cluster(a) == cl][:3]
+                        + [(f"../q/{x['slug']}.html", x["h1"], x["title"]) for x in qs if x is not q and Q.cluster(x) == cl][:3])
+        (o / "q" / f"{q['slug']}.html").write_text(page(f"{q['title']} | {BRAND}", Q.computed(q)["desc"],
+            Q.body(q, c, calc_widget(c, Q.preset(q)), rel), root="../", path=f"q/{q['slug']}.html", ld=Q.faq_ld(q),
+            og=S.og_path("q", q["slug"]), crumbs=[("계산기", "index.html#calcs"), (c["title"], f"calc/{c['slug']}.html"), (q["h1"], f"q/{q['slug']}.html")]),
+            encoding="utf-8")
     (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
     (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
         PR.page_body(products, HIST), path="prices.html"), encoding="utf-8")
@@ -573,8 +625,8 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     for n in news:
         (o / "news" / f"{n['id']}.html").write_text(page(f"{n['title']} | {BRAND}", n["body"][:150], N.news_page_body(n), root="../",
             path=f"news/{n['id']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": n["title"],
-            "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}}), encoding="utf-8")
-    arts = A.load()
+            "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
+            crumbs=[("삼촌 소식", "news.html"), (n["title"], f"news/{n['id']}.html")]), encoding="utf-8")
     by_slug = {p["slug"]: p for p in products}
     (o / "guide").mkdir(exist_ok=True)
     (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 직구 세금, 난방비처럼 사기 전에 궁금한 것을 계산으로 답합니다.",
@@ -583,12 +635,23 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     for a in arts:
         cards = "".join(card(by_slug[s], "../") for s in a.get("products", [])[:2] if s in by_slug)
         nv = A.naver_box(A.naver_for(a, naver))
-        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv), root="../",
-            path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE)), encoding="utf-8")
+        cl = S.article_cluster(a)
+        more = ""
+        if cl:
+            c = calc_by[cl]
+            more += (f'<section class="related trycalc"><h2>우리 집 숫자로 계산해 보기</h2><p><a href="../calc/{cl}.html"><b>{html.escape(c["title"])}</b></a>'
+                     f' · 고지서 사용량만 넣으면 바로 나와요.</p></section>')
+        same = [x for x in arts if x is not a and S.article_cluster(x) == cl] if cl else []
+        others = same + [x for x in arts if x is not a and x not in same]
+        more += link_list("같이 보면 좋은 글", [(f"{x['slug']}.html", x["title"], x["desc"]) for x in others[:3]]
+                          + [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in qs if cl and Q.cluster(q) == cl][:2])
+        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + more, root="../",
+            path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
+            crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
-    (o / "feed.xml").write_text(N.feed_xml(news, BASE, BRAND), encoding="utf-8")
+    (o / "feed.xml").write_text(S.feed(BASE, BRAND, news, arts), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
     for f in pathlib.Path("static").rglob("*"):  # 하위 폴더(video/ 등)도 그대로 복사
@@ -596,10 +659,19 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             t = o / f.relative_to("static")
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_bytes(f.read_bytes())
-    urls = ["", "guide.html", "news.html", "prices.html", "faq.html"] + [f"guide/{a['slug']}.html" for a in arts] + [f"news/{n['id']}.html" for n in news] + [f"calc/{c['slug']}.html" for c in CALCS] + ([] if PRODUCT_NOINDEX else [f"p/{p['slug']}.html" for p in products]) + ["about.html", "contact.html", "privacy.html"]
     today = dt.date.today().isoformat()
-    (o / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + "".join(f"<url><loc>{BASE}/{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls) + "</urlset>\n", encoding="utf-8")
+    SITE_PAGES = "2026-11-11"  # 소개·문의·개인정보·계산기 틀을 마지막으로 고친 날 (고치면 같이 바꾼다)
+    adate = {a["slug"]: a.get("updated", a["date"]) for a in arts}
+    newest_a = max(adate.values(), default=SITE_PAGES)
+    newest_n = max((n["date"] for n in news), default=SITE_PAGES)
+    entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES)]
+               + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
+               + [(f"news/{n['id']}.html", n["date"]) for n in news]
+               + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS]
+               + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
+               + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
+               + [("about.html", SITE_PAGES), ("contact.html", SITE_PAGES), ("privacy.html", SITE_PAGES)])
+    (o / "sitemap.xml").write_text(S.sitemap(BASE, entries), encoding="utf-8")
     (o / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n", encoding="utf-8")
     return len(products)
 
