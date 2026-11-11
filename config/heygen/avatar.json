@@ -1,0 +1,13 @@
+{
+ "avatar_id": "2578ecb254878030f245cb638aafc970",
+ "group_id": "2578ecb254878030f245cb638aafc970",
+ "voice_id": "07ca39b243184dbcb82e7e0f0e524b21",
+ "photo": "uncle.jpg",
+ "engines": [
+  "avatar_v",
+  "avatar_iv",
+  "avatar_iii",
+  "heygen-avatar-6",
+  "heygen-avatar-6-turbo"
+ ]
+}
