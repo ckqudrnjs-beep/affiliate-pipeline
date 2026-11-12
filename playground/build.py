@@ -190,15 +190,16 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None)
     pub = cfg.get("adsensePublisherId", "").strip()
     if pub:
         head += (f'<meta name="google-adsense-account" content="ca-{pub}"><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{pub}" crossorigin="anonymous"></script>')
+    verify = ""  # 검색엔진 확인 태그는 <head> 맨 앞에 둔다(긴 CSS 뒤에 있으면 일부 봇이 못 읽음).
     for tag in cfg.get("naverSiteVerification", []):
-        head += f'<meta name="naver-site-verification" content="{esc(tag)}">'
+        verify += f'<meta name="naver-site-verification" content="{esc(tag)}">'
     if cfg.get("googleSiteVerification"):
-        head += f'<meta name="google-site-verification" content="{esc(cfg["googleSiteVerification"])}">'
+        verify += f'<meta name="google-site-verification" content="{esc(cfg["googleSiteVerification"])}">'
     if noindex:
         head += '<meta name="robots" content="noindex,follow">'
     for x in jsonld or []:
         head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
-    return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">{verify}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#2b1055">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
