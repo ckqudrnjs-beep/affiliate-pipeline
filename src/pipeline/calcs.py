@@ -169,8 +169,8 @@ function run(){const hd=$('#h').value*$('#d').value/1000, base=+$('#base').value
         "js": """
 function run(){const a=+$('#amt').value, n=Math.max(1,Math.round(+$('#n').value)), r=$('#r').value/100/12, free=Math.max(0,+$('#free').value), disc=+$('#disc').value;
  const pr=Math.floor(a/n); let left=a, fee=0;
- for(let m=1;m<=n;m++){if(m>free) fee+=Math.floor(left*r); left-= m<n?pr:left;}
- const first=pr+(free>=1?0:Math.floor(a*r)), net=disc-fee;
+ for(let m=1;m<=n;m++){if(m>free) fee+=Math.floor(left*r+1e-6); left-= m<n?pr:left;}
+ const first=pr+(free>=1?0:Math.floor(a*r+1e-6)), net=disc-fee;
  $('#out').innerHTML=`<div><span>매달 원금</span><span>${fmt(pr)}</span></div>
  <div><span>첫 달 청구 (원금+수수료)</span><span>${fmt(first)}</span></div>
  <div class="sum"><span>총 할부 수수료</span><span>${fmt(fee)}</span></div>
@@ -184,6 +184,69 @@ function run(){const a=+$('#amt').value, n=Math.max(1,Math.round(+$('#n').value)
 <p>카드 할부 수수료는 보통 "남은 할부 원금 × 연 수수료율 ÷ 12"로 매달 붙습니다. 원금이 매달 줄어드니 수수료도 조금씩 줄어들고, 전체로는 대략 결제 금액 × 연 수수료율 × (개월 수 + 1) ÷ 24 정도가 됩니다. 30만 원을 연 15%로 6개월 할부하면 수수료가 1만 3천 원 안팎이에요.</p>
 <p>세일 기간에 할인을 받아도 긴 할부로 나누면 그 할인이 수수료로 꽤 빠져나갑니다. 부분 무이자는 앞 몇 개월만 수수료가 없고 나머지 개월은 붙는 방식이라, 무이자 개월 칸에 그 숫자를 넣으면 됩니다.</p>
 <p>수수료율은 카드사·회원 등급·개월 수마다 다릅니다. 위 15%는 계산을 보여 주기 위한 예시예요. 카드 앱이나 이용대금 명세서의 "할부 수수료율"을 확인해서 바꿔 넣으세요. 카드사마다 계산 방식이 조금 달라 실제 청구액과 몇백 원 차이 날 수 있습니다.</p>""",
+        "category": "",
+    },
+    {
+        "slug": "salary",
+        "title": "2026 연봉 실수령액 계산기 (4대보험·소득세)",
+        "h1": "연봉 ○천이면 통장에 매달 얼마 들어올까?",
+        "lede": "연봉과 비과세 식대, 부양가족 수만 넣으면 2026년 4대보험 요율로 공제액을 빼고 한 달 실수령액을 계산합니다.",
+        "form": """
+<label>연봉 (원, 퇴직금 별도)<input id="pay" type="number" inputmode="numeric" value="40000000" min="0" step="1000000"></label>
+<label>비과세 식대 등 (월, 원)<input id="nt" type="number" inputmode="numeric" value="200000" min="0"></label>
+<label>부양가족 수 (본인 포함)<input id="fam" type="number" inputmode="numeric" value="1" min="1" max="10"></label>""",
+        "ids": ["pay", "nt", "fam"],
+        "js": """
+const f10=n=>Math.floor(n/10)*10;
+function earnDed(g){const d=g<=5e6?g*.7:g<=1.5e7?3.5e6+(g-5e6)*.4:g<=4.5e7?7.5e6+(g-1.5e7)*.15:g<=1e8?1.2e7+(g-4.5e7)*.05:1.475e7+(g-1e8)*.02;return Math.min(d,2e7);}
+function taxOn(x){const b=[[1.4e7,.06],[5e7,.15],[8.8e7,.24],[1.5e8,.35],[3e8,.38],[5e8,.40],[1e9,.42],[1e99,.45]];let t=0,p=0;for(const [l,r] of b){if(x>p)t+=(Math.min(x,l)-p)*r;p=l;}return t;}
+function taxCredit(t,g){const c=t<=1.3e6?t*.55:715000+(t-1.3e6)*.3;
+ const lim=g<=3.3e7?740000:g<=7e7?Math.max(660000,740000-(g-3.3e7)*.008):g<=1.2e8?Math.max(500000,660000-(g-7e7)/2):Math.max(200000,500000-(g-1.2e8)/2);return Math.min(c,lim);}
+function run(){const pay=+$('#pay').value, nt=Math.min(+$('#nt').value,pay/12), fam=Math.max(1,+$('#fam').value);
+ const m=pay/12, tm=m-nt;
+ const np=f10(Math.min(Math.max(tm,410000),6590000)*.0475), hi=f10(tm*.03595), lt=f10(hi*.1314), ei=f10(tm*.009);
+ const g=tm*12, ins=(np+hi+lt+ei)*12;
+ const base=Math.max(0,g-earnDed(g)-1.5e6*fam-ins);
+ const t0=taxOn(base), it=Math.max(0,t0-taxCredit(t0,g)-130000), mt=f10(it/12), lo=f10(mt*.1);
+ const take=m-np-hi-lt-ei-mt-lo;
+ $('#out').innerHTML=`<div><span>월 급여 (세전)</span><span>${fmt(m)}</span></div>
+ <div><span>국민연금 4.75%</span><span>${fmt(np)}</span></div><div><span>건강보험 3.595%</span><span>${fmt(hi)}</span></div>
+ <div><span>장기요양 (건보료의 13.14%)</span><span>${fmt(lt)}</span></div><div><span>고용보험 0.9%</span><span>${fmt(ei)}</span></div>
+ <div><span>소득세 (연간 추정 ÷ 12)</span><span>${fmt(mt)}</span></div><div><span>지방소득세</span><span>${fmt(lo)}</span></div>
+ <div class="sum"><span>한 달 실수령액</span><span>${fmt(take)}</span></div><div><span>1년 실수령액</span><span>${fmt(take*12)}</span></div>`;
+ $('#cmp').textContent=`세전 월급의 ${Math.round(take/m*100)}%가 통장에 들어와요. 공제액 중 ${fmt(np+hi+lt+ei)}은 4대보험, ${fmt(mt+lo)}은 세금입니다.`;}""",
+        "body": """<h2>삼촌의 설명</h2>
+<p>2026년 근로자 부담 4대보험은 국민연금 4.75%(2025년 4.5%에서 올랐어요), 건강보험 3.595%, 장기요양보험은 건강보험료의 13.14%, 고용보험 0.9%입니다. 국민연금은 월 소득 41만~659만 원(2026년 7월~ 기준) 사이에서만 계산돼서, 월급이 그보다 많아도 연금 보험료는 더 오르지 않아요. 비과세 식대(월 20만 원까지)는 보험료와 세금 계산에서 빠집니다.</p>
+<p>소득세는 회사가 매달 간이세액표로 떼고 다음 해 연말정산 때 맞춥니다. 이 계산기는 연말정산 방식(근로소득공제·인적공제 1인 150만 원·보험료 공제·근로소득세액공제·표준세액공제)으로 1년 세금을 추정해서 12로 나눴어요. 그래서 매달 떼는 금액과 몇만 원 다를 수 있고, 카드·의료비·자녀 공제는 넣지 않았습니다. 정확한 원천징수액은 국세청 홈택스 "근로소득 간이세액표"에서 확인하세요.</p>""",
+        "category": "",
+    },
+    {
+        "slug": "severance",
+        "title": "퇴직금 계산기 (평균임금 × 30일 × 재직일수)",
+        "h1": "지금 그만두면 퇴직금은 얼마일까?",
+        "lede": "입사일·마지막 근무일과 최근 3개월 월급만 넣으면 법정 퇴직금(세전)을 계산합니다. 상여금·연차수당도 반영할 수 있어요.",
+        "form": """
+<label>입사일<input id="s" type="date" value="2023-03-02"></label>
+<label>마지막 근무일<input id="e" type="date" value="2026-12-31"></label>
+<label>최근 3개월 월평균 급여 (세전, 원, 수당 포함)<input id="m" type="number" inputmode="numeric" value="3500000" min="0"></label>
+<label>최근 1년 상여금 합계 (원)<input id="b" type="number" inputmode="numeric" value="0" min="0"></label>
+<label>최근 1년 연차수당 (원)<input id="a" type="number" inputmode="numeric" value="0" min="0"></label>""",
+        "ids": ["s", "e", "m", "b", "a"],
+        "js": """
+function run(){const s=new Date($('#s').value), e=new Date($('#e').value), m=+$('#m').value, b=+$('#b').value, a=+$('#a').value;
+ if(isNaN(s)||isNaN(e)||e<s){$('#out').innerHTML='<div><span>날짜를 확인해 주세요</span><span>-</span></div>';$('#cmp').textContent='';return;}
+ const out=new Date(e.getTime()+864e5), days=Math.round((out-s)/864e5);
+ const st=new Date(out); st.setMonth(st.getMonth()-3); const d3=Math.round((out-st)/864e5);
+ const avg=(m*3+b*3/12+a*3/12)/d3, sev=days>=365?avg*30*days/365:0;
+ $('#out').innerHTML=`<div><span>재직일수</span><span>${days.toLocaleString('ko-KR')}일 (약 ${(days/365).toFixed(1)}년)</span></div>
+ <div><span>최근 3개월 일수</span><span>${d3}일</span></div>
+ <div><span>1일 평균임금</span><span>${fmt(avg)}</span></div>
+ <div class="sum"><span>퇴직금 (세전)</span><span>${fmt(sev)}</span></div>`;
+ $('#cmp').textContent= days<365?`재직 1년이 안 돼서 법정 퇴직금 대상이 아니에요. ${365-days}일 더 다니면 받을 수 있습니다.`
+  :`1년 더 다니면 퇴직금이 약 ${fmt(avg*30)} 늘어요. 퇴직소득세는 근속연수가 길수록 낮아집니다.`;}""",
+        "body": """<h2>삼촌의 설명</h2>
+<p>법정 퇴직금은 "1일 평균임금 × 30일 × 재직일수 ÷ 365"입니다. 1일 평균임금은 퇴직 전 3개월 동안 받은 임금 총액을 그 3개월의 날짜 수(89~92일)로 나눈 값이고, 1년 동안 받은 상여금과 연차수당은 3/12만큼 더합니다. 주 15시간 이상, 1년 이상 일했다면 정규직·계약직 모두 받을 수 있어요.</p>
+<p>여기서 나온 금액은 세전입니다. 퇴직금에는 퇴직소득세가 붙는데 근속연수가 길수록 공제가 커져서, 일반 월급보다 세율이 훨씬 낮은 편이에요. IRP 계좌로 받아 연금으로 나눠 받으면 세금을 더 줄일 수 있습니다. 회사가 퇴직연금(DC형)에 가입돼 있다면 계좌 적립금이 기준이 되니 회사 담당자에게 확인하세요.</p>""",
         "category": "",
     },
 ]
