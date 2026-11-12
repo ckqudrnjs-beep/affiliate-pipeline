@@ -46,6 +46,13 @@ class TelegramTest(unittest.TestCase):
             T.save_state(tmp, {"a": "2026-11-10"})
             self.assertEqual([s for s, _ in T.pick(tmp, D)], ["c"])
 
+    def test_new_window_and_intro(self):
+        with tempfile.TemporaryDirectory() as d:
+            tmp = pathlib.Path(d)
+            setup(tmp, [], [prod("y", addedDate="2026-11-12"), prod("old", addedDate="2026-11-09")])
+            self.assertEqual([s for s, _ in T.pick(tmp, D)], ["y"])  # 어제 10:2x 추가분은 오늘 06:30 에 보냄
+        self.assertIn("수수료", T.INTRO)
+
 
 if __name__ == "__main__":
     unittest.main()
