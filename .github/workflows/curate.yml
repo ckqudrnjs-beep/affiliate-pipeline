@@ -41,6 +41,13 @@ jobs:
           CURATE_K: ${{ inputs.count || '15' }}
           CURATE_MAX_KW: ${{ inputs.keywords && '30' || '12' }}
         run: PYTHONPATH=src python -m pipeline.curate
+      - name: 텔레그램 가격 알림 (TELEGRAM_ENABLED=true 일 때만 실제 전송)
+        if: ${{ !inputs.keywords }}
+        env:
+          TELEGRAM_ENABLED: ${{ vars.TELEGRAM_ENABLED }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.telegram || echo "텔레그램 전송 실패(가격 기록은 계속 커밋)"
       - name: 수동 검색어 후보는 브랜치에만 올림
         if: ${{ inputs.keywords }}
         run: |
@@ -57,6 +64,7 @@ jobs:
           git config user.name "curate-bot"
           git config user.email "curate-bot@users.noreply.github.com"
           git add data/prices data/products data/news.json data/candidates
+          [ -f data/telegram_sent.json ] && git add data/telegram_sent.json
           git commit -m "알리 가격·판매 상태·후보 갱신 $(TZ=Asia/Seoul date +%F)" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
