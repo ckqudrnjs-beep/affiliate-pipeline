@@ -74,6 +74,7 @@ def load_questions(cfg: dict, upto: date | None = None) -> list[dict]:
 
 
 CSS = """
+.challenge{background:linear-gradient(90deg,#ff5a5f,#ff9f43);color:#fff;border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:15px;line-height:1.5}.challenge b{font-size:17px}
 :root{--bg:#0c0620;--bg2:#160b33;--card:#1a1038;--card2:#22164a;--ink:#f4f0ff;--muted:#a99fc9;--line:#3a2b6e;--a:#ff3d7f;--b:#22d3ee;--y:#ffd23f;--g:#3ddc84;--soft:#2a1d58;--btn:#ffd23f;--btn-ink:#1a0f00;--px:"Press Start 2P",monospace;--hd:"Black Han Sans","Noto Sans KR",sans-serif}
 *{box-sizing:border-box}html{background:var(--bg)}
 body{margin:0;word-break:keep-all;color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
@@ -211,6 +212,12 @@ COMMON_JS = (
     "return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}"
     "function shareText(t){if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(t);alert('결과를 복사했어요. 친구에게 붙여 넣어 보세요!')}}"
     f"const ADJ={json.dumps(ADJ, ensure_ascii=False)},ANI={json.dumps(ANI, ensure_ascii=False)};"
+    "function nickOk(n){const p=String(n||'').split(' ');return p.length===3&&ADJ.includes(p[0])&&ANI.includes(p[1])&&/^\\d{1,2}$/.test(p[2])}"
+    "function challengeUrl(score){return location.origin+location.pathname+'?c='+Math.floor(score)+'&n='+encodeURIComponent(myNick())+'&d='+KST}"
+    "addEventListener('DOMContentLoaded',()=>{const q=new URLSearchParams(location.search),c=parseInt(q.get('c'),10),n=q.get('n'),d=q.get('d');"
+    "if(!(c>0)||!nickOk(n)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(d||''))return;const h=document.querySelector('main h1');if(!h)return;"
+    "const b=document.createElement('div');b.className='challenge';const t=document.createElement('b');t.textContent=n+'님의 '+(d===KST?'오늘':d.slice(5).replace('-','/'))+' 기록 '+c.toLocaleString()+'점';"
+    "b.append('🔥 ',t,document.createElement('br'),d===KST?'같은 판으로 이겨 보세요!':'오늘 판으로 도전해 보세요!');h.after(b)});"
     "function myNick(){let n=null;try{n=localStorage.getItem('nr_nick')}catch(e){}if(!n||!/^\\S+ \\S+ \\d{1,2}$/.test(n)){n=ADJ[Math.floor(Math.random()*ADJ.length)]+' '+ANI[Math.floor(Math.random()*ANI.length)]+' '+Math.floor(Math.random()*100);try{localStorage.setItem('nr_nick',n)}catch(e){}}return n}"
 )
 
@@ -315,7 +322,7 @@ def stat_html(s: dict, asof: date) -> str:
             f'<small>{asof.month}월 {asof.day}일 집계 기준. 투표하면 지금 결과가 바로 보여요.</small></div>')
 
 
-def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None):
+def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
     pub = pub_id(cfg)
@@ -336,7 +343,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None)
         script += ADFIT_JS
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">{verify}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
-<meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
+<meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
@@ -373,8 +380,8 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     rpt = [s for s in sums.values() if s["t"] >= REPORT_MIN]
     has_report = len(rpt) >= REPORT_NEED
 
-    def write(path, title, desc, body, script="", noindex=False, jsonld=None):
-        (out / f"{path or 'index'}.html").write_text(page(cfg, path=path, title=title, desc=desc, body=body, script=script, noindex=noindex, jsonld=jsonld), encoding="utf-8")
+    def write(path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
+        (out / f"{path or 'index'}.html").write_text(page(cfg, path=path, title=title, desc=desc, body=body, script=script, noindex=noindex, jsonld=jsonld, og=og), encoding="utf-8")
         if not noindex:
             pages.append(path)
 
@@ -401,7 +408,8 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         write(f"q/{q['id']}", title, desc,
               f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}{st}"
               f"<p class=\"next\"><a class=\"btn\" href=\"/q/{nxt['id']}\">다음 밸런스게임 ▶</a></p><!--AD--><h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS,
-              jsonld=[crumbs(cfg, [("밸런스게임", "archive"), (f"{q['a']} vs {q['b']}", f"q/{q['id']}")])])
+              jsonld=[crumbs(cfg, [("밸런스게임", "archive"), (f"{q['a']} vs {q['b']}", f"q/{q['id']}")])],
+              og=f"og/q/{q['id']}.png" if (HERE / "static" / "og" / "q" / f"{q['id']}.png").exists() else None)
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
     write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
@@ -481,8 +489,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     (out / "feed.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>{esc(cfg["siteName"])} 오늘의 밸런스게임</title><link>{base}/</link>'
                                   f'<description>{esc(cfg["description"])}</description><language>ko</language>{items}</channel></rss>', encoding="utf-8")
     import shutil
-    for f in (HERE / "static").glob("*"):
-        shutil.copy(f, out / f.name)
+    shutil.copytree(HERE / "static", out, dirs_exist_ok=True)
     (out / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>', encoding="utf-8")
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")
     (out / "favicon.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c0620"/><rect x="2" y="2" width="28" height="28" rx="7" fill="none" stroke="#ff3d7f" stroke-width="2"/><path d="M10 8h12v4h-8v3h6l2 2v6l-2 2H10v-4h8v-3h-8z" fill="#ffd23f"/></svg>', encoding="utf-8")
