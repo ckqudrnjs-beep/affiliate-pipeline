@@ -1,7 +1,8 @@
 """수수료 높은 알리 상품 후보 수집 + 상품 원장 가격 이력 (2026-11-09, GitHub Actions 에서 매일 실행).
 
 - 후보: ALI_KEYWORDS 검색어별로 product.query 결과를 모아 평점·판매량으로 거르고 수수료율 순으로 정렬
-  → data/candidates/YYYY-MM-DD.json + 요약 MD. 사람이(또는 Claude가) 고르고 판단 글·쿠팡 비교가를 붙여야 사이트에 올라간다.
+  → data/candidates/YYYY-MM-DD.json + 요약 MD (main에 바로 기록). 이미 사이트에 있는 상품·같은 상품 변형은 뺀다.
+  주 2회 예약 작업(Claude)이 docs/PRODUCTS_AUTO.md 규칙대로 골라 판단 글을 붙여 사이트에 올린다.
 - 가격 이력: data/products/*.json 중 aliProductId 가 있는 상품의 오늘 가격을 data/prices/YYYY-MM.csv 에 한 줄씩 추가.
 수수료는 후보 순서에만 쓰고 결론(알리냐 쿠팡이냐)은 계산으로만 정한다.
 """
@@ -76,16 +77,28 @@ def imitation_reason(title: str) -> str:
     return ""
 
 
-def pick_candidates(raw: list[dict], k: int = 15) -> list[dict]:
-    seen, out = set(), []
+def name_key(name: str) -> str:
+    """같은 상품의 판매자별 변형(색상·가격만 다른 글)을 하나로 본다: 앞 18글자(공백·기호 제외)."""
+    return "".join(ch for ch in (name or "").lower() if ch.isalnum())[:18]
+
+
+def existing_ids(root: pathlib.Path = pathlib.Path("data")) -> set[str]:
+    """이미 사이트 원장에 있는 상품(판매 종료·숨김 포함)은 후보로 다시 내지 않는다."""
+    return {str(json.loads(f.read_text(encoding="utf-8")).get("aliProductId") or "")
+            for f in (root / "products").glob("*.json")} - {""}
+
+
+def pick_candidates(raw: list[dict], k: int = 15, exclude: set[str] | None = None) -> list[dict]:
+    seen, names, out = set(exclude or ()), set(), []
     for c in sorted(raw, key=lambda c: (-c["commission"], -c["orders"])):
-        if c["aliProductId"] in seen or not c["aliUrl"] or not c["aliPrice"]:
+        if c["aliProductId"] in seen or not c["aliUrl"] or not c["aliPrice"] or name_key(c["name"]) in names:
             continue
         if c["rating"] < MIN_RATING or c["orders"] < MIN_ORDERS or c["aliPrice"] < MIN_PRICE:
             continue
         if imitation_reason(c["name"]):
             continue
         seen.add(c["aliProductId"])
+        names.add(name_key(c["name"]))
         out.append(c)
     return out[:k]
 
@@ -112,6 +125,8 @@ def summary_md(cands: list[dict], today: dt.date) -> str:
 
 MISSING_DAYS = 3  # 사흘 연속 조회가 안 되면 판매 종료로 보고 사이트에서 내린다
 DROP_PCT = 10     # 하루 사이 10% 넘게 내리면 소식 게시판에 자동으로 알린다
+PAUSE_PCT = 30    # 소개 당시 가격보다 30% 이상 오르면 잠시 내린다 (판단 글의 계산이 더는 맞지 않음)
+RESUME_PCT = 15   # 소개 가격 +15% 안으로 돌아오면 다시 올린다
 
 
 def last_prices(root: pathlib.Path) -> dict[str, int]:
@@ -128,7 +143,7 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
     ids, files = {}, {}
     for f in sorted((root / "products").glob("*.json")):
         d = json.loads(f.read_text(encoding="utf-8"))
-        if d.get("aliProductId") and d.get("status", "active") == "active":
+        if d.get("aliProductId") and d.get("status", "active") in ("active", "paused"):
             ids[str(d["aliProductId"])] = d["slug"]
             files[d["slug"]] = (f, d)
     if not ids:
@@ -166,6 +181,14 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
             d.pop("missingDays", None)
             old = prev.get(slug) or int(d.get("aliPrice") or 0)
             price = seen[slug]
+            base = int(d.get("aliPrice") or 0)
+            if base and d.get("status", "active") == "active" and price >= base * (1 + PAUSE_PCT / 100):
+                d["status"], d["pausedDate"] = "paused", today.isoformat()
+                print(f"가격 급등으로 잠시 내림: {slug} {base:,} → {price:,}")
+            elif base and d.get("status") == "paused" and price <= base * (1 + RESUME_PCT / 100):
+                d["status"] = "active"
+                d.pop("pausedDate", None)
+                print(f"가격이 돌아와 다시 올림: {slug}")
             nid = f"drop-{slug}-{today.isoformat()}"
             if old and (old - price) / old * 100 >= DROP_PCT and not any(n.get("id") == nid for n in news):
                 news.insert(0, {"date": today.isoformat(), "type": "가격", "id": nid,
@@ -182,10 +205,23 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
     return len(seen)
 
 
+ROTATION = pathlib.Path("data/curate_keywords.json")
+
+
+def todays_keywords(today: dt.date, base: list[str], path: pathlib.Path = ROTATION) -> list[str]:
+    """요일별 검색어(data/curate_keywords.json)를 앞에, 고정 검색어(ALI_KEYWORDS)를 뒤에 둔다.
+    매일 같은 검색어만 쓰면 같은 상품만 다시 나오기 때문 (2026-11-13)."""
+    rot = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    day = rot.get(str(today.isoweekday()), [])
+    return list(dict.fromkeys(day + base))
+
+
 def main() -> int:
     today = dt.datetime.now(KST).date()
     client = AliExpressClient()
-    cands = pick_candidates(fetch_raw(client, parse_keywords(os.environ.get("ALI_KEYWORDS", ""))), int(os.environ.get("CURATE_K") or 15))
+    base = parse_keywords(os.environ.get("ALI_KEYWORDS", ""))
+    kws = base if os.environ.get("CANDIDATES_ONLY") else todays_keywords(today, base)
+    cands = pick_candidates(fetch_raw(client, kws), int(os.environ.get("CURATE_K") or 15), exclude=existing_ids())
     out = pathlib.Path("data/candidates")
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{today.isoformat()}.json").write_text(json.dumps(cands, ensure_ascii=False, indent=1), encoding="utf-8")

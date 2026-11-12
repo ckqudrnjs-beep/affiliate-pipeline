@@ -24,7 +24,7 @@ BK: "영상은 손이 많이 가고 비효율적, 문제없다면 알리·쿠팡
 - `data/products/<slug>.json`: 상품 원장. 상품당 파일 하나, 변경 이력은 Git. `status`가 active가 아니면 사이트에서 빠진다. 필드는 config/site_products.csv와 같고 `imageUrl`, `aliProductId`가 더 있다.
 - `data/prices/YYYY-MM.csv`: 매일 알리 가격 기록(curate.yml). 사이트는 가장 최근 가격으로 갱신하고, 7일 이상 쌓이면 "최근 30일 최저가"를 보여 준다.
 - **자동 갱신 (2026-11-09):** 가격 기록·판매 상태·가격 내림 소식은 curate.yml이 main에 바로 커밋해 매일 재배포된다. 소개 당시 가격(원장 aliPrice)과 10% 넘게 달라지면 "소개 때보다 ○% 내렸어요/올랐어요"를 표시한다. 하루 사이 10% 넘게 내리면 news.json에 "가격" 소식을 자동 추가한다. API에서 사흘 연속 조회되지 않으면 원장 status를 ended로 바꿔 사이트에서 내린다(응답이 통째로 비면 아무것도 바꾸지 않음). 쿠팡 가격은 최종 승인 전 저장 금지, 승인 후 API로 같은 방식.
-- `data/candidates/YYYY-MM-DD.json|md`: 수수료 높은 알리 후보(평점 90%↑, 판매 50개↑, 수수료 순). 매일 06:30 KST PR로 온다. 사이트에 자동으로 올라가지 않는다. 고른 상품만 원장에 쿠팡 비교가와 판단 글(40자↑)을 붙여 추가한다. 수수료는 후보 순서에만 쓰고 결론은 계산으로만 정한다.
+- `data/candidates/YYYY-MM-DD.json|md`: 수수료 높은 알리 후보(평점 90%↑, 판매 50개↑, 수수료 순, 이미 올린 상품·변형 제외, 요일별 검색어 `data/curate_keywords.json`). **2026-11-13부터** 매일 06:30 KST main에 바로 기록(PR 없음)하고, 화·금 예약 작업이 [PRODUCTS_AUTO.md](PRODUCTS_AUTO.md) 규칙대로 최대 3개를 골라 판단 글을 붙여 바로 올린다. 가격 30%↑ 잠시 내림·계절 상품 비수기 숨김·내린 상품 안내 페이지도 같은 문서. 수수료는 후보 순서에만 쓰고 결론은 계산으로만 정한다.
 - `data/news.json`: 삼촌 소식(id, date, type, title, body, link). news.html(월별·분류 필터), news/<id>.html, feed.xml.
 - `data/faq.json`: 자주 묻는 질문 → faq.html(FAQPage 구조화 데이터).
 - `data/sales.json`: 공식 공개된 세일 일정만.
