@@ -177,7 +177,14 @@ document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>show(b.dataset.g)
 """
 
 
-def page(cfg, *, path, title, desc, body, script="", noindex=False):
+def crumbs(cfg: dict, trail: list[tuple[str, str]]) -> dict:
+    base = cfg["baseUrl"].rstrip("/")
+    items = [("홈", "")] + trail
+    return {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": i + 1, "name": n, "item": f"{base}/{p}"} for i, (n, p) in enumerate(items)]}
+
+
+def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
     pub = cfg.get("adsensePublisherId", "").strip()
@@ -189,9 +196,12 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False):
         head += f'<meta name="google-site-verification" content="{esc(cfg["googleSiteVerification"])}">'
     if noindex:
         head += '<meta name="robots" content="noindex,follow">'
+    for x in jsonld or []:
+        head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
-<meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website">
+<meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#2b1055">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><style>{CSS}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
 <main class="wrap">{body}</main>
@@ -222,8 +232,8 @@ def build(out: Path, upto: date | None = None) -> dict:
     d = date.fromisoformat(latest)
     pages = []
 
-    def write(path, title, desc, body, script="", noindex=False):
-        (out / f"{path or 'index'}.html").write_text(page(cfg, path=path, title=title, desc=desc, body=body, script=script, noindex=noindex), encoding="utf-8")
+    def write(path, title, desc, body, script="", noindex=False, jsonld=None):
+        (out / f"{path or 'index'}.html").write_text(page(cfg, path=path, title=title, desc=desc, body=body, script=script, noindex=noindex, jsonld=jsonld), encoding="utf-8")
         if not noindex:
             pages.append(path)
 
@@ -234,7 +244,8 @@ def build(out: Path, upto: date | None = None) -> dict:
           f"<div class=\"hero\"><h1>5락실</h1><p>{esc(cfg['tagline'])}</p></div>"
           f"<h2>🕹️ 오늘의 기계</h2>{grid}"
           f"<h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2>{cards}"
-          f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS)
+          f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
+          jsonld=[{"@context": "https://schema.org", "@type": "WebSite", "name": cfg["siteName"], "alternateName": "오락실", "url": cfg["baseUrl"].rstrip("/") + "/"}])
 
     for q in qs:
         title = f"{q['a']} vs {q['b']} | 밸런스게임"
@@ -242,7 +253,8 @@ def build(out: Path, upto: date | None = None) -> dict:
         others = "".join(f'<li><a href="/q/{x["id"]}">{esc(x["a"])} vs {esc(x["b"])}</a></li>' for x in qs if x["id"] != q["id"])
         others = "<ul class=\"list\">" + "".join(others.split("</li>")[:6]) + "</ul>" if others else ""
         write(f"q/{q['id']}", title, desc,
-              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}<h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS)
+              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}<h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS,
+              jsonld=[crumbs(cfg, [("밸런스게임", "archive"), (f"{q['a']} vs {q['b']}", f"q/{q['id']}")])])
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
     write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
@@ -262,7 +274,11 @@ def build(out: Path, upto: date | None = None) -> dict:
         if g.get("ranked"):
             body = body.replace("<!--RANK-->", RANK_HTML)
             script += RANK_JS
-        write(f"games/{g['slug']}", f"{g['title']} | {cfg['siteName']}", g["description"], body, script)
+        write(f"games/{g['slug']}", f"{g['title']} | {cfg['siteName']}", g["description"], body, script,
+              jsonld=[{"@context": "https://schema.org", "@type": "VideoGame", "name": g["name"], "description": g["description"], "url": f"{cfg['baseUrl'].rstrip('/')}/games/{g['slug']}",
+                       "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "All", "inLanguage": "ko", "isAccessibleForFree": True,
+                       "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}},
+                      crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])])
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
@@ -286,7 +302,15 @@ def build(out: Path, upto: date | None = None) -> dict:
           f"<h2>4. 문의</h2><p><a href=\"mailto:{esc(email)}\">{esc(email)}</a></p>")
 
     base = cfg["baseUrl"].rstrip("/")
-    sm = "".join(f"<url><loc>{base}/{p}</loc></url>" for p in pages)
+    lm = today().isoformat()
+    sm = "".join(f"<url><loc>{base}/{p}</loc><lastmod>{(p[2:6] + '-' + p[6:8] + '-' + p[8:10]) if p.startswith('q/') else lm}</lastmod></url>" for p in pages)
+    items = "".join(f"<item><title>{esc(q['a'])} vs {esc(q['b'])}</title><link>{base}/q/{q['id']}</link><guid>{base}/q/{q['id']}</guid>"
+                    f"<pubDate>{datetime.fromisoformat(q['date']).replace(tzinfo=KST).strftime('%a, %d %b %Y 00:00:00 +0900')}</pubDate><description>{esc(q['note'])}</description></item>" for q in qs[:50])
+    (out / "feed.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>{esc(cfg["siteName"])} 오늘의 밸런스게임</title><link>{base}/</link>'
+                                  f'<description>{esc(cfg["description"])}</description><language>ko</language>{items}</channel></rss>', encoding="utf-8")
+    import shutil
+    for f in (HERE / "static").glob("*"):
+        shutil.copy(f, out / f.name)
     (out / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>', encoding="utf-8")
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")
     (out / "favicon.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#22201c"/><rect x="5" y="9" width="10" height="14" rx="3" fill="#ff5a5f"/><rect x="17" y="9" width="10" height="14" rx="3" fill="#2f80ed"/></svg>', encoding="utf-8")
