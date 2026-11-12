@@ -69,35 +69,82 @@ def load_questions(cfg: dict, upto: date | None = None) -> list[dict]:
 
 
 CSS = """
-:root{--bg:#fff8f0;--card:#fff;--ink:#22201c;--muted:#6f6a62;--line:#efe4d6;--a:#ff5a5f;--b:#2f80ed;--soft:#fff0e0;--btn:#22201c;--btn-ink:#fff}
-@media (prefers-color-scheme:dark){:root{--bg:#17150f;--card:#221f19;--ink:#f3eee6;--muted:#a9a296;--line:#3a352c;--a:#ff7a7e;--b:#5aa0ff;--soft:#2c271e;--btn:#f3eee6;--btn-ink:#17150f}}
-*{box-sizing:border-box}body{margin:0;word-break:keep-all;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
-a{color:inherit}.wrap{max-width:720px;margin:0 auto;padding:0 16px}
-header{border-bottom:1px solid var(--line);background:var(--card)}header .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
-.logo{font-weight:900;font-size:22px;text-decoration:none;letter-spacing:-1px}.logo span{color:var(--a)}
-nav a{text-decoration:none;color:var(--muted);font-size:14px;margin-left:12px}
-h1{font-size:26px;line-height:1.3;margin:24px 0 6px;letter-spacing:-.5px}h2{font-size:19px;margin:30px 0 10px}.lead{color:var(--muted);margin:0 0 16px}
-.q{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}
-.q .no{font-size:13px;color:var(--muted)}.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;margin:10px 0}
-.vs button{font:inherit;font-weight:800;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:16px 10px;cursor:pointer;min-height:84px;position:relative;overflow:hidden}
-.vs button.a:hover,.vs button.a.mine{border-color:var(--a)}.vs button.b:hover,.vs button.b.mine{border-color:var(--b)}
-.vs .x{align-self:center;font-weight:900;color:var(--muted)}
-.bar{display:none;height:10px;border-radius:6px;background:var(--b);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--a)}
-.done .bar{display:block}.pct{display:none;justify-content:space-between;font-weight:800;font-size:15px;margin-top:4px}.done .pct{display:flex}.pct .pa{color:var(--a)}.pct .pb{color:var(--b)}
-.note{color:var(--muted);font-size:14px;margin:8px 0 0}.re{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.re button,.share{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer}
-.big{font:inherit;font-weight:800;border:0;border-radius:12px;padding:12px 18px;background:var(--btn);color:var(--btn-ink);cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.grid a{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-.grid a b{display:block;font-size:17px}.grid a small{color:var(--muted)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
-input.ans{font:inherit;font-size:18px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-.cho{font-size:40px;font-weight:900;letter-spacing:8px;text-align:center;margin:10px 0}.muted{color:var(--muted)}
-.pad{height:220px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;cursor:pointer;user-select:none;background:var(--soft)}
-.hero{background:linear-gradient(135deg,#2b1055,#7597de);color:#fff;border-radius:22px;padding:26px 20px;margin:18px 0}.hero h1{margin:0 0 6px;color:#fff;font-size:30px}.hero p{margin:0;opacity:.9}
+:root{--bg:#0c0620;--bg2:#160b33;--card:#1a1038;--card2:#22164a;--ink:#f4f0ff;--muted:#a99fc9;--line:#3a2b6e;--a:#ff3d7f;--b:#22d3ee;--y:#ffd23f;--g:#3ddc84;--soft:#2a1d58;--btn:#ffd23f;--btn-ink:#1a0f00;--px:"Press Start 2P",monospace;--hd:"Black Han Sans","Noto Sans KR",sans-serif}
+*{box-sizing:border-box}html{background:var(--bg)}
+body{margin:0;word-break:keep-all;color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+background:radial-gradient(1px 1px at 20% 30%,#fff8 50%,transparent 51%) 0 0/180px 180px,radial-gradient(1px 1px at 70% 80%,#fff6 50%,transparent 51%) 0 0/240px 240px,radial-gradient(1.5px 1.5px at 50% 50%,#ffd23f88 50%,transparent 51%) 0 0/320px 320px,radial-gradient(ellipse at 50% -10%,#3b1a7a 0%,transparent 60%),var(--bg);min-height:100vh}
+[hidden]{display:none!important}
+a{color:var(--b)}.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:40;background:#0c0620e6;backdrop-filter:blur(8px);border-bottom:2px solid var(--line);box-shadow:0 2px 0 #ff3d7f33}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:10px}
+.logo{font-family:var(--hd);font-size:28px;text-decoration:none;color:var(--b);letter-spacing:0;line-height:1;text-shadow:0 0 6px #22d3eeaa,0 0 18px #22d3ee55;white-space:nowrap}
+.logo span{font-family:var(--px);font-size:22px;color:var(--a);margin-right:3px;text-shadow:0 0 6px #ff3d7fcc,0 0 20px #ff3d7f88;animation:flick 6s infinite}
+@keyframes flick{0%,92%,96%,100%{opacity:1}94%{opacity:.35}95%{opacity:.9}}
+nav{display:flex;gap:6px}nav a{text-decoration:none;color:var(--ink);font-size:13px;font-weight:700;padding:6px 10px;border:2px solid var(--line);border-radius:8px;background:var(--bg2)}
+nav a:hover{border-color:var(--y);color:var(--y)}
+h1{font-family:var(--hd);font-weight:400;font-size:30px;line-height:1.25;margin:26px 0 8px;color:#fff;text-shadow:0 0 12px #ff3d7f66}
+h2{font-family:var(--hd);font-weight:400;font-size:22px;margin:36px 0 12px;color:#fff;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h2 small{font-family:-apple-system,"Noto Sans KR",sans-serif;font-size:14px;font-weight:400}
+.sec{display:flex;align-items:baseline;gap:10px;margin:38px 0 12px}.sec h2{margin:0}
+.tag{font-family:var(--px);font-size:9px;letter-spacing:1px;color:var(--y);border:2px solid var(--y);padding:4px 6px 3px;border-radius:4px;text-shadow:0 0 6px #ffd23f88}
+.lead{color:var(--muted);margin:0 0 16px}.muted{color:var(--muted)}
+/* hero */
+.hero{position:relative;overflow:hidden;margin:20px 0 6px;padding:26px 20px 22px;border-radius:20px;border:3px solid var(--a);background:linear-gradient(180deg,#2a0f55 0%,#130a2e 70%);box-shadow:0 0 0 3px #0c0620,0 0 0 6px var(--b),0 0 34px #ff3d7f55,inset 0 0 40px #ff3d7f22;text-align:center}
+.hero:before{content:"";position:absolute;left:-20%;right:-20%;bottom:-40px;height:120px;background:linear-gradient(transparent 0 0),repeating-linear-gradient(90deg,#22d3ee55 0 2px,transparent 2px 40px),repeating-linear-gradient(0deg,#22d3ee55 0 2px,transparent 2px 20px);transform:perspective(200px) rotateX(55deg);transform-origin:bottom;opacity:.7}
+.hero>*{position:relative}.hero:after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#0000002a 2px 3px)}
+.coin{font-family:var(--px);font-size:11px;color:var(--y);letter-spacing:2px;animation:blink 1.1s steps(1) infinite;margin:0 0 12px}
+@keyframes blink{50%{opacity:0}}
+.hero h1{margin:0;font-size:56px;line-height:1;color:#fff;text-shadow:0 0 4px #fff,0 0 14px var(--a),0 0 30px var(--a),4px 4px 0 #22d3ee88}
+.hero h1 b{font-family:var(--px);font-weight:400;font-size:46px;color:var(--y);text-shadow:0 0 6px var(--y),0 0 22px #ff9900,4px 4px 0 #ff3d7f}
+.hero p{margin:14px auto 18px;max-width:440px;color:#dcd3ff;font-size:15px}
+.cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.big,.btn{display:inline-block;font:inherit;font-family:var(--hd);font-size:18px;font-weight:400;text-decoration:none;border:0;border-radius:12px;padding:12px 20px 10px;background:var(--btn);color:var(--btn-ink);cursor:pointer;box-shadow:0 5px 0 #b8860b,0 0 18px #ffd23f55;transition:transform .08s,box-shadow .08s}
+.big:active,.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b8860b}
+.btn.ghost{background:transparent;color:var(--b);border:2px solid var(--b);box-shadow:0 4px 0 #0e7490,0 0 14px #22d3ee44}
+.ticker{overflow:hidden;white-space:nowrap;border-top:2px solid var(--line);border-bottom:2px solid var(--line);background:#000a;margin:18px -16px 0;padding:7px 0;font-size:13px;color:var(--y)}
+.ticker div{display:inline-block;padding-left:100%;animation:tick 22s linear infinite}.ticker i{font-style:normal;color:var(--a);margin:0 14px}
+@keyframes tick{to{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.ticker div{padding-left:0}}
+/* game cabinets */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid a{--c:var(--b);position:relative;display:flex;flex-direction:column;text-decoration:none;color:var(--ink);background:var(--card);border:3px solid var(--c);border-radius:16px 16px 10px 10px;padding:0;overflow:hidden;box-shadow:0 6px 0 #00000088,0 0 16px color-mix(in srgb,var(--c) 35%,transparent);transition:transform .12s,box-shadow .12s}
+.grid a:hover{transform:translateY(-4px);box-shadow:0 10px 0 #00000088,0 0 28px color-mix(in srgb,var(--c) 60%,transparent)}
+.grid a .scr{display:flex;align-items:center;justify-content:center;height:92px;margin:10px 10px 0;border-radius:10px;background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--c) 45%,#0c0620),#0a0518 75%);border:2px solid #000;box-shadow:inset 0 0 18px #000}
+.ic{font-size:44px;display:block;filter:drop-shadow(0 0 8px color-mix(in srgb,var(--c) 70%,transparent))}
+.grid a b{display:block;font-family:var(--hd);font-weight:400;font-size:19px;line-height:1.25;margin:10px 12px 2px;color:#fff}
+.grid a small{display:block;color:var(--muted);font-size:13px;line-height:1.45;margin:0 12px;flex:1}
+.grid a .play{display:flex;justify-content:space-between;align-items:center;margin:12px 0 0;padding:8px 12px;background:var(--c);color:#0c0620;font-family:var(--px);font-size:10px}
+.grid a .rk{position:absolute;top:14px;right:14px;font-family:var(--px);font-size:8px;background:var(--y);color:#1a0f00;padding:4px 5px 3px;border-radius:3px;box-shadow:0 0 8px #ffd23f99}
+/* balance cards */
+.q,.card{background:linear-gradient(180deg,var(--card2),var(--card));border:2px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 6px 0 #00000066}
+.q .no{font-family:var(--hd);font-size:15px;color:var(--y);text-shadow:0 0 6px #ffd23f66}
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;margin:12px 0}
+.vs button{font:inherit;font-family:var(--hd);font-size:18px;font-weight:400;line-height:1.35;border:3px solid;border-radius:14px;padding:16px 10px;cursor:pointer;min-height:92px;position:relative;overflow:hidden;color:#fff;transition:transform .08s,box-shadow .12s}
+.vs button.a{border-color:var(--a);background:linear-gradient(180deg,#ff3d7f33,#ff3d7f12);box-shadow:0 5px 0 #8a1240,0 0 14px #ff3d7f33}
+.vs button.b{border-color:var(--b);background:linear-gradient(180deg,#22d3ee33,#22d3ee12);box-shadow:0 5px 0 #0e6474,0 0 14px #22d3ee33}
+.vs button:hover{transform:translateY(-2px)}.vs button:active{transform:translateY(3px)}
+.vs button.a:hover,.vs button.a.mine{box-shadow:0 5px 0 #8a1240,0 0 26px #ff3d7f99;background:#ff3d7f44}
+.vs button.b:hover,.vs button.b.mine{box-shadow:0 5px 0 #0e6474,0 0 26px #22d3ee99;background:#22d3ee44}
+.vs button.mine:after{content:"MY PICK";position:absolute;top:5px;left:50%;transform:translateX(-50%);font-family:var(--px);font-size:7px;color:var(--y)}
+.vs .x{align-self:center;font-family:var(--px);font-size:14px;color:var(--y);text-shadow:0 0 8px #ffd23f,2px 2px 0 #ff3d7f}
+.bar{display:none;height:14px;border-radius:4px;background:var(--b);overflow:hidden;margin-top:6px;border:2px solid #000;box-shadow:0 0 12px #22d3ee55}.bar i{display:block;height:100%;background:var(--a);transition:width .6s cubic-bezier(.2,.9,.3,1.2)}
+.done .bar{display:block}.pct{display:none;justify-content:space-between;font-family:var(--px);font-size:11px;margin-top:8px}.done .pct{display:flex}.pct .pa{color:var(--a)}.pct .pb{color:var(--b)}
+.note{color:var(--muted);font-size:14px;margin:10px 0 0}.re{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.re button,.share{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.re button:hover,.share:hover{border-color:var(--y)}
+.more{display:inline-block;margin:6px 0 0;font-weight:700;color:var(--b);text-decoration:none}
+/* in-game */
+input.ans{font:inherit;font-size:18px;width:100%;padding:12px;border-radius:12px;border:2px solid var(--b);background:#0a0518;color:var(--ink);box-shadow:inset 0 0 10px #22d3ee33}
+input.ans:focus{outline:none;box-shadow:0 0 0 3px #22d3ee55}
+.cho{font-family:var(--hd);font-size:48px;letter-spacing:10px;text-align:center;margin:12px 0;color:var(--y);text-shadow:0 0 10px #ffd23f99,3px 3px 0 #ff3d7f}
+.pad{height:220px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:var(--hd);font-size:24px;cursor:pointer;user-select:none;background:#0a0518;border:3px solid var(--b);box-shadow:inset 0 0 30px #22d3ee33,0 0 14px #22d3ee33}
 .spot{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0}@media(min-width:700px){.spot{grid-template-columns:1fr 1fr}}
-.ic{font-size:28px;display:block}.grid a b{margin-top:4px}h2 small{font-size:14px;font-weight:400}
-footer{margin-top:48px;padding:22px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px}footer a{margin-right:12px}
-ul.list{padding-left:18px}ul.list li{margin:4px 0}
+.spot svg{border-radius:10px;border:2px solid #000}
+ul.list{padding-left:20px}ul.list li{margin:5px 0}ul.list li::marker{color:var(--a)}ol.list li::marker{font-family:var(--px);font-size:11px;color:var(--y)}
+canvas{box-shadow:0 0 0 2px #000,0 0 18px #22d3ee44}
+footer{margin-top:56px;padding:24px 0 30px;border-top:2px solid var(--line);background:#07031399;color:var(--muted);font-size:13px}footer a{margin-right:14px;color:var(--ink)}
+footer .gameover{font-family:var(--px);font-size:10px;color:var(--a);letter-spacing:2px;margin:0 0 12px}
+@media (max-width:420px){.logo{font-size:24px}.logo span{font-size:18px}nav a{padding:5px 7px;font-size:12px}.hero h1{font-size:46px}.hero h1 b{font-size:38px}.vs button{font-size:16px}.grid{grid-template-columns:1fr 1fr;gap:10px}.grid a .scr{height:76px}.ic{font-size:38px}.grid a b{font-size:17px}}
 """
 
 VOTE_JS = """
@@ -140,7 +187,8 @@ def load_games() -> list[dict]:
 
 
 def game_grid(games: list[dict]) -> str:
-    cards = "".join(f'<a href="/games/{g["slug"]}"><span class="ic">{g.get("icon", "🎮")}</span><b>{esc(g["name"])}{" 🏆" if g.get("ranked") else ""}</b><small>{esc(g["short"])}</small></a>' for g in games)
+    colors = ["#ff3d7f", "#22d3ee", "#ffd23f", "#3ddc84", "#b06bff", "#ff8a3d"]
+    cards = "".join(f'<a href="/games/{g["slug"]}" style="--c:{colors[i % len(colors)]}">{"<span class=rk>RANK</span>" if g.get("ranked") else ""}<span class="scr"><span class="ic">{g.get("icon", "🎮")}</span></span><b>{esc(g["name"])}</b><small>{esc(g["short"])}</small><span class="play"><span>PLAY</span><span>▶</span></span></a>' for i, g in enumerate(games))
     return f'<div class="grid">{cards}</div>'
 
 
@@ -201,12 +249,12 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None)
         head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">{verify}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
-<meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#2b1055">
+<meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><style>{CSS}</style>{head}</head><body>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
 <main class="wrap">{body}</main>
-<footer><div class="wrap"><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
+<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{script}</script></body></html>"""
 
 
@@ -214,7 +262,7 @@ def qcard(q, n=None, link=True):
     num = f'<div class="no">{esc(n)}</div>' if n else ""
     title = f'{q["a"]} vs {q["b"]}'
     re_btns = "".join(f'<button type="button" data-r="{k}">{e} <span></span></button>' for k, e in EMOJI)
-    more = f' · <a href="/q/{q["id"]}">결과 자세히</a>' if link else ""
+    more = f' <a class="more" href="/q/{q["id"]}">결과 자세히 →</a>' if link else ""
     return f"""<div class="q" data-q="{q['id']}">{num}<div class="vs"><button class="a" type="button">{esc(q['a'])}</button><span class="x">VS</span><button class="b" type="button">{esc(q['b'])}</button></div>
 <div class="bar"><i></i></div><div class="pct"><span class="pa"></span><span class="pb"></span></div>
 <p class="note">{esc(q['note'])}{more}</p><div class="re">{re_btns}<button class="share" type="button" data-url="/q/{q['id']}" data-t="{esc(title)}">공유</button></div></div>"""
@@ -242,9 +290,11 @@ def build(out: Path, upto: date | None = None) -> dict:
     games = load_games()
     grid = game_grid(games)
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
-          f"<div class=\"hero\"><h1>5락실</h1><p>{esc(cfg['tagline'])}</p></div>"
-          f"<h2>🕹️ 오늘의 기계</h2>{grid}"
-          f"<h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2>{cards}"
+          f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
+          f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a></div>"
+          f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
+          f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{grid}"
+          f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
           jsonld=[{"@context": "https://schema.org", "@type": "WebSite", "name": cfg["siteName"], "alternateName": "오락실", "url": cfg["baseUrl"].rstrip("/") + "/"}])
 
@@ -314,7 +364,7 @@ def build(out: Path, upto: date | None = None) -> dict:
         shutil.copy(f, out / f.name)
     (out / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>', encoding="utf-8")
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")
-    (out / "favicon.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#22201c"/><rect x="5" y="9" width="10" height="14" rx="3" fill="#ff5a5f"/><rect x="17" y="9" width="10" height="14" rx="3" fill="#2f80ed"/></svg>', encoding="utf-8")
+    (out / "favicon.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c0620"/><rect x="2" y="2" width="28" height="28" rx="7" fill="none" stroke="#ff3d7f" stroke-width="2"/><path d="M10 8h12v4h-8v3h6l2 2v6l-2 2H10v-4h8v-3h-8z" fill="#ffd23f"/></svg>', encoding="utf-8")
     if pub := cfg.get("adsensePublisherId", "").strip():
         (out / "ads.txt").write_text(f"google.com, {pub}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     return {"questions": len(qs), "today": latest, "pages": len(pages)}
