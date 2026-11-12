@@ -696,6 +696,11 @@ def contact_body() -> str:
 <p class="note">이 사이트는 물건을 직접 팔지 않습니다. 주문·배송·환불은 구매하신 쇼핑몰(쿠팡, 알리익스프레스, 네이버) 고객센터로 문의해 주세요.</p>"""
 
 
+def thin_news(n: dict) -> bool:
+    """자동 '가격 내림' 알림(drop-…)은 상품 한 줄짜리라 애드센스 심사에서 얇은 제휴 페이지로 보인다 → 색인·사이트맵·광고 제외."""
+    return str(n.get("id", "")).startswith("drop-")
+
+
 HIST: dict = {}
 
 
@@ -748,7 +753,8 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "news" / f"{n['id']}.html").write_text(page(f"{n['title']} | {BRAND}", n["body"][:150], N.news_page_body(n), root="../",
             path=f"news/{n['id']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": n["title"],
             "datePublished": n["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
-            crumbs=[("삼촌 소식", "news.html"), (n["title"], f"news/{n['id']}.html")]), encoding="utf-8")
+            crumbs=[("삼촌 소식", "news.html"), (n["title"], f"news/{n['id']}.html")],
+            ads=not thin_news(n), noindex=thin_news(n)), encoding="utf-8")
     by_slug = {p["slug"]: p for p in products}
     (o / "guide").mkdir(exist_ok=True)
     (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 직구 세금, 난방비처럼 사기 전에 궁금한 것을 계산으로 답합니다.",
@@ -811,7 +817,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     newest_n = max((n["date"] for n in news), default=SITE_PAGES)
     entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES), ("quiz.html", today)]
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
-               + [(f"news/{n['id']}.html", n["date"]) for n in news]
+               + [(f"news/{n['id']}.html", n["date"]) for n in news if not thin_news(n)]
                + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
                + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
