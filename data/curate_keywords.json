@@ -1,0 +1,10 @@
+{
+ "_note": "요일별 알리 검색어 (1=월 ... 7=일). curate가 고정 검색어(ALI_KEYWORDS) 앞에 붙여 쓴다. 계절이 바뀌면 고친다.",
+ "1": ["heated insoles", "hand warmer rechargeable", "electric heated socks", "thermal curtain"],
+ "2": ["kitchen scale digital", "electric milk frother", "vacuum sealer machine", "knife sharpener"],
+ "3": ["car phone holder magnetic", "tire inflator portable", "car seat gap organizer", "dash cam mini"],
+ "4": ["usb c hub", "mechanical keyboard wireless", "monitor stand riser", "webcam 1080p"],
+ "5": ["storage box foldable", "drawer organizer", "vacuum storage bag", "shoe rack stackable"],
+ "6": ["camping lantern rechargeable", "portable power station", "thermos bottle", "camping chair folding"],
+ "7": ["dehumidifier mini", "humidifier filter", "smart plug energy monitor", "led bulb motion sensor"]
+}

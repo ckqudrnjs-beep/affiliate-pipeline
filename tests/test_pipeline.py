@@ -181,6 +181,23 @@ class SiteTest(unittest.TestCase):
 
 
 class CurateTest(unittest.TestCase):
+    def test_pick_candidates_excludes_existing_and_variants(self):
+        from pipeline.curate import pick_candidates
+        base = {"aliUrl": "https://s.click.aliexpress.com/x", "aliPrice": 30000, "rating": 95, "orders": 500, "commission": 7.0}
+        raw = [base | {"aliProductId": "1", "name": "Baseus 자동차 진공 청소기 무선 블로워 A"},
+               base | {"aliProductId": "2", "name": "Baseus 자동차 진공 청소기 무선 블로워 B"},
+               base | {"aliProductId": "3", "name": "SONOFF TRVZB 라디에이터 밸브"}]
+        self.assertEqual([c["aliProductId"] for c in pick_candidates(raw, exclude={"3"})], ["1"])
+
+    def test_todays_keywords_rotation_first(self):
+        import datetime as dt, json, pathlib, tempfile
+        from pipeline.curate import todays_keywords
+        with tempfile.TemporaryDirectory() as d:
+            f = pathlib.Path(d, "k.json")
+            f.write_text(json.dumps({"5": ["drawer organizer", "humidifier"]}), encoding="utf-8")
+            self.assertEqual(todays_keywords(dt.date(2026, 11, 13), ["humidifier", "blanket"], f),
+                             ["drawer organizer", "humidifier", "blanket"])
+
     def test_pick_candidates_filters_and_sorts(self):
         from pipeline.curate import pick_candidates, to_candidate
         raw = [to_candidate({"product_id": i, "product_title": f"p{i}", "target_sale_price": "20000", "promotion_link": "https://s.click.aliexpress.com/e/x",
@@ -300,3 +317,42 @@ class NaverBoxTest(unittest.TestCase):
         self.assertNotIn("prefetch", h)
         self.assertEqual(A.naver_box([]), "")
         self.assertEqual(A.naver_for({"title": "온풍기", "naver": []}, items), [])
+
+
+class LifecycleTest(unittest.TestCase):
+    def _run(self, root, price, status="active"):
+        import json, datetime as dt
+        from pipeline import curate
+        f = root / "products" / "a.json"
+        f.write_text(json.dumps({"slug": "a", "name": "x", "aliProductId": "1", "aliPrice": 10000, "status": status}), encoding="utf-8")
+        class C:
+            tracking_id = "t"
+            def _call(self, m, product_ids, **k):
+                return {"r": {"resp_result": {"result": {"products": {"product": [{"product_id": 1, "target_sale_price": str(price)}]}}}}}
+        curate.record_prices(C(), dt.date(2026, 11, 13), root)
+        return json.loads(f.read_text(encoding="utf-8"))["status"]
+
+    def test_price_spike_pauses_and_resumes(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d); (root / "products").mkdir()
+            self.assertEqual(self._run(root, 13500), "paused")
+            self.assertEqual(self._run(root, 12000, "paused"), "paused")
+            self.assertEqual(self._run(root, 11000, "paused"), "active")
+            self.assertEqual(self._run(root, 12500), "active")
+
+    def test_season_and_retired_pages(self):
+        import datetime as dt, json, tempfile
+        from pipeline import site
+        self.assertFalse(site.in_season({"category": "heat"}, dt.date(2026, 7, 1)))
+        self.assertTrue(site.in_season({"category": "heat"}, dt.date(2026, 12, 1)))
+        self.assertTrue(site.in_season({"category": "kitchen"}, dt.date(2026, 7, 1)))
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d); (root / "products").mkdir()
+            for slug, st, cat in (("e", "ended", "kitchen"), ("h", "active", "heat"), ("k", "active", "kitchen")):
+                (root / "products" / f"{slug}.json").write_text(json.dumps({"slug": slug, "name": slug, "status": st, "category": cat}), encoding="utf-8")
+            got = {r["slug"]: r["why"] for r in site.retired(d, dt.date(2026, 7, 1))}
+            self.assertEqual(set(got), {"e", "h"})
+            html = site.retired_page(got and site.retired(d, dt.date(2026, 7, 1))[0], [])
+            self.assertIn("noindex", html)
+            self.assertNotIn("s.click.aliexpress", html)

@@ -1,8 +1,7 @@
 name: daily-drafts
 
 on:
-  schedule:
-    - cron: "0 22 * * *"   # 매일 07:00 KST
+  # 2026-11-13 BK: 매일 초안 PR은 쓰지 않아 자동 실행을 끔(블로그는 주말 수동, 인스타는 스레드에서 준비). 필요하면 손으로 실행.
   workflow_dispatch:
 
 permissions:
