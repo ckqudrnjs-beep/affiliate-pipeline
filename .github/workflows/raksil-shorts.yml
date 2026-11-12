@@ -56,6 +56,20 @@ jobs:
           name: raksil-short
           path: media/raksil/
           retention-days: 7
+      - name: 틱톡용으로 보관 (릴리스 raksil-shorts, 최근 14개)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls media/raksil/*.mp4 >/dev/null 2>&1 || exit 0
+          gh release view raksil-shorts >/dev/null 2>&1 || gh release create raksil-shorts --title "5락실 쇼츠 (틱톡 재업로드용)" --notes "매일 18:00 KST 자동 추가. 최근 14개만 보관. mp4 + 같은 이름 .txt(틱톡 설명)." --latest=false
+          for j in media/raksil/*.json; do
+            python -c "import json,sys;m=json.load(open(sys.argv[1]));print(m['title'].replace('#shorts','').strip()+'\n\n오늘의 밸런스게임 투표: 프로필 링크 5raksil.com\n#밸런스게임 #너라면 #5락실'+('\nAI 음성' if m.get('voiced') else ''))" "$j" > "${j%.json}.txt"
+          done
+          gh release upload raksil-shorts media/raksil/*.mp4 media/raksil/*.txt --clobber
+          gh release view raksil-shorts --json assets -q '.assets[].name' | sort | grep -E '^[0-9]{4}-' | cut -c1-10 | sort -u | head -n -14 | while read d; do
+            for a in $(gh release view raksil-shorts --json assets -q ".assets[].name" | grep "^$d"); do gh release delete-asset raksil-shorts "$a" -y; done
+          done
       - name: 업로드 기록 저장
         if: always()
         run: |
