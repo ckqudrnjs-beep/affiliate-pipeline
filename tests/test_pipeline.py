@@ -356,3 +356,13 @@ class LifecycleTest(unittest.TestCase):
             html = site.retired_page(got and site.retired(d, dt.date(2026, 7, 1))[0], [])
             self.assertIn("noindex", html)
             self.assertNotIn("s.click.aliexpress", html)
+
+
+class NewArrivalsTest(unittest.TestCase):
+    def test_is_new_window(self):
+        import datetime as dt
+        from pipeline import site
+        t = dt.date(2026, 11, 20)
+        self.assertTrue(site.is_new({"addedDate": "2026-11-10"}, t))
+        self.assertFalse(site.is_new({"addedDate": "2026-11-06"}, t))
+        self.assertFalse(site.is_new({}, t))

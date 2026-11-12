@@ -16,5 +16,6 @@
  "check": "국내 판매가와 비교, 220V 플러그, 물통 용량",
  "commission": 8.0,
  "status": "hidden",
- "hiddenReason": "가품 위험(브랜드 공식 판매처 확인 불가) 2026-11-11"
+ "hiddenReason": "가품 위험(브랜드 공식 판매처 확인 불가) 2026-11-11",
+ "addedDate": "2026-11-10"
 }

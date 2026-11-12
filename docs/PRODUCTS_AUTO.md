@@ -23,10 +23,13 @@ BK 결정 2026-11-13: "가이드가 잡히면 알아서 올려줘." 새 알리 �
 - 같은 물건이 사이트에 이미 있으면(다른 판매자) 추가하지 않는다.
 
 ## 4. 파일 필드
-- slug(영문 소문자-하이픈), category(위 분야 키), name(한국어 25자 안팎, 판매자 광고 문구 빼고 무엇인지만), aliProductId, aliPrice(후보 가격), aliUrl(후보의 promotion_link 그대로), imageUrl(후보 이미지 = 알리 공식 API 사진, 다른 사진 금지), coupangPrice "" (쿠팡은 BK가 링크를 만들어야 해서 자동 등록 안 함), shipDays "10", lifeMonths(소모품 12, 전자기기 24~36), priceDate(오늘), commission, status "active".
+- slug(영문 소문자-하이픈), category(위 분야 키), name(한국어 25자 안팎, 판매자 광고 문구 빼고 무엇인지만), aliProductId, aliPrice(후보 가격), aliUrl(후보의 promotion_link 그대로), imageUrl(후보 이미지 = 알리 공식 API 사진, 다른 사진 금지), coupangPrice "" (쿠팡은 BK가 링크를 만들어야 해서 자동 등록 안 함), shipDays "10", lifeMonths(소모품 12, 전자기기 24~36), priceDate(오늘), commission, status "active", addedDate(오늘 KST).
 - note(판단 글, 60~150자): 무엇인지 + 누구에게 맞는지 + 가격이 어떤지 + 주의점. 후보 데이터(가격·판매량·평점)와 상품명에 있는 사실만. **써 봤다·효과 있다 같은 체험·효능 표현 금지**, "사세요" 권유 금지.
 - check(구매 전 확인, 1~3개): 전압·플러그, 호환 기종, 크기, 소모품 가격, KC 여부 등.
 - 대가성 표기·[광고]·rel="sponsored"는 사이트 코드가 자동으로 붙인다(지우지 않는다).
+
+## 4-1. 새로 들어온 물건 (BK 2026-11-13)
+- 홈에 "새로 들어온 물건" 칸: addedDate 후 14일 동안만 최신순 최대 8개, 상품 카드에 NEW 표시. 14일이 지나면 칸에서만 빠지고 상품은 "모든 물건"에 그대로 남는다(상품을 기간으로 지우지는 않는다: 글 속 링크·가격 기록·판매 기회가 사라지므로).
 
 ## 5. 내리는 기준 (코드가 매일 자동)
 | 경우 | 처리 | 다시 올림 |

@@ -38,6 +38,7 @@ DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이�
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
 MIN_NOTE = 40
 # 상품 정리 규칙 (docs/PRODUCTS_AUTO.md): 철 지난 계절 상품은 잠시 내렸다가 철이 오면 자동으로 다시 올린다
+NEW_DAYS = 14  # 새로 들어온 물건: 등록(addedDate) 후 14일 동안만 홈 칸·NEW 표시. 상품 자체는 남는다.
 SEASON_MONTHS = {"heat": {10, 11, 12, 1, 2, 3}, "humidify": {10, 11, 12, 1, 2, 3}}
 _cfg_path = pathlib.Path("config/site.json")
 CFG = json.loads(_cfg_path.read_text(encoding="utf-8")) if _cfg_path.exists() else {}
@@ -243,6 +244,7 @@ section.fold:not(.open)>:not(.sechead){display:none}
 .receipt div{display:flex;justify-content:space-between;gap:12px}.receipt .sum{border-top:1px solid var(--ink);margin-top:8px;padding-top:8px;color:var(--green);font-weight:600}
 .verdict{font:500 26px/1.35 var(--display);margin:28px 0 6px}.verdict span{color:var(--green)}
 .note{max-width:62ch}
+.newtag{display:inline-block;font-size:11px;letter-spacing:.06em;padding:1px 6px;border-radius:4px;background:var(--green);color:var(--coin-ink);margin-right:4px}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
 .btn{padding:14px 26px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid var(--ink);color:var(--ink)}
 .btn.main{background:var(--ink);color:var(--bg)}
@@ -351,11 +353,18 @@ def price_line(p: dict) -> str:
             f'<span class="v">{p["verdict"]}</span></span>')
 
 
+def is_new(p: dict, today: dt.date | None = None) -> bool:
+    try:
+        return ((today or dt.date.today()) - dt.date.fromisoformat(p.get("addedDate") or "")).days < NEW_DAYS
+    except ValueError:
+        return False
+
+
 def pick(p: dict, lead: bool = False) -> str:
     e = html.escape
     d = dt.date.fromisoformat(p["priceDate"])
     return f"""<a class="pick{' lead' if lead else ''}" href="p/{p['slug']}.html"><div class="ph">{media(p)}</div><div style="display:flex;flex-direction:column;gap:10px">
-<span class="cat">{e(CATEGORIES.get(p['category'], ''))}</span>{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
+<span class="cat">{'<b class="newtag">NEW</b> ' if is_new(p) else ''}{e(CATEGORIES.get(p['category'], ''))}</span>{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
 {price_line(p)}
 <span class="small">{d.month}월 {d.day}일 기준{'' if p.get('solo') else ' · 기능이 비슷한 제품 비교'}</span><span class="more">{'자세히 보기' if p.get('solo') else '계산 보기'}</span></div></a>"""
 
@@ -505,10 +514,14 @@ def index_page(products: list[dict]) -> str:
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
 <div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
 <p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
+    fresh = sorted((p for p in products if is_new(p)), key=lambda p: p["addedDate"], reverse=True)[:8]
+    new_sec = f"""<section id="new"><div class="sechead"><h2>새로 들어온 물건</h2><span>최근 {NEW_DAYS}일 · {len(fresh)}개</span></div>
+<div class="picks compact">{"".join(pick(p) for p in fresh)}</div></section>""" if fresh else ""
     news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     body = f"""{N.home_block(news, sales)}
 {picks_sec}
+{new_sec}
 {A.home_block(A.load())}
 {all_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
