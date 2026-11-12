@@ -38,7 +38,9 @@ AD_LABEL = "광고 · 알리익스프레스 제휴 링크"
 SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 = 첫 1초 안에 숫자가 보이는 질문·상황(cap 에 숫자), "
              "2줄 = 조카의 그럴듯한 오답·고집, 3줄 = sfx buzz + big(반전 숫자) + sub(가정), 이후 해결·펀치라인. "
              "상품은 마지막 1~2줄에만 prop product 로, 그 뒤 end. 조카는 시청자 대신 묻는 역할, 삼촌은 계산으로 답한다. "
-             "마지막 줄은 웃기거나 첫 줄로 이어지게(다시 보게). ")
+             "마지막 줄은 웃기거나 첫 줄로 이어지게(다시 보게). "
+             "skit 에 badge(첫 장면 노란 배지 = 썸네일, 6자 안팎 질문: \"세금 얼마?\")와 bg(room/office/store/door 중 주제에 맞게)를 꼭 넣고, "
+             "포즈를 줄마다 바꾼다(삼촌 talk/wow/point/think/thumb/facepalm, 조카 talk/shock/cold/happy/think). ")
 # 요일(월=0) → 쇼츠 형식. 2026-11-11 BK "지루하지 않게": 만화 상황극(조회수 10배)을 월·목·토, 사이 날은 카드형으로 번갈아.
 SHORT_FORMATS = {
     0: ("skit-quiz", "삼촌 vs 조카 얼마게?", True,
@@ -191,6 +193,9 @@ def check(spec: dict) -> list[str]:
             if kind != "short":
                 e.append(f"장면 {i}: skit 은 쇼츠 전용")
             e.extend(f"장면 {i}: {x}" for x in check_lines(s.get("lines")))
+            from .skit import BGS
+            if s.get("bg", "room") not in BGS:
+                e.append(f"장면 {i}: bg 는 {sorted(BGS)}")
             if any(ln.get("prop") == "product" for ln in s.get("lines") or []) and not spec.get("product"):
                 e.append(f"장면 {i}: prop product 는 상품이 있어야")
             words += sum(len(ln.get("say", "")) for ln in s.get("lines") or [])
@@ -542,8 +547,18 @@ def render(path: pathlib.Path) -> pathlib.Path:
                 t_acc += dur
             elif k == "skit":
                 from .skit import render_part
-                img = photo_of(product, ss[0].get("photo", 1)) if product else None
-                t_acc += render_part(ss[0]["lines"], ad, part, tmp, img, progress=lambda x, t0=t_acc: min(1.0, (t0 + x) / est))
+                cut = ASSETS / (product or "") / "cutout.png"
+                img = None
+                if product:  # 배경 없는 상품 사진(cutout)이 있으면 그걸로 (광고 배너 글씨가 덜 보이게)
+                    if cut.exists() and "photo" not in ss[0]:
+                        from PIL import Image
+                        c = Image.open(cut).convert("RGBA")
+                        img = Image.new("RGB", c.size, "white")
+                        img.paste(c, mask=c)
+                    else:
+                        img = photo_of(product, ss[0].get("photo", 1))
+                t_acc += render_part(ss[0]["lines"], ad, part, tmp, img, progress=lambda x, t0=t_acc: min(1.0, (t0 + x) / est),
+                                     bg=ss[0].get("bg", "room"), badge=ss[0].get("badge"))
             else:
                 before = len(ctx["durs"])
                 vs = [next(voices) for _ in ss]
