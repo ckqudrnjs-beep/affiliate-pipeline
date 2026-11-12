@@ -187,6 +187,8 @@ def check(spec: dict) -> list[str]:
         if t == "uncle":
             if s.get("clip") not in clips:
                 e.append(f"장면 {i}: 삼촌 영상 이름 {s.get('clip')}")
+            elif str(s.get("clip")).startswith("outro"):
+                e.append(f"장면 {i}: 수수료 외치는 outro 영상은 쓰지 않음 (고지는 화면 위 막대·제목·설명란·유료 프로모션으로)")
             continue
         if t == "skit":
             from .skit import check_lines
