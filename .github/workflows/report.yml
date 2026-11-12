@@ -1,0 +1,44 @@
+name: report
+
+# 주간 생활물가 리포트: 매주 월요일 07:10 KST 공공 API(오피넷·KAMIS·ECOS)로 data/report/<날짜>.json 을 만들어 main에 커밋.
+# 사이트는 커밋되면 자동 재배포되어 /report/ 페이지가 생긴다. 키가 하나도 없으면 아무것도 커밋하지 않는다.
+on:
+  schedule:
+    - cron: "10 22 * * 0"   # 월 07:10 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: 공공 데이터 수집 + 리포트
+        env:
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          KAMIS_KEY: ${{ secrets.KAMIS_KEY }}
+          KAMIS_ID: ${{ secrets.KAMIS_ID }}
+          ECOS_KEY: ${{ secrets.ECOS_KEY }}
+          TELEGRAM_ENABLED: ${{ vars.TELEGRAM_ENABLED }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.report
+      - name: main에 기록
+        run: |
+          git config user.name "report-bot"
+          git config user.email "report-bot@users.noreply.github.com"
+          git add data/report 2>/dev/null || exit 0
+          git commit -m "주간 생활물가 리포트 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
