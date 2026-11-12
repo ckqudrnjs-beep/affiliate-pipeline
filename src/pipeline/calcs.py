@@ -154,6 +154,38 @@ function run(){const hd=$('#h').value*$('#d').value/1000, base=+$('#base').value
 <p>요금만 보면 초음파식이 가장 싸지만, 물통과 진동판을 자주 씻어야 하고 수돗물 속 성분이 하얀 가루로 내려앉을 수 있습니다. 가열식은 요금이 더 나오는 대신 끓인 수증기를 내보냅니다. 겨울 내내 켜 둘 가습기라면 요금과 관리 시간을 같이 따져 보세요.</p>""",
         "category": "humidify",
     },
+    {
+        "slug": "installment",
+        "title": "카드 할부 수수료 계산기 (할인 vs 수수료)",
+        "h1": "할인받아 할부로 사면, 수수료가 할인을 다 먹을까?",
+        "lede": "결제 금액·할부 개월·연 수수료율만 넣으면 총 할부 수수료와 매달 낼 돈을 계산하고, 받은 할인액과 비교합니다.",
+        "form": """
+<label>결제 금액 (원)<input id="amt" type="number" inputmode="numeric" value="300000" min="0"></label>
+<label>할부 개월<input id="n" type="number" inputmode="numeric" value="6" min="1" max="36"></label>
+<label>연 할부 수수료율 (%, 카드사 안내)<input id="r" type="number" inputmode="decimal" value="15" min="0" max="30" step="0.1"></label>
+<label>무이자 개월 (부분 무이자면 그 개월 수, 없으면 0)<input id="free" type="number" inputmode="numeric" value="0" min="0" max="36"></label>
+<label>이번 구매로 받은 할인액 (원)<input id="disc" type="number" inputmode="numeric" value="30000" min="0"></label>""",
+        "ids": ["amt", "n", "r", "free", "disc"],
+        "js": """
+function run(){const a=+$('#amt').value, n=Math.max(1,Math.round(+$('#n').value)), r=$('#r').value/100/12, free=Math.max(0,+$('#free').value), disc=+$('#disc').value;
+ const pr=Math.floor(a/n); let left=a, fee=0;
+ for(let m=1;m<=n;m++){if(m>free) fee+=Math.floor(left*r); left-= m<n?pr:left;}
+ const first=pr+(free>=1?0:Math.floor(a*r)), net=disc-fee;
+ $('#out').innerHTML=`<div><span>매달 원금</span><span>${fmt(pr)}</span></div>
+ <div><span>첫 달 청구 (원금+수수료)</span><span>${fmt(first)}</span></div>
+ <div class="sum"><span>총 할부 수수료</span><span>${fmt(fee)}</span></div>
+ <div><span>받은 할인</span><span>${fmt(disc)}</span></div>
+ <div><span>할인 − 수수료</span><span>${net>=0?fmt(net)+' 이득':fmt(-net)+' 손해'}</span></div>`;
+ $('#cmp').textContent= fee===0?'무이자 할부라 수수료가 없어요. 받은 할인이 그대로 남습니다.'
+  : net<0?`할부 수수료가 할인보다 ${fmt(-net)} 커요. 일시불이나 무이자 개월 안으로 줄이는 게 낫습니다.`
+  : fee>disc*0.5?`할인의 ${Math.round(fee/disc*100)}%가 수수료로 나가요. 개월 수를 줄이면 남는 돈이 늘어납니다.`
+  :`수수료를 빼도 ${fmt(net)} 남아요. 그래도 개월이 길수록 수수료는 커집니다.`;}""",
+        "body": """<h2>삼촌의 설명</h2>
+<p>카드 할부 수수료는 보통 "남은 할부 원금 × 연 수수료율 ÷ 12"로 매달 붙습니다. 원금이 매달 줄어드니 수수료도 조금씩 줄어들고, 전체로는 대략 결제 금액 × 연 수수료율 × (개월 수 + 1) ÷ 24 정도가 됩니다. 30만 원을 연 15%로 6개월 할부하면 수수료가 1만 3천 원 안팎이에요.</p>
+<p>세일 기간에 할인을 받아도 긴 할부로 나누면 그 할인이 수수료로 꽤 빠져나갑니다. 부분 무이자는 앞 몇 개월만 수수료가 없고 나머지 개월은 붙는 방식이라, 무이자 개월 칸에 그 숫자를 넣으면 됩니다.</p>
+<p>수수료율은 카드사·회원 등급·개월 수마다 다릅니다. 위 15%는 계산을 보여 주기 위한 예시예요. 카드 앱이나 이용대금 명세서의 "할부 수수료율"을 확인해서 바꿔 넣으세요. 카드사마다 계산 방식이 조금 달라 실제 청구액과 몇백 원 차이 날 수 있습니다.</p>""",
+        "category": "",
+    },
 ]
 
 CALC_CSS = """
