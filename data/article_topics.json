@@ -1,8 +1,9 @@
 [
  {
   "q": "알리 블랙프라이데이·연말 직구 체크리스트 (관세·합배송·할부)",
-  "done": false,
-  "format": "체크리스트"
+  "done": true,
+  "format": "체크리스트",
+  "slug": "ali-black-friday-checklist"
  },
  {
   "q": "전기장판 한 달 전기요금",
