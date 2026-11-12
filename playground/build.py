@@ -74,6 +74,7 @@ def load_questions(cfg: dict, upto: date | None = None) -> list[dict]:
 
 
 CSS = """
+.shsheet{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:99}.shsheet>div{background:#fff;color:#111;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:16px;display:grid;gap:8px}.shsheet button{font:inherit;font-weight:700;padding:13px;border-radius:12px;border:0;background:#f1f1f4;color:#111;cursor:pointer}.shsheet button[data-k=k]{background:#fee500}
 .challenge{background:linear-gradient(90deg,#ff5a5f,#ff9f43);color:#fff;border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:15px;line-height:1.5}.challenge b{font-size:17px}
 :root{--bg:#0c0620;--bg2:#160b33;--card:#1a1038;--card2:#22164a;--ink:#f4f0ff;--muted:#a99fc9;--line:#3a2b6e;--a:#ff3d7f;--b:#22d3ee;--y:#ffd23f;--g:#3ddc84;--soft:#2a1d58;--btn:#ffd23f;--btn-ink:#1a0f00;--px:"Press Start 2P",monospace;--hd:"Black Han Sans","Noto Sans KR",sans-serif}
 *{box-sizing:border-box}html{background:var(--bg)}
@@ -171,7 +172,7 @@ async function send(qid,opt){try{await fetch(API,{method:'POST',headers:{'conten
 document.addEventListener('click',e=>{const btn=e.target.closest('.vs button');if(btn){const el=btn.closest('.q'),q=el.dataset.q;if(mine[q])return;const opt=btn.classList.contains('a')?'a':'b';
 mine[q]=opt;save();const c=Object.assign({a:0,b:0},el._c||{});c[opt]++;paint(el,c);send(q,opt);return}
 const r=e.target.closest('.re button[data-r]');if(r){const el=r.closest('.q'),k=el.dataset.q+':'+r.dataset.r;if(mine[k])return;mine[k]=1;save();const s=r.querySelector('span');s.textContent=(+s.textContent||0)+1;send(el.dataset.q,r.dataset.r);return}
-const sh=e.target.closest('.share');if(sh){const url=location.origin+sh.dataset.url;const t=sh.dataset.t;if(navigator.share)navigator.share({title:t,url}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(url);sh.textContent='링크 복사됨'}}});
+const sh=e.target.closest('.share');if(sh){const url=location.origin+sh.dataset.url;const t=sh.dataset.t;shareLink(t,url,t+'\\n'+url)}});
 load();
 """
 
@@ -210,7 +211,7 @@ COMMON_JS = (
     "const KST=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);"
     "function seeded(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}"
     "return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}"
-    "function shareText(t){if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(t);alert('결과를 복사했어요. 친구에게 붙여 넣어 보세요!')}}"
+    "function shareText(t){const m=t.match(/https?:\\/\\/\\S+$/);shareLink(t.split('\\n')[0],m?m[0]:location.href,t)}"
     f"const ADJ={json.dumps(ADJ, ensure_ascii=False)},ANI={json.dumps(ANI, ensure_ascii=False)};"
     "function nickOk(n){const p=String(n||'').split(' ');return p.length===3&&ADJ.includes(p[0])&&ANI.includes(p[1])&&/^\\d{1,2}$/.test(p[2])}"
     "function challengeUrl(score){return location.origin+location.pathname+'?c='+Math.floor(score)+'&n='+encodeURIComponent(myNick())+'&d='+KST}"
@@ -321,10 +322,25 @@ def stat_html(s: dict, asof: date) -> str:
     return (f'<div class="stat">📊 지금까지 {s["t"]:,}명이 투표했어요. ‘{esc(q["a"])}’ {s["pa"]}% · ‘{esc(q["b"])}’ {s["pb"]}%로 {esc(s["phrase"])}.{react}'
             f'<small>{asof.month}월 {asof.day}일 집계 기준. 투표하면 지금 결과가 바로 보여요.</small></div>')
 
+# 공유: 카카오 키(KAKAO_JS_KEY, Cloudflare 변수)가 있으면 "카카오톡 / 다른 앱" 선택 창, 없으면 기기 공유창·복사.
+SHARE_JS = """
+function plainShare(text){if(navigator.share)navigator.share({text}).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(text);alert('링크를 복사했어요. 친구에게 붙여 넣어 보세요!')}}
+function shareLink(title,url,text){if(!(window.Kakao&&Kakao.isInitialized&&Kakao.isInitialized())){plainShare(text);return}
+const m=url.match(/\\/q\\/(\\d{8}-\\d)/);const og=document.querySelector('meta[property="og:image"]');const img=m?location.origin+'/og/q/'+m[1]+'.png':(og?og.content:location.origin+'/og.png');
+const box=document.createElement('div');box.className='shsheet';box.innerHTML='<div><b>공유하기</b><button type="button" data-k="k">💬 카카오톡</button><button type="button" data-k="o">📤 다른 앱 · 링크 복사</button><button type="button" data-k="x">닫기</button></div>';
+box.onclick=e=>{const k=e.target.dataset&&e.target.dataset.k;if(e.target===box||k==='x'){box.remove();return}if(!k)return;box.remove();
+if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};document.body.appendChild(box)}
+"""
+
 
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
+    kkey = (os.environ.get("KAKAO_JS_KEY") or cfg.get("kakaoJsKey", "")).strip()
+    kakao = ""
+    if re.fullmatch(r"[0-9a-f]{32}", kkey):
+        kakao = ('<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>'
+                 f'<script>try{{Kakao.init("{kkey}")}}catch(e){{}}</script>')
     pub = pub_id(cfg)
     if pub:
         head += (f'<meta name="google-adsense-account" content="ca-{pub}"><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{pub}" crossorigin="anonymous"></script>')
@@ -349,7 +365,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
-<script>{script}</script></body></html>"""
+<script>{SHARE_JS}{script}</script>{kakao}</body></html>"""
 
 
 def qcard(q, n=None, link=True):
