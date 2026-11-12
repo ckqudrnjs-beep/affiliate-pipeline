@@ -7,8 +7,9 @@
  },
  {
   "q": "전기장판 한 달 전기요금",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "electric-blanket-vs-mat-bill"
  },
  {
   "q": "알리 직구 관세 150달러 기준 정리",
@@ -17,8 +18,9 @@
  },
  {
   "q": "삼촌의 일기: 첫 고지서 받고 전기 먹는 가전 찾기",
-  "done": false,
-  "format": "일기"
+  "done": true,
+  "format": "일기",
+  "slug": "first-winter-bill-power-hogs-diary"
  },
  {
   "q": "해외직구 부가세 계산법",
