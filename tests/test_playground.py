@@ -15,9 +15,11 @@ class PlaygroundTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             r = pg.build(Path(d), upto=date(2030, 1, 1))
             self.assertGreaterEqual(r["questions"], 21)
-            for name in ("index", "archive", "rank", "games/spot", "games/dodge", "games/stop", "games/chosung", "games/reaction", "games/majority", "privacy"):
-                self.assertTrue((Path(d) / f"{name}.html").exists(), name)
+            for name in ("feed", "index", "archive", "rank", "games/spot", "games/dodge", "games/stop", "games/chosung", "games/reaction", "games/majority", "privacy"):
+                self.assertTrue((Path(d) / (f"{name}.xml" if name == "feed" else f"{name}.html")).exists(), name)
             self.assertNotIn(".html", (Path(d) / "sitemap.xml").read_text(encoding="utf-8"))
+            self.assertTrue((Path(d) / "og.png").exists())
+            self.assertIn('"VideoGame"', (Path(d) / "games" / "spot.html").read_text(encoding="utf-8"))
 
     def test_nick_lists_match_score_function(self):
         js = (ROOT / "playground" / "functions" / "api" / "score.js").read_text(encoding="utf-8")
