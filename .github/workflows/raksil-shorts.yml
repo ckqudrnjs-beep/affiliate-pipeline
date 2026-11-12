@@ -1,0 +1,68 @@
+name: raksil-shorts
+
+# 5락실 채널: 오늘의 밸런스게임 쇼츠를 매일 자동으로 만들어 바로 공개 업로드 (2026-11-13 BK 요청).
+# 상품·협찬 없음 → 유료 프로모션 아님. AI 음성이면 합성 콘텐츠 표시 자동.
+# 저장소 변수 RAKSIL_YT_ENABLED=true 전에는 만들기만 하고 영상은 Actions 아티팩트로만 남긴다.
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 18:00 KST (저녁 시청 시간 전에 공개)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "날짜 YYYY-MM-DD (비우면 오늘)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+          pip install -q pillow numpy supertonic==1.3.1
+          mkdir -p "$HOME/fonts"
+          curl -sfL -o "$HOME/fonts/BlackHanSans-Regular.ttf" https://fonts.gstatic.com/s/blackhansans/v24/ea8Aad44WunzF9a-dL6toA8r8nqV.ttf || true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/supertonic3
+          key: supertonic-3-v1
+      - name: 검사
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts
+      - name: 만들기 + 올리기
+        env:
+          RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+        run: |
+          export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
+          PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raksil-short
+          path: media/raksil/
+          retention-days: 7
+      - name: 업로드 기록 저장
+        if: always()
+        run: |
+          [ -f data/youtube/raksil_uploaded.json ] || exit 0
+          git config user.name "raksil-bot"
+          git config user.email "raksil-bot@users.noreply.github.com"
+          git add data/youtube/raksil_uploaded.json
+          git commit -m "5락실 쇼츠 업로드 기록 $(TZ=Asia/Seoul date '+%F')" || exit 0
+          git pull --rebase -q origin main
+          git push origin HEAD:main
