@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import html
 import json
+import os
+import urllib.request
 import re
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -19,6 +21,9 @@ QID = re.compile(r"^\d{8}-\d$")
 BANNED = ("정치", "대통령", "국회", "정당", "남자는", "여자는", "남녀", "페미", "지역감정", "전라도", "경상도", "종교", "교회", "절에", "섹스", "야한", "자살",
           "참사", "사망", "죽", "살인", "혐오", "장애", "흑인", "백인", "조선족", "외국인 노동자")
 EMOJI = [("r1", "😂"), ("r2", "🤔"), ("r3", "😱"), ("r4", "👍")]
+STAT_MIN = 20    # 질문 페이지에 집계 문장을 붙이는 최소 투표 수(적은 숫자로 단정하지 않기)
+REPORT_MIN = 30  # 리포트에 넣는 최소 투표 수
+REPORT_NEED = 5  # 리포트 페이지를 만드는 최소 질문 수(내용이 빈약하면 만들지 않음)
 
 
 def esc(s: str) -> str:
@@ -133,6 +138,10 @@ h2 small{font-family:-apple-system,"Noto Sans KR",sans-serif;font-size:14px;font
 .re button,.share{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
 .re button:hover,.share:hover{border-color:var(--y)}
 .more{display:inline-block;margin:6px 0 0;font-weight:700;color:var(--b);text-decoration:none}
+/* ads & stats */
+.ad{margin:30px 0;text-align:center}.ad>small{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+.stat{background:#0a0518;border:2px dashed var(--line);border-radius:14px;padding:12px 14px;margin:14px 0;font-size:15px}.stat small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.next{display:flex;justify-content:flex-end;margin:6px 0 0}
 /* in-game */
 input.ans{font:inherit;font-size:18px;width:100%;padding:12px;border-radius:12px;border:2px solid var(--b);background:#0a0518;color:var(--ink);box-shadow:inset 0 0 10px #22d3ee33}
 input.ans:focus{outline:none;box-shadow:0 0 0 3px #22d3ee55}
@@ -232,10 +241,84 @@ def crumbs(cfg: dict, trail: list[tuple[str, str]]) -> dict:
         {"@type": "ListItem", "position": i + 1, "name": n, "item": f"{base}/{p}"} for i, (n, p) in enumerate(items)]}
 
 
+def pub_id(cfg: dict) -> str:
+    """adsensePublisherId 는 pub-… 또는 ca-pub-… 둘 다 허용 → pub-…"""
+    p = (cfg.get("adsensePublisherId") or "").strip()
+    return p[3:] if p.startswith("ca-") else p
+
+
+def ad_slot(cfg: dict) -> str:
+    """본문 광고 1칸. ID가 하나도 없으면 빈 문자열(자리도 안 생김).
+    애드센스 승인 후 adsenseSlot(디스플레이 광고 단위 번호)이 있으면 애드센스, 없으면 카카오 애드핏(adfitUnit 모바일 320x100, adfitUnitPc 728x90)."""
+    pub, slot = pub_id(cfg), (cfg.get("adsenseSlot") or "").strip()
+    if pub and slot:
+        return (f'<div class="ad"><small>광고</small><ins class="adsbygoogle" style="display:block" data-ad-client="ca-{esc(pub)}" data-ad-slot="{esc(slot)}" '
+                'data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle=window.adsbygoogle||[]).push({});</script></div>')
+    m, pc = (cfg.get("adfitUnit") or "").strip(), (cfg.get("adfitUnitPc") or "").strip()
+    if m or pc:
+        return f'<div class="ad" data-m="{esc(m)}" data-p="{esc(pc)}"><small>광고</small></div>'
+    return ""
+
+
+# 애드핏: 화면 폭에 맞는 단위 하나만 넣는다(숨겨 둔 광고로 노출을 부풀리지 않음).
+ADFIT_JS = """
+(function(){var s=document.querySelectorAll('.ad[data-m]');if(!s.length)return;var w=innerWidth>=760,n=0;
+s.forEach(function(d){var u=w?(d.dataset.p||d.dataset.m):d.dataset.m;if(!u){d.remove();return}var big=w&&u===d.dataset.p;var i=document.createElement('ins');i.className='kakao_ad_area';i.style.display='none';
+i.setAttribute('data-ad-unit',u);i.setAttribute('data-ad-width',big?'728':'320');i.setAttribute('data-ad-height',big?'90':'100');d.appendChild(i);n++});
+if(n){var j=document.createElement('script');j.async=true;j.src='//t1.daumcdn.net/kas/static/ba.min.js';document.body.appendChild(j)}})();
+"""
+
+
+def fetch_stats(base: str, ids: list[str], timeout: float = 6) -> dict:
+    """빌드할 때 실제 투표 집계(/api/vote 공개 GET)를 가져온다. 실패하면 있는 만큼만(없으면 {}) → 집계 문장 없이 빌드."""
+    out: dict = {}
+    for i in range(0, len(ids), 30):
+        url = f"{base.rstrip('/')}/api/vote?ids=" + ",".join(ids[i:i + 30])
+        try:
+            req = urllib.request.Request(url, headers={"user-agent": "5raksil-build/1.0"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.loads(r.read().decode("utf-8"))
+            out.update({k: v for k, v in data.items() if isinstance(v, dict)})
+        except Exception as e:  # 사이트가 아직 없거나 네트워크 차단: 집계 없이 진행
+            print(f"집계 가져오기 실패({e.__class__.__name__}), 집계 없이 빌드")
+            break
+    return out
+
+
+def summary(q: dict, c: dict | None) -> dict | None:
+    """실제 숫자로만 만든 결과 요약. 표가 적으면 None."""
+    if not c:
+        return None
+    a, b = int(c.get("a", 0)), int(c.get("b", 0))
+    t = a + b
+    if t < STAT_MIN:
+        return None
+    pa = round(a * 100 / t)
+    pb = 100 - pa
+    lead = q["a"] if a >= b else q["b"]
+    gap = abs(pa - pb)
+    if gap <= 10:
+        phrase = "거의 반반으로 갈렸어요"
+    elif gap <= 30:
+        phrase = f"‘{lead}’ 쪽이 조금 앞섰어요"
+    else:
+        phrase = f"‘{lead}’ 쪽으로 크게 기울었어요"
+    rs = [(int(c.get(k, 0)), e) for k, e in EMOJI]
+    top = max(rs)
+    return {"t": t, "pa": pa, "pb": pb, "gap": gap, "phrase": phrase, "react": top[1] if top[0] >= 3 else "", "rn": top[0], "q": q}
+
+
+def stat_html(s: dict, asof: date) -> str:
+    q = s["q"]
+    react = f" 가장 많이 눌린 반응은 {s['react']}예요." if s["react"] else ""
+    return (f'<div class="stat">📊 지금까지 {s["t"]:,}명이 투표했어요. ‘{esc(q["a"])}’ {s["pa"]}% · ‘{esc(q["b"])}’ {s["pb"]}%로 {esc(s["phrase"])}.{react}'
+            f'<small>{asof.month}월 {asof.day}일 집계 기준. 투표하면 지금 결과가 바로 보여요.</small></div>')
+
+
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
-    pub = cfg.get("adsensePublisherId", "").strip()
+    pub = pub_id(cfg)
     if pub:
         head += (f'<meta name="google-adsense-account" content="ca-{pub}"><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{pub}" crossorigin="anonymous"></script>')
     verify = ""  # 검색엔진 확인 태그는 <head> 맨 앞에 둔다(긴 CSS 뒤에 있으면 일부 봇이 못 읽음).
@@ -247,6 +330,10 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None)
         head += '<meta name="robots" content="noindex,follow">'
     for x in jsonld or []:
         head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
+    ad = ad_slot(cfg)
+    body = body.replace("<!--AD-->", ad)
+    if 'class="ad" data-m=' in body:
+        script += ADFIT_JS
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">{verify}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
@@ -268,8 +355,8 @@ def qcard(q, n=None, link=True):
 <p class="note">{esc(q['note'])}{more}</p><div class="re">{re_btns}<button class="share" type="button" data-url="/q/{q['id']}" data-t="{esc(title)}">공유</button></div></div>"""
 
 
-def build(out: Path, upto: date | None = None) -> dict:
-    cfg = json.loads((HERE / "config.json").read_text(encoding="utf-8"))
+def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: dict | None = None) -> dict:
+    cfg = cfg or json.loads((HERE / "config.json").read_text(encoding="utf-8"))
     qs = load_questions(cfg, upto)
     if not qs:
         raise ValueError("공개할 질문 없음")
@@ -280,6 +367,11 @@ def build(out: Path, upto: date | None = None) -> dict:
     todays = sorted([q for q in qs if q["date"] == latest], key=lambda q: q["id"])
     d = date.fromisoformat(latest)
     pages = []
+    stats = stats or {}
+    asof = today()
+    sums = {q["id"]: s for q in qs if (s := summary(q, stats.get(q["id"])))}
+    rpt = [s for s in sums.values() if s["t"] >= REPORT_MIN]
+    has_report = len(rpt) >= REPORT_NEED
 
     def write(path, title, desc, body, script="", noindex=False, jsonld=None):
         (out / f"{path or 'index'}.html").write_text(page(cfg, path=path, title=title, desc=desc, body=body, script=script, noindex=noindex, jsonld=jsonld), encoding="utf-8")
@@ -294,22 +386,26 @@ def build(out: Path, upto: date | None = None) -> dict:
           f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a></div>"
           f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
           f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{grid}"
+          "<!--AD-->"
           f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
           jsonld=[{"@context": "https://schema.org", "@type": "WebSite", "name": cfg["siteName"], "alternateName": "오락실", "url": cfg["baseUrl"].rstrip("/") + "/"}])
 
-    for q in qs:
+    for i, q in enumerate(qs):
         title = f"{q['a']} vs {q['b']} | 밸런스게임"
+        nxt = qs[(i + 1) % len(qs)]
+        st = stat_html(sums[q["id"]], asof) if q["id"] in sums else ""
         desc = f"밸런스게임: {q['a']} vs {q['b']}. 투표하고 사람들의 선택 비율을 확인하세요. {q['note']}"[:150]
         others = "".join(f'<li><a href="/q/{x["id"]}">{esc(x["a"])} vs {esc(x["b"])}</a></li>' for x in qs if x["id"] != q["id"])
         others = "<ul class=\"list\">" + "".join(others.split("</li>")[:6]) + "</ul>" if others else ""
         write(f"q/{q['id']}", title, desc,
-              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}<h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS,
+              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}{st}"
+              f"<p class=\"next\"><a class=\"btn\" href=\"/q/{nxt['id']}\">다음 밸런스게임 ▶</a></p><!--AD--><h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS,
               jsonld=[crumbs(cfg, [("밸런스게임", "archive"), (f"{q['a']} vs {q['b']}", f"q/{q['id']}")])])
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
     write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
-          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p><ul class=\"list\">{rows}</ul>")
+          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->")
 
     write("games", f"무료 미니게임 | {cfg['siteName']}", "5락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
           f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{grid}")
@@ -321,6 +417,7 @@ def build(out: Path, upto: date | None = None) -> dict:
     for g in games:
         pre = "".join(f"const {k}={json.dumps(inject[k], ensure_ascii=False)};" for k in g.get("inject", []))
         body = g["body"]
+        body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
         script = pre + COMMON_JS + g["js"]
         if g.get("ranked"):
             body = body.replace("<!--RANK-->", RANK_HTML)
@@ -337,6 +434,30 @@ def build(out: Path, upto: date | None = None) -> dict:
           f"<h1>🏆 오늘의 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 순위가 초기화돼요. 이름은 자동으로 붙는 별명이라 개인 정보가 없습니다.</p><div class=\"re\">{tabs}</div><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
           COMMON_JS + RANK_PAGE_JS)
 
+    if has_report:
+        def li(x, extra=""):
+            q = x["q"]
+            return f'<li><a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a> · {x["pa"]}% : {x["pb"]}% ({x["t"]:,}표){extra}</li>'
+        close = sorted(rpt, key=lambda x: (x["gap"], -x["t"]))[:5]
+        far = sorted(rpt, key=lambda x: (-x["gap"], -x["t"]))[:5]
+        hot = sorted(rpt, key=lambda x: -x["t"])[:5]
+        total = sum(x["t"] for x in sums.values())
+        c0, f0 = close[0], far[0]
+        parts = [f"<h1>📊 밸런스게임 결과 리포트</h1><p class=\"lead\">{asof.month}월 {asof.day}일 기준, {cfg['siteName']}에 올라온 밸런스게임 {len(qs)}개에 모두 {total:,}표가 모였어요. "
+                 f"투표 {REPORT_MIN}표 이상인 질문 {len(rpt)}개만 골라 실제 숫자 그대로 정리했어요(매일 자동 갱신).</p>",
+                 f"<div class=\"stat\">가장 팽팽했던 질문은 ‘{esc(c0['q']['a'])} vs {esc(c0['q']['b'])}’로 {c0['pa']}% 대 {c0['pb']}%였고, "
+                 f"가장 한쪽으로 쏠린 질문은 ‘{esc(f0['q']['a'])} vs {esc(f0['q']['b'])}’로 {f0['pa']}% 대 {f0['pb']}%였어요.</div>",
+                 "<h2>⚖️ 가장 팽팽했던 질문</h2><ol class=\"list\">" + "".join(li(x) for x in close) + "</ol>", "<!--AD-->",
+                 "<h2>🏳️ 한쪽으로 쏠린 질문</h2><ol class=\"list\">" + "".join(li(x) for x in far) + "</ol>",
+                 "<h2>🔥 가장 많이 투표한 질문</h2><ol class=\"list\">" + "".join(li(x) for x in hot) + "</ol>"]
+        for k, e in EMOJI:
+            top = max(rpt, key=lambda x: int(stats[x["q"]["id"]].get(k, 0)))
+            n = int(stats[top["q"]["id"]].get(k, 0))
+            if n >= 3:
+                parts.append(f"<p>{e} 반응을 가장 많이 받은 질문: <a href=\"/q/{top['q']['id']}\">{esc(top['q']['a'])} vs {esc(top['q']['b'])}</a> ({n:,}번)</p>")
+        parts.append("<p class=\"muted\">같은 사람이 같은 질문에 하루 한 번만 투표할 수 있어요. 숫자를 사람이 고치지 않습니다.</p><p><a href=\"/archive\">밸런스게임 전체 보기 →</a></p>")
+        write("report", f"밸런스게임 결과 리포트 | {cfg['siteName']}", f"밸런스게임 실제 투표 결과 정리: 가장 팽팽했던 질문, 한쪽으로 쏠린 질문, 가장 많이 투표한 질문. {asof.month}월 {asof.day}일 기준 자동 갱신.", "".join(parts))
+
     email = cfg["contactEmail"]
     write("about", f"소개 | {cfg['siteName']}", f"{cfg['siteName']} 소개",
           f"<h1>소개</h1><p>{esc(cfg['siteName'])}(밸런스 놀이터)은 매일 새로운 밸런스게임 질문을 올리고, 누구나 익명으로 투표해 서로의 선택을 비교해 보는 놀이터입니다.</p>"
@@ -348,7 +469,7 @@ def build(out: Path, upto: date | None = None) -> dict:
     write("privacy", f"개인정보처리방침 | {cfg['siteName']}", f"{cfg['siteName']} 개인정보처리방침",
           f"<h1>개인정보처리방침</h1><p>시행일: {cfg['privacyDate']}</p><h2>1. 수집하는 정보</h2><p>회원 가입이 없고 이름·연락처를 받지 않습니다. 투표와 반응 버튼을 누르면 '어떤 질문에 어느 쪽을 골랐는지'만 숫자로 집계합니다.</p>"
           "<h2>2. 중복 투표 방지</h2><p>같은 사람의 중복 투표를 막기 위해 접속 IP 주소를 비밀값과 함께 되돌릴 수 없는 해시값으로 바꿔 최대 2일 동안 보관한 뒤 자동 삭제합니다. 원래 IP 주소는 저장하지 않습니다. 이용자의 브라우저에는 이미 투표한 질문 목록이 저장됩니다(브라우저에서 언제든 삭제 가능).</p>"
-          "<h2>3. 광고와 쿠키</h2><p>이 사이트는 Google 애드센스 등 제3자 광고를 게재할 수 있습니다. Google을 포함한 제3자 공급업체는 쿠키를 사용하여 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 게재합니다. "
+          "<h2>3. 광고와 쿠키</h2><p>이 사이트는 Google 애드센스, 카카오 애드핏 등 제3자 광고를 게재할 수 있으며, 광고 영역에는 ‘광고’라고 표시합니다. Google을 포함한 제3자 공급업체는 쿠키를 사용하여 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 게재합니다. "
           "맞춤 광고는 <a href=\"https://adssettings.google.com\" rel=\"nofollow\">Google 광고 설정</a>에서 끌 수 있고, <a href=\"https://www.aboutads.info\" rel=\"nofollow\">aboutads.info</a>에서 제3자 쿠키 사용을 거부할 수 있습니다.</p>"
           f"<h2>4. 문의</h2><p><a href=\"mailto:{esc(email)}\">{esc(email)}</a></p>")
 
@@ -371,5 +492,8 @@ def build(out: Path, upto: date | None = None) -> dict:
 
 
 if __name__ == "__main__":
-    r = build(Path(sys.argv[1] if len(sys.argv) > 1 else "dist"))
+    _cfg = json.loads((HERE / "config.json").read_text(encoding="utf-8"))
+    _ids = [q["id"] for q in load_questions(_cfg)]
+    _stats = {} if os.environ.get("PG_NO_STATS") else fetch_stats(_cfg["baseUrl"], _ids)
+    r = build(Path(sys.argv[1] if len(sys.argv) > 1 else "dist"), stats=_stats)
     print(f"놀이터: 질문 {r['questions']}개, 오늘 {r['today']}, 페이지 {r['pages']}개")
