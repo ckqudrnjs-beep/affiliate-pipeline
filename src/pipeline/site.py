@@ -672,6 +672,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
                + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
                + [("about.html", SITE_PAGES), ("contact.html", SITE_PAGES), ("privacy.html", SITE_PAGES)])
     (o / "sitemap.xml").write_text(S.sitemap(BASE, entries), encoding="utf-8")
+    S.clean_urls(o, BASE)
     (o / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n", encoding="utf-8")
     return len(products)
 
