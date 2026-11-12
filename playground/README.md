@@ -17,7 +17,7 @@
 1. `data/questions.json` 끝에 **내일 날짜** 질문 3개 추가: id `YYYYMMDD-1..3`, a/b 2~40자, note 1~2문장(두 선택지의 차이를 짚는 중립 해설).
 2. 금지: 정치·성별·지역·종교 갈등, 실존 인물·브랜드, 성적 내용, 혐오, 사고·참사, 죽음, 미성년자 대상, 도박. 일상·음식·여행·상상·습관 위주.
 3. 기존 질문과 같은 선택지 쌍 금지(build.py가 검사).
-4. `PYTHONPATH=src python -m unittest discover -s tests` 통과해야만 main에 커밋.
+4. `cd playground && python og.py` 로 새 질문의 미리보기 이미지(static/og/q/<id>.png)를 만들고, `PYTHONPATH=src python -m unittest discover -s tests` 통과해야만 질문 파일과 이미지를 함께 main에 커밋.
 5. 사람이 쓴 척하는 글, 가짜 투표 수 금지. 숫자는 D1 집계만.
 
 ## 광고(자동, ID 넣으면 켜짐)

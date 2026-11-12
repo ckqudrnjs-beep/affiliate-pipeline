@@ -38,5 +38,5 @@ $('sp-b').addEventListener('click',e=>{if(done)return;const s=$('sp-b').querySel
  if(hit!==undefined){found.add(hit);mark(hit,'ok');$('sp-found').textContent='찾은 개수 '+found.size+' / 5';if(found.size===5)finish()}else{pen+=3;$('sp-msg').textContent='틀린 곳이 아니에요 (+3초)'}});
 $('sp-hint').onclick=()=>{if(done)return;const i=diffs.find(i=>!found.has(i));pen+=30;const o=objs[i];document.querySelectorAll('.marks').forEach(g=>g.insertAdjacentHTML('beforeend',`<circle cx="${o.x}" cy="${o.y}" r="30" fill="#ffd23f" opacity=".5"><animate attributeName="opacity" values=".6;0;.6" dur="1s" repeatCount="3"/></circle>`))};
 function finish(){done=true;clearInterval(tick);const sec=Math.floor((Date.now()-t0)/1000+pen);$('sp-time').textContent=sec+'초';const score=Math.max(1,3000-sec*10);
- $('sp-msg').textContent='다 찾았어요! '+sec+'초 · '+score+'점';$('sp-share').hidden=false;$('sp-share').onclick=()=>shareText('5락실 오늘의 틀린그림찾기 '+KST.slice(5)+'\n🔍 5개 모두 '+sec+'초 ('+score+'점)\n너는 몇 초? '+location.href);if(window.submitScore)submitScore(score)}
+ $('sp-msg').textContent='다 찾았어요! '+sec+'초 · '+score+'점';$('sp-share').hidden=false;$('sp-share').onclick=()=>shareText('5락실 오늘의 틀린그림찾기 '+KST.slice(5)+'\n🔍 5개 모두 '+sec+'초 ('+score+'점)\n나보다 빨리 찾을 수 있어? '+challengeUrl(score));if(window.submitScore)submitScore(score)}
 })();
