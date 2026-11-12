@@ -193,7 +193,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False):
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><style>{CSS}</style>{head}</head><body>
-<header><div class="wrap"><a class="logo" href="/">노리터<span> 오락실</span></a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
+<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{script}</script></body></html>"""
@@ -230,8 +230,8 @@ def build(out: Path, upto: date | None = None) -> dict:
     cards = "".join(qcard(q, f"오늘의 질문 {i + 1}") for i, q in enumerate(todays))
     games = load_games()
     grid = game_grid(games)
-    write("", f"{cfg['siteName']} 오락실 | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
-          f"<div class=\"hero\"><h1>노리터 오락실</h1><p>{esc(cfg['tagline'])}</p></div>"
+    write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
+          f"<div class=\"hero\"><h1>5락실</h1><p>{esc(cfg['tagline'])}</p></div>"
           f"<h2>🕹️ 오늘의 기계</h2>{grid}"
           f"<h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2>{cards}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS)
@@ -245,10 +245,10 @@ def build(out: Path, upto: date | None = None) -> dict:
               f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}<h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS)
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
-    write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "노리터 오락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
+    write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
           f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p><ul class=\"list\">{rows}</ul>")
 
-    write("games", f"무료 미니게임 | {cfg['siteName']} 오락실", "노리터 오락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
+    write("games", f"무료 미니게임 | {cfg['siteName']}", "5락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
           f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{grid}")
 
     inject = {
@@ -262,11 +262,11 @@ def build(out: Path, upto: date | None = None) -> dict:
         if g.get("ranked"):
             body = body.replace("<!--RANK-->", RANK_HTML)
             script += RANK_JS
-        write(f"games/{g['slug']}", f"{g['title']} | {cfg['siteName']} 오락실", g["description"], body, script)
+        write(f"games/{g['slug']}", f"{g['title']} | {cfg['siteName']}", g["description"], body, script)
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
-    write("rank", f"오늘의 도전 순위 | {cfg['siteName']} 오락실", "노리터 오락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
+    write("rank", f"오늘의 도전 순위 | {cfg['siteName']}", "5락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
           f"<h1>🏆 오늘의 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 순위가 초기화돼요. 이름은 자동으로 붙는 별명이라 개인 정보가 없습니다.</p><div class=\"re\">{tabs}</div><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
           COMMON_JS + RANK_PAGE_JS)
 

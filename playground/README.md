@@ -1,4 +1,4 @@
-# 노리터 오락실 (두 번째 사이트, noriteo.com 예정)
+# 5락실 (두 번째 사이트, 5raksil.com 예정)
 
 계획: /mnt/project-files/plan/PLAYGROUND.md (docs 사본 없음, 이 파일이 저장소 기준 안내).
 

@@ -6,4 +6,4 @@ function show(){if(i>=qs.length){$('box').hidden=true;$('end').hidden=false;$('r
 function pick(o){const q=qs[i],t=q.a+q.b,pa=Math.round(q.a/t*100);const win=q.a===q.b?o:(q.a>q.b?'a':'b');const ok=o===win;if(ok)score++;
 $('msg').textContent=(ok?'정답! ':'땡! ')+'('+pa+'% : '+(100-pa)+'%)';i++;setTimeout(show,900)}
 $('ba').onclick=()=>pick('a');$('bb').onclick=()=>pick('b');
-$('sh').onclick=()=>{const t='노리터 다수결 맞히기 '+$('res').textContent+'\n'+location.href;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(t);$('sh').textContent='복사됨'}};init();
+$('sh').onclick=()=>{const t='5락실 다수결 맞히기 '+$('res').textContent+'\n'+location.href;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(t);$('sh').textContent='복사됨'}};init();
