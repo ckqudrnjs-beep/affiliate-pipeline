@@ -87,12 +87,15 @@ h1{font-size:26px;line-height:1.3;margin:24px 0 6px;letter-spacing:-.5px}h2{font
 .note{color:var(--muted);font-size:14px;margin:8px 0 0}.re{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .re button,.share{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer}
 .big{font:inherit;font-weight:800;border:0;border-radius:12px;padding:12px 18px;background:var(--btn);color:var(--btn-ink);cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}.grid a{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.grid a{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 .grid a b{display:block;font-size:17px}.grid a small{color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
 input.ans{font:inherit;font-size:18px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 .cho{font-size:40px;font-weight:900;letter-spacing:8px;text-align:center;margin:10px 0}.muted{color:var(--muted)}
 .pad{height:220px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;cursor:pointer;user-select:none;background:var(--soft)}
+.hero{background:linear-gradient(135deg,#2b1055,#7597de);color:#fff;border-radius:22px;padding:26px 20px;margin:18px 0}.hero h1{margin:0 0 6px;color:#fff;font-size:30px}.hero p{margin:0;opacity:.9}
+.spot{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0}@media(min-width:700px){.spot{grid-template-columns:1fr 1fr}}
+.ic{font-size:28px;display:block}.grid a b{margin-top:4px}h2 small{font-size:14px;font-weight:400}
 footer{margin-top:48px;padding:22px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px}footer a{margin-right:12px}
 ul.list{padding-left:18px}ul.list li{margin:4px 0}
 """
@@ -116,6 +119,64 @@ load();
 """
 
 
+def load_games() -> list[dict]:
+    games = []
+    for d in sorted((HERE / "games").iterdir()):
+        if not (d / "meta.json").exists():
+            continue
+        g = json.loads((d / "meta.json").read_text(encoding="utf-8"))
+        g["slug"] = d.name
+        g["body"] = (d / "body.html").read_text(encoding="utf-8")
+        g["js"] = (d / "game.js").read_text(encoding="utf-8")
+        for k in ("name", "short", "title", "description"):
+            if not g.get(k):
+                raise ValueError(f"{d.name}: {k} 없음")
+        if len(re.sub(r"<[^>]+>", "", g["body"])) < 300:
+            raise ValueError(f"{d.name}: 규칙·설명 글 300자 미만")
+        if re.search(r"https?://", g["js"]):
+            raise ValueError(f"{d.name}: 외부 주소 금지")
+        games.append(g)
+    return sorted(games, key=lambda g: (g.get("order", 99), g["slug"]))
+
+
+def game_grid(games: list[dict]) -> str:
+    cards = "".join(f'<a href="/games/{g["slug"]}"><span class="ic">{g.get("icon", "🎮")}</span><b>{esc(g["name"])}{" 🏆" if g.get("ranked") else ""}</b><small>{esc(g["short"])}</small></a>' for g in games)
+    return f'<div class="grid">{cards}</div>'
+
+
+# 자동 별명: 자유 입력이 없어서 욕설 관리가 필요 없다. functions/api/score.js 와 같은 목록.
+ADJ = ["빠른", "느긋한", "용감한", "졸린", "배고픈", "신난", "수줍은", "똑똑한", "엉뚱한", "반짝이는", "조용한", "씩씩한", "날쌘", "포근한", "명랑한", "꼼꼼한"]
+ANI = ["수달", "고양이", "강아지", "판다", "펭귄", "다람쥐", "여우", "너구리", "부엉이", "고래", "토끼", "햄스터", "거북이", "사슴", "오리", "곰"]
+
+COMMON_JS = (
+    "const KST=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);"
+    "function seeded(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}"
+    "return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}"
+    "function shareText(t){if(navigator.share)navigator.share({text:t}).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(t);alert('결과를 복사했어요. 친구에게 붙여 넣어 보세요!')}}"
+    f"const ADJ={json.dumps(ADJ, ensure_ascii=False)},ANI={json.dumps(ANI, ensure_ascii=False)};"
+    "function myNick(){let n=null;try{n=localStorage.getItem('nr_nick')}catch(e){}if(!n||!/^\\S+ \\S+ \\d{1,2}$/.test(n)){n=ADJ[Math.floor(Math.random()*ADJ.length)]+' '+ANI[Math.floor(Math.random()*ANI.length)]+' '+Math.floor(Math.random()*100);try{localStorage.setItem('nr_nick',n)}catch(e){}}return n}"
+)
+
+RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 오늘의 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명 바꾸기</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p><a href="/rank">전체 순위 보기 →</a></p></div>"""
+
+RANK_JS = """
+(function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
+$r('renick').onclick=()=>{try{localStorage.removeItem('nr_nick')}catch(e){}$r('mynick').textContent=myNick()};
+async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST)).json();const me=myNick();
+$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>'}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
+window.submitScore=async function(score){score=Math.floor(score);let best=0;try{best=+localStorage.getItem('nr_best_'+G+'_'+KST)||0}catch(e){}
+if(score<=best){load();return}try{localStorage.setItem('nr_best_'+G+'_'+KST,score)}catch(e){}
+try{await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick()})})}catch(e){}load()};load()})();
+"""
+
+RANK_PAGE_JS = """
+let cur=document.querySelector('[data-g]').dataset.g;const me=myNick();
+async function show(g){cur=g;document.querySelectorAll('[data-g]').forEach(b=>b.style.fontWeight=b.dataset.g===g?'800':'400');
+try{const r=await (await fetch('/api/score?game='+g+'&day='+KST)).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
+document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>show(b.dataset.g));show(cur);
+"""
+
+
 def page(cfg, *, path, title, desc, body, script="", noindex=False):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
@@ -132,7 +193,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False):
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><style>{CSS}</style>{head}</head><body>
-<header><div class="wrap"><a class="logo" href="/">밸<span>놀</span></a><nav><a href="/archive">지난 질문</a><a href="/games">게임</a></nav></div></header>
+<header><div class="wrap"><a class="logo" href="/">노리터<span> 오락실</span></a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{script}</script></body></html>"""
@@ -167,11 +228,13 @@ def build(out: Path, upto: date | None = None) -> dict:
             pages.append(path)
 
     cards = "".join(qcard(q, f"오늘의 질문 {i + 1}") for i, q in enumerate(todays))
-    games = """<div class="grid"><a href="/games/chosung"><b>오늘의 초성 퀴즈</b><small>하루 5문제, 맞힌 개수 공유</small></a>
-<a href="/games/majority"><b>다수결 맞히기</b><small>사람들이 더 많이 고른 쪽은?</small></a><a href="/games/reaction"><b>반응속도 측정</b><small>나는 몇 ms?</small></a></div>"""
-    write("", f"{cfg['siteName']} | 오늘의 밸런스게임", cfg["description"],
-          f"<h1>오늘의 밸런스게임</h1><p class=\"lead\">{d.month}월 {d.day}일 · 하나만 고르세요. 고르면 다른 사람들의 선택이 보여요.</p>{cards}<h2>놀거리</h2>{games}"
-          f"<h2>어제까지의 질문</h2><p><a href=\"/archive\">지난 질문 전체 보기 →</a></p>", VOTE_JS)
+    games = load_games()
+    grid = game_grid(games)
+    write("", f"{cfg['siteName']} 오락실 | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
+          f"<div class=\"hero\"><h1>노리터 오락실</h1><p>{esc(cfg['tagline'])}</p></div>"
+          f"<h2>🕹️ 오늘의 기계</h2>{grid}"
+          f"<h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2>{cards}"
+          f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS)
 
     for q in qs:
         title = f"{q['a']} vs {q['b']} | 밸런스게임"
@@ -179,26 +242,33 @@ def build(out: Path, upto: date | None = None) -> dict:
         others = "".join(f'<li><a href="/q/{x["id"]}">{esc(x["a"])} vs {esc(x["b"])}</a></li>' for x in qs if x["id"] != q["id"])
         others = "<ul class=\"list\">" + "".join(others.split("</li>")[:6]) + "</ul>" if others else ""
         write(f"q/{q['id']}", title, desc,
-              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}<h2>다른 질문</h2>{others}", VOTE_JS)
+              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}<h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS)
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
-    write("archive", f"지난 밸런스게임 질문 모음 | {cfg['siteName']}", "지금까지 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
-          f"<h1>지난 질문</h1><p class=\"lead\">지금 투표해도 결과에 반영돼요. 총 {len(qs)}개.</p><ul class=\"list\">{rows}</ul>")
+    write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "노리터 오락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
+          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p><ul class=\"list\">{rows}</ul>")
 
-    write("games", f"미니게임 | {cfg['siteName']}", "오늘의 초성 퀴즈, 다수결 맞히기, 반응속도 측정. 가입 없이 바로 하는 무료 미니게임.",
-          f"<h1>미니게임</h1><p class=\"lead\">가입 없이 바로. 결과는 친구에게 공유해 보세요.</p>{games}")
+    write("games", f"무료 미니게임 | {cfg['siteName']} 오락실", "노리터 오락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
+          f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{grid}")
 
-    words = json.loads((HERE / "data" / "chosung_words.json").read_text(encoding="utf-8"))
-    write("games/chosung", f"오늘의 초성 퀴즈 - 하루 5문제 | {cfg['siteName']}",
-          "매일 바뀌는 초성 퀴즈 5문제. 음식, 동물, 직업, 장소 등 주제 힌트를 보고 초성만으로 단어를 맞혀 보세요. 맞힌 개수를 이모지로 공유할 수 있어요.",
-          CHOSUNG_BODY, "const WORDS=" + json.dumps(words, ensure_ascii=False) + ";" + CHOSUNG_JS)
-    write("games/reaction", f"반응속도 측정 - 나는 몇 ms? | {cfg['siteName']}",
-          "화면이 초록색으로 바뀌는 순간 누르세요. 5번 평균 반응속도(ms)를 재고 친구와 비교해 보세요. 평균적인 사람의 시각 반응속도는 200~300ms 정도입니다.",
-          REACTION_BODY, REACTION_JS)
-    pool = [q for q in qs if q["date"] < latest][:30]
-    write("games/majority", f"다수결 맞히기 - 사람들은 뭘 골랐을까? | {cfg['siteName']}",
-          "지난 밸런스게임에서 더 많은 사람이 고른 쪽을 맞혀 보세요. 실제 투표 결과로 채점합니다. 10문제 중 몇 개나 맞힐 수 있을까요?",
-          MAJORITY_BODY, "const POOL=" + json.dumps([{"id": q["id"], "a": q["a"], "b": q["b"]} for q in pool], ensure_ascii=False) + ";" + MAJORITY_JS)
+    inject = {
+        "WORDS": json.loads((HERE / "data" / "chosung_words.json").read_text(encoding="utf-8")),
+        "POOL": [{"id": q["id"], "a": q["a"], "b": q["b"]} for q in qs if q["date"] < latest][:30],
+    }
+    for g in games:
+        pre = "".join(f"const {k}={json.dumps(inject[k], ensure_ascii=False)};" for k in g.get("inject", []))
+        body = g["body"]
+        script = pre + COMMON_JS + g["js"]
+        if g.get("ranked"):
+            body = body.replace("<!--RANK-->", RANK_HTML)
+            script += RANK_JS
+        write(f"games/{g['slug']}", f"{g['title']} | {cfg['siteName']} 오락실", g["description"], body, script)
+
+    ranked = [g for g in games if g.get("ranked")]
+    tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
+    write("rank", f"오늘의 도전 순위 | {cfg['siteName']} 오락실", "노리터 오락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
+          f"<h1>🏆 오늘의 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 순위가 초기화돼요. 이름은 자동으로 붙는 별명이라 개인 정보가 없습니다.</p><div class=\"re\">{tabs}</div><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
+          COMMON_JS + RANK_PAGE_JS)
 
     email = cfg["contactEmail"]
     write("about", f"소개 | {cfg['siteName']}", f"{cfg['siteName']} 소개",
@@ -223,63 +293,6 @@ def build(out: Path, upto: date | None = None) -> dict:
     if pub := cfg.get("adsensePublisherId", "").strip():
         (out / "ads.txt").write_text(f"google.com, {pub}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     return {"questions": len(qs), "today": latest, "pages": len(pages)}
-
-
-CHOSUNG_BODY = """<h1>오늘의 초성 퀴즈</h1><p class="lead" id="day"></p>
-<div class="card"><div class="muted" id="prog"></div><div class="muted" id="hint"></div><div class="cho" id="cho"></div>
-<input class="ans" id="ans" placeholder="정답 입력 후 Enter" autocomplete="off"><div style="display:flex;gap:8px;margin-top:10px"><button class="big" id="ok" type="button">확인</button><button class="share" id="skip" type="button">모르겠어요</button></div>
-<p id="msg"></p></div><div class="card" id="end" hidden><h2 style="margin-top:0">오늘의 결과</h2><p id="res" style="font-size:28px"></p><button class="big" id="sh" type="button">결과 공유</button><p class="muted">내일 0시(한국 시간)에 새 문제가 나와요.</p></div>
-<h2>규칙</h2><ul class="list"><li>하루 5문제가 나오고, 모든 사람에게 같은 문제가 나옵니다.</li><li>주제 힌트와 초성(첫 자음)을 보고 단어를 맞힙니다. 띄어쓰기는 무시합니다.</li><li>문제마다 기회는 한 번입니다. 모르면 넘어가도 돼요.</li><li>결과는 🟩(정답) 🟥(오답) 이모지로 공유됩니다. 정답은 공유되지 않아요.</li></ul>
-<h2>초성 퀴즈 잘 푸는 법</h2><p>먼저 주제 힌트에서 떠오르는 단어를 글자 수에 맞춰 떠올려 보세요. 초성이 'ㄱㅊ'처럼 짧으면 받침 없는 두 글자 단어부터, 'ㄴㅇㄱㅇ'처럼 길면 장소·복합어를 먼저 생각하면 빨라집니다. 쌍자음(ㄲ, ㄸ)이 보이면 후보가 크게 줄어듭니다.</p>"""
-
-CHOSUNG_JS = """
-const CH='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';const cho=w=>[...w].map(c=>{const k=c.charCodeAt(0)-44032;return k>=0&&k<11172?CH[Math.floor(k/588)]:c}).join('');
-const now=new Date(Date.now()+9*3600e3);const key=now.toISOString().slice(0,10);let seed=+key.replace(/-/g,'');
-const rnd=()=>{seed=(seed*1103515245+12345)%2147483648;return seed/2147483648};
-const cats=Object.keys(WORDS);const set=[];const used=new Set();while(set.length<5){const c=cats[Math.floor(rnd()*cats.length)];const w=WORDS[c][Math.floor(rnd()*WORDS[c].length)];if(!used.has(w)){used.add(w);set.push([c,w])}}
-const $=id=>document.getElementById(id);$('day').textContent=key.slice(5).replace('-','월 ')+'일 문제 · 모두 같은 문제를 풀어요';
-let i=0,res=[];const SK='bn_cho_'+key;try{const s=JSON.parse(localStorage.getItem(SK)||'null');if(s){res=s;i=5}}catch(e){}
-function show(){if(i>=5){finish();return}$('prog').textContent=(i+1)+' / 5';$('hint').textContent='주제: '+set[i][0];$('cho').textContent=cho(set[i][1]);$('ans').value='';$('ans').focus()}
-function answer(skip){const v=$('ans').value.replace(/\\s/g,'');const ok=!skip&&v===set[i][1];res.push(ok?1:0);$('msg').textContent=(ok?'정답! ':'아쉬워요. ')+'정답은 '+set[i][1];i++;try{if(i>=5)localStorage.setItem(SK,JSON.stringify(res))}catch(e){};show()}
-function finish(){$('end').hidden=false;document.querySelector('.card').hidden=true;$('res').textContent=res.map(x=>x?'🟩':'🟥').join('')+' '+res.reduce((a,b)=>a+b,0)+'/5'}
-$('ok').onclick=()=>answer(false);$('skip').onclick=()=>answer(true);$('ans').onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing)answer(false)};
-$('sh').onclick=()=>{const t='밸놀 초성 퀴즈 '+key.slice(5)+'\\n'+$('res').textContent+'\\n'+location.href;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(t);$('sh').textContent='복사됨'}};show();
-"""
-
-REACTION_BODY = """<h1>반응속도 측정</h1><p class="lead">빨간 화면이 초록색으로 바뀌는 순간 누르세요. 5번 재서 평균을 냅니다.</p>
-<div class="pad" id="pad">눌러서 시작</div><p id="log" class="muted"></p><button class="big" id="sh" type="button" hidden>결과 공유</button>
-<h2>반응속도란?</h2><p>눈으로 신호를 보고 손가락이 움직이기까지 걸리는 시간입니다. 사람의 평균적인 시각 반응속도는 대략 200~300ms(0.2~0.3초)이고, 화면과 기기에 따라 수십 ms 차이가 날 수 있습니다.</p>
-<h2>규칙</h2><ul class="list"><li>초록색이 되기 전에 누르면 '너무 빨라요'로 그 회차는 다시 합니다.</li><li>5회 평균과 최고 기록을 보여 줍니다.</li><li>기록은 이 기기에만 저장되고 서버로 보내지 않습니다.</li></ul>
-<h2>기록을 올리는 팁</h2><p>화면 가운데를 보고 손가락을 미리 화면 가까이 두세요. 모니터 주사율이 높을수록(120Hz 이상) 기록이 조금 좋게 나옵니다. 피곤하거나 카페인을 먹은 직후에는 기록이 흔들릴 수 있어요.</p>"""
-
-REACTION_JS = """
-const pad=document.getElementById('pad'),log=document.getElementById('log'),sh=document.getElementById('sh');let st='idle',t0=0,tm=0,rs=[];
-const set=(bg,txt)=>{pad.style.background=bg;pad.style.color=bg?'#fff':'';pad.textContent=txt};
-function arm(){st='wait';set('#e5484d','초록색이 되면 누르세요…');tm=setTimeout(()=>{st='go';t0=performance.now();set('#30a46c','지금!')},1200+Math.random()*2500)}
-pad.onpointerdown=()=>{if(st==='idle'||st==='done'){if(st==='done')rs=[];arm();return}
-if(st==='wait'){clearTimeout(tm);st='idle';set('','너무 빨라요! 다시 누르세요');return}
-if(st==='go'){const ms=Math.round(performance.now()-t0);rs.push(ms);log.textContent=rs.map((x,i)=>(i+1)+'회 '+x+'ms').join(' · ');
-if(rs.length>=5){const avg=Math.round(rs.reduce((a,b)=>a+b)/5);st='done';set('','평균 '+avg+'ms · 최고 '+Math.min(...rs)+'ms (다시 하려면 누르기)');sh.hidden=false;sh.dataset.r=avg}else{st='idle';set('',ms+'ms! 눌러서 다음')}}};
-sh.onclick=()=>{const t='밸놀 반응속도 평균 '+sh.dataset.r+'ms, 너는 몇 ms?\\n'+location.href;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(t);sh.textContent='복사됨'}};
-"""
-
-MAJORITY_BODY = """<h1>다수결 맞히기</h1><p class="lead">지난 밸런스게임에서 사람들이 더 많이 고른 쪽을 맞혀 보세요.</p>
-<div class="card" id="box"><div class="muted" id="prog"></div><div class="vs" style="margin-top:10px"><button class="a" type="button" id="ba"></button><span class="x">VS</span><button class="b" type="button" id="bb"></button></div><p id="msg"></p></div>
-<div class="card" id="end" hidden><h2 style="margin-top:0">결과</h2><p id="res" style="font-size:26px"></p><button class="big" id="sh" type="button">결과 공유</button></div>
-<h2>규칙</h2><ul class="list"><li>투표가 20표 이상 모인 지난 질문 중에서 최대 10문제가 나옵니다.</li><li>내 취향이 아니라 '사람들이 더 많이 고른 쪽'을 고르세요.</li><li>채점은 실제 투표 비율로 합니다. 비율이 50:50이면 둘 다 정답이에요.</li></ul>
-<h2>잘 맞히는 법</h2><p>밸런스게임 결과는 '무난한 쪽'이 이기는 경우가 많습니다. 극단적인 선택지보다는 일상에서 덜 불편한 쪽, 그리고 질문을 보는 사람들의 나이대를 떠올려 보세요.</p>"""
-
-MAJORITY_JS = """
-const $=id=>document.getElementById(id);let qs=[],i=0,score=0;
-async function init(){let c={};try{c=await (await fetch('/api/vote?ids='+POOL.map(q=>q.id).join(','))).json()}catch(e){}
-qs=POOL.filter(q=>c[q.id]&&(c[q.id].a+c[q.id].b)>=20).map(q=>Object.assign({},q,c[q.id])).slice(0,10);
-if(!qs.length){$('prog').textContent='아직 표가 충분히 모인 질문이 없어요. 오늘의 질문에 먼저 투표해 주세요!';$('ba').parentNode.hidden=true;return}show()}
-function show(){if(i>=qs.length){$('box').hidden=true;$('end').hidden=false;$('res').textContent=score+' / '+qs.length+' 정답';return}const q=qs[i];$('prog').textContent=(i+1)+' / '+qs.length;$('ba').textContent=q.a;$('bb').textContent=q.b}
-function pick(o){const q=qs[i],t=q.a+q.b,pa=Math.round(q.a/t*100);const win=q.a===q.b?o:(q.a>q.b?'a':'b');const ok=o===win;if(ok)score++;
-$('msg').textContent=(ok?'정답! ':'땡! ')+'('+pa+'% : '+(100-pa)+'%)';i++;setTimeout(show,900)}
-$('ba').onclick=()=>pick('a');$('bb').onclick=()=>pick('b');
-$('sh').onclick=()=>{const t='밸놀 다수결 맞히기 '+$('res').textContent+'\\n'+location.href;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(t);$('sh').textContent='복사됨'}};init();
-"""
 
 
 if __name__ == "__main__":

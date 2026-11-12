@@ -1,10 +1,11 @@
-# 밸런스게임 놀이터 (두 번째 사이트)
+# 노리터 오락실 (두 번째 사이트, noriteo.com 예정)
 
 계획: /mnt/project-files/plan/PLAYGROUND.md (docs 사본 없음, 이 파일이 저장소 기준 안내).
 
 ## 구조
-- `build.py` → `dist/` 정적 페이지. 질문은 `data/questions.json`(date가 오늘(KST) 이하인 것만 공개).
-- `functions/api/vote.js` Cloudflare Pages Functions: 투표·이모지 반응 집계(D1 바인딩 `DB`, 비밀값 `VOTE_SALT`).
+- `build.py` → `dist/` 정적 페이지. 게임은 `games/<slug>/` (meta.json, body.html 규칙·설명 300자 이상, game.js). `ranked: true` 면 매일 같은 판 + 순위.
+- `build.py` 질문은 `data/questions.json`(date가 오늘(KST) 이하인 것만 공개).
+- `functions/api/vote.js` 투표·이모지 반응 집계, `functions/api/score.js` 오늘의 도전 순위(자동 별명만)(D1 바인딩 `DB`, 비밀값 `VOTE_SALT`).
 - `schema.sql` D1 테이블. 원본 IP 저장 안 함(해시 2일 보관).
 
 ## Cloudflare Pages 설정 (don3chon과 별도 프로젝트)

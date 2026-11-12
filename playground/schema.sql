@@ -3,3 +3,6 @@ CREATE TABLE IF NOT EXISTS counts (qid TEXT NOT NULL, opt TEXT NOT NULL, n INTEG
 -- 중복 방지: 원본 IP는 저장하지 않고, (IP+질문+날짜+비밀값) 해시만 하루 동안 둔다.
 CREATE TABLE IF NOT EXISTS seen (h TEXT PRIMARY KEY, day TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS seen_day ON seen(day);
+-- 오늘의 도전 순위: 별명(자동 생성)과 최고 점수만. 하루 지나면 순위 초기화(지난 기록은 7일 뒤 삭제).
+CREATE TABLE IF NOT EXISTS scores (day TEXT NOT NULL, game TEXT NOT NULL, h TEXT NOT NULL, nick TEXT NOT NULL, score INTEGER NOT NULL, PRIMARY KEY (day, game, h));
+CREATE INDEX IF NOT EXISTS scores_top ON scores(day, game, score DESC);

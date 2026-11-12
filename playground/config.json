@@ -1,8 +1,8 @@
 {
-  "siteName": "밸놀",
-  "baseUrl": "https://balnori.com",
-  "tagline": "오늘의 밸런스게임, 초성 퀴즈, 반응속도. 가입 없이 누르기만 하세요.",
-  "description": "매일 새로 올라오는 밸런스게임 투표와 결과, 오늘의 초성 퀴즈, 반응속도 측정까지. 가입 없이 익명으로 참여하는 놀이터.",
+  "siteName": "노리터",
+  "baseUrl": "https://noriteo.com",
+  "tagline": "오늘의 틀린그림찾기, 밸런스게임, 미니게임. 가입 없이 바로 놀고, 매일 모두 같은 판으로 순위를 겨뤄요.",
+  "description": "노리터 오락실: 매일 새로 나오는 틀린그림찾기, 밸런스게임 투표, 초성 퀴즈, 별똥별 피하기 등 무료 미니게임. 가입 없이 익명으로 참여하고 오늘의 도전 순위를 겨뤄 보세요.",
   "contactEmail": "don3chon.official@gmail.com",
   "privacyDate": "2026-11-12",
   "questionsPerDay": 3,
