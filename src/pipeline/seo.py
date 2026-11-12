@@ -161,3 +161,39 @@ if __name__ == "__main__":
         print(f"썸네일 {write_all('--all' in sys.argv)}개 만듦")
     else:
         print(__doc__)
+
+
+# ---------- 깔끔한 주소 (2026-11-12) ----------
+# Cloudflare Pages 는 /글.html 을 /글 로 308 리디렉션한다. 그래서 canonical·사이트맵·링크가 .html 이면
+# 구글이 "리디렉션이 포함된 페이지", "적절한 표준 태그가 포함된 대체 페이지"로 색인에서 뺀다.
+# 빌드가 끝난 뒤 모든 주소를 리디렉션 없는 최종 주소(.html 없음, index.html → 폴더)로 바꾼다.
+
+def _clean_abs(base: str, s: str) -> str:
+    import re
+    return re.sub(re.escape(base) + r"/((?:[\w-]+/)*)([\w-]+)\.html",
+                  lambda m: f"{base}/{m.group(1)}" + ("" if m.group(2) == "index" else m.group(2)), s)
+
+
+def _clean_rel(s: str) -> str:
+    import re
+
+    def rep(m):
+        up, dirs, name = m.group(1), m.group(2), m.group(3)
+        if name == "index":
+            return f'href="{up}{dirs}' + ("" if (up or dirs) else "./")
+        return f'href="{up}{dirs}{name}'
+    return re.sub(r'href="((?:\.\./)*)((?:[\w-]+/)*)([\w-]+)\.html', rep, s)
+
+
+def clean_urls(out: pathlib.Path, base: str) -> int:
+    n = 0
+    for f in list(out.rglob("*.html")) + list(out.rglob("*.xml")):
+        if f.name.startswith("naver") and f.parent == out:
+            continue  # 네이버 소유확인 파일은 그대로
+        s = f.read_text(encoding="utf-8")
+        t = _clean_abs(base, s)
+        if f.suffix == ".html":
+            t = _clean_rel(t)
+        if t != s:
+            f.write_text(t, encoding="utf-8"); n += 1
+    return n

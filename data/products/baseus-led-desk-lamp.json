@@ -15,7 +15,7 @@
  "note": "밝기가 자동으로 조절되는 접이식 책상 램프로 25,850원입니다. LED 책상 램프는 보통 10W 안팎이라 하루 5시간 켜도 한 달 전기요금이 몇백 원 수준이에요. 긍정 평가 98%입니다.",
  "check": "전원 방식(USB 전원·충전식), 색온도 조절 범위",
  "commission": 7.0,
- "status": "active",
+ "status": "ended",
  "gallery": [
   "https://ae-pic-a1.aliexpress-media.com/kf/S27d5086d8cb84ff1855da6ce2951613e6.jpg",
   "https://ae-pic-a1.aliexpress-media.com/kf/H7d718c7aa2794f04984b9f0065a69d05F.jpg",
@@ -24,7 +24,8 @@
   "https://ae-pic-a1.aliexpress-media.com/kf/H6a0862fb65804751b70a1b1ef2bd9245y.jpg",
   "https://ae-pic-a1.aliexpress-media.com/kf/S15a94aff9ad5430182a3c30aa6942181m.jpg"
  ],
- "missingDays": 2,
+ "missingDays": 3,
  "coupangName": "홈플래닛 LED 학습용 스탠드",
- "coupangPriceDate": "2026-11-11"
+ "coupangPriceDate": "2026-11-11",
+ "endedDate": "2026-11-12"
 }
