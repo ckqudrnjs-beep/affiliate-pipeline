@@ -2,7 +2,8 @@
 
 보낼 것 (하루 최대 MAX_POSTS 개, 같은 상품은 COOLDOWN_DAYS 동안 다시 안 보냄):
 - 가격 하락: 오늘 가격이 직전 기록보다 DROP_PCT% 이상 싸고, 최근 30일 기록 중 최저가인 상품
-- 새 상품: 오늘 추가된(addedDate == 오늘) 상품
+- 새 상품: 최근 NEW_DAYS 일 안에 추가된 상품 (화·금 10:2x 자동 추가분을 다음 날 06:30 실행에서 보냄)
+- 채널 첫 실전 실행 때 소개 글 1회 (연결 확인 겸)
 
 모든 글 맨 앞에 [광고], 맨 끝에 알리 대가성 문구. 링크는 공식 제휴 링크(aliUrl)와 사이트 가격 기록 페이지뿐.
 TELEGRAM_ENABLED 가 'true' 가 아니거나 토큰이 없으면 보낼 글만 출력한다(드라이런).
@@ -25,6 +26,13 @@ COOLDOWN_DAYS = 7
 MAX_POSTS = 3
 SITE = "https://don3chon.com"
 STATE = "telegram_sent.json"
+NEW_DAYS = 3
+INTRO_KEY = "_intro"
+INTRO = (
+    "돈 줍는 삼촌 가격 알림을 시작합니다.\n\n"
+    "삼촌 사이트(https://don3chon.com)에 소개한 알리 상품 가격이 30일 최저로 내려가거나 새 물건이 들어오면 하루 최대 3개만 알려드려요.\n\n"
+    "이 채널의 상품 글에는 알리익스프레스 어필리에이트 링크가 들어가며, 구매 시 수수료를 받을 수 있어요."
+)
 
 
 def load_history(root: pathlib.Path) -> dict[str, list[tuple[str, int]]]:
@@ -72,7 +80,7 @@ def message(p: dict, kind: str, info: tuple[int, int, int] | None = None) -> str
     else:
         lines.append(f"🆕 새로 담은 상품: {p['name']}")
         if p.get("aliPrice"):
-            lines.append(f"오늘 가격 {won(int(p['aliPrice']))}")
+            lines.append(f"소개 가격 {won(int(p['aliPrice']))}")
     if p.get("note"):
         lines.append(first_sentence(p["note"]))
     if p.get("check"):
@@ -101,7 +109,7 @@ def pick(root: pathlib.Path, today: dt.date) -> list[tuple[str, str]]:
         info = drop_info(hist.get(slug, []), today)
         if info:
             drops.append((info[2], slug, message(p, "drop", info)))
-        elif p.get("addedDate") == today.isoformat():
+        elif (today - dt.timedelta(days=NEW_DAYS)).isoformat() < p.get("addedDate", "") <= today.isoformat():
             news.append((slug, message(p, "new")))
     drops.sort(reverse=True)
     out = [(s, m) for _, s, m in drops] + news
@@ -132,10 +140,15 @@ def main() -> int:
     posts = pick(root, today)
     token, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
     live = os.environ.get("TELEGRAM_ENABLED") == "true" and token and chat
+    state = load_state(root)
+    if live and INTRO_KEY not in state:
+        send(token, chat, INTRO)
+        state[INTRO_KEY] = today.isoformat()
+        save_state(root, state)
+        print("소개 글 보냄")
     if not posts:
         print("보낼 글 없음")
         return 0
-    state = load_state(root)
     for slug, text in posts:
         if live:
             send(token, chat, text)
