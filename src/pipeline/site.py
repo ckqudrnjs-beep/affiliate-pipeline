@@ -17,6 +17,7 @@ import sys
 from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
+from . import report as R
 from . import articles as A
 from . import prices as PR
 from . import questions as Q
@@ -317,10 +318,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}faq.html">질문</a></nav></div></header>
+<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}{adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
@@ -696,6 +697,15 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + more, root="../",
             path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
             crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
+    reps = R.load_all()
+    (o / "report").mkdir(exist_ok=True)
+    (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "기름값·장바구니 물가·환율을 공공 데이터로 매주 월요일 정리합니다.",
+        R.list_body(reps), path="report.html"), encoding="utf-8")
+    for r in reps:
+        (o / "report" / f"{r['date']}.html").write_text(page(f"{R.title(r)} | {BRAND}", " ".join(r["lines"])[:150], R.body(r), root="../",
+            path=f"report/{r['date']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": R.title(r),
+            "datePublished": r["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
+            crumbs=[("물가 리포트", "report.html"), (R.title(r), f"report/{r['date']}.html")]), encoding="utf-8")
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
@@ -715,6 +725,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES)]
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
                + [(f"news/{n['id']}.html", n["date"]) for n in news]
+               + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
                + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
                + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
