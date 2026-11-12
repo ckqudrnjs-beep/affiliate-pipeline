@@ -63,3 +63,4 @@ BK: "영상은 손이 많이 가고 비효율적, 문제없다면 알리·쿠팡
 - BreadcrumbList JSON-LD: 글·소식·계산기·질문 페이지.
 - 주제 묶음 `seo.CLUSTER_KEYS` (가습기·난방·대기전력·직구·전기요금): 글 끝에 관련 계산기 + 같은 묶음 글/질문, 계산기 페이지에 관련 질문·글.
 - 계산기 질문 페이지 `q/<slug>.html` ← `data/calc_questions.json`. 숫자는 빌드 때 bill()로 계산, 페이지마다 설명·팁·FAQ를 따로 쓴다(검사: questions.validate, 고유 글 250자 이상). 홈 계산기 칸 아래 "많이 묻는 계산"에 목록.
+- 깔끔한 주소 (2026-11-12): Cloudflare Pages 가 `/x.html` → `/x` 로 308 리디렉션하므로, 빌드 마지막에 `seo.clean_urls` 가 canonical·og:url·JSON-LD·사이트맵·RSS·내부 링크를 `.html` 없는 최종 주소로 바꾼다(`index.html` → 폴더). GSC "리디렉션 포함 페이지/대체 페이지" 대응. 상품 페이지 noindex 는 의도된 것.
