@@ -5,11 +5,16 @@ name: raksil-shorts
 # 저장소 변수 RAKSIL_YT_ENABLED=true 전에는 만들기만 하고 영상은 Actions 아티팩트로만 남긴다.
 on:
   schedule:
-    - cron: "0 9 * * *"   # 18:00 KST (저녁 시청 시간 전에 공개)
+    - cron: "23 7 * * *"   # 16:23 KST 만들기 → 17:00 KST 공개 예약 (BK 11/13: 매일 오후 5시)
+    - cron: "47 7 * * *"   # 16:47 KST 예비 (이미 올렸으면 건너뜀, 17시 지나면 바로 공개)
   workflow_dispatch:
     inputs:
       date:
         description: "날짜 YYYY-MM-DD (비우면 오늘)"
+        required: false
+        default: ""
+      qid:
+        description: "추가 1편: 질문 id (예 20261113-2). 넣으면 그 질문으로 바로 공개, 매일 분과 따로 기록"
         required: false
         default: ""
 
@@ -47,6 +52,7 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          RAKSIL_QID: ${{ inputs.qid }}
         run: |
           export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
           PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
