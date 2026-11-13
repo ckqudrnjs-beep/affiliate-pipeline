@@ -91,5 +91,6 @@ export async function onRequestPost({ request, env }) {
   if ((+b.rev || 0) < row.rev) return json({ error: "old", nick: row.nick, data: JSON.parse(row.data), rev: row.rev }, 409); // 다른 기기가 먼저 저장함 → 최신 걸 돌려줌
   const rev = row.rev + 1;
   await env.DB.prepare("UPDATE profiles SET nick = ?, data = ?, rev = ?, updated = ? WHERE h = ?").bind(b.nick, JSON.stringify(data), rev, today, h).run();
+  if (b.nick !== row.nick) { try { await env.DB.prepare("UPDATE testers SET nick = ? WHERE h = ?").bind(b.nick, h).run(); } catch { /* testers 표 없음 = 테스터 없음 */ } }
   return json({ rev });
 }

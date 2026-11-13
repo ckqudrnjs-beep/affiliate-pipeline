@@ -20,7 +20,10 @@ export async function onRequestGet({ request, env }) {
   const u = new URL(request.url);
   const game = u.searchParams.get("game"), day = u.searchParams.get("day") || kst();
   if (!(game in MAX) || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return json([]);
-  const { results } = await env.DB.prepare("SELECT nick, score FROM scores WHERE day = ? AND game = ? ORDER BY score DESC LIMIT 10").bind(day, game).all();
+  // 관리자가 지정한 테스터는 순위에 "테스터" 표시(t=1). '순위 제외'를 켠 테스터만 빠진다(BK 2026-11-13)
+  let results;
+  try { ({ results } = await env.DB.prepare("SELECT s.nick, s.score, CASE WHEN t.h IS NULL THEN 0 ELSE 1 END AS t FROM scores s LEFT JOIN testers t ON t.nick = s.nick WHERE s.day = ? AND s.game = ? AND COALESCE(t.hide, 0) = 0 ORDER BY s.score DESC LIMIT 10").bind(day, game).all()); }
+  catch { ({ results } = await env.DB.prepare("SELECT nick, score FROM scores WHERE day = ? AND game = ? ORDER BY score DESC LIMIT 10").bind(day, game).all()); }
   return json(results);
 }
 
