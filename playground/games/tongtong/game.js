@@ -109,7 +109,7 @@ function size(){const r=cab.getBoundingClientRect();W=Math.max(1,r.width);H=Math
  if(W*H*DPR*DPR>2.6e6)DPR=Math.sqrt(2.6e6/(W*H));cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cx.setTransform(DPR,0,0,DPR,0,0);T=Math.min(H/8,W/14);if(state!=='run')draw()}
 const HUES=[188,300,48,140,265,20,330,100];
 const hash=n=>{n=Math.imul(n^0x9e3779b9,0x85ebca6b);n^=n>>>13;n=Math.imul(n,0xc2b2ae35);return((n^n>>>16)>>>0)/4294967296};
-let state='title',P={i:0,y:0,vy:0,g:true},held=false,buf=0,acc=0,camY=0,squash=0,trail=[],parts=[],deadT=0,readyT=0,pauseUsed=false,attempts=0,best=0,shownBest=0,lastSub=0,subBest=0,flash=0,beatPulse=0;
+let state='title',P={i:0,y:0,vy:0,g:true},held=false,buf=0,acc=0,camY=0,squash=0,trail=[],parts=[],deadT=0,readyT=0,pauseUsed=false,lastDist=0,newBest=false,attempts=0,best=0,shownBest=0,lastSub=0,subBest=0,flash=0,beatPulse=0;
 try{best=+localStorage.getItem('tt_best_'+KST)||0}catch(e){}subBest=best;shownBest=best;
 function px(){return P.i*DX}
 function draw(){
@@ -157,7 +157,7 @@ function draw(){
  if(best>8&&sx(best)>-T&&sx(best)<W+T){const X=sx(best),Y=sy(0);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.moveTo(X,Y);cx.lineTo(X,Y-T*2.6);cx.stroke();cx.fillStyle='#fff';cx.beginPath();cx.moveTo(X,Y-T*2.6);cx.lineTo(X+T*0.8,Y-T*2.35);cx.lineTo(X,Y-T*2.1);cx.fill();
   cx.font=`700 ${Math.round(T*0.28)}px sans-serif`;cx.textAlign='left';cx.fillText('BEST',X+4,Y-T*2.7)}
  // 꼬리 + 통통이
- if(state!=='dead'){for(let k=0;k<trail.length;k++){const p=trail[k],a=(k+1)/trail.length;cx.fillStyle=`hsla(${hue2},100%,70%,${a*0.35})`;cx.beginPath();cx.arc(sx(p[0]),sy(p[1]+R),R*T*(0.3+a*0.5),0,7);cx.fill()}
+ if(state!=='dead'&&state!=='over'){for(let k=0;k<trail.length;k++){const p=trail[k],a=(k+1)/trail.length;cx.fillStyle=`hsla(${hue2},100%,70%,${a*0.35})`;cx.beginPath();cx.arc(sx(p[0]),sy(p[1]+R),R*T*(0.3+a*0.5),0,7);cx.fill()}
   const X=sx(x),Y=sy(P.y+R),sq=squash>0?squash:0,st=P.g?0:Math.min(0.18,Math.abs(P.vy)/120);
   cx.save();cx.translate(X,Y+R*T*sq*0.25);cx.scale(1+sq*0.25-st*0.5,1-sq*0.25+st);
   cx.fillStyle=SKC[1]+'40';cx.beginPath();cx.arc(0,0,R*T*1.35,0,7);cx.fill();
@@ -182,7 +182,7 @@ function draw(){
  for(const p of parts){cx.fillStyle=p.c;cx.globalAlpha=Math.max(0,p.l);cx.fillRect(sx(p.x)-p.s/2,sy(p.y)-p.s/2,p.s,p.s)}cx.globalAlpha=1;
  if(flash>0){cx.fillStyle=`rgba(255,255,255,${flash*0.5})`;cx.fillRect(0,0,W,H)}
  // HUD
- if(state!=='title'){const fs=Math.round(Math.max(14,Math.min(30,H*0.06)));cx.textAlign='center';cx.font=`800 ${fs}px sans-serif`;cx.fillStyle='#fff';cx.shadowColor='#000';cx.shadowBlur=6;
+ if(state!=='title'&&state!=='over'){const fs=Math.round(Math.max(14,Math.min(30,H*0.06)));cx.textAlign='center';cx.font=`800 ${fs}px sans-serif`;cx.fillStyle='#fff';cx.shadowColor='#000';cx.shadowBlur=6;
   cx.fillText(Math.floor(Math.max(0,x))+'m',W/2,fs+12);cx.font=`600 ${Math.round(fs*0.55)}px sans-serif`;cx.fillStyle='#cfefff';
   cx.fillText(`시도 ${attempts} · 오늘 최고 ${shownBest}m · ${bpmAt(x)} BPM`,W/2,fs*1.75+12);
   const pr=(x%SEC)/SEC,bw=Math.min(W*0.5,360);cx.fillStyle='#ffffff22';cx.fillRect(W/2-bw/2,fs*2.2+12,bw,4);cx.fillStyle=`hsl(${hue2},100%,65%)`;cx.fillRect(W/2-bw/2,fs*2.2+12,bw*pr,4);cx.shadowBlur=0;
@@ -190,11 +190,15 @@ function draw(){
   if(state==='ready'){cx.font=`900 ${fs*1.6}px sans-serif`;cx.fillStyle='#ffd23f';cx.fillText('READY',W/2,H*0.45)}
   if(x>2&&x<SEC*0.12&&attempts<=2&&state==='run'){cx.font=`700 ${Math.round(fs*0.7)}px sans-serif`;cx.fillStyle='#fff';cx.fillText(COARSE?'화면을 누르면 점프!':'스페이스바·클릭으로 점프!',W/2,H*0.42)}
   if(x>=SEC&&x%SEC<10&&state==='run'){cx.font=`900 ${Math.round(fs*1.1)}px sans-serif`;cx.fillStyle=`hsl(${hue2},100%,70%)`;cx.fillText('SECTION '+(sec+1)+' · SPEED UP',W/2,H*0.4)}}
- else{const fs=Math.round(Math.max(18,Math.min(44,H*0.1)));cx.textAlign='center';cx.font=`900 ${fs}px sans-serif`;cx.fillStyle='#fff';cx.shadowColor='#22d3ee';cx.shadowBlur=18;cx.fillText('통통 네온런',W/2,H*0.26);cx.shadowBlur=0;
+ else if(state==='title'){const fs=Math.round(Math.max(18,Math.min(44,H*0.1)));cx.textAlign='center';cx.font=`900 ${fs}px sans-serif`;cx.fillStyle='#fff';cx.shadowColor='#22d3ee';cx.shadowBlur=18;cx.fillText('통통 네온런',W/2,H*0.26);cx.shadowBlur=0;
   cx.font=`600 ${Math.round(fs*0.4)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(best?`오늘 최고 ${best}m · 오늘의 코스 ${KST.slice(5)}`:`오늘의 코스 ${KST.slice(5)} · 박자에 맞춰 점프!`,W/2,H*0.26+fs*0.8)}
  if(state==='paused'){cx.fillStyle='#07031a';cx.fillRect(0,0,W,H);const fs=Math.round(Math.max(18,Math.min(40,H*0.08)));cx.textAlign='center';cx.fillStyle='#fff';cx.font=`900 ${fs}px sans-serif`;cx.fillText('일시정지',W/2,H*0.3);
   cx.font=`600 ${Math.round(fs*0.5)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(`${Math.floor(Math.max(0,x))}m · 이번 판 남은 일시정지 ${pauseUsed?0:1}번 · 이어 달리면 3초 뒤 출발`,W/2,H*0.3+fs*0.9)}
  if(state==='count'){const n=Math.ceil(readyT),fs=Math.round(Math.max(40,Math.min(120,H*0.25)));cx.fillStyle='rgba(7,3,26,0.45)';cx.fillRect(0,0,W,H);cx.textAlign='center';cx.font=`900 ${fs}px sans-serif`;cx.fillStyle='#ffd23f';cx.fillText(String(n),W/2,H*0.5)}
+ if(state==='over'){cx.fillStyle='rgba(7,3,26,0.78)';cx.fillRect(0,0,W,H);const fs=Math.round(Math.max(36,Math.min(96,H*0.16)));cx.textAlign='center';
+  cx.font=`700 ${Math.round(fs*0.3)}px sans-serif`;cx.fillStyle='#ff3d7f';cx.fillText(newBest?'★ 오늘 최고 기록! ★':'꽈당! 여기까지 달렸어요',W/2,H*0.17);
+  cx.font=`900 ${fs}px sans-serif`;cx.fillStyle=newBest?'#ffd23f':'#fff';cx.shadowColor=newBest?'#ffd23f':'#22d3ee';cx.shadowBlur=18;cx.fillText(lastDist+'m',W/2,H*0.17+fs*1.05);cx.shadowBlur=0;
+  cx.font=`600 ${Math.round(fs*0.24)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(`오늘 최고 ${best}m · 시도 ${attempts}번`,W/2,H*0.17+fs*1.5)}
 }
 // ── 진행
 let SKC=['#e9fdff','#22d3ee','#0e7490'],DES='base';// 출석 보너스 '내 네온 색'·디자인 스킨(겉모습만, 판정 동일)
@@ -210,8 +214,11 @@ function tick(){
 function bot(){if(!P.g)return false;const w=clone(P);let ok=sim(w,false,0),c=0;while(ok&&!w.g&&c++<400)ok=sim(w,false,0);return !(ok&&solve([w],px()+30,0,false).length)}
 function die(){state='dead';deadT=0.75;flash=1;sfx.die();const x=px(),dist=Math.floor(x);if(dist>=500&&!DEBUG&&window.Bonus)Bonus.ach('tt500');
  for(let k=0;k<26;k++){const a=Math.random()*7,v=2+Math.random()*7;parts.push({x,y:P.y+R,vx:Math.cos(a)*v,vy:Math.sin(a)*v+3,l:1,s:3+Math.random()*6,c:k%3?SKC[1]:'#ff3d7f'})}
- if(dist>best){best=dist;try{localStorage.setItem('tt_best_'+KST,best)}catch(e){}}
- if(best>subBest&&performance.now()-lastSub>15000)submit()}
+ lastDist=dist;newBest=dist>best&&dist>0;if(dist>best){best=dist;try{localStorage.setItem('tt_best_'+KST,best)}catch(e){}}
+ held=false;submit()}
+// 죽으면 멈추고 결과 화면: 거리·오늘 최고·다시 시작(가운데)·공유·순위. 버튼을 눌러야 새 판 시작.
+function over(){state='over';$('tt-go').hidden=false;$('tt-go').textContent='↻ 다시 시작';$('tt-ov').style.display='flex';draw()}
+function shareBest(){shareText('5락실 통통 네온런 '+KST.slice(5)+'\n🎵 오늘 코스 '+best+'m 달렸어요. 이겨 볼래?\n'+challengeUrl(best))}
 function submit(){if(DEBUG||best<=subBest||!window.submitScore)return;subBest=best;lastSub=performance.now();submitScore(best)}
 function restart(){reset();attempts++;shownBest=best;pauseUsed=false;padUI();state='run'}
 // 일시정지: 한 번 달릴 때(시도마다) 직접 멈춤 1회. 탭 전환·전화 같은 자동 멈춤은 횟수에 안 셈. 멈춘 동안 코스를 가리고, 이어 달릴 때 3-2-1.
@@ -220,7 +227,7 @@ function padUI(){const b=$('tt-pa');if(!b)return;b.disabled=pauseUsed;b.style.op
 let last=0,raf=0;
 function frame(now){raf=requestAnimationFrame(frame);const rdt=Math.min(0.05,(now-last)/1000||0);last=now;
  if(state==='run'){acc+=rdt*kAt(px());let n=0;while(acc>=STEP&&n++<40){acc-=STEP;tick();if(state!=='run')break}music(px())}
- else if(state==='dead'){deadT-=rdt;if(deadT<=0)restart()}
+ else if(state==='dead'){deadT-=rdt;if(deadT<=0)over()}
  else if(state==='ready'){readyT-=rdt;if(readyT<=0)state='run'}
  else if(state==='count'){readyT-=rdt;if(readyT<=0)state='run'}
  squash=Math.max(0,squash-rdt*6);flash=Math.max(0,flash-rdt*3);
@@ -229,25 +236,27 @@ function frame(now){raf=requestAnimationFrame(frame);const rdt=Math.min(0.05,(no
  draw()}
 // ── 시작·종료·전체 화면
 function full(){if(!COARSE)return;const el=document.documentElement;try{if(el.requestFullscreen&&!document.fullscreenElement)el.requestFullscreen({navigationUI:'hide'}).then(()=>{try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}).catch(()=>{});else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen()}catch(e){}}
-function go(){audio();full();cab.classList.add('on');document.documentElement.style.overflow='hidden';$('tt-go').hidden=true;
+function go(){audio();full();cab.classList.add('on');document.documentElement.style.overflow='hidden';$('tt-go').hidden=true;$('tt-ov').style.display='none';
  if(IOS&&!navigator.standalone){$('tt-ios').style.display='block';setTimeout(()=>$('tt-ios').style.display='none',4500)}
  ensure(200);size();
- if(state==='title'){reset();attempts++;pauseUsed=false;state='ready';readyT=0.7}else if(state==='paused'){state='count';readyT=3}
+ if(state==='title'){reset();attempts++;pauseUsed=false;state='ready';readyT=0.7}else if(state==='paused'){state='count';readyT=3}else if(state==='over'){restart();state='ready';readyT=0.5}
  padUI()
  cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(frame)}
-function exit(){cancelAnimationFrame(raf);submit();state='title';reset();cab.classList.remove('on');document.documentElement.style.overflow='';$('tt-go').hidden=false;$('tt-go').textContent='▶ 다시 달리기';
+function exit(){cancelAnimationFrame(raf);submit();state='title';$('tt-ov').style.display='none';reset();cab.classList.remove('on');document.documentElement.style.overflow='';$('tt-go').hidden=false;$('tt-go').textContent='▶ 다시 달리기';
  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
  $('tt-msg').textContent=best?`오늘 최고 ${best}m (시도 ${attempts}번) `:'';if(best){const b=document.createElement('button');b.className='share';b.type='button';b.textContent='결과 공유';
   b.onclick=()=>shareText('5락실 통통 네온런 '+KST.slice(5)+'\n🎵 오늘 코스 '+best+'m 달렸어요. 이겨 볼래?\n'+challengeUrl(best));$('tt-msg').appendChild(b)}
  setTimeout(()=>{size();const rb=document.getElementById('rankbox');if(rb&&best)rb.scrollIntoView({behavior:'smooth',block:'center'})},60)}
 $('tt-go').onclick=e=>{e.stopPropagation();go()};
 $('tt-x').onclick=e=>{e.stopPropagation();exit()};
+$('tt-sh').onclick=e=>{e.stopPropagation();shareBest()};
+$('tt-rk').onclick=e=>{e.stopPropagation();exit()};
 function muteUI(){$('tt-mu').textContent=muted?'🔇':'🔊'}muteUI();
 $('tt-mu').onclick=e=>{e.stopPropagation();muted=!muted;try{localStorage.setItem('tt_mute',muted?'1':'0')}catch(x){}if(master)master.gain.value=muted?0:0.5;muteUI()};
 const press=()=>{if(state==='run'||state==='ready'){held=true;buf=0.12}};
 cab.addEventListener('pointerdown',e=>{if(e.target.tagName==='BUTTON')return;if(!cab.classList.contains('on'))return;e.preventDefault();press()});
 addEventListener('pointerup',()=>held=false);addEventListener('pointercancel',()=>held=false);
-addEventListener('keydown',e=>{if(!cab.classList.contains('on'))return;if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){e.preventDefault();if(!e.repeat)press();held=true}else if(e.code==='KeyP')pause(false);else if(e.code==='Escape')exit()});
+addEventListener('keydown',e=>{if(!cab.classList.contains('on'))return;if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){e.preventDefault();if(!e.repeat)press();held=true}else if(e.code==='Enter'&&state==='over'){e.preventDefault();go()}else if(e.code==='KeyP')pause(false);else if(e.code==='Escape')exit()});
 addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')held=false});
 cab.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('visibilitychange',()=>{if(document.hidden){pause(true);submit()}});
