@@ -23,6 +23,17 @@ function dot(col, r) {
 /* 출석 보너스 '내 네온 색'(스킨): 요격기 테두리 색만 바뀌는 꾸미기. 점수·능력과 무관 */
 function skinCol() { try { const k = opts && opts.skin && opts.skin(); return (k && k.c && k.c[1]) || C.cy; } catch (e) { return C.cy; } }
 function skinDes() { try { return (opts && opts.design && opts.design()) || 'base'; } catch (e) { return 'base'; } }
+/* 전설 디자인 '오로라 세라프'(🪙50): 날개 3겹 색이 흐르고(색상별로 미리 그린 12장 돌려 보기) 지나간 자리에 무지개 가루. 판정 동일 */
+function auroraFrame(h) {
+  return sprite(50, 46, x => {
+    const wing = (s, hh, a, l) => { x.beginPath(); x.moveTo(0, -4); x.quadraticCurveTo(s * l * .6, -14 + a, s * l, -2 + a); x.quadraticCurveTo(s * l * .7, 6 + a, s * 4, 8); x.closePath(); x.fillStyle = `hsla(${hh % 360},100%,62%,.45)`; x.fill(); glowStroke(x, `hsl(${hh % 360},100%,70%)`, 1, 6); };
+    for (const s of [-1, 1]) { wing(s, h, 6, 22); wing(s, h + 90, 2, 18); wing(s, h + 140, -2, 14); }
+    poly(x, [0, -20, 5, -4, 3, 12, 0, 9, -3, 12, -5, -4]); x.fillStyle = '#10163a'; x.fill(); glowStroke(x, '#ffffff', 1.1, 8);
+    const g = x.createLinearGradient(0, -12, 0, 0); g.addColorStop(0, '#aef7ff'); g.addColorStop(1, '#d58bff'); x.fillStyle = g; poly(x, [0, -14, 2.4, -5, 0, -1, -2.4, -5]); x.fill();
+    x.fillStyle = C.ye; x.beginPath(); x.arc(0, -20.5, 1.3, 0, TAU); x.fill();
+  });
+}
+function setShip(S, c, d) { S.shipCol = c; S.shipDes = d; S.auro = d === 'aurora' ? Array.from({ length: 12 }, (_, i) => auroraFrame(190 + i * 30)) : null; S.ship = S.auro ? S.auro[0] : shipSprite(c, d); }
 function shipSprite(col, des) {
   // 디자인 스킨(겉모습만, 맞는 범위 동일): 드래곤 파이터 / 냥냥 요격기 / 원반 UFO
   if (des === 'dragon') return sprite(36, 38, x => {
@@ -118,7 +129,7 @@ function buildSprites() {
   S.boss2 = [orbit(false), orbit(true)];
   S.orb = sprite(26, 26, x => { x.beginPath(); x.arc(0, 0, 8, 0, TAU); x.fillStyle = '#062616'; x.fill(); glowStroke(x, C.gr, 2, 8); x.fillStyle = C.gr; x.beginPath(); x.arc(0, 0, 3, 0, TAU); x.fill(); });
   S.bossRing = sprite(150, 150, x => { x.setLineDash([10, 8]); x.beginPath(); x.arc(0, 0, 66, 0, TAU); glowStroke(x, C.pu + 'aa', 2, 6); });
-  S.shipCol = skinCol(); S.shipDes = skinDes(); S.ship = shipSprite(S.shipCol, S.shipDes);
+  setShip(S, skinCol(), skinDes());
   S.pod = sprite(18, 18, x => { poly(x, [0, -7, 6, 4, 0, 2, -6, 4]); x.fillStyle = '#1a0630'; x.fill(); glowStroke(x, C.pu, 1.6, 8); x.fillStyle = '#fff'; x.fillRect(-1, -2, 2, 2); });
   S.pb = sprite(10, 22, x => { x.shadowColor = C.cy; x.shadowBlur = 8; x.fillStyle = C.cy; x.fillRect(-2, -8, 4, 16); x.shadowBlur = 0; x.fillStyle = '#fff'; x.fillRect(-1, -7, 2, 14); });
   S.lz = sprite(10, 34, x => { x.shadowColor = C.pk; x.shadowBlur = 8; x.fillStyle = C.pk; x.fillRect(-1.8, -15, 3.6, 30); x.shadowBlur = 0; x.fillStyle = '#fff'; x.fillRect(-.8, -14, 1.6, 28); });
@@ -689,7 +700,13 @@ function draw() {
   }
   if (G.dead <= 0 && G.mode === 'play' && !(G.inv > 0 && !G.nova && (G.t * 12 | 0) % 2)) {
     const fl = .8 + Math.random() * .5; spr(x, SP.flame, G.px - 4, G.py + 15, 0, fl * .8); spr(x, SP.flame, G.px + 4, G.py + 15, 0, fl * .8);
-    spr(x, SP.ship, G.px, G.py);
+    if (SP.auro) {
+      const tr = G.atr || (G.atr = []); tr.unshift([G.px, G.py + 12]); if (tr.length > 22) tr.length = 22;
+      x.globalCompositeOperation = 'lighter';
+      for (let i = 1; i < tr.length; i++) { const f = 1 - i / tr.length; x.globalAlpha = f * .7; x.fillStyle = `hsl(${(G.t * 120 + i * 16) % 360 | 0},100%,62%)`; x.beginPath(); x.arc(tr[i][0] + Math.sin(G.t * 9 + i * .7) * 2.5 * f, tr[i][1] + i * 2.2, 1 + 3.2 * f, 0, TAU); x.fill(); }
+      x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+      spr(x, SP.auro[(G.t * 8 | 0) % 12], G.px, G.py);
+    } else spr(x, SP.ship, G.px, G.py);
     for (let i = 0; i < G.pods; i++) spr(x, SP.pod, G.podPos[i][0], G.podPos[i][1]);
     if (G.shield) { x.strokeStyle = C.cy + 'aa'; x.lineWidth = 2; x.beginPath(); x.arc(G.px, G.py, 21 + Math.sin(G.t * 8), 0, TAU); x.stroke(); }
   }
@@ -807,7 +824,7 @@ function fs() {
 }
 function open() {
   ov.hidden = false; document.documentElement.style.overflow = 'hidden';
-  if (SP) { const c = skinCol(), d = skinDes(); if (c !== SP.shipCol || d !== SP.shipDes) { SP.ship = shipSprite(c, d); SP.shipCol = c; SP.shipDes = d; } }
+  if (SP) { const c = skinCol(), d = skinDes(); if (c !== SP.shipCol || d !== SP.shipDes) setShip(SP, c, d); }
   fs(); layout(); audioInit(); paused = false; panel.hidden = true; newGame();
   last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
 }

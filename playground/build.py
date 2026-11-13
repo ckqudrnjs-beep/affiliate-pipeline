@@ -74,7 +74,7 @@ def load_questions(cfg: dict, upto: date | None = None) -> list[dict]:
 
 
 CSS = """
-.shsheet{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:99}.shsheet>div{background:#fff;color:#111;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:16px;display:grid;gap:8px}.shsheet button{font:inherit;font-weight:700;padding:13px;border-radius:12px;border:0;background:#f1f1f4;color:#111;cursor:pointer}.shsheet button[data-k=k]{background:#fee500}
+.shsheet{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:2147483646}.shsheet>div{background:#fff;color:#111;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:16px;display:grid;gap:8px}.shsheet button{font:inherit;font-weight:700;padding:13px;border-radius:12px;border:0;background:#f1f1f4;color:#111;cursor:pointer}.shsheet button[data-k=k]{background:#fee500}
 .challenge{background:linear-gradient(90deg,#ff5a5f,#ff9f43);color:#fff;border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:15px;line-height:1.5}.challenge b{font-size:17px}
 :root{--bg:#0c0620;--bg2:#160b33;--card:#1a1038;--card2:#22164a;--ink:#f4f0ff;--muted:#a99fc9;--line:#3a2b6e;--a:#ff3d7f;--b:#22d3ee;--y:#ffd23f;--g:#3ddc84;--soft:#2a1d58;--btn:#ffd23f;--btn-ink:#1a0f00;--px:"Press Start 2P",monospace;--hd:"Black Han Sans","Noto Sans KR",sans-serif}
 *{box-sizing:border-box}html{background:var(--bg)}
@@ -330,14 +330,14 @@ function shareLink(title,url,text){if(!(window.Kakao&&Kakao.isInitialized&&Kakao
 const m=url.match(/\\/q\\/(\\d{8}-\\d)/);const og=document.querySelector('meta[property="og:image"]');const img=m?location.origin+'/og/q/'+m[1]+'.png':(og?og.content:location.origin+'/og.png');
 const box=document.createElement('div');box.className='shsheet';box.innerHTML='<div><b>공유하기</b><button type="button" data-k="k">💬 카카오톡</button><button type="button" data-k="o">📤 다른 앱 · 링크 복사 (첫 공유 🪙+2)</button><button type="button" data-k="x">닫기</button></div>';
 box.onclick=e=>{const k=e.target.dataset&&e.target.dataset.k;if(e.target===box||k==='x'){box.remove();return}if(!k)return;box.remove();
-if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};document.body.appendChild(box)}
+if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};['pointerdown','pointerup','touchstart','touchend','mousedown','mouseup'].forEach(t=>box.addEventListener(t,e=>e.stopPropagation()));(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(box)}
 """
 
 
 # 출석체크 보너스(2026-11-13 BK): 모든 게임은 코인 없이 무료로 끝까지 할 수 있고, 출석은 '덤'만 준다.
 # 코인은 출석·게임 업적·결과 공유로만 생긴다(광고 클릭·시청과 무관, 판매·현금 교환 없음). 기록은 이 브라우저 localStorage 에만.
 # 코인 사용: 이어하기(한 판 1번) + 스킨 사기(BK: 화려할수록 비싸게). 스킨은 겉모습만, 점수·판정 영향 없음.
-BONUS_MAX_COINS = 30
+BONUS_MAX_COINS = 60
 SKINS = [  # 모든 게임 공통 '내 네온 색'. p = 코인 가격. c = [밝은 색, 기본 색, 어두운 색]
     {"id": "cy", "name": "네온 청록", "p": 0, "c": ["#e9fdff", "#22d3ee", "#0e7490"]},
     {"id": "pk", "name": "체리 핑크", "p": 2, "c": ["#ffe9f3", "#ff3d9a", "#9d174d"]},
@@ -351,9 +351,11 @@ DESIGNS = [
     {"g": "starlight", "id": "cat", "name": "냥냥 요격기", "icon": "🐱", "p": 6},
     {"g": "starlight", "id": "ufo", "name": "원반 UFO", "icon": "🛸", "p": 8},
     {"g": "starlight", "id": "dragon", "name": "드래곤 파이터", "icon": "🐉", "p": 12},
+    {"g": "starlight", "id": "aurora", "name": "오로라 세라프", "icon": "🌈", "p": 50, "leg": 1},
     {"g": "tongtong", "id": "cat", "name": "냥이 통통", "icon": "🐱", "p": 5},
     {"g": "tongtong", "id": "frog", "name": "개구리 통통", "icon": "🐸", "p": 7},
     {"g": "tongtong", "id": "astro", "name": "우주인 통통", "icon": "🧑‍🚀", "p": 10},
+    {"g": "tongtong", "id": "whale", "name": "별고래", "icon": "🐋", "p": 50, "leg": 1},
 ]
 DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"]}
 # 업적·공유 보너스 코인(각 1번만): sl5 별빛 5단계, tt500 통통 500m, rg4 사격장 4단계, share 결과 공유
@@ -396,15 +398,17 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   pg.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{if(B.setSkin(b.dataset.s))B.toast('색을 바꿨어요! 다음 판부터 적용돼요')});
   pg.querySelector('.designs').innerHTML=Object.keys(DGAMES).map(g=>{const cur=B.design(g),[gn,bn,bi]=DGAMES[g];
    return `<h3>${gn}</h3><div class="skins"><button type="button" data-d="${g}:base" class="${cur==='base'?'sel':''}"><span class="di">${bi}</span><b>${bn}</b><small>${cur==='base'?'사용 중':'고르기'}</small></button>`
-   +DESIGNS.filter(d=>d.g===g).map(d=>{const ok=own('d:'+g+':'+d.id,d.p);return `<button type="button" data-d="${g}:${d.id}" class="${cur===d.id?'sel':''}${ok?'':' lock'}"><span class="di">${d.icon}</span><b>${d.name}</b><small>${tag(ok,cur===d.id,d.p)}</small></button>`}).join('')+'</div>'}).join('');
+   +DESIGNS.filter(d=>d.g===g).map(d=>{const ok=own('d:'+g+':'+d.id,d.p);return `<button type="button" data-d="${g}:${d.id}" class="${cur===d.id?'sel':''}${ok?'':' lock'}${d.leg?' leg':''}"><span class="di">${d.icon}</span><b>${d.leg?'<i>전설</i> ':''}${d.name}</b><small>${tag(ok,cur===d.id,d.p)}</small></button>`}).join('')+'</div>'}).join('');
   pg.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const [g,id]=b.dataset.d.split(':');if(B.setDesign(g,id))B.toast('스킨을 바꿨어요! 다음 판부터 적용돼요')});
   pg.querySelector('.achs').innerHTML=Object.entries(ACH).map(([k,[t,n]])=>`<li>${s.ach[k]?'✅':'⬜'} ${t} <b>🪙 +${n}</b></li>`).join('')}};
 document.addEventListener('DOMContentLoaded',B.render);if(document.readyState!=='loading')B.render();
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pre]');if(!b)return;e.preventDefault();const u=location.origin+(b.dataset.u||location.pathname);shareLink(b.dataset.t,u,b.dataset.t+'\n'+b.dataset.d+'\n'+u)});
 return B})();
 """
 )
 
 BONUS_CSS = """
+.leg{border-color:#ffd23f!important;background:linear-gradient(135deg,#2a1a5a,#123a5a)!important;box-shadow:0 0 12px #ffd23f55}.leg b i{font-style:normal;font-size:.75em;background:#ffd23f;color:#120a2a;border-radius:6px;padding:1px 5px}
 nav a.att{position:relative;color:var(--y);border-color:#ffd23f66}nav a.att b{font-weight:800}nav a.att.new::after{content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--a);box-shadow:0 0 8px var(--a)}
 .bonus-mini{margin:10px 0;padding:10px 12px;border:2px dashed #ffd23f66;border-radius:12px;background:#ffd23f0d;font-size:14px;line-height:1.6}.bonus-mini:empty{display:none}.bonus-mini small{color:var(--muted)}
 .bonus-mini .ck{margin-left:4px;font:inherit;font-weight:800;font-size:13px;padding:5px 12px;border-radius:9px;border:0;background:var(--y);color:#1a0f00;cursor:pointer;box-shadow:0 3px 0 #b8860b}
@@ -497,6 +501,7 @@ PROFILE_BODY = """<h1>👤 내 프로필</h1><p class="lead">가입 없이 별�
 PROFILE_CSS = """
 nav a.me{display:flex;align-items:center;gap:4px;max-width:150px;border-color:#ff3d7f88}nav a.me i{font-style:normal}nav a.me b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}nav a.me.new{color:#fff;background:#ff3d7f33;border-color:var(--a);box-shadow:0 0 10px #ff3d7f66}
 @media (max-width:560px){nav a.me b{display:none}nav a.me.new b{display:inline}nav a.me.new b{font-size:0}nav a.me.new b::after{content:'프로필';font-size:12px}}@media (max-width:420px){nav .hs{display:none}nav{gap:4px}}nav a{white-space:nowrap}@media (max-width:380px){nav a{padding:5px 5px!important;font-size:11.5px!important}.logo{font-size:21px!important}.logo span{font-size:16px!important}header .wrap{gap:6px}nav{gap:3px}}
+.preshare{margin:4px 0 14px}.preshare small{margin-left:4px}
 .mkp{margin:6px 0 0}.mkp .btn{display:inline-block}
 #profpage .pv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}#profpage .pav{font-size:56px;line-height:1.1}#profpage .pv b{font-size:22px}#profpage .pv small{color:var(--muted)}
 #profpage .avs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}#profpage .avs button{font-size:26px;aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:var(--bg2);cursor:pointer;padding:0}
@@ -580,7 +585,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     grid = game_grid(games)
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
-          f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a></div>"
+          f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"
           f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
           f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{grid}"
           "<!--AD-->"
@@ -615,6 +620,11 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     for g in games:
         pre = "".join(f"const {k}={json.dumps(inject[k], ensure_ascii=False)};" for k in g.get("inject", []))
         body = g["body"]
+        # 시작 전 공유(BK 11/13): 하기 전에도 친구에게 보낼 수 있게. 선택 사항, 공유해야 시작되는 것 아님.
+        pshare = (f'<p class="preshare"><button type="button" class="share" data-pre="1" data-t="{esc("5락실 " + g["name"])}" '
+               f'data-d="{esc(g["short"] + " · 가입 없이 무료, 같이 해 볼래?")}">📤 친구에게 이 게임 공유</button> <small class="muted">첫 공유 🪙+2</small></p>')
+        m = re.search(r'<h1>.*?</h1>(\s*<p class="lead">.*?</p>)?', body, re.S)
+        body = body[:m.end()] + pshare + body[m.end():] if m else pshare + body
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
         script = pre + COMMON_JS + g["js"]
         if g.get("ranked"):
