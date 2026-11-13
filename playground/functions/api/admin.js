@@ -4,6 +4,8 @@
 // POST /api/admin {a:"set", h, coins?, own?, des?, skin?} → 코인 설정·스킨 열기·적용 (rev+1 → 그 기기가 다음 접속 때 받아 감)
 // POST /api/admin {a:"tester", h, on}               → 테스터 지정/해제(순위에 "테스터" 표시)
 // POST /api/admin {a:"hide", h, on}                 → 순위 제외 켜기/끄기(BK 요청 때만. 켜면 테스터로도 지정)
+// POST /api/admin {a:"list", page}                 → 별명 목록(최근 사용 순, 50개씩)
+// POST /api/admin {a:"reissue", h}                  → 새 복구 코드 발급(옛 코드 즉시 무효, 새 코드는 응답에 한 번만. 원본은 저장 안 함)
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
 import { clean, normCode } from "./profile.js";
@@ -59,6 +61,12 @@ export async function onRequestPost({ request, env }) {
     else rows = (await env.DB.prepare("SELECT * FROM profiles WHERE nick LIKE ? ESCAPE '\\' ORDER BY updated DESC LIMIT 20").bind("%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%").all()).results;
     return json({ list: await Promise.all((rows || []).map(view)) });
   }
+  if (a === "list") {
+    const pg = Math.max(0, Math.min(1000, Math.floor(+b.page || 0)));
+    const { results } = await env.DB.prepare("SELECT p.h, p.nick, p.data, p.updated, t.h AS th, t.hide FROM profiles p LEFT JOIN testers t ON t.h = p.h ORDER BY p.updated DESC, p.nick LIMIT 51 OFFSET ?").bind(pg * 50).all();
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM profiles").first();
+    return json({ total: n ? n.n : 0, more: (results || []).length > 50, list: (results || []).slice(0, 50).map((r) => { let d = {}; try { d = JSON.parse(r.data); } catch {} return { h: r.h, nick: r.nick, updated: r.updated, coins: d.coins || 0, days: d.days || 0, tester: !!r.th, hide: !!r.hide }; }) });
+  }
   if (a === "log") {
     const { results } = await env.DB.prepare("SELECT t, act, nick, detail FROM admin_log ORDER BY id DESC LIMIT 30").all();
     return json({ list: results || [] });
@@ -77,6 +85,22 @@ export async function onRequestPost({ request, env }) {
     await env.DB.prepare("INSERT INTO testers (h, nick, t, hide) VALUES (?, ?, ?, ?) ON CONFLICT(h) DO UPDATE SET nick = excluded.nick, hide = excluded.hide").bind(h, row.nick, now(), b.on ? 1 : 0).run();
     await log(env, b.on ? "rank_hide" : "rank_show", row.nick);
     return json({ ok: true, item: await view(row) });
+  }
+  if (a === "get") return json({ item: await view(row) });
+  if (a === "reissue") {
+    const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let i = 0; i < 3; i++) {
+      const r = crypto.getRandomValues(new Uint8Array(12)), code = [...r].map((x) => ABC[x & 31]).join(""), nh = await sha(`${code}|${env.VOTE_SALT || ""}`);
+      if (await env.DB.prepare("SELECT 1 FROM profiles WHERE h = ?").bind(nh).first()) continue;
+      await env.DB.batch([
+        env.DB.prepare("UPDATE profiles SET h = ?, rev = rev + 1, updated = ? WHERE h = ?").bind(nh, day, h),
+        env.DB.prepare("UPDATE testers SET h = ? WHERE h = ?").bind(nh, h),
+      ]);
+      await log(env, "reissue", row.nick);
+      const row2 = await env.DB.prepare("SELECT * FROM profiles WHERE h = ?").bind(nh).first();
+      return json({ ok: true, code: code.slice(0, 4) + "-" + code.slice(4, 8) + "-" + code.slice(8), item: await view(row2) });
+    }
+    return json({ error: "retry" }, 500);
   }
   if (a === "set") {
     const d = JSON.parse(row.data), ch = {};
