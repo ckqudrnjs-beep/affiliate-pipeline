@@ -18,6 +18,7 @@ from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
 from . import report as R
+from . import daily as DY
 from . import articles as A
 from . import prices as PR
 from . import questions as Q
@@ -331,10 +332,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}{DY.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
+<nav class="menu"><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}guide.html">글</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}{adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
@@ -458,7 +459,7 @@ a.addEventListener('click',function(e){try{var r=new URL(document.referrer);
 if(r.origin===location.origin&&/\/(index\.html)?$/.test(r.pathname)&&history.length>1){e.preventDefault();history.back();}}catch(x){}});})();"""
 
 
-# 모바일(720px 이하) 홈에서만 섹션을 접는다. 첫 화면엔 "이번 주 삼촌의 선택"만 펼침.
+# 모바일(720px 이하) 홈에서만 섹션을 접는다. 첫 화면엔 "오늘의 생활 시세"(시세+퀴즈)만 펼침.
 # 메뉴의 #picks·#calcs 같은 주소로 들어오면 그 섹션을 펼친다. 상태는 저장하지 않는다.
 FOLD_JS = r"""(function(){
 var mq=window.matchMedia('(max-width:720px)');if(!mq.matches)return;
@@ -467,7 +468,7 @@ var b=document.createElement('span');b.className='foldbtn';b.setAttribute('aria-
 head.setAttribute('role','button');head.setAttribute('tabindex','0');head.setAttribute('aria-expanded',open?'true':'false');
 function t(e){if(e&&e.target.closest('a'))return;var o=el.classList.toggle('open');head.setAttribute('aria-expanded',o?'true':'false');}
 head.addEventListener('click',t);head.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});}
-document.querySelectorAll('main>section').forEach(function(s){var h=s.querySelector(':scope>.sechead');if(h&&!s.hidden)setup(s,h,s.id==='picks');});
+document.querySelectorAll('main>section').forEach(function(s){var h=s.querySelector(':scope>.sechead');if(h&&!s.hidden)setup(s,h,s.id==='today');});
 function openTo(id){var el=id&&document.getElementById(id);if(!el)return;
 for(var n=el;n;n=n.parentElement){if(n.classList&&n.classList.contains('fold')&&!n.classList.contains('open')){n.classList.add('open');var h=n.querySelector(':scope>.sechead,:scope>h3');if(h)h.setAttribute('aria-expanded','true');}}
 el.scrollIntoView();}
@@ -509,7 +510,7 @@ def retired_page(d: dict, products: list[dict]) -> str:
     return page(f"{d['name']} | {BRAND}", f"{d['name']}: {d['why']}.", body, root="../", path=f"p/{d['slug']}.html", ads=False, noindex=True)
 
 
-def index_page(products: list[dict]) -> str:
+def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     e = html.escape
     ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
     picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:4]))
@@ -523,9 +524,9 @@ def index_page(products: list[dict]) -> str:
     qrow = "".join(f'<li><a href="q/{q["slug"]}.html">{e(q["h1"])}</a></li>' for q in Q.load())
     qrow = f'<h3 class="qhead">많이 묻는 계산</h3><ul class="qlist">{qrow}</ul>' if qrow else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
-    hero = """<section class="hero"><div class="wrap"><p class="eyebrow">CURATED BY 돈 줍는 삼촌</p>
-<h1>좋은 물건을,<br>제값에.</h1>
-<p>삼촌이 가격을 나란히 놓고 계산해 본 뒤 고른 물건만 소개합니다. 차액이 작으면 빠른 배송을, 크면 기다림을 권합니다. 매일 가격을 적어 두고 지금 사도 되는지, 기다리는 게 나은지도 알려 드립니다.</p></div></section>"""
+    hero = """<section class="hero slim"><div class="wrap"><p class="eyebrow">매일 아침 새 숫자로</p>
+<h1>오늘 아낄 돈,<br>삼촌이 먼저 계산해 뒀어요.</h1>
+<p>기름값·환율·장바구니 시세를 매일 아침 정리하고, 하루 한 문제로 생활 물가 감각을 키워요. 물건은 직접 계산해 보고 정말 괜찮을 때만 소개해요.</p></div></section>"""
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
 <div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
 <p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
@@ -534,11 +535,14 @@ def index_page(products: list[dict]) -> str:
 <div class="picks compact">{"".join(pick(p) for p in fresh)}</div></section>""" if fresh else ""
     news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
-    body = f"""{N.home_block(news, sales)}
-{picks_sec}
-{new_sec}
+    days = days if days is not None else DY.load_all()
+    latest = days[0] if days else None
+    body = f"""{DY.today_block(latest)}
+{N.home_block(news, sales)}
 {A.home_block(A.load())}
 {RC.home_block(RC.load())}
+{picks_sec}
+{new_sec}
 {all_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
 <div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
@@ -547,8 +551,9 @@ def index_page(products: list[dict]) -> str:
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
 <div class="toolrow">{tools}</div>{qrow}</section>
 <script>window.PRICES={prices};{N.HOME_JS}</script>
+{DY.data_script(latest, days, BASE)}
 <script>{FOLD_JS}{ALL_JS}</script>"""
-    return page(f"{BRAND} | 계산해 보고 고른 물건", "삼촌이 알리와 쿠팡 가격을 계산해 보고 고른 물건을 소개합니다. 전기요금·직구 세금·난방비 계산기도 무료로 쓸 수 있어요.", body,
+    return page(f"{BRAND} | 오늘의 생활 시세와 살림 계산", "기름값·환율·장바구니 시세를 매일 아침 정리하고, 하루 한 문제 얼마게 퀴즈와 전기요금·직구 세금·레시피 원가 계산을 무료로 제공해요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
 
@@ -675,7 +680,10 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     client = adsense_client()
     if client:  # ads.txt: 게시자 ID 가 있을 때만
         (o / "ads.txt").write_text(f"google.com, {client.removeprefix('ca-')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
-    (o / "index.html").write_text(index_page(products), encoding="utf-8")
+    days = DY.load_all()
+    (o / "index.html").write_text(index_page(products, days), encoding="utf-8")
+    (o / "quiz.html").write_text(page(f"오늘의 얼마게 | {BRAND}", "하루 한 문제, 생활 속 숫자 맞히기. 레시피 원가·전기요금·기름값·환율로 물가 감각을 키우고 출석 도장을 모아요.",
+        DY.quiz_body(days[0] if days else None) + DY.data_script(days[0] if days else None, days, BASE), path="quiz.html"), encoding="utf-8")
     for p in products:
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
     live = {p["slug"] for p in products}
@@ -751,7 +759,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     adate = {a["slug"]: a.get("updated", a["date"]) for a in arts}
     newest_a = max(adate.values(), default=SITE_PAGES)
     newest_n = max((n["date"] for n in news), default=SITE_PAGES)
-    entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES)]
+    entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES), ("quiz.html", today)]
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
                + [(f"news/{n['id']}.html", n["date"]) for n in news]
                + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
