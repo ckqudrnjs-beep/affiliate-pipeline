@@ -1,7 +1,7 @@
 # 5락실 유튜브 쇼츠 자동 업로드 (2026-11-13)
 
-`.github/workflows/raksil-shorts.yml` 이 매일 **17:43 KST**(빠지면 19:13 KST 예비 실행) 에 그날의 밸런스게임 쇼츠(약 14초)를 만들어
-5락실 채널에 **바로 공개**로 올린다. 코드: `src/pipeline/raksil_shorts.py`.
+`.github/workflows/raksil-shorts.yml` 이 매일 **16:23 KST**(빠지면 16:47 예비) 에 그날의 밸런스게임 쇼츠(약 14초)를 만들어
+5락실 채널에 올려 **17:00 KST 공개 예약**한다(17시가 지났으면 바로 공개). 코드: `src/pipeline/raksil_shorts.py`.
 
 - 내용: 오늘 질문 A vs B → 3·2·1 → 어제 질문 실제 투표 결과(20표 이상일 때만) 또는 "다른 사람들은?" → 5raksil.com
 - 유료 프로모션 아님(내 사이트 홍보, 협찬·제휴 없음). 광고 문구 넣지 않음.

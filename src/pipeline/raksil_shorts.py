@@ -412,11 +412,23 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
 
 
 # ---------- 올리기 ----------
-def video_body(meta: dict) -> dict:
+PUBLISH_HOUR = 17  # KST, BK 2026-11-13: 매일 오후 5시 공개
+
+
+def publish_time(meta: dict, now: dt.datetime) -> dt.datetime | None:
+    """그날 17:00 KST 전이면 그 시각 예약, 지났으면 None(바로 공개)."""
+    at = dt.datetime.combine(dt.date.fromisoformat(meta["date"]), dt.time(PUBLISH_HOUR), KST)
+    return at if now < at - dt.timedelta(minutes=2) else None
+
+
+def video_body(meta: dict, publish_at: dt.datetime | None = None) -> dict:
+    status = {"privacyStatus": "public"} if publish_at is None else {
+        "privacyStatus": "private",  # publishAt 은 private 일 때만
+        "publishAt": publish_at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     return {
         "snippet": {"title": meta["title"], "description": meta["description"], "tags": TAGS,
                     "categoryId": "24", "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
-        "status": {"privacyStatus": "public", "selfDeclaredMadeForKids": False,
+        "status": {**status, "selfDeclaredMadeForKids": False,
                    "containsSyntheticMedia": bool(meta.get("voiced")), "embeddable": True},
     }
 
@@ -435,11 +447,13 @@ def upload_meta(meta: dict) -> int:
         summary("5락실 유튜브 비밀값이 없어 업로드하지 않음 (docs/RAKSIL_YOUTUBE.md)")
         return 1
     tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
-    r = upload(tok, video_body(meta), pathlib.Path(meta["file"]))
+    at = publish_time(meta, dt.datetime.now(KST))
+    r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
     log[meta["date"]] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"]}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
-    summary(f"5락실 쇼츠 공개 완료: https://youtu.be/{r['id']} ({meta['title']})")
+    when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
+    summary(f"5락실 쇼츠 업로드 ({when}): https://youtu.be/{r['id']} ({meta['title']})")
     return 0
 
 

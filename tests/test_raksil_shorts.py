@@ -35,5 +35,16 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertTrue(b["status"]["containsSyntheticMedia"])
 
 
+    def test_publish_at_17(self):
+        m = {"date": "2026-11-14"}
+        early = dt.datetime(2026, 11, 14, 16, 23, tzinfo=r.KST)
+        at = r.publish_time(m, early)
+        self.assertEqual((at.hour, at.minute), (17, 0))
+        b = r.video_body({"title": "t", "description": "d"}, at)
+        self.assertEqual(b["status"]["privacyStatus"], "private")
+        self.assertEqual(b["status"]["publishAt"], "2026-11-14T08:00:00Z")
+        self.assertIsNone(r.publish_time(m, dt.datetime(2026, 11, 14, 17, 5, tzinfo=r.KST)))
+
+
 if __name__ == "__main__":
     unittest.main()
