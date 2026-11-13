@@ -222,7 +222,7 @@ COMMON_JS = (
     "function myNick(){let n=null;try{n=localStorage.getItem('nr_nick')}catch(e){}if(!n||!(/^\\S+ \\S+ \\d{1,2}$/.test(n)||profileNickOk(n))){n=ADJ[Math.floor(Math.random()*ADJ.length)]+' '+ANI[Math.floor(Math.random()*ANI.length)]+' '+Math.floor(Math.random()*100);try{localStorage.setItem('nr_nick',n)}catch(e){}}return n}"
 )
 
-RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 오늘의 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명·프로필 설정</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p><a href="/rank">전체 순위 보기 →</a></p></div>"""
+RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 오늘의 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명·프로필 설정</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p><a href="/rank">전체 순위 보기 →</a></p><p class="mkp" hidden><a class="btn" href="/profile">✨ 별명 정하고 순위 올리기</a></p></div>"""
 
 RANK_JS = """
 (function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
@@ -449,7 +449,9 @@ const P={code:()=>LS('nr_pcode'),nick:()=>{const n=LS('nr_nick');return profileN
   if(j.rev&&!j.data)LS('nr_prev',String(j.rev));else if(j._s===409)P.adopt(j);else if(j._s===404)P.forget()}catch(e){}busy=false},ms===undefined?1500:ms)},
  async pull(){const c=P.code();if(!c)return;let last=0;try{last=+sessionStorage.getItem('nr_pget')||0}catch(e){}if(Date.now()-last<6e5)return;try{sessionStorage.setItem('nr_pget',String(Date.now()))}catch(e){}
   try{const j=await api({a:'get',code:c});if(j.rev&&j.rev>(+LS('nr_prev')||0))P.adopt(j);else if(j._s===404)P.forget()}catch(e){}},
- render(){const pg=document.getElementById('profpage');if(pg&&P.page)P.page(pg)}};
+ render(){const n=P.nick();document.querySelectorAll('a.me').forEach(a=>{a.classList.toggle('new',!n);a.querySelector('i').textContent=n?n.split(' ')[0]:'👤';a.querySelector('b').textContent=n?n.slice(n.indexOf(' ')+1):'프로필 만들기'});
+  document.querySelectorAll('.mkp').forEach(e=>e.hidden=!!n);const pg=document.getElementById('profpage');if(pg&&P.page)P.page(pg)}};
+P.render();
 addEventListener('bonus-save',()=>P.sync());
 document.addEventListener('DOMContentLoaded',()=>{P.pull();P.render()});
 return P})();
@@ -492,6 +494,9 @@ PROFILE_BODY = """<h1>👤 내 프로필</h1><p class="lead">가입 없이 별�
 <h2>알아 두세요</h2><ul class="list"><li>이메일·전화번호·이름 같은 개인정보는 받지 않아요. 서버에는 별명, 아바타, 코인·스킨·출석 기록과 복구 코드를 알아볼 수 없게 바꾼 값(해시)만 저장돼요.</li><li>복구 코드가 곧 열쇠예요. 잃어버리면 다시 찾을 방법이 없고, 남이 알면 내 기록을 불러갈 수 있어요.</li><li>틀린 코드를 하루 10번 넘게 넣으면 그날은 더 넣을 수 없어요.</li><li>별명은 한글·영문·숫자 2~10자. 욕설, 운영자 사칭 단어는 쓸 수 없어요.</li><li>1년 동안 한 번도 쓰지 않은 프로필은 자동으로 지워져요. 언제든 위 '서버의 내 프로필 삭제'로 직접 지울 수 있어요.</li></ul>"""
 
 PROFILE_CSS = """
+nav a.me{display:flex;align-items:center;gap:4px;max-width:150px;border-color:#ff3d7f88}nav a.me i{font-style:normal}nav a.me b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}nav a.me.new{color:#fff;background:#ff3d7f33;border-color:var(--a);box-shadow:0 0 10px #ff3d7f66}
+@media (max-width:560px){nav a.me b{display:none}nav a.me.new b{display:inline}nav a.me.new b{font-size:0}nav a.me.new b::after{content:'프로필';font-size:12px}}@media (max-width:420px){nav .hs{display:none}nav{gap:4px}}nav a{white-space:nowrap}@media (max-width:380px){nav a{padding:5px 5px!important;font-size:11.5px!important}.logo{font-size:21px!important}.logo span{font-size:16px!important}header .wrap{gap:6px}nav{gap:3px}}
+.mkp{margin:6px 0 0}.mkp .btn{display:inline-block}
 #profpage .pv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}#profpage .pav{font-size:56px;line-height:1.1}#profpage .pv b{font-size:22px}#profpage .pv small{color:var(--muted)}
 #profpage .avs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}#profpage .avs button{font-size:26px;aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:var(--bg2);cursor:pointer;padding:0}
 #profpage .avs button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f66}#profpage .avs button:disabled{opacity:.45;cursor:default;font-size:18px}
@@ -530,7 +535,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}</style>{head}</head><body>
-<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a><a class="att" href="/bonus" aria-label="출석체크, 보유 코인">🪙<b>0</b></a></nav></div></header>
+<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스<span class="hs">게임</span></a><a href="/rank">순위</a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크, 보유 코인">🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script>{kakao}</body></html>"""
