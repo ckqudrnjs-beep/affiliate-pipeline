@@ -13,6 +13,10 @@ on:
         description: "날짜 YYYY-MM-DD (비우면 오늘)"
         required: false
         default: ""
+      range:
+        description: "true 면 네온 사격장 하이라이트도 (월·목이 아니어도)"
+        required: false
+        default: "false"
       qid:
         description: "추가 1편: 질문 id (예 20261113-2). 넣으면 그 질문으로 바로 공개, 매일 분과 따로 기록"
         required: false
@@ -28,7 +32,7 @@ concurrency:
 jobs:
   short:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -45,7 +49,7 @@ jobs:
           path: ~/.cache/supertonic3
           key: supertonic-3-v1
       - name: 검사
-        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range
       - name: 만들기 + 올리기
         env:
           RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
@@ -56,6 +60,26 @@ jobs:
         run: |
           export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
           PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
+      - name: 게임 데이(월·목) 네온 사격장 하이라이트 → 20:00 공개
+        if: ${{ inputs.qid == '' || inputs.qid == null }}
+        env:
+          RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          FORCE: ${{ inputs.range }}
+        run: |
+          D="${{ inputs.date }}"; D="${D:-$(TZ=Asia/Seoul date +%F)}"
+          DOW=$(date -d "$D" +%u)
+          if [ "$FORCE" != "true" ] && [ "$DOW" != 1 ] && [ "$DOW" != 4 ]; then echo "게임 데이 아님"; exit 0; fi
+          if grep -q "\"$D-range\"" data/youtube/raksil_uploaded.json 2>/dev/null; then echo "이미 올림"; exit 0; fi
+          export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
+          (cd playground && PG_NO_STATS=1 python build.py /tmp/site >/dev/null)
+          (cd /tmp/site && python -m http.server 8765 >/dev/null 2>&1 &)
+          npm i --no-save --silent playwright@1.63.0 && npx playwright install --with-deps chromium >/dev/null
+          STAGE=$(PYTHONPATH=src python -c "import datetime as d;from pipeline.raksil_range import stage_for;print(stage_for(d.date.fromisoformat('$D')))")
+          node scripts/range_rec.js http://localhost:8765 /tmp/rec "$STAGE" 21
+          PYTHONPATH=src python -m pipeline.raksil_range /tmp/rec upload "$D"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,7 +94,7 @@ jobs:
           ls media/raksil/*.mp4 >/dev/null 2>&1 || exit 0
           gh release view raksil-shorts >/dev/null 2>&1 || gh release create raksil-shorts --title "5락실 쇼츠 (틱톡 재업로드용)" --notes "매일 18:00 KST 자동 추가. 최근 14개만 보관. mp4 + 같은 이름 .txt(틱톡 설명)." --latest=false
           for j in media/raksil/*.json; do
-            python -c "import json,sys;m=json.load(open(sys.argv[1]));print(m['title'].replace('#shorts','').strip()+'\n\n오늘의 밸런스게임 투표: 프로필 링크 5raksil.com\n#밸런스게임 #너라면 #5락실'+('\nAI 음성' if m.get('voiced') else ''))" "$j" > "${j%.json}.txt"
+            python -c "import json,sys;m=json.load(open(sys.argv[1]));g='stage' in m;print(m['title'].replace('#shorts','').strip()+'\n\n'+('무료 웹게임 하기: 프로필 링크 5raksil.com\n#네온사격장 #웹게임 #5락실' if g else '오늘의 밸런스게임 투표: 프로필 링크 5raksil.com\n#밸런스게임 #너라면 #5락실')+('\nAI 음성' if m.get('voiced') else ''))" "$j" > "${j%.json}.txt"
           done
           gh release upload raksil-shorts media/raksil/*.mp4 media/raksil/*.txt --clobber
           gh release view raksil-shorts --json assets -q '.assets[].name' | sort | grep -E '^[0-9]{4}-' | cut -c1-10 | sort -u | head -n -14 | while read d; do
