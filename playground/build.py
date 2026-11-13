@@ -400,6 +400,7 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   pg.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const [g,id]=b.dataset.d.split(':');if(B.setDesign(g,id))B.toast('스킨을 바꿨어요! 다음 판부터 적용돼요')});
   pg.querySelector('.achs').innerHTML=Object.entries(ACH).map(([k,[t,n]])=>`<li>${s.ach[k]?'✅':'⬜'} ${t} <b>🪙 +${n}</b></li>`).join('')}};
 document.addEventListener('DOMContentLoaded',B.render);if(document.readyState!=='loading')B.render();
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pre]');if(!b)return;e.preventDefault();const u=location.origin+(b.dataset.u||location.pathname);shareLink(b.dataset.t,u,b.dataset.t+'\n'+b.dataset.d+'\n'+u)});
 return B})();
 """
 )
@@ -497,6 +498,7 @@ PROFILE_BODY = """<h1>👤 내 프로필</h1><p class="lead">가입 없이 별�
 PROFILE_CSS = """
 nav a.me{display:flex;align-items:center;gap:4px;max-width:150px;border-color:#ff3d7f88}nav a.me i{font-style:normal}nav a.me b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}nav a.me.new{color:#fff;background:#ff3d7f33;border-color:var(--a);box-shadow:0 0 10px #ff3d7f66}
 @media (max-width:560px){nav a.me b{display:none}nav a.me.new b{display:inline}nav a.me.new b{font-size:0}nav a.me.new b::after{content:'프로필';font-size:12px}}@media (max-width:420px){nav .hs{display:none}nav{gap:4px}}nav a{white-space:nowrap}@media (max-width:380px){nav a{padding:5px 5px!important;font-size:11.5px!important}.logo{font-size:21px!important}.logo span{font-size:16px!important}header .wrap{gap:6px}nav{gap:3px}}
+.preshare{margin:4px 0 14px}.preshare small{margin-left:4px}
 .mkp{margin:6px 0 0}.mkp .btn{display:inline-block}
 #profpage .pv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}#profpage .pav{font-size:56px;line-height:1.1}#profpage .pv b{font-size:22px}#profpage .pv small{color:var(--muted)}
 #profpage .avs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}#profpage .avs button{font-size:26px;aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:var(--bg2);cursor:pointer;padding:0}
@@ -580,7 +582,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     grid = game_grid(games)
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
-          f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a></div>"
+          f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"
           f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
           f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{grid}"
           "<!--AD-->"
@@ -615,6 +617,11 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     for g in games:
         pre = "".join(f"const {k}={json.dumps(inject[k], ensure_ascii=False)};" for k in g.get("inject", []))
         body = g["body"]
+        # 시작 전 공유(BK 11/13): 하기 전에도 친구에게 보낼 수 있게. 선택 사항, 공유해야 시작되는 것 아님.
+        pshare = (f'<p class="preshare"><button type="button" class="share" data-pre="1" data-t="{esc("5락실 " + g["name"])}" '
+               f'data-d="{esc(g["short"] + " · 가입 없이 무료, 같이 해 볼래?")}">📤 친구에게 이 게임 공유</button> <small class="muted">첫 공유 🪙+2</small></p>')
+        m = re.search(r'<h1>.*?</h1>(\s*<p class="lead">.*?</p>)?', body, re.S)
+        body = body[:m.end()] + pshare + body[m.end():] if m else pshare + body
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
         script = pre + COMMON_JS + g["js"]
         if g.get("ranked"):
