@@ -491,7 +491,7 @@ function card(it){const d=it.data||{},own=d.own||{},des=d.des||{};const el=docum
   if(x==='coins')return done(await api({a:'set',h:it.h,coins:+el.querySelector('.co').value}));
   if(x==='own'){const cs=[...el.querySelectorAll('.own input')];return done(await api({a:'set',h:it.h,own:cs.filter(c=>c.checked).map(c=>c.value),unown:cs.filter(c=>!c.checked).map(c=>c.value)}))}
   if(x==='apply'){const des={},need=[];el.querySelectorAll('select[data-g]').forEach(s=>{des[s.dataset.g]=s.value;if(s.value!=='base')need.push('d:'+s.dataset.g+':'+s.value)});const sk=el.querySelector('.sk').value;if(sk!=='cy')need.push('c:'+sk);return done(await api({a:'set',h:it.h,des,skin:sk,own:need}))}
-  if(x==='reissue'){if(!confirm(it.nick+' 프로필의 옛 복구 코드는 바로 쓸 수 없게 돼요. 새 코드를 발급할까요?'))return;const j=await api({a:'reissue',h:it.h});if(j&&j.item){const n=card(j.item);el.replaceWith(n);n.querySelector('.nc').innerHTML='<p class="tag" style="font-size:18px;padding:8px 12px">새 복구 코드: <b>'+esc(j.code)+'</b></p><p class="muted">이 화면을 닫으면 다시 볼 수 없어요. 비밀글 답변으로 전해 주세요.</p>';$('am').textContent='새 코드를 발급했어요.'}return}
+  if(x==='reissue'){if(!confirm(it.nick+' 프로필의 옛 복구 코드는 바로 쓸 수 없게 돼요. 새 코드를 발급할까요?'))return;const j=await api({a:'reissue',h:it.h});if(j&&j.item){const n=card(j.item);el.replaceWith(n);n.querySelector('.nc').innerHTML='<p style="font:700 20px monospace;color:#ffd23f;border:2px solid #ffd23f;border-radius:10px;padding:8px 12px">새 복구 코드<br><b style="font-size:24px">'+esc(j.code)+'</b></p><p class="muted">이 화면을 닫으면 다시 볼 수 없어요. 비밀글 답변으로 전해 주세요.</p>';$('am').textContent='새 코드를 발급했어요.'}return}
   if(x==='tester')return done(await api({a:'tester',h:it.h,on:!it.tester}));
   if(x==='hide')return done(await api({a:'hide',h:it.h,on:!it.hide}))});
  return el}
