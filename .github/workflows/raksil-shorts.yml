@@ -5,7 +5,8 @@ name: raksil-shorts
 # 저장소 변수 RAKSIL_YT_ENABLED=true 전에는 만들기만 하고 영상은 Actions 아티팩트로만 남긴다.
 on:
   schedule:
-    - cron: "0 9 * * *"   # 18:00 KST (저녁 시청 시간 전에 공개)
+    - cron: "43 8 * * *"   # 17:43 KST (저녁 시청 시간 전에 공개, 정각은 GitHub가 자주 밀림)
+    - cron: "13 10 * * *"  # 19:13 KST 예비 (이미 올렸으면 건너뜀)
   workflow_dispatch:
     inputs:
       date:
