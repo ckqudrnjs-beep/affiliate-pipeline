@@ -29,5 +29,17 @@
     "publish_at": "2026-11-13T19:00:00+09:00",
     "uploaded_at": "2026-11-12T16:49:43+09:00",
     "paid_promotion": false
+  },
+  "ep-2026-11-13-skit-dont": {
+    "video_id": "Qe0-hXYiDAw",
+    "publish_at": "2026-11-13T19:00:00+09:00",
+    "uploaded_at": "2026-11-13T16:26:34+09:00",
+    "paid_promotion": false
+  },
+  "ep-2026-11-14-skit-quiz": {
+    "video_id": "-lvw_Halm8Q",
+    "publish_at": "2026-11-14T19:00:00+09:00",
+    "uploaded_at": "2026-11-13T16:26:34+09:00",
+    "paid_promotion": false
   }
 }
