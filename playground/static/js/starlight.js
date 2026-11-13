@@ -235,8 +235,8 @@ function mkDom() {
   };
   panel.addEventListener('pointerdown', e => e.stopPropagation());
   addEventListener('resize', () => { if (!ov.hidden) layout(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') pause(true); });
-  addEventListener('blur', () => { if (!ov.hidden && G && G.mode === 'play' && !DEBUG) pause(true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play' && !paused) pause(true, true); });
+  addEventListener('blur', () => { if (!ov.hidden && G && G.mode === 'play' && !paused && !DEBUG) pause(true, true); });
   input();
   for (let i = 0; i < 70; i++) stars.push({ x: Math.random(), y: Math.random(), l: i % 3 });
 }
@@ -304,7 +304,7 @@ function diff(n) {
 function newGame() {
   G = { mode: 'play', stage: 0, score: 0, disp: 0, lives: 3, power: 1, wpn: 'P', pods: 0, bombs: 2, charge: 0, shield: false, px: W / 2, py: H - 70, inv: 0, fireT: 0, dead: 0,
     en: [], pb: [], eb: [], beams: [], parts: [], caps: [], texts: [], q: [], t: 0, shake: 0, flash: 0, nova: null, nextLife: 30000, shots: 0, hits: 0, kills: 0, boss: null, debug: DEBUG, god: false,
-    podPos: [[W / 2, H - 70], [W / 2, H - 70]] };
+    podPos: [[W / 2, H - 70], [W / 2, H - 70]], pauseLeft: 1, cd: 0, autoP: false };
   try { G.best = +localStorage.getItem('nr_best_starlight_' + window.KST_SL) || 0; } catch (e) { G.best = 0; }
   startStage(1);
 }
@@ -408,7 +408,7 @@ function hitPlayer() {
 }
 // 필살기 '노바 버스트': 화면의 적탄 삭제 + 모든 적 큰 피해 + 보스 체력 8%
 function bomb() {
-  if (!G || G.mode !== 'play' || paused || G.dead > 0 || G.bombs <= 0 || G.nova) return;
+  if (!G || G.mode !== 'play' || paused || G.cd > 0 || G.dead > 0 || G.bombs <= 0 || G.nova) return;
   G.bombs--; G.nova = { x: G.px, y: G.py, t: 0 }; G.inv = Math.max(G.inv, 1.4); G.flash = .35; G.shake = .4;
   for (const b of G.eb) boom(b.x, b.y, 'pk', 2);
   G.eb = []; G.beams = []; SFX.nova();
@@ -679,6 +679,7 @@ function draw() {
   hud();
   x.restore();
   x.strokeStyle = '#ff3d9a55'; x.lineWidth = 1.5 / s; if (ox > 2) { x.beginPath(); x.moveTo(0, 0); x.lineTo(0, H); x.moveTo(W, 0); x.lineTo(W, H); x.stroke(); }
+  { const pb = hudBtns.children[1], o = G.pauseLeft > 0 || paused ? '1' : '.35'; if (pb.style.opacity !== o) pb.style.opacity = o; }
   if (bombBtn.style.display !== 'none') { const t = '<b>💥</b>필살기 ' + G.bombs; if (bombBtn._t !== t) { bombBtn._t = t; bombBtn.innerHTML = t; } bombBtn.disabled = G.bombs <= 0; }
 }
 function neon(t, px, py, size, col, font, align) {
@@ -707,7 +708,11 @@ function hud() {
     x.globalAlpha = 1;
   }
   if (G.clearT > 0) { neon('STAGE CLEAR', W / 2, H * .4, 16, C.gr); neon('+' + G.clearBonus.toLocaleString(), W / 2, H * .4 + 28, 12, C.ye); if (!G.miss) neon('NO MISS 보너스', W / 2, H * .4 + 56, 15, C.cy, FONT_K); }
-  if (paused) { x.fillStyle = '#02010aaa'; x.fillRect(0, 0, W, H); neon('PAUSE', W / 2, H * .45, 20, C.cy); x.fillStyle = '#fff'; x.font = '15px ' + FONT_K; x.fillText('화면을 누르면 계속', W / 2, H * .45 + 34); }
+  if (paused) { // 멈춘 동안은 화면을 가려 총알 위치를 미리 볼 수 없게
+    x.fillStyle = '#02010a'; x.fillRect(0, 0, W, H); neon('PAUSE', W / 2, H * .42, 20, C.cy); x.fillStyle = '#fff'; x.font = '15px ' + FONT_K; x.textAlign = 'center';
+    x.fillText('화면을 누르면 3초 뒤 계속', W / 2, H * .42 + 34); x.fillStyle = '#ffffff88'; x.font = '13px ' + FONT_K;
+    x.fillText(G.autoP ? '자동 멈춤은 횟수에 들어가지 않아요' : '남은 멈춤 ' + G.pauseLeft + '회 (한 판에 1번)', W / 2, H * .42 + 60);
+  } else if (G.cd > 0) { x.fillStyle = '#02010a66'; x.fillRect(0, 0, W, H); neon('' + Math.ceil(G.cd), W / 2, H * .45, 40, C.ye); x.fillStyle = '#fff'; x.font = '14px ' + FONT_K; x.fillText('준비!', W / 2, H * .45 + 34); }
 }
 function sidePanels() {
   const { ox, ch, cw } = lay, lx = ox / 2;
@@ -726,12 +731,18 @@ function sidePanels() {
 function loop(t) {
   raf = requestAnimationFrame(loop);
   let dt = Math.min(.05, (t - last) / 1000 || 0); last = t; if (window.__slDtMax) dt = Math.min(dt, window.__slDtMax);
-  if (!paused) { const n = Math.ceil(dt / (1 / 90)); for (let i = 0; i < n; i++) update(dt / n); if (A.ctx) music(!!G.boss); }
+  if (!paused && G.cd > 0) { G.cd -= dt; if (G.cd <= 0) { G.cd = 0; if (A.ctx) { A.ctx.resume(); A.next = 0; } } }
+  else if (!paused) { const n = Math.ceil(dt / (1 / 90)); for (let i = 0; i < n; i++) update(dt / n); if (A.ctx) music(!!G.boss); }
   draw();
 }
-function pause(p) {
-  if (!G || G.mode !== 'play') return; paused = p;
-  if (A.ctx) { if (p) A.ctx.suspend(); else { A.ctx.resume(); A.next = 0; } }
+// 멈춤: 손으로 멈추는 건 한 판에 1번(BK 11/13, 순위 공정성). 전화·탭 전환 같은 자동 멈춤은 횟수에 안 셈. 다시 시작은 항상 3초 카운트다운.
+function pause(p, auto) {
+  if (!G || G.mode !== 'play') return;
+  if (p) {
+    if (paused || G.cd > 0) return;
+    if (!auto) { if (G.pauseLeft <= 0) { G.texts.push({ x: W / 2, y: H * .3, t: 0, s: '멈춤은 한 판에 1번!', col: C.rd, k: 1 }); return; } G.pauseLeft--; }
+    paused = true; G.autoP = !!auto; if (A.ctx) A.ctx.suspend();
+  } else { if (!paused) return; paused = false; G.cd = 3; }
   last = performance.now();
 }
 function gameOver() {
