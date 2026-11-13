@@ -1,6 +1,7 @@
 // GET  /api/score?game=spot&day=YYYY-MM-DD → TOP 10 [{nick, score}]
 // POST /api/score {game, day, score, nick} → 같은 사람(하루 해시)은 최고 점수만 남긴다.
-// 별명은 자동 생성 목록 조합만 허용(자유 입력 없음 → 욕설 관리 불필요). build.py ADJ/ANI와 같은 목록.
+// 별명은 자동 생성 목록 조합, 또는 프로필 별명(아바타+이름, lib/nick.js 욕설·사칭 거르기 통과)만 허용. build.py ADJ/ANI와 같은 목록.
+import { profileNickOk } from "../../lib/nick.js";
 const ADJ = ["빠른", "느긋한", "용감한", "졸린", "배고픈", "신난", "수줍은", "똑똑한", "엉뚱한", "반짝이는", "조용한", "씩씩한", "날쌘", "포근한", "명랑한", "꼼꼼한"];
 const ANI = ["수달", "고양이", "강아지", "판다", "펭귄", "다람쥐", "여우", "너구리", "부엉이", "고래", "토끼", "햄스터", "거북이", "사슴", "오리", "곰"];
 const MAX = { spot: 3000, dodge: 20000, stop: 20000, range: 5000000, starlight: 9000000, tongtong: 200000 };
@@ -12,7 +13,7 @@ async function sha(s) {
 }
 function nickOk(n) {
   const p = String(n || "").split(" ");
-  return p.length === 3 && ADJ.includes(p[0]) && ANI.includes(p[1]) && /^\d{1,2}$/.test(p[2]);
+  return (p.length === 3 && ADJ.includes(p[0]) && ANI.includes(p[1]) && /^\d{1,2}$/.test(p[2])) || profileNickOk(n);
 }
 
 export async function onRequestGet({ request, env }) {

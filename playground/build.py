@@ -213,20 +213,20 @@ COMMON_JS = (
     "return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}"
     "function shareText(t){const m=t.match(/https?:\\/\\/\\S+$/);shareLink(t.split('\\n')[0],m?m[0]:location.href,t)}"
     f"const ADJ={json.dumps(ADJ, ensure_ascii=False)},ANI={json.dumps(ANI, ensure_ascii=False)};"
-    "function nickOk(n){const p=String(n||'').split(' ');return p.length===3&&ADJ.includes(p[0])&&ANI.includes(p[1])&&/^\\d{1,2}$/.test(p[2])}"
+    "function nickOk(n){const p=String(n||'').split(' ');return (p.length===3&&ADJ.includes(p[0])&&ANI.includes(p[1])&&/^\\d{1,2}$/.test(p[2]))||profileNickOk(n)}"
     "function challengeUrl(score){return location.origin+location.pathname+'?c='+Math.floor(score)+'&n='+encodeURIComponent(myNick())+'&d='+KST}"
     "addEventListener('DOMContentLoaded',()=>{const q=new URLSearchParams(location.search),c=parseInt(q.get('c'),10),n=q.get('n'),d=q.get('d');"
     "if(!(c>0)||!nickOk(n)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(d||''))return;const h=document.querySelector('main h1');if(!h)return;"
     "const b=document.createElement('div');b.className='challenge';const t=document.createElement('b');t.textContent=n+'님의 '+(d===KST?'오늘':d.slice(5).replace('-','/'))+' 기록 '+c.toLocaleString()+'점';"
     "b.append('🔥 ',t,document.createElement('br'),d===KST?'같은 판으로 이겨 보세요!':'오늘 판으로 도전해 보세요!');h.after(b)});"
-    "function myNick(){let n=null;try{n=localStorage.getItem('nr_nick')}catch(e){}if(!n||!/^\\S+ \\S+ \\d{1,2}$/.test(n)){n=ADJ[Math.floor(Math.random()*ADJ.length)]+' '+ANI[Math.floor(Math.random()*ANI.length)]+' '+Math.floor(Math.random()*100);try{localStorage.setItem('nr_nick',n)}catch(e){}}return n}"
+    "function myNick(){let n=null;try{n=localStorage.getItem('nr_nick')}catch(e){}if(!n||!(/^\\S+ \\S+ \\d{1,2}$/.test(n)||profileNickOk(n))){n=ADJ[Math.floor(Math.random()*ADJ.length)]+' '+ANI[Math.floor(Math.random()*ANI.length)]+' '+Math.floor(Math.random()*100);try{localStorage.setItem('nr_nick',n)}catch(e){}}return n}"
 )
 
-RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 오늘의 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명 바꾸기</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p><a href="/rank">전체 순위 보기 →</a></p></div>"""
+RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 오늘의 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명·프로필 설정</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p><a href="/rank">전체 순위 보기 →</a></p></div>"""
 
 RANK_JS = """
 (function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
-$r('renick').onclick=()=>{try{localStorage.removeItem('nr_nick')}catch(e){}$r('mynick').textContent=myNick()};
+$r('renick').onclick=()=>{location.href='/profile'};
 async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST)).json();const me=myNick();
 $r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>'}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
 window.submitScore=async function(score){score=Math.floor(score);let best=0;try{best=+localStorage.getItem('nr_best_'+G+'_'+KST)||0}catch(e){}
@@ -363,7 +363,7 @@ BONUS_JS = (
     r"""
 window.Bonus=(function(){const K='nr_bonus',day=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);let s={};
 function ld(){try{s=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){s={}}s.coins=Math.max(0,Math.min(BONUS_MAX,+s.coins||0));s.days=+s.days||0;s.streak=+s.streak||0;s.ach=s.ach||{};s.des=s.des||{};s.own=s.own||{};return s}
-function sv(){try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}}
+function sv(){try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}try{dispatchEvent(new Event('bonus-save'))}catch(e){}}
 function yday(){return new Date(Date.parse(day()+'T00:00:00Z')-864e5).toISOString().slice(0,10)}
 function add(n){const b=s.coins;s.coins=Math.min(BONUS_MAX,s.coins+n);return s.coins-b}
 const own=(k,p)=>p<=0||!!s.own[k];
@@ -423,13 +423,83 @@ nav a.att{position:relative;color:var(--y);border-color:#ffd23f66}nav a.att b{fo
 """
 
 BONUS_BODY = f"""<h1>📅 출석체크 · 스킨 상점</h1><p class="lead">하루 한 번 출석하면 🪙 코인을 받아요. 코인으로 이어하기를 하거나 스킨을 살 수 있어요. <b>모든 게임은 코인 없이도 처음부터 끝까지 무료</b>예요.</p>
-<div class="card" id="bonuspage"><p class="bst"></p><ol class="stamps"></ol><button type="button" class="bigck">📅 오늘 출석하기</button>
+<p><a href="/profile">👤 내 프로필·복구 코드 (다른 기기에서 이어 하기) →</a></p><div class="card" id="bonuspage"><p class="bst"></p><ol class="stamps"></ol><button type="button" class="bigck">📅 오늘 출석하기</button>
 <h2>🐉 디자인 스킨</h2><p class="muted">스킨은 게임 속 <b>내 캐릭터의 겉모습</b>만 바꾸는 꾸미기예요. 점수·능력·맞는 범위는 그대로예요. 화려할수록 코인이 더 들어요. 한 번 사면 계속 내 것이에요.</p><div class="designs"></div>
 <h2>🎨 내 네온 색</h2><p class="muted">고른 디자인에 입힐 색이에요.</p><div class="skins"></div>
 <h2>🏅 업적 보너스 코인</h2><p class="muted">한 번씩만 받아요.</p><ul class="list achs"></ul></div>
 <h2>코인은 어디에 쓰나요?</h2><ul class="list"><li><b>스킨 사기</b>: 위 상점에서 디자인·색을 코인으로 사요. 가격은 화려함에 따라 🪙 2~12개.</li><li><b>별빛 요격대</b>: 게임 오버 화면에서 코인 1개로 그 자리에서 이어하기(목숨 3개로 다시). 한 판에 한 번만.</li><li><b>네온 사격장</b>: 탈락한 스테이지를 코인 1개로 한 번 더 도전(점수는 그대로 이어짐). 한 판에 한 번만.</li><li>이어하기로 낸 점수도 오늘의 순위에 올라가요. 모두가 하루 똑같이 코인을 받으니 공평해요.</li></ul>
 <h2>출석 규칙</h2><ul class="list"><li>한국 시간 0시가 지나면 다시 출석할 수 있어요. 하루 1번, 🪙 1개. <b>7일 연속</b>이면 그날은 🪙 2개.</li><li>코인은 최대 {BONUS_MAX_COINS}개까지 모여요. 하루 빠지면 연속 일수만 1일부터 다시 세요.</li><li>코인은 <b>돈으로 살 수 없고, 팔거나 현금·상품으로 바꿀 수 없으며, 광고를 보거나 누르는 것과도 아무 관계가 없어요.</b> 출석·업적·공유로만 생겨요.</li><li>가입이 없어서 기록(코인·산 스킨)은 지금 쓰는 <b>이 기기의 브라우저에만</b> 저장돼요. 다른 폰·브라우저에서는 따로 세고, 브라우저 기록(사이트 데이터)을 지우면 처음부터예요.</li></ul>
 <p><a class="btn" href="/games">🕹️ 게임하러 가기</a></p>"""
+
+# 가입 없는 프로필(2026-11-13 BK): 별명·아바타 + 복구 코드로 다른 기기에서 코인·스킨·출석·별명을 이어 쓴다. 개인정보 없음.
+NICK_JS = re.sub(r"^export ", "", (HERE / "lib" / "nick.js").read_text(encoding="utf-8"), flags=re.M)
+PROFILE_JS = NICK_JS + r"""
+window.Profile=(function(){const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}};
+const api=async b=>{const r=await fetch('/api/profile',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}j._s=r.status;return j};
+const data=()=>{try{return JSON.parse(localStorage.getItem('nr_bonus')||'{}')}catch(e){return {}}};
+let t=0,busy=false;
+const P={code:()=>LS('nr_pcode'),nick:()=>{const n=LS('nr_nick');return profileNickOk(n)?n:null},
+ setNick(av,name){const n=av+' '+name;if(!profileNickOk(n))return false;LS('nr_nick',n);P.sync(0);return true},
+ adopt(j){if(j.data){LS('nr_bonus',JSON.stringify(j.data))}if(j.nick)LS('nr_nick',j.nick);if(j.rev)LS('nr_prev',String(j.rev));if(window.Bonus)Bonus.render();P.render()},
+ async create(){const n=P.nick();if(!n)return {error:'nick'};const j=await api({a:'new',nick:n,data:data()});if(j.code){LS('nr_pcode',j.code);LS('nr_prev',String(j.rev))}P.render();return j},
+ async load(code){const j=await api({a:'get',code});if(j.data){LS('nr_pcode',code.toUpperCase().trim());P.adopt(j)}return j},
+ async del(){const c=P.code();if(!c)return {};const j=await api({a:'del',code:c});if(j.ok||j._s===404){LS('nr_pcode',null);LS('nr_prev',null)}P.render();return j},
+ forget(){LS('nr_pcode',null);LS('nr_prev',null);P.render()},
+ sync(ms){const c=P.code(),n=P.nick();if(!c||!n)return;clearTimeout(t);t=setTimeout(async()=>{if(busy)return;busy=true;try{const j=await api({a:'put',code:c,nick:n,data:data(),rev:+LS('nr_prev')||0});
+  if(j.rev&&!j.data)LS('nr_prev',String(j.rev));else if(j._s===409)P.adopt(j);else if(j._s===404)P.forget()}catch(e){}busy=false},ms===undefined?1500:ms)},
+ async pull(){const c=P.code();if(!c)return;let last=0;try{last=+sessionStorage.getItem('nr_pget')||0}catch(e){}if(Date.now()-last<6e5)return;try{sessionStorage.setItem('nr_pget',String(Date.now()))}catch(e){}
+  try{const j=await api({a:'get',code:c});if(j.rev&&j.rev>(+LS('nr_prev')||0))P.adopt(j);else if(j._s===404)P.forget()}catch(e){}},
+ render(){const pg=document.getElementById('profpage');if(pg&&P.page)P.page(pg)}};
+addEventListener('bonus-save',()=>P.sync());
+document.addEventListener('DOMContentLoaded',()=>{P.pull();P.render()});
+return P})();
+"""
+
+PROFILE_PAGE_JS = r"""
+Profile.page=function(pg){if(pg._busy)return;const own=(window.Bonus&&Bonus.state().own)||{},n=Profile.nick(),code=Profile.code();
+ const cur=n?n.split(' ')[0]:'🐱',name=n?n.slice(n.indexOf(' ')+1):'';
+ pg.querySelector('.pv').innerHTML=`<span class="pav">${n?cur:'❔'}</span><b>${n?name:'아직 별명이 없어요'}</b><small>${n?'순위에 이렇게 보여요':'지금은 자동 별명: '+myNick()}</small>`;
+ const sel=pg.dataset.av||cur;pg.dataset.av=sel;
+ pg.querySelector('.avs').innerHTML=AVATARS.map(a=>{const lk=AVATAR_LOCK[a]&&!own[AVATAR_LOCK[a]];return `<button type="button" data-a="${a}" class="${a===sel?'sel':''}"${lk?' disabled title="스킨 상점에서 해당 스킨을 사면 열려요"':''}>${lk?'🔒':a}</button>`}).join('');
+ pg.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{pg.dataset.av=b.dataset.a;Profile.page(pg)});
+ const inp=pg.querySelector('.nm');if(!inp.dataset.init){inp.value=name;inp.dataset.init=1}
+ const msg=pg.querySelector('.nmsg'),chk=()=>{const v=inp.value.trim();msg.textContent=!v?'한글·영문·숫자 2~10자':nameOk(v)?'✅ 쓸 수 있어요':'❌ 2~10자 한글·영문·숫자만, 욕설·운영자 사칭 금지';return nameOk(v)};inp.oninput=chk;chk();
+ pg.querySelector('.save').onclick=()=>{if(!chk())return;Profile.setNick(pg.dataset.av,inp.value.trim());Bonus.toast('✅ 저장했어요! 순위에 새 별명으로 올라가요');Profile.page(pg)};
+ const cb=pg.querySelector('.codebox');
+ cb.innerHTML=code?`<p>내 복구 코드</p><div class="code">${pg.dataset.show?code:code.slice(0,4)+'-••••-••••'}</div><div class="row"><button type="button" class="share" data-c="show">${pg.dataset.show?'가리기':'보기'}</button><button type="button" class="share" data-c="copy">복사</button></div><p class="muted">이 코드만 있으면 다른 폰·PC에서 코인·스킨·출석·별명을 그대로 이어 써요. <b>잃어버리면 찾아 드릴 수 없으니</b> 메모장이나 사진으로 저장해 두세요. 남에게 알려 주지 마세요.</p>`
+  :`<p class="muted">복구 코드를 만들면 기록이 서버에도 저장돼서 폰을 바꾸거나 다른 기기에서도 이어 할 수 있어요. 이메일·전화번호는 받지 않아요.</p><button type="button" class="btn" data-c="new">🔑 복구 코드 만들기</button>`;
+ cb.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{const k=b.dataset.c;
+  if(k==='show'){pg.dataset.show=pg.dataset.show?'':'1';Profile.page(pg)}
+  else if(k==='copy'){try{await navigator.clipboard.writeText(code);Bonus.toast('복사했어요. 안전한 곳에 붙여 넣어 두세요')}catch(e){pg.dataset.show='1';Profile.page(pg)}}
+  else if(k==='new'){if(!Profile.nick()){Bonus.toast('먼저 별명을 정하고 저장해 주세요');return}pg._busy=1;b.textContent='만드는 중…';const j=await Profile.create();pg._busy=0;
+   if(j.code){pg.dataset.show='1';Bonus.toast('🔑 복구 코드가 생겼어요! 꼭 적어 두세요')}else Bonus.toast(j.msg||'지금은 만들 수 없어요. 잠시 뒤 다시 해 주세요');Profile.page(pg)}});
+ pg.querySelector('.ld').onclick=async()=>{const v=pg.querySelector('.lc').value.trim();if(v.replace(/[^A-Za-z0-9]/g,'').length!==12){Bonus.toast('복구 코드 12자리를 넣어 주세요');return}
+  if(!confirmBox('이 기기의 코인·스킨 기록이 불러온 기록으로 바뀌어요. 계속할까요?'))return;const j=await Profile.load(v);Bonus.toast(j.data?'✅ 불러왔어요! 반가워요 '+j.nick:(j.msg||'불러오지 못했어요'));pg.dataset.av='';inp.dataset.init='';Profile.page(pg)};
+ const dz=pg.querySelector('.dz');dz.hidden=!code;
+ pg.querySelector('.fg').onclick=()=>{if(confirmBox('이 기기에서만 복구 코드를 지워요(서버 기록은 남아요). 코드를 적어 두셨나요?')){Profile.forget();Bonus.toast('이 기기에서 코드를 지웠어요')}};
+ pg.querySelector('.dl').onclick=async()=>{if(!confirmBox('서버에 저장된 내 프로필을 완전히 지워요. 되돌릴 수 없어요. 계속할까요?'))return;const j=await Profile.del();Bonus.toast(j.ok?'프로필을 지웠어요':(j.msg||'지우지 못했어요'))};
+};
+function confirmBox(t){return window.confirm(t)}
+"""
+
+PROFILE_BODY = """<h1>👤 내 프로필</h1><p class="lead">가입 없이 별명과 아바타를 정하고, <b>복구 코드</b> 하나로 다른 기기에서도 코인·스킨·출석 기록을 이어 써요.</p>
+<div class="card" id="profpage"><div class="pv"></div>
+<h2>아바타</h2><div class="avs"></div><p class="muted">🔒 아바타는 스킨 상점에서 그 스킨을 사면 열려요.</p>
+<h2>별명</h2><input class="nm" maxlength="10" placeholder="예: 냥이왕" autocomplete="off"><p class="nmsg muted"></p><button type="button" class="btn save">💾 저장</button>
+<h2>🔑 복구 코드</h2><div class="codebox"></div>
+<h2>다른 기기 기록 불러오기</h2><input class="lc" maxlength="16" placeholder="ABCD-EFGH-JKLM" autocomplete="off" autocapitalize="characters"><button type="button" class="btn ghost ld">불러오기</button>
+<div class="dz"><h2>관리</h2><button type="button" class="share fg">이 기기에서 코드 지우기</button> <button type="button" class="share dl">서버의 내 프로필 삭제</button></div></div>
+<h2>알아 두세요</h2><ul class="list"><li>이메일·전화번호·이름 같은 개인정보는 받지 않아요. 서버에는 별명, 아바타, 코인·스킨·출석 기록과 복구 코드를 알아볼 수 없게 바꾼 값(해시)만 저장돼요.</li><li>복구 코드가 곧 열쇠예요. 잃어버리면 다시 찾을 방법이 없고, 남이 알면 내 기록을 불러갈 수 있어요.</li><li>틀린 코드를 하루 10번 넘게 넣으면 그날은 더 넣을 수 없어요.</li><li>별명은 한글·영문·숫자 2~10자. 욕설, 운영자 사칭 단어는 쓸 수 없어요.</li><li>1년 동안 한 번도 쓰지 않은 프로필은 자동으로 지워져요. 언제든 위 '서버의 내 프로필 삭제'로 직접 지울 수 있어요.</li></ul>"""
+
+PROFILE_CSS = """
+#profpage .pv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}#profpage .pav{font-size:56px;line-height:1.1}#profpage .pv b{font-size:22px}#profpage .pv small{color:var(--muted)}
+#profpage .avs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}#profpage .avs button{font-size:26px;aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:var(--bg2);cursor:pointer;padding:0}
+#profpage .avs button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f66}#profpage .avs button:disabled{opacity:.45;cursor:default;font-size:18px}
+#profpage input{width:100%;font:inherit;font-size:18px;padding:12px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);margin-bottom:6px}
+#profpage .code{font-family:var(--px);font-size:18px;letter-spacing:2px;color:var(--y);text-align:center;padding:14px;border:2px dashed var(--y);border-radius:12px;margin:6px 0;word-break:break-all}
+#profpage .row{display:flex;gap:8px;justify-content:center}#profpage .btn{border:0;cursor:pointer;font:inherit;font-weight:800}#profpage .ld{margin-top:4px}
+"""
+
 
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
@@ -459,11 +529,11 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}</style>{head}</head><body>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a><a class="att" href="/bonus" aria-label="출석체크, 보유 코인">🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
-<script>{SHARE_JS}{BONUS_JS}{script}</script>{kakao}</body></html>"""
+<script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script>{kakao}</body></html>"""
 
 
 def qcard(q, n=None, link=True):
@@ -557,6 +627,8 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           f"<h1>🏆 오늘의 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 순위가 초기화돼요. 이름은 자동으로 붙는 별명이라 개인 정보가 없습니다.</p><div class=\"re\">{tabs}</div><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
           COMMON_JS + RANK_PAGE_JS)
 
+    write("profile", f"내 프로필 | {cfg['siteName']}", "5락실 프로필. 가입 없이 별명·아바타를 정하고 복구 코드로 다른 기기에서도 코인·스킨을 이어 써요.",
+          PROFILE_BODY, COMMON_JS + PROFILE_PAGE_JS, noindex=True)
     write("bonus", f"출석체크·스킨 상점 | {cfg['siteName']}", "5락실 출석체크. 하루 한 번 출석하면 코인을 받아 이어하기나 스킨(캐릭터 겉모습)에 써요. 게임은 모두 무료.",
           BONUS_BODY, noindex=True)
 
