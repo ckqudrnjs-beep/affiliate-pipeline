@@ -1,0 +1,95 @@
+// 가입 없는 프로필 + 복구 코드 (2026-11-13 BK)
+// POST /api/profile {a:"new", nick, data}        → {code, rev}   새 복구 코드 발급(서버엔 코드의 해시만 저장)
+// POST /api/profile {a:"get", code}              → {nick, data, rev}  다른 기기에서 불러오기
+// POST /api/profile {a:"put", code, nick, data, rev} → {rev}     저장(코드 아는 사람만)
+// POST /api/profile {a:"del", code}              → {ok}       프로필 삭제
+// 개인정보(이메일·전화·이름) 없음. 원본 IP 저장 안 함: (IP+날짜+비밀값) 해시로 하루 시도 횟수만 센다.
+import { profileNickOk } from "../../lib/nick.js";
+
+const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 헷갈리는 0·O·1·I 제외, 32자 → 12자리 = 60비트
+const LIMIT = { get: 20, new: 5, put: 300, del: 10, bad: 10 }; // IP당 하루 횟수. bad = 틀린 코드 입력
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+async function sha(s) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+export function normCode(c) {
+  const s = String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return s.length === 12 && [...s].every((ch) => ABC.includes(ch)) ? s : null;
+}
+function newCode() {
+  const r = crypto.getRandomValues(new Uint8Array(12));
+  return [...r].map((x) => ABC[x & 31]).join("");
+}
+// 저장 데이터 정리: 알려진 칸만, 숫자 범위 제한, 4KB 이하
+export function clean(d) {
+  d = d && typeof d === "object" ? d : {};
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(d.last || "") ? d.last : undefined;
+  const flags = (o, re) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, 60).map(([k]) => [k, 1]));
+  const out = {
+    coins: Math.max(0, Math.min(30, Math.floor(+d.coins || 0))), days: Math.max(0, Math.min(100000, Math.floor(+d.days || 0))),
+    streak: Math.max(0, Math.min(100000, Math.floor(+d.streak || 0))), last: day,
+    skin: /^[a-z]{1,8}$/.test(d.skin || "") ? d.skin : undefined,
+    des: Object.fromEntries(Object.entries(d.des && typeof d.des === "object" ? d.des : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
+    own: flags(d.own, /^[cd]:[a-z:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
+  };
+  return JSON.stringify(out).length <= 4096 ? out : null;
+}
+let ready = false;
+async function ensure(db) {
+  if (ready) return;
+  await db.batch([
+    db.prepare("CREATE TABLE IF NOT EXISTS profiles (h TEXT PRIMARY KEY, nick TEXT NOT NULL, data TEXT NOT NULL, rev INTEGER NOT NULL DEFAULT 1, updated TEXT NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS ptries (h TEXT PRIMARY KEY, day TEXT NOT NULL, n INTEGER NOT NULL)"),
+  ]);
+  ready = true;
+}
+// 하루 횟수 제한. 넘으면 false
+async function hit(env, ip, kind, add = 1) {
+  const day = kst(), h = (await sha(`${ip}|p|${kind}|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
+  const r = await env.DB.prepare("SELECT n FROM ptries WHERE h = ?").bind(h).first();
+  if (r && r.n >= LIMIT[kind]) return false;
+  if (add) await env.DB.prepare("INSERT INTO ptries (h, day, n) VALUES (?, ?, 1) ON CONFLICT(h) DO UPDATE SET n = n + 1").bind(h, day).run();
+  return true;
+}
+
+export async function onRequestPost({ request, env }) {
+  let b;
+  try { b = await request.json(); } catch { return json({ error: "bad" }, 400); }
+  if (!env.DB) return json({ error: "nodb" }, 500);
+  await ensure(env.DB);
+  const a = b && b.a, ip = request.headers.get("cf-connecting-ip") || "0", salt = env.VOTE_SALT || "";
+  if (!["new", "get", "put", "del"].includes(a)) return json({ error: "bad" }, 400);
+  if (!(await hit(env, ip, "bad", 0))) return json({ error: "limit", msg: "틀린 코드를 너무 많이 넣었어요. 내일 다시 해 주세요." }, 429);
+  if (!(await hit(env, ip, a))) return json({ error: "limit", msg: "오늘 요청이 너무 많아요. 내일 다시 해 주세요." }, 429);
+  const today = kst();
+  if (a === "new") {
+    if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
+    const data = clean(b.data); if (!data) return json({ error: "bad" }, 400);
+    for (let i = 0; i < 3; i++) {
+      const code = newCode(), h = await sha(`${code}|${salt}`);
+      const r = await env.DB.prepare("INSERT INTO profiles (h, nick, data, rev, updated) VALUES (?, ?, ?, 1, ?) ON CONFLICT(h) DO NOTHING").bind(h, b.nick, JSON.stringify(data), today).run();
+      if (r.meta && r.meta.changes) {
+        // 1년 넘게 안 쓴 프로필 정리(가끔만)
+        if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM profiles WHERE updated < date(?, '-365 day')").bind(today).run();
+        await env.DB.prepare("DELETE FROM ptries WHERE day < ?").bind(today).run();
+        return json({ code: code.slice(0, 4) + "-" + code.slice(4, 8) + "-" + code.slice(8), rev: 1 });
+      }
+    }
+    return json({ error: "retry" }, 500);
+  }
+  const code = normCode(b.code);
+  const h = code && (await sha(`${code}|${salt}`));
+  const row = h && (await env.DB.prepare("SELECT nick, data, rev FROM profiles WHERE h = ?").bind(h).first());
+  if (!row) { await hit(env, ip, "bad"); return json({ error: "nocode", msg: "그런 복구 코드가 없어요. 다시 확인해 주세요." }, 404); }
+  if (a === "get") return json({ nick: row.nick, data: JSON.parse(row.data), rev: row.rev });
+  if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); return json({ ok: true }); }
+  // put
+  if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
+  const data = clean(b.data); if (!data) return json({ error: "bad" }, 400);
+  if ((+b.rev || 0) < row.rev) return json({ error: "old", nick: row.nick, data: JSON.parse(row.data), rev: row.rev }, 409); // 다른 기기가 먼저 저장함 → 최신 걸 돌려줌
+  const rev = row.rev + 1;
+  await env.DB.prepare("UPDATE profiles SET nick = ?, data = ?, rev = ?, updated = ? WHERE h = ?").bind(b.nick, JSON.stringify(data), rev, today, h).run();
+  return json({ rev });
+}

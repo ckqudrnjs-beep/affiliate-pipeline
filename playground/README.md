@@ -63,3 +63,9 @@
 - 코인 사용: 이어하기(별빛 요격대 그 자리 목숨 3 / 네온 사격장 탈락 스테이지 재도전, 한 판 1번, 이어한 점수도 순위 반영) + 스킨 사기(BK: 화려할수록 비싸게).
 - 스킨(겉모습만, 판정 동일): build.py `DESIGNS`(별빛: 냥냥 요격기 6·원반 UFO 8·드래곤 파이터 12 / 통통: 냥이 5·개구리 7·우주인 10) + `SKINS` 색(0~5). 그림은 starlight.js `shipSprite`, tongtong game.js 그리기 코드.
 - 코드: build.py `BONUS_JS`(window.Bonus: checkin/spend/ach/buy/skin/design), `BONUS_CSS`, `BONUS_BODY`. 게임 boot 옵션 `bonus`, `skin`, `design`.
+
+## 가입 없는 프로필 (/profile, 2026-11-13 BK)
+- 별명(아바타 이모지 + 한글·영문·숫자 2~10자) + 복구 코드(12자리, 60비트). 코드로 다른 기기에서 코인·스킨·출석·별명 이어 쓰기. 이메일·전화 등 개인정보 없음.
+- 서버 `functions/api/profile.js` (new/get/put/del), D1 `profiles`(코드 해시만 저장)·`ptries`(IP 해시 하루 횟수). 테이블은 첫 호출 때 자동 생성(BK 할 일 없음). 틀린 코드 하루 10번 넘으면 차단. 1년 안 쓴 프로필 자동 삭제.
+- 별명 규칙·욕설 목록 `lib/nick.js` 하나를 서버(profile.js·score.js)와 화면(build.py가 그대로 넣음)이 같이 쓴다. 순위 별명은 자동 별명 또는 프로필 별명만 허용.
+- 동기화: 코인·스킨이 바뀌면 1.5초 뒤 저장(rev 번호로 충돌 시 서버 최신본 채택), 페이지 열 때 10분에 한 번 최신본 확인.

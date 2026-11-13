@@ -1,0 +1,16 @@
+// 프로필 별명 규칙(서버 functions/api/*.js 와 화면 build.py 가 같이 쓴다. build.py 는 이 파일의 'export '를 떼고 그대로 넣는다).
+// 별명 = "아바타 이름". 이름은 한글·영문·숫자 2~10자(띄어쓰기·기호·자음만 금지 → 'ㅅㅂ' 같은 우회 차단), 욕설·사칭 단어 금지.
+export const AVATARS = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐰", "🐻", "🐯", "🐸", "🐙", "👾", "🤖", "🎮", "⭐", "🚀", "🐉", "🛸", "🧑‍🚀"];
+// 스킨을 산 사람만 고를 수 있는 아바타(화면에서만 잠금, 꾸미기라 서버는 검사 안 함)
+export const AVATAR_LOCK = { "🐉": "d:starlight:dragon", "🛸": "d:starlight:ufo", "🧑‍🚀": "d:tongtong:astro" };
+export const BAD = ["시발", "씨발", "씨빨", "시빨", "싸발", "쌍년", "썅", "병신", "븅신", "빙신", "좆", "좃", "존나", "졸라", "개새", "개색", "개세", "새끼", "섀끼", "지랄", "염병", "미친", "미췬", "꺼져", "닥쳐", "엿먹", "느금", "니미", "니애미", "느개비", "애미", "애비", "에미", "섹스", "쎅스", "야동", "보지", "자지", "꼬추", "창녀", "걸레", "한남", "김치녀", "틀딱", "장애", "똥꼬", "운영자", "관리자", "5락실", "오락실운영", "fuck", "fuk", "shit", "bitch", "sex", "porn", "nigg", "dick", "pussy", "cunt", "admin", "slut", "whore"];
+export function nameOk(n) {
+  n = String(n || "");
+  if (!/^[가-힣A-Za-z0-9]{2,10}$/.test(n)) return false;
+  const t = n.toLowerCase().replace(/[0-9]/g, "");
+  return !BAD.some((w) => t.includes(w));
+}
+export function profileNickOk(n) {
+  const s = String(n || ""), i = s.indexOf(" ");
+  return i > 0 && AVATARS.includes(s.slice(0, i)) && nameOk(s.slice(i + 1));
+}
