@@ -1,0 +1,12 @@
+{
+  "name": "5raksil-3d",
+  "private": true,
+  "description": "5락실 3D 게임 원본. 빌드 결과(static/js/*.js)는 저장소에 커밋한다(Cloudflare 빌드는 파이썬만 실행).",
+  "scripts": {
+    "build": "esbuild range/main.js --bundle --minify --format=esm --target=es2020 --legal-comments=none --outfile=../static/js/range.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "three": "0.170.0"
+  }
+}

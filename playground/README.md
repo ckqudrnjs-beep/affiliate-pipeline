@@ -36,3 +36,10 @@
 
 ## 다음
 - 유형 테스트 주 1개.
+
+## 3D 게임 (네온 사격장, 2026-11-13)
+- `games/range/` 는 다른 게임과 같은 구조(meta/body/game.js)지만, 3D 본체는 `static/js/range.js`(three.js 포함 번들, gzip 약 160KB)를 **시작 버튼을 누를 때** 불러온다.
+- 원본 코드: `src3d/range/*.js` (무기 모델 weapons.js, 맵·표적 world.js, 효과음 audio.js, 게임 main.js). 외부 모델·이미지·음원 없음(전부 코드로 생성).
+- 고친 뒤 빌드: `cd src3d && npm install && npm run build` → `static/js/range.js` 를 함께 커밋(Cloudflare 빌드는 파이썬만 돌리므로 번들을 저장소에 둔다).
+- 점수 상한은 `functions/api/score.js` MAX.range. 매일 같은 판 = `seeded('range'+KST)`.
+- 테스트용: 주소 끝에 `#rgdebug` 를 붙이면 `window.__rg` 로 조작 가능.
