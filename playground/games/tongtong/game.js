@@ -157,14 +157,17 @@ function draw(){
  if(best>8&&sx(best)>-T&&sx(best)<W+T){const X=sx(best),Y=sy(0);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.moveTo(X,Y);cx.lineTo(X,Y-T*2.6);cx.stroke();cx.fillStyle='#fff';cx.beginPath();cx.moveTo(X,Y-T*2.6);cx.lineTo(X+T*0.8,Y-T*2.35);cx.lineTo(X,Y-T*2.1);cx.fill();
   cx.font=`700 ${Math.round(T*0.28)}px sans-serif`;cx.textAlign='left';cx.fillText('BEST',X+4,Y-T*2.7)}
  // 꼬리 + 통통이
- if(state!=='dead'&&state!=='over'){for(let k=0;k<trail.length;k++){const p=trail[k],a=(k+1)/trail.length;cx.fillStyle=`hsla(${hue2},100%,70%,${a*0.35})`;cx.beginPath();cx.arc(sx(p[0]),sy(p[1]+R),R*T*(0.3+a*0.5),0,7);cx.fill()}
+ if(state!=='dead'&&state!=='over'){for(let k=0;k<trail.length;k++){const p=trail[k],a=(k+1)/trail.length;if(DES==='whale'){const X0=sx(p[0]),Y0=sy(p[1]+R);cx.fillStyle=`hsla(${(200+k*14+performance.now()/20)%360},95%,72%,${a*0.6})`;cx.beginPath();cx.arc(X0,Y0,R*T*(0.25+a*0.45),0,7);cx.fill();if(k%2===0){cx.fillStyle=`rgba(255,255,255,${a*0.9})`;cx.fillRect(X0-2+Math.sin(k+performance.now()/200)*R*T*0.5,Y0-R*T*0.6,3,3)}continue}cx.fillStyle=`hsla(${hue2},100%,70%,${a*0.35})`;cx.beginPath();cx.arc(sx(p[0]),sy(p[1]+R),R*T*(0.3+a*0.5),0,7);cx.fill()}
   const X=sx(x),Y=sy(P.y+R),sq=squash>0?squash:0,st=P.g?0:Math.min(0.18,Math.abs(P.vy)/120);
   cx.save();cx.translate(X,Y+R*T*sq*0.25);cx.scale(1+sq*0.25-st*0.5,1-sq*0.25+st);
   cx.fillStyle=SKC[1]+'40';cx.beginPath();cx.arc(0,0,R*T*1.35,0,7);cx.fill();
+  if(DES==='whale'){const r=R*T,w=Math.sin(performance.now()/160)*0.12;cx.fillStyle='#4b3df0';cx.strokeStyle='#e9fdff';cx.lineWidth=2;cx.beginPath();cx.moveTo(-0.85*r,0.1*r);cx.quadraticCurveTo(-1.35*r,-0.2*r,-1.6*r,(-0.75+w)*r);cx.quadraticCurveTo(-1.35*r,-0.15*r,-1.75*r,(0.15-w)*r);cx.quadraticCurveTo(-1.3*r,0.25*r,-0.85*r,0.4*r);cx.closePath();cx.fill();cx.stroke();
+   if(!P.g){const t=performance.now()/1000;for(let k=0;k<5;k++){const a=-Math.PI/2+(k-2)*0.38,d=(1.5+((t*2+k*0.37)%1)*0.9)*r;cx.save();cx.translate(Math.cos(a)*d*0.8+0.2*r,-0.5*r+Math.sin(a)*d);cx.rotate(t*3+k);cx.fillStyle=k%2?'#ffd23f':'#aef7ff';cx.beginPath();for(let q=0;q<10;q++){const rr=(q%2?0.09:0.22)*r,aa=q*Math.PI/5;cx.lineTo(Math.cos(aa)*rr,Math.sin(aa)*rr)}cx.fill();cx.restore()}}}
   const og=cx.createRadialGradient(-R*T*0.3,-R*T*0.35,R*T*0.1,0,0,R*T);og.addColorStop(0,SKC[0]);og.addColorStop(0.45,SKC[1]);og.addColorStop(1,SKC[2]);cx.fillStyle=og;cx.beginPath();cx.arc(0,0,R*T,0,7);cx.fill();
   cx.strokeStyle='#ffffffcc';cx.lineWidth=2;cx.stroke();
   const r=R*T,blink=(Math.floor(performance.now()/1800)%3===0&&performance.now()%1800<120)?0.15:1;
-  if(DES==='cat'){for(const e0 of [-0.6,0.12]){cx.fillStyle=SKC[1];cx.beginPath();cx.moveTo(e0*r,-0.72*r);cx.lineTo((e0+0.2)*r,-1.38*r);cx.lineTo((e0+0.52)*r,-0.86*r);cx.closePath();cx.fill();cx.strokeStyle='#ffffffcc';cx.lineWidth=2;cx.stroke();
+  if(DES==='whale'){cx.fillStyle='rgba(214,200,255,0.35)';cx.beginPath();cx.ellipse(0.1*r,0.45*r,0.72*r,0.3*r,0,0,Math.PI);cx.fill();const tw=0.6+0.4*Math.sin(performance.now()/250),pts=[[-0.55,-0.35],[-0.25,-0.62],[0.05,-0.5],[-0.12,-0.2],[-0.48,-0.05]];cx.strokeStyle='rgba(255,255,255,0.6)';cx.lineWidth=1.2;cx.beginPath();pts.forEach((q,i)=>i?cx.lineTo(q[0]*r,q[1]*r):cx.moveTo(q[0]*r,q[1]*r));cx.stroke();cx.fillStyle=`rgba(255,255,255,${tw})`;for(const q of pts){cx.beginPath();cx.arc(q[0]*r,q[1]*r,0.07*r,0,7);cx.fill()}}
+  else if(DES==='cat'){for(const e0 of [-0.6,0.12]){cx.fillStyle=SKC[1];cx.beginPath();cx.moveTo(e0*r,-0.72*r);cx.lineTo((e0+0.2)*r,-1.38*r);cx.lineTo((e0+0.52)*r,-0.86*r);cx.closePath();cx.fill();cx.strokeStyle='#ffffffcc';cx.lineWidth=2;cx.stroke();
     cx.fillStyle='#ff9ec4';cx.beginPath();cx.moveTo((e0+0.1)*r,-0.82*r);cx.lineTo((e0+0.21)*r,-1.18*r);cx.lineTo((e0+0.4)*r,-0.88*r);cx.closePath();cx.fill()}
    cx.strokeStyle='#ffffffcc';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(0.72*r,0.05*r);cx.lineTo(1.3*r,-0.08*r);cx.moveTo(0.72*r,0.18*r);cx.lineTo(1.3*r,0.26*r);cx.stroke()}
   else if(DES==='frog'){for(const ex of [-0.05,0.55]){cx.fillStyle=SKC[1];cx.beginPath();cx.arc(ex*r,-0.82*r,0.32*r,0,7);cx.fill();cx.strokeStyle='#ffffffcc';cx.lineWidth=2;cx.stroke();
@@ -202,7 +205,7 @@ function draw(){
 }
 // ── 진행
 let SKC=['#e9fdff','#22d3ee','#0e7490'],DES='base';// 출석 보너스 '내 네온 색'·디자인 스킨(겉모습만, 판정 동일)
-function reset(){try{if(window.Bonus){SKC=Bonus.skin().c;DES=Bonus.design('tongtong')}}catch(e){}P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
+function reset(){try{if(window.Bonus){SKC=Bonus.skin().c;DES=Bonus.design('tongtong');if(DES==='whale')SKC=['#9fd8ff','#4b5dff','#6a2bd8']}}catch(e){}P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
 function tick(){
  const wasG=P.g,jump=P.g&&(held||buf>0)||(DEBUG&&window.__ttBot&&bot());buf-=STEP;
  const ok=sim(P,jump,0);if(jump)sfx.jump();if(P.pad){P.pad=0;sfx.pad()}

@@ -337,7 +337,7 @@ if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.
 # 출석체크 보너스(2026-11-13 BK): 모든 게임은 코인 없이 무료로 끝까지 할 수 있고, 출석은 '덤'만 준다.
 # 코인은 출석·게임 업적·결과 공유로만 생긴다(광고 클릭·시청과 무관, 판매·현금 교환 없음). 기록은 이 브라우저 localStorage 에만.
 # 코인 사용: 이어하기(한 판 1번) + 스킨 사기(BK: 화려할수록 비싸게). 스킨은 겉모습만, 점수·판정 영향 없음.
-BONUS_MAX_COINS = 30
+BONUS_MAX_COINS = 60
 SKINS = [  # 모든 게임 공통 '내 네온 색'. p = 코인 가격. c = [밝은 색, 기본 색, 어두운 색]
     {"id": "cy", "name": "네온 청록", "p": 0, "c": ["#e9fdff", "#22d3ee", "#0e7490"]},
     {"id": "pk", "name": "체리 핑크", "p": 2, "c": ["#ffe9f3", "#ff3d9a", "#9d174d"]},
@@ -351,9 +351,11 @@ DESIGNS = [
     {"g": "starlight", "id": "cat", "name": "냥냥 요격기", "icon": "🐱", "p": 6},
     {"g": "starlight", "id": "ufo", "name": "원반 UFO", "icon": "🛸", "p": 8},
     {"g": "starlight", "id": "dragon", "name": "드래곤 파이터", "icon": "🐉", "p": 12},
+    {"g": "starlight", "id": "aurora", "name": "오로라 세라프", "icon": "🌈", "p": 50, "leg": 1},
     {"g": "tongtong", "id": "cat", "name": "냥이 통통", "icon": "🐱", "p": 5},
     {"g": "tongtong", "id": "frog", "name": "개구리 통통", "icon": "🐸", "p": 7},
     {"g": "tongtong", "id": "astro", "name": "우주인 통통", "icon": "🧑‍🚀", "p": 10},
+    {"g": "tongtong", "id": "whale", "name": "별고래", "icon": "🐋", "p": 50, "leg": 1},
 ]
 DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"]}
 # 업적·공유 보너스 코인(각 1번만): sl5 별빛 5단계, tt500 통통 500m, rg4 사격장 4단계, share 결과 공유
@@ -396,7 +398,7 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   pg.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{if(B.setSkin(b.dataset.s))B.toast('색을 바꿨어요! 다음 판부터 적용돼요')});
   pg.querySelector('.designs').innerHTML=Object.keys(DGAMES).map(g=>{const cur=B.design(g),[gn,bn,bi]=DGAMES[g];
    return `<h3>${gn}</h3><div class="skins"><button type="button" data-d="${g}:base" class="${cur==='base'?'sel':''}"><span class="di">${bi}</span><b>${bn}</b><small>${cur==='base'?'사용 중':'고르기'}</small></button>`
-   +DESIGNS.filter(d=>d.g===g).map(d=>{const ok=own('d:'+g+':'+d.id,d.p);return `<button type="button" data-d="${g}:${d.id}" class="${cur===d.id?'sel':''}${ok?'':' lock'}"><span class="di">${d.icon}</span><b>${d.name}</b><small>${tag(ok,cur===d.id,d.p)}</small></button>`}).join('')+'</div>'}).join('');
+   +DESIGNS.filter(d=>d.g===g).map(d=>{const ok=own('d:'+g+':'+d.id,d.p);return `<button type="button" data-d="${g}:${d.id}" class="${cur===d.id?'sel':''}${ok?'':' lock'}${d.leg?' leg':''}"><span class="di">${d.icon}</span><b>${d.leg?'<i>전설</i> ':''}${d.name}</b><small>${tag(ok,cur===d.id,d.p)}</small></button>`}).join('')+'</div>'}).join('');
   pg.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const [g,id]=b.dataset.d.split(':');if(B.setDesign(g,id))B.toast('스킨을 바꿨어요! 다음 판부터 적용돼요')});
   pg.querySelector('.achs').innerHTML=Object.entries(ACH).map(([k,[t,n]])=>`<li>${s.ach[k]?'✅':'⬜'} ${t} <b>🪙 +${n}</b></li>`).join('')}};
 document.addEventListener('DOMContentLoaded',B.render);if(document.readyState!=='loading')B.render();
@@ -406,6 +408,7 @@ return B})();
 )
 
 BONUS_CSS = """
+.leg{border-color:#ffd23f!important;background:linear-gradient(135deg,#2a1a5a,#123a5a)!important;box-shadow:0 0 12px #ffd23f55}.leg b i{font-style:normal;font-size:.75em;background:#ffd23f;color:#120a2a;border-radius:6px;padding:1px 5px}
 nav a.att{position:relative;color:var(--y);border-color:#ffd23f66}nav a.att b{font-weight:800}nav a.att.new::after{content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--a);box-shadow:0 0 8px var(--a)}
 .bonus-mini{margin:10px 0;padding:10px 12px;border:2px dashed #ffd23f66;border-radius:12px;background:#ffd23f0d;font-size:14px;line-height:1.6}.bonus-mini:empty{display:none}.bonus-mini small{color:var(--muted)}
 .bonus-mini .ck{margin-left:4px;font:inherit;font-weight:800;font-size:13px;padding:5px 12px;border-radius:9px;border:0;background:var(--y);color:#1a0f00;cursor:pointer;box-shadow:0 3px 0 #b8860b}
