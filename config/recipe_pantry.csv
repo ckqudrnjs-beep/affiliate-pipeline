@@ -1,6 +1,6 @@
 id,name,pack,packAmount,unit,packPrice,priceDate,coupangUrl
-rice,쌀,10kg,10000,g,32000,2026-11-13,
-egg,계란,30구,30,개,8900,2026-11-13,
+rice,쌀,10kg,10000,g,32000,2026-11-13,https://link.coupang.com/a/iDCUJcLxBc
+egg,계란,30구,30,개,8900,2026-11-13,https://link.coupang.com/a/iDDbX8uruK
 kimchi,포기김치,5kg,5000,g,27000,2026-11-13,
 pork,돼지고기 앞다리살,1kg,1000,g,13000,2026-11-13,
 tofu,찌개용 두부,300g,300,g,1800,2026-11-13,
