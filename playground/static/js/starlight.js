@@ -458,6 +458,51 @@ function hitPlayer() {
   if (G.shield) { G.shield = false; G.inv = 1; SFX.shield(); G.parts.push({ ring: 1, x: G.px, y: G.py, l: 0, m: .4, k: 'cy' }); return; }
   boom(G.px, G.py, 'cy', 40); boom(G.px, G.py, 'or', 20); SFX.die(); G.shake = .5; G.lives--; G.miss++; G.dead = 1.8; G.power = Math.max(1, G.power - 1); G.pods = 0; G.eb = []; G.beams = [];
 }
+/* 필살기 연출(디자인 스킨별 겉모습만 다름. 위력·범위·시간은 모두 같음 — novaHit 한 곳) */
+function drawNova(x, nv, f, des) {
+  const cx = nv.x, cy = nv.y, a = 1 - f; x.save(); x.globalAlpha = a;
+  if (des === 'cat') { // 냥냥: 퍼져 나가는 분홍 발자국 + 하트
+    for (let ring = 0; ring < 2; ring++) {
+      const r = 30 + f * (620 - ring * 160), n = 12 + ring * 4;
+      for (let i = 0; i < n; i++) {
+        const an = i / n * TAU + f * 1.5 * (ring ? -1 : 1), px = cx + Math.cos(an) * r, py = cy + Math.sin(an) * r;
+        x.save(); x.translate(px, py); x.rotate(an + Math.PI / 2); x.fillStyle = ring ? '#ffd1e6' : '#ff7eb6'; x.shadowColor = '#ff7eb6'; x.shadowBlur = 8;
+        x.beginPath(); x.ellipse(0, 3, 6, 5, 0, 0, TAU); x.fill(); for (const [tx, ty] of [[-6, -4], [-2, -8], [2, -8], [6, -4]]) { x.beginPath(); x.arc(tx, ty, 2.2, 0, TAU); x.fill(); }
+        x.restore();
+      }
+    }
+    const hs = 14 + f * 60; x.fillStyle = '#ff5fa2'; x.beginPath(); x.moveTo(cx, cy + hs * .9); x.bezierCurveTo(cx - hs * 1.4, cy - hs * .1, cx - hs * .6, cy - hs, cx, cy - hs * .35); x.bezierCurveTo(cx + hs * .6, cy - hs, cx + hs * 1.4, cy - hs * .1, cx, cy + hs * .9); x.fill();
+  } else if (des === 'ufo') { // UFO: 소용돌이 블랙홀이 커졌다가 빨려 들어감
+    const R = 40 + Math.sin(Math.min(1, f * 1.4) * Math.PI) * 260, rot = f * 9;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, R); g.addColorStop(0, '#000'); g.addColorStop(.35, '#05021a'); g.addColorStop(.7, '#3b1d8f88'); g.addColorStop(1, '#22d3ee00');
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R, 0, TAU); x.fill();
+    x.lineWidth = 3; for (let k = 0; k < 4; k++) { x.strokeStyle = k % 2 ? C.cy : '#b06bff'; x.shadowColor = x.strokeStyle; x.shadowBlur = 10; x.beginPath();
+      for (let t = 0; t < 1; t += .04) { const an = rot + k * TAU / 4 + t * 4.2, rr = R * (1 - t) + 6; t ? x.lineTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr) : x.moveTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr); } x.stroke(); }
+    x.shadowBlur = 0; x.strokeStyle = C.cy; x.lineWidth = 2; x.beginPath(); x.arc(cx, cy, 20 + f * 700, 0, TAU); x.stroke();
+  } else if (des === 'dragon') { // 드래곤: 화면을 왼쪽→오른쪽으로 쓸고 지나가는 불길
+    const sweep = -Math.PI * .92 + Math.min(1, f * 1.25) * Math.PI * .84, len = 900;
+    for (let k = 0; k < 3; k++) {
+      const w = .32 - k * .09, g = x.createRadialGradient(cx, cy, 0, cx, cy, len * (1 - k * .2));
+      g.addColorStop(0, '#fff6c0'); g.addColorStop(.25, k ? '#ffd23f' : '#ff8a3d'); g.addColorStop(1, '#ff3d1f00');
+      x.fillStyle = g; x.beginPath(); x.moveTo(cx, cy); x.arc(cx, cy, len * (1 - k * .2), sweep - w, sweep + w); x.closePath(); x.fill();
+    }
+    x.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 26; i++) { const d = 40 + ((i * 53 + f * 900) % 700), an = sweep + Math.sin(i * 7.3) * .28; x.fillStyle = i % 3 ? C.or : C.ye; x.beginPath(); x.arc(cx + Math.cos(an) * d, cy + Math.sin(an) * d, 4 + (i % 4) * 2, 0, TAU); x.fill(); }
+  } else if (des === 'aurora') { // 오로라 세라프: 무지개 날개가 화면 양옆으로 활짝 + 무지개 고리
+    const h0 = (f * 360) | 0;
+    for (let k = 0; k < 6; k++) { x.strokeStyle = `hsl(${(h0 + k * 55) % 360},100%,65%)`; x.lineWidth = 6 * a + 2; x.shadowColor = x.strokeStyle; x.shadowBlur = 12; x.beginPath(); x.arc(cx, cy, 20 + f * (700 - k * 70), 0, TAU); x.stroke(); }
+    x.shadowBlur = 0; const sp = 60 + f * 520;
+    for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) {
+      x.fillStyle = `hsla(${(h0 + 120 * k) % 360},100%,62%,.35)`; x.beginPath(); x.moveTo(cx, cy - 10);
+      x.quadraticCurveTo(cx + sd * sp * .6, cy - sp * (.7 - k * .15), cx + sd * sp, cy - 20 + k * 30); x.quadraticCurveTo(cx + sd * sp * .5, cy + 40 + k * 20, cx, cy + 10); x.closePath(); x.fill();
+    }
+    x.globalCompositeOperation = 'lighter'; for (let i = 0; i < 40; i++) { const an = i * 2.4, d = f * (200 + (i * 37) % 500); x.fillStyle = `hsl(${(h0 + i * 25) % 360},100%,70%)`; x.fillRect(cx + Math.cos(an) * d, cy + Math.sin(an) * d, 3, 3); }
+  } else { // 기본 노바 버스트
+    x.strokeStyle = C.or; x.lineWidth = 14 * a + 2; x.beginPath(); x.arc(cx, cy, 20 + f * 700, 0, TAU); x.stroke();
+    x.strokeStyle = C.ye; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy, 10 + f * 560, 0, TAU); x.stroke();
+  }
+  x.restore();
+}
 // 필살기 '노바 버스트': 화면의 적탄 삭제 + 모든 적 큰 피해 + 보스 체력 8%
 function bomb() {
   if (!G || G.mode !== 'play' || paused || G.cd > 0 || G.dead > 0 || G.bombs <= 0 || G.nova) return;
@@ -729,7 +774,7 @@ function draw() {
     if (p.ring) { x.globalAlpha = f; x.strokeStyle = C[p.k]; x.lineWidth = 3 * f + .5; x.beginPath(); x.arc(p.x, p.y, 6 + (1 - f) * 34, 0, TAU); x.stroke(); }
     else spr(x, SP.dot[p.k], p.x, p.y, 0, p.sz * (0.5 + f * .7), f);
   }
-  if (G.nova) { const f = G.nova.t / .8; x.globalAlpha = 1 - f; x.strokeStyle = C.or; x.lineWidth = 14 * (1 - f) + 2; x.beginPath(); x.arc(G.nova.x, G.nova.y, 20 + f * 700, 0, TAU); x.stroke(); x.strokeStyle = C.ye; x.lineWidth = 4; x.beginPath(); x.arc(G.nova.x, G.nova.y, 10 + f * 560, 0, TAU); x.stroke(); }
+  if (G.nova) drawNova(x, G.nova, G.nova.t / .8, SP.shipDes);
   x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
   if (G.flash > 0) { x.globalAlpha = G.flash * 1.6; x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.globalAlpha = 1; }
   for (const t of G.texts) { x.globalAlpha = 1 - t.t / 1.1; x.fillStyle = t.col; x.font = t.k ? (t.big ? '20px ' : '14px ') + FONT_K : (t.big ? '14px ' : '8px ') + FONT_N; x.textAlign = 'center'; x.fillText(t.s, t.x, t.y - t.t * 30); }
