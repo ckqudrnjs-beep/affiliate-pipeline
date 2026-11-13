@@ -16,5 +16,6 @@
  "check": "지원 파일 형식(EPUB·PDF), 국내 전자책 앱 설치 가능 여부, 화면 크기",
  "commission": 7.0,
  "status": "active",
- "addedDate": "2026-11-11"
+ "addedDate": "2026-11-11",
+ "missingDays": 1
 }
