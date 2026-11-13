@@ -13,8 +13,9 @@
  },
  {
   "q": "알리 직구 관세 150달러 기준 정리",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "ali-customs-150-dollar-limit"
  },
  {
   "q": "삼촌의 일기: 첫 고지서 받고 전기 먹는 가전 찾기",
