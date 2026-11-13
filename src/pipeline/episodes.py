@@ -190,12 +190,16 @@ def speak(text: str) -> str:
     """숫자를 한글로, 괄호 설명은 뺀다 (TTS 용)."""
     import re
     text = re.sub(r"\s*\([^)]*\)", "", text)
-    text = text.replace("kWh", "킬로와트시").replace("W", "와트")
+    text = text.replace("kWh", "킬로와트시").replace("W", "와트").replace(" × ", " 곱하기 ").replace(" = ", "@@ ")
+    native = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉", "열"]
+    text = re.sub(r"(?<![\d,.])(10|[1-9])(?=\s?(번|시간|개|명|잔|그릇|달)(?!러))", lambda m: native[int(m.group(1))] + " ", text)
 
     def rep(m):
         a, _, b = m.group(0).replace(",", "").partition(".")
         return num_ko(int(a)) + (" 점 " + "".join(DIGITS[int(c)] for c in b) if b else "")
-    return re.sub(r"\d[\d,]*(?:\.\d+)?", rep, text)
+    text = re.sub(r"\d[\d,]*(?:\.\d+)?", rep, text)
+    # "=" 은 받침에 맞춰 "은/는" (삼십일은, 이십일만 원은)
+    return re.sub(r"(.)@@", lambda m: m.group(1) + ("은" if (ord(m.group(1)) - 0xAC00) % 28 else "는"), text)
 
 
 def chunks(text: str, n: int = 40) -> list[str]:
@@ -214,6 +218,27 @@ def chunks(text: str, n: int = 40) -> list[str]:
     return out
 
 
+def reasons(q: dict) -> list[str]:
+    """정답 근거 2~4줄. 사이트 문제에 단계별 풀이(steps)가 있으면 그대로(사이트와 같은 풀이), 없으면 계산식 + 해설 문장."""
+    import re
+    if q.get("steps"):
+        return [str(x) for x in q["steps"]][:3]
+    out = []
+    m = re.search(r"\(([\d,]+)W\)를 하루 ([\d.]+)시간", q["q"])
+    if m:
+        w, hr = int(m.group(1).replace(",", "")), float(m.group(2))
+        out.append(f"{w:,}W × {hr:g}시간 × 30일 = {w * hr * 30 / 1000:,.0f}kWh")
+    m = re.search(r"환율이 ([\d,]+)원일 때.*?([\d,]+)달러", q["q"])
+    if m:
+        fx, usd = int(m.group(1).replace(",", "")), int(m.group(2).replace(",", ""))
+        out.append(f"{usd}달러 × {fx:,}원 = {usd * fx:,}원")
+    for sent in [x.strip().rstrip(".") for x in q["why"].split(". ") if x.strip()]:
+        parts = [x.strip() for x in sent.split("), ")]
+        for j, x in enumerate(parts):
+            out.append(x + (")" if j < len(parts) - 1 else ""))
+    return out[:4]
+
+
 def quiz_spec(d: dt.date) -> dict | None:
     """사이트(don3chon.com/quiz)와 같은 날 같은 문제로 상황극 쇼츠 대본. 조카 오답 → 삼촌 정답 → 내일 문제는 돈삼촌에서."""
     from . import daily
@@ -227,7 +252,7 @@ def quiz_spec(d: dt.date) -> dict | None:
     import re
     sq = speak(q["q"])
     said = [sq] if len(sq) <= 42 else chunks(sq, 42)
-    why = chunks(speak(q["why"].split(". ")[0].rstrip(".") + "."), 42)[:2]
+    steps = reasons(q)
     no = 1 + sum(1 for p in ep_files() if p.stem[11:] == "quiz" and p.stem < f"{d.isoformat()}-quiz")
     subj = re.sub(r"\s*\([^)]*\)", "", q["q"].split(", ")[0]).strip()
     badge = f"{subj} 얼마?" if len(subj) <= 6 else "얼마게?"
@@ -251,8 +276,12 @@ def quiz_spec(d: dt.date) -> dict | None:
                 {"who": "n", "n": "think", "u": "think", "cap": [f"{wrong}?"], "say": f"음, 이건 쉽지. {speak(wrong)}!"},
                 {"who": "u", "u": "facepalm", "n": "shock", "cap": ["땡!"], "sfx": "buzz", "big": ans, "sub": "정답",
                  "say": f"땡! 정답은 {speak(ans)}."},
-                *({"who": "u", "u": "point" if j == 0 else "talk", "n": "think", "cap": ["이유는?" if j == 0 else "그래서"], "say": w}
-                  for j, w in enumerate(why)),
+            ]},
+            # 2026-11-14 BK: "왜 그게 답인지도 알려줘야 한다" → 계산 근거를 한 줄씩 쌓아 보여 준다
+            *({"type": "list", "title": f"왜 {ans}일까?", "items": steps[:k + 1], "say": c}
+              for k, x in enumerate(steps) for c in chunks(speak(x), 42)),
+            {"type": "skit", "bg": "room", "lines": [
+                {"who": "n", "n": "happy", "u": "thumb", "cap": ["아하!"], "say": "아, 그래서 그 금액이구나!"},
                 {"who": "n", "n": "happy", "u": "thumb", "cap": ["내일 문제는", "돈삼촌에서!"],
                  "say": "내일 문제는 돈삼촌에서 맞혀야지!"},
             ]},
