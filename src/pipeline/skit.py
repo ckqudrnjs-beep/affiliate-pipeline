@@ -339,11 +339,35 @@ def buzz():
     return np.sign(np.sin(2 * math.pi * 140 * t)) * 0.12 * np.exp(-t * 4)
 
 
+NEPHEW_VOICE = "M1"   # 2026-11-13 BK: 조카 = M1 톤 +3반음(젊게) "1번"
+NEPHEW_SHIFT = 3.0
+
+
+def young(a):
+    """조카 목소리를 20대 초반처럼: 톤 +NEPHEW_SHIFT 반음(포먼트 같이), 5% 빠르게. ffmpeg rubberband, 없으면 단순 리샘플."""
+    import numpy as np
+    import tempfile
+    from .uncle import write_wav
+    r = 2 ** (float(os.environ.get("SKIT_NEPHEW_SHIFT", NEPHEW_SHIFT)) / 12)
+    if r == 1:
+        return a
+    with tempfile.TemporaryDirectory() as td:
+        src, dst = pathlib.Path(td) / "a.wav", pathlib.Path(td) / "b.raw"
+        write_wav(a, src)
+        ok = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-af", f"rubberband=pitch={r}:formant=shifted,atempo=1.05",
+                             "-f", "f32le", "-ac", "1", "-ar", str(SR), str(dst)]).returncode == 0
+        if ok:
+            return np.fromfile(dst, dtype=np.float32) * float(np.abs(a).max() or 1) / 0.9
+    k = r * 1.05  # 대체: 빠르게 재생 (톤·속도 같이)
+    x = np.arange(0, len(a) - 1, k)
+    return np.interp(x, np.arange(len(a)), a).astype(np.float32)
+
+
 def voices(lines: list[dict]) -> list:
-    """삼촌 7번(M2), 조카 F2. 줄마다 따로."""
+    """삼촌 7번(M2), 조카 M1 젊게. 줄마다 따로."""
     import numpy as np
     from .uncle import resample
-    nv = os.environ.get("SKIT_NEPHEW_VOICE", "F2")
+    nv = os.environ.get("SKIT_NEPHEW_VOICE", NEPHEW_VOICE)
     if os.environ.get("UNCLE_TTS") == "sherpa":
         import sherpa_onnx as s
         d = os.environ["SHERPA_DIR"]
@@ -359,7 +383,8 @@ def voices(lines: list[dict]) -> list:
             u = ln["who"] == "u"
             g.sid, g.num_steps, g.speed, g.extra = (6 if u else sid_n), 24, (1.15 if u else 1.2), {"lang": "ko"}
             a = tts.generate(ln["say"], g)
-            out.append(resample(np.array(a.samples, dtype=np.float32), a.sample_rate))
+            c = resample(np.array(a.samples, dtype=np.float32), a.sample_rate)
+            out.append(c if u else young(c))
         return out
     from supertonic import TTS
     from .shorts import VOICE
@@ -369,7 +394,8 @@ def voices(lines: list[dict]) -> list:
     for ln in lines:
         u = ln["who"] == "u"
         wav, _ = tts.synthesize(ln["say"], voice_style=styles[ln["who"]], lang="ko", total_steps=32, speed=1.15 if u else 1.2)
-        out.append(resample(wav.reshape(-1).astype(np.float32), tts.sample_rate))
+        c = resample(wav.reshape(-1).astype(np.float32), tts.sample_rate)
+        out.append(c if u else young(c))
     return out
 
 
