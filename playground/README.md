@@ -43,3 +43,10 @@
 - 고친 뒤 빌드: `cd src3d && npm install && npm run build` → `static/js/range.js` 를 함께 커밋(Cloudflare 빌드는 파이썬만 돌리므로 번들을 저장소에 둔다).
 - 점수 상한은 `functions/api/score.js` MAX.range. 매일 같은 판 = `seeded('range'+KST)`.
 - 테스트용: 주소 끝에 `#rgdebug` 를 붙이면 `window.__rg` 로 조작 가능.
+
+## 우주 슈팅 (별빛 요격대, 2026-11-13)
+- 오리지널 세로 슈팅. 기존 유명 게임의 이름·캐릭터·그림·소리·고유 연출(포획 광선 등)은 쓰지 않는다. 기체·적·보스·효과음·배경음 모두 코드로 생성.
+- 페이지 `games/starlight/`, 본체 `static/js/starlight.js`(번들 없이 그대로 배포, 페이지 열리고 잠시 뒤 미리 불러와 스프라이트까지 준비). 포스터 `static/img/starlight-poster.jpg`, 공유 이미지 `static/og/starlight.jpg`.
+- 매일 같은 판 = `seeded('starlight'+KST+'#'+단계)`. 점수 상한 `functions/api/score.js` MAX.starlight.
+- 성능: 픽셀 비율 최대 2, 화면 픽셀 360만 상한, 그림은 미리 그린 스프라이트만 사용. 시작하면 전체화면(아이폰은 화면 꽉 찬 오버레이).
+- 테스트용: 주소 끝 `#sldebug` → `window.__sl` (G(), stage(n), god(true)). 디버그 판은 순위에 안 올라감.
