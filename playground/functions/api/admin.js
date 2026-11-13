@@ -6,9 +6,11 @@
 // POST /api/admin {a:"hide", h, on}                 → 순위 제외 켜기/끄기(BK 요청 때만. 켜면 테스터로도 지정)
 // POST /api/admin {a:"list", page}                 → 별명 목록(최근 사용 순, 50개씩)
 // POST /api/admin {a:"reissue", h}                  → 새 복구 코드 발급(옛 코드 즉시 무효, 새 코드는 응답에 한 번만. 원본은 저장 안 함)
+// 게시판: {a:"posts", page} 전체 글(숨김·비밀 포함) / {a:"phide", id, on} / {a:"pdel", id} / {a:"reply", id, text} / {a:"ban", id, days(0=해제, 7, 9999=영구)}
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
 import { clean, normCode } from "./profile.js";
+import { ensureBoard } from "./board.js";
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
@@ -52,6 +54,28 @@ export async function onRequestPost({ request, env }) {
   const a = b && b.a;
   const view = async (r) => { const t = await env.DB.prepare("SELECT hide FROM testers WHERE h = ?").bind(r.h).first(); return { h: r.h, nick: r.nick, data: JSON.parse(r.data), rev: r.rev, updated: r.updated, tester: !!t, hide: !!(t && t.hide) }; };
 
+  if (["posts", "phide", "pdel", "reply", "ban"].includes(a)) {
+    await ensureBoard(env.DB);
+    const id = Math.floor(+b.id || 0);
+    if (a === "posts") {
+      const pg = Math.max(0, Math.min(500, Math.floor(+b.page || 0)));
+      const { results } = await env.DB.prepare("SELECT p.*, x.until FROM posts p LEFT JOIN bans x ON x.h = p.h ORDER BY (p.hidden = 2) DESC, p.id DESC LIMIT 31 OFFSET ?").bind(pg * 30).all();
+      return json({ list: (results || []).slice(0, 30).map((r) => ({ id: r.id, nick: r.nick, title: r.title, body: r.body, secret: !!r.secret, created: r.created, hidden: r.hidden, reports: r.reports, reply: r.reply, ban: r.until && r.until >= kst() ? r.until : null })), more: (results || []).length > 30 });
+    }
+    const p = await env.DB.prepare("SELECT * FROM posts WHERE id = ?").bind(id).first();
+    if (!p) return json({ error: "none", msg: "글이 없어요." }, 404);
+    if (a === "phide") await env.DB.prepare("UPDATE posts SET hidden = ? WHERE id = ?").bind(b.on ? 1 : 0, id).run();
+    if (a === "pdel") await env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(id).run();
+    if (a === "reply") await env.DB.prepare("UPDATE posts SET reply = ?, replied = ? WHERE id = ?").bind(String(b.text || "").trim().slice(0, 1000) || null, now(), id).run();
+    if (a === "ban") {
+      const d = Math.floor(+b.days || 0);
+      if (d <= 0) await env.DB.prepare("DELETE FROM bans WHERE h = ?").bind(p.h).run();
+      else { const until = d >= 9999 ? "9999-12-31" : new Date(Date.now() + 9 * 3600e3 + d * 864e5).toISOString().slice(0, 10);
+        await env.DB.prepare("INSERT INTO bans (h, nick, until, reason) VALUES (?, ?, ?, ?) ON CONFLICT(h) DO UPDATE SET until = excluded.until, reason = excluded.reason").bind(p.h, p.nick, until, `글 #${id}`).run(); }
+    }
+    await log(env, a, p.nick, { id, on: b.on, days: b.days });
+    return json({ ok: true });
+  }
   if (a === "find") {
     const q = String(b.q || "").trim().slice(0, 20);
     if (!q) return json({ error: "bad" }, 400);
@@ -88,6 +112,7 @@ export async function onRequestPost({ request, env }) {
   }
   if (a === "get") return json({ item: await view(row) });
   if (a === "reissue") {
+    await ensureBoard(env.DB);
     const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     for (let i = 0; i < 3; i++) {
       const r = crypto.getRandomValues(new Uint8Array(12)), code = [...r].map((x) => ABC[x & 31]).join(""), nh = await sha(`${code}|${env.VOTE_SALT || ""}`);
@@ -95,6 +120,8 @@ export async function onRequestPost({ request, env }) {
       await env.DB.batch([
         env.DB.prepare("UPDATE profiles SET h = ?, rev = rev + 1, updated = ? WHERE h = ?").bind(nh, day, h),
         env.DB.prepare("UPDATE testers SET h = ? WHERE h = ?").bind(nh, h),
+        env.DB.prepare("UPDATE posts SET h = ? WHERE h = ?").bind(nh, h),
+        env.DB.prepare("UPDATE bans SET h = ? WHERE h = ?").bind(nh, h),
       ]);
       await log(env, "reissue", row.nick);
       const row2 = await env.DB.prepare("SELECT * FROM profiles WHERE h = ?").bind(nh).first();

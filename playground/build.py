@@ -501,6 +501,70 @@ const findOne=async h=>{const j=await api({a:'get',h});if(j&&j.item){$('al').inn
 $('alst').onclick=()=>lst(false);$('amore').onclick=()=>lst(true);
 $('alog').onclick=async()=>{const j=await api({a:'log'});if(j)$('alist').innerHTML=j.list.map(r=>`<li>${esc(r.t)} · ${esc(r.act)} · ${esc(r.nick)} <small class="muted">${esc(r.detail)}</small></li>`).join('')||'<li>아직 없어요</li>'}})();"""
 
+# 게시판(/board) + 이용 지침(/board-rules). 서버 functions/api/board.js, 관리 /admin
+BOARD_RULES = """<h1>📜 게시판 이용 지침</h1><p class="lead">5락실 게시판은 게임 이야기, 건의, 오류 제보, 프로필 문의를 위한 곳이에요. 모두가 편하게 쓰도록 아래 지침을 꼭 지켜 주세요.</p>
+<div class="card"><h2>금지 행위</h2><ul class="list">
+<li>욕설·비하·혐오·성적인 표현, 특정인을 괴롭히거나 저격하는 글</li>
+<li>운영자·다른 이용자 사칭</li>
+<li>전화번호·이메일·주소·학교·계좌 등 <b>개인정보</b>(내 것이든 남의 것이든)</li>
+<li>광고·홍보·외부 링크·오픈채팅 주소, 같은 글 반복(도배)</li>
+<li>복구 코드를 공개 글에 쓰는 것(다른 사람이 내 프로필을 가져갈 수 있어요)</li>
+<li>코인·스킨 거래, 현금·물건과 바꾸자는 글(코인은 사고팔 수 없어요)</li>
+<li>불법·위험한 행동을 권하거나 저작권을 침해하는 글</li></ul></div>
+<div class="card"><h2>제재</h2><ul class="list">
+<li>욕설·링크·개인정보는 글을 올릴 때 자동으로 막혀요.</li>
+<li>서로 다른 3명이 신고하면 글이 <b>자동으로 숨겨지고</b> 관리자가 확인해요.</li>
+<li>위반 정도에 따라 <b>글 숨김·삭제 → 7일 글쓰기 제한 → 영구 제한</b>. 심한 경우 바로 영구 제한해요.</li>
+<li>프로필 하나로 하루 5개까지 글을 쓸 수 있어요.</li></ul></div>
+<div class="card"><h2>복구 코드를 잃어버렸다면</h2><ul class="list">
+<li>지금 기기에서 <a href="/profile">프로필</a>을 새로 만든 뒤, 게시판에 <b>🔒 비밀글</b>로 남겨 주세요.</li>
+<li>예전 별명, 대략의 코인·스킨, 처음 만든 날을 적어 주시면 관리자가 확인하고 <b>새 복구 코드</b>를 비밀글 답변으로 드려요. 예전 코드는 그때부터 쓸 수 없어요.</li>
+<li>비밀글은 쓴 사람(그 프로필)과 관리자만 볼 수 있어요.</li></ul></div>
+<div class="card"><h2>권리 침해 신고·삭제 요청</h2><p>내 권리를 침해하는 글은 글의 [신고] 버튼이나 <a href="/contact">문의</a> 메일로 알려 주세요. 확인 후 바로 숨기고 처리해요(정보통신망법상 임시조치).</p></div>"""
+BOARD_BODY = """<h1>💬 게시판</h1><p class="lead">게임 이야기·건의·오류 제보·프로필 문의. 글을 쓰기 전에 <a href="/board-rules"><b>이용 지침</b></a>을 꼭 읽어 주세요. 지침을 어기면 글이 숨겨지고 글쓰기가 제한돼요.</p>
+<div class="card" id="bv" hidden></div>
+<div class="card" id="bw"><h2>✏️ 글쓰기</h2><div id="bwf"></div></div>
+<div class="card"><h2>글 목록</h2><ol id="bl" class="list blist"></ol><button class="share" type="button" id="bmore" hidden>더 보기</button></div>"""
+BOARD_CSS = """.blist li{display:flex;gap:6px;flex-wrap:wrap;align-items:baseline}.blist a{font-weight:700}.blist small{color:var(--muted)}
+#bwf input[type=text],#bwf textarea{width:100%;box-sizing:border-box;font:inherit;padding:9px 11px;border-radius:10px;border:2px solid #ffffff33;background:#0b0620;color:#fff;margin:4px 0}
+#bwf textarea{min-height:120px}#bwf label{display:block;margin:6px 0;font-size:14px}.bbody{white-space:pre-wrap;word-break:break-word;line-height:1.7}.brep{margin-top:12px;padding:10px 12px;border-left:4px solid var(--y);background:#ffd23f12;border-radius:8px;white-space:pre-wrap}
+.bmsg{color:#ff8fb1;font-size:14px}"""
+BOARD_JS = r"""(function(){const $=i=>document.getElementById(i),esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const code=()=>window.Profile&&Profile.code(),post=async b=>{const r=await fetch('/api/board',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}j._s=r.status;return j};
+let pg=0;async function list(more){if(!more){pg=0;$('bl').innerHTML=''}try{const j=await (await fetch('/api/board?page='+pg)).json();
+ $('bl').insertAdjacentHTML('beforeend',j.list.map(p=>`<li><a href="?p=${p.id}" data-p="${p.id}">${esc(p.title)}</a>${p.replied?' <span class="tag">답변</span>':''} <small>${esc(p.nick)} · ${esc(p.created)}</small></li>`).join('')||(more?'':'<li class="muted">아직 글이 없어요. 첫 글을 남겨 보세요!</li>'));$('bmore').hidden=!j.more;pg++}catch(e){$('bl').innerHTML='<li class="muted">목록을 불러오지 못했어요.</li>'}}
+async function view(id){const v=$('bv');const j=await post({a:'read',id,code:code()});v.hidden=false;
+ if(!j.id){v.innerHTML='<p class="muted">'+esc(j.msg||'글을 볼 수 없어요.')+'</p>';return}
+ v.innerHTML=`<h2>${j.secret?'🔒 ':''}${esc(j.title)}</h2><small class="muted">${esc(j.nick)} · ${esc(j.created)}</small><p class="bbody">${esc(j.body)}</p>${j.reply?`<div class="brep"><b>🔧 관리자 답변</b> <small class="muted">${esc(j.replied_at||'')}</small>\n${esc(j.reply)}</div>`:''}
+ <p><button class="share" type="button" data-r="1">🚨 신고</button> ${j.mine?'<button class="share" type="button" data-d="1">삭제</button>':''} <button class="share" type="button" data-c="1">닫기</button></p><p class="bmsg"></p>`;
+ v.querySelector('[data-r]').onclick=async()=>{if(!confirm('이용 지침을 어긴 글로 신고할까요?'))return;const r=await post({a:'report',id});v.querySelector('.bmsg').textContent=r.msg||'신고했어요.'};
+ const d=v.querySelector('[data-d]');if(d)d.onclick=async()=>{if(!confirm('이 글을 지울까요?'))return;await post({a:'del',id,code:code()});v.hidden=true;history.replaceState(null,'','/board');list()};
+ v.querySelector('[data-c]').onclick=()=>{v.hidden=true;history.replaceState(null,'','/board')};scrollTo(0,0)}
+function form(){const f=$('bwf'),c=code(),n=window.Profile&&Profile.nick();
+ if(!c||!n){f.innerHTML='<p>글을 쓰려면 <b>프로필(별명 + 복구 코드)</b>이 있어야 해요.</p><p><a class="btn" href="/profile">👤 프로필 만들기</a></p><p class="muted">복구 코드를 잃어버렸다면 새 프로필을 만든 뒤 🔒 비밀글로 문의해 주세요.</p>';return}
+ f.innerHTML=`<p class="muted">작성자: <b>${esc(n)}</b></p><input type="text" id="bt" maxlength="40" placeholder="제목 (2~40자)"><textarea id="bb" maxlength="1000" placeholder="내용 (2~1000자). 개인정보·링크·욕설은 올라가지 않아요."></textarea>
+ <label><input type="checkbox" id="bs"> 🔒 비밀글 (나와 관리자만 보기 · 복구 코드 문의는 꼭 비밀글로)</label><label><input type="checkbox" id="ba"> <a href="/board-rules" target="_blank">이용 지침</a>을 읽었고 지킬게요</label><button class="btn" type="button" id="bgo">올리기</button> <span class="bmsg" id="bm"></span>`;
+ $('bgo').onclick=async()=>{if(!$('ba').checked){$('bm').textContent='이용 지침 동의에 체크해 주세요.';return}$('bgo').disabled=true;
+  const j=await post({a:'write',code:c,title:$('bt').value,body:$('bb').value,secret:$('bs').checked});$('bgo').disabled=false;
+  if(j.ok){$('bt').value='';$('bb').value='';$('bm').textContent='올렸어요!';list();if(j.id)view(j.id)}else $('bm').textContent=j.msg||'올리지 못했어요.'}}
+$('bl').onclick=e=>{const a=e.target.closest('[data-p]');if(!a)return;e.preventDefault();history.replaceState(null,'','?p='+a.dataset.p);view(+a.dataset.p)};$('bmore').onclick=()=>list(true);
+form();list();const q=+new URLSearchParams(location.search).get('p');if(q)view(q)})();"""
+ADMIN_BOARD = """<div class="card"><h2>💬 게시판 관리</h2><p class="muted">자동 숨김(신고 3번) 글이 맨 위에 와요. 비밀글 내용도 여기서 보여요.</p><button class="share" type="button" id="bpl">불러오기</button><div id="bpa"></div><button class="share" type="button" id="bpm" hidden>더 보기</button></div>"""
+ADMIN_BOARD_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak'),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)alert(j.msg||('오류 '+r.status));return r.ok?j:null};
+let pg=0;const st=p=>p.hidden===2?'<span class="tag">신고로 자동 숨김</span>':p.hidden?'<span class="tag">숨김</span>':'';
+async function load(more){if(!more){pg=0;$('bpa').innerHTML=''}const j=await api({a:'posts',page:pg});if(!j)return;pg++;$('bpm').hidden=!j.more;
+ j.list.forEach(p=>{const el=document.createElement('div');el.className='ap';el.innerHTML=`<h3>#${p.id} ${p.secret?'🔒 ':''}${esc(p.title)} ${st(p)}</h3><small class="muted">${esc(p.nick)} · ${esc(p.created)} · 신고 ${p.reports}${p.ban?' · <b>글쓰기 제한 ~'+esc(p.ban)+'</b>':''}</small><p class="bbody">${esc(p.body)}</p>
+ <textarea class="rp" maxlength="1000" placeholder="관리자 답변(비밀글이면 작성자만 봐요)" style="width:100%;box-sizing:border-box;min-height:60px;background:#0b0620;color:#fff;border:2px solid #ffffff33;border-radius:9px;padding:8px">${esc(p.reply||'')}</textarea>
+ <div class="row"><button class="share" data-x="reply">답변 저장</button><button class="share" data-x="hide">${p.hidden?'다시 보이기':'숨기기'}</button><button class="share" data-x="del">삭제</button><button class="share" data-x="b7">7일 제한</button><button class="share" data-x="b0">영구 제한</button><button class="share" data-x="ub">제한 풀기</button></div>`;
+ el.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{const x=b.dataset.x;let r;
+  if(x==='reply')r=await api({a:'reply',id:p.id,text:el.querySelector('.rp').value});
+  if(x==='hide')r=await api({a:'phide',id:p.id,on:!p.hidden});
+  if(x==='del'){if(!confirm('글 #'+p.id+'을 지울까요?'))return;r=await api({a:'pdel',id:p.id})}
+  if(x==='b7'||x==='b0'||x==='ub'){if(!confirm(esc(p.nick)+' 님의 글쓰기를 '+(x==='ub'?'풀까요?':x==='b7'?'7일 제한할까요?':'영구 제한할까요?')))return;r=await api({a:'ban',id:p.id,days:x==='ub'?0:x==='b7'?7:9999})}
+  if(r)load()});$('bpa').appendChild(el)})}
+$('bpl').onclick=()=>load();$('bpm').onclick=()=>load(true)})();"""
+
 PROFILE_PAGE_JS = r"""
 Profile.page=function(pg){if(pg._busy)return;const own=(window.Bonus&&Bonus.state().own)||{},n=Profile.nick(),code=Profile.code();
  const cur=n?n.split(' ')[0]:'🐱',name=n?n.slice(n.indexOf(' ')+1):'';
@@ -579,10 +643,10 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}</style>{head}</head><body>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}{BOARD_CSS if path in ('board', 'admin') else ''}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스<span class="hs">게임</span></a><a href="/rank">순위</a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크, 보유 코인">🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
-<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
+<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script>{kakao}</body></html>"""
 
 
@@ -686,7 +750,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY, COMMON_JS + PROFILE_PAGE_JS, noindex=True)
     write("bonus", f"출석체크·스킨 상점 | {cfg['siteName']}", "5락실 출석체크. 하루 한 번 출석하면 코인을 받아 이어하기나 스킨(캐릭터 겉모습)에 써요. 게임은 모두 무료.",
           BONUS_BODY, noindex=True)
-    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY, ADMIN_JS, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_BOARD, ADMIN_JS + ADMIN_BOARD_JS, noindex=True)
+    write("board", f"게시판 | {cfg['siteName']}", "5락실 게시판. 게임 이야기, 건의, 오류 제보, 프로필 문의.", BOARD_BODY, BOARD_JS, noindex=True)
+    write("board-rules", f"게시판 이용 지침 | {cfg['siteName']}", "5락실 게시판 이용 지침과 제재 기준.", BOARD_RULES, noindex=True)
 
     if has_report:
         def li(x, extra=""):
