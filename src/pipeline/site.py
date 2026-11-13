@@ -21,6 +21,7 @@ from . import report as R
 from . import articles as A
 from . import prices as PR
 from . import questions as Q
+from . import recipes as RC
 from . import seo as S
 from urllib.parse import urlparse
 
@@ -318,10 +319,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
+<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}{adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
@@ -524,6 +525,7 @@ def index_page(products: list[dict]) -> str:
 {picks_sec}
 {new_sec}
 {A.home_block(A.load())}
+{RC.home_block(RC.load())}
 {all_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
 <div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
@@ -709,7 +711,21 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
-    (o / "feed.xml").write_text(S.feed(BASE, BRAND, news, arts), encoding="utf-8")
+    pantry = RC.load_pantry()
+    recs = RC.load(pantry=pantry)
+    for r in recs:
+        if err := RC.validate(r, pantry):
+            raise ValueError(f"레시피 {r['slug']}: {err}")
+    (o / "recipe").mkdir(exist_ok=True)
+    (o / "recipe.html").write_text(page(f"1인분 원가 레시피 | {BRAND}", "김치찌개·제육볶음·떡볶이처럼 자주 먹는 한 그릇을 1인분 재료비로 계산하고 배달보다 얼마나 아끼는지 정리했어요.",
+        RC.list_body(recs, pantry), path="recipe.html"), encoding="utf-8")
+    for r in recs:
+        og = S.og_path("recipe", r["slug"])
+        others = [x for x in recs if x is not r][:4]
+        (o / "recipe" / f"{r['slug']}.html").write_text(page(f"{RC.title(r)} | {BRAND}", RC.desc(r), RC.page_body(r, others), root="../",
+            path=f"recipe/{r['slug']}.html", ld=RC.ld(r, BASE, og), og=og,
+            crumbs=[("1인분 원가 레시피", "recipe.html"), (f"{r['name']} 1인분", f"recipe/{r['slug']}.html")]), encoding="utf-8")
+    (o / "feed.xml").write_text(S.feed(BASE, BRAND, news, arts, recs), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
     for f in pathlib.Path("static").rglob("*"):  # 하위 폴더(video/ 등)도 그대로 복사
@@ -728,6 +744,8 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
                + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
                + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
+               + ([("recipe.html", max(max(r["date"], r["priceDate"]) for r in recs))] if recs else [])
+               + [(f"recipe/{r['slug']}.html", max(r.get("updated", r["date"]), r["priceDate"])) for r in recs]
                + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
                + [("about.html", SITE_PAGES), ("contact.html", SITE_PAGES), ("privacy.html", SITE_PAGES)])
     (o / "sitemap.xml").write_text(S.sitemap(BASE, entries), encoding="utf-8")
