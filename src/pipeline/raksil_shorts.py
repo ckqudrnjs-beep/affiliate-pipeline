@@ -319,7 +319,10 @@ def place(buf, clip, at: float):
 def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     import numpy as np
     qs = load_questions()
-    q = pick_question(qs, day)
+    extra = os.environ.get("RAKSIL_QID", "").strip()  # 추가 1편: 질문 id 지정 (바로 공개, 날짜 기록과 따로)
+    q = next((x for x in qs if x["id"] == extra), None) if extra else pick_question(qs, day)
+    if q and extra:
+        day = dt.date.fromisoformat(q["date"])
     if not q:
         print(f"{day} 질문 없음")
         return None
@@ -353,7 +356,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     audio = np.clip(audio, -1, 1)[: int(SR * total)]
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    stem = f"{day.isoformat()}-balance"
+    stem = f"{day.isoformat()}-balance" + (f"-{q['id'][-1]}" if extra else "")
     wav = out_dir / f"{stem}.wav"
     mp4 = out_dir / f"{stem}.mp4"
     import wave
@@ -405,7 +408,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
     meta = {"date": day.isoformat(), "qid": q["id"], "file": str(mp4), "title": title_of(q),
-            "description": description_of(q, res, voiced), "voiced": voiced, "result": res, "seconds": round(total, 1)}
+            "description": description_of(q, res, voiced), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
@@ -436,8 +439,9 @@ def video_body(meta: dict, publish_at: dt.datetime | None = None) -> dict:
 def upload_meta(meta: dict) -> int:
     from .youtube import access_token, summary, upload
     log = json.loads(LOG.read_text(encoding="utf-8")) if LOG.exists() else {}
-    if meta["date"] in log:
-        summary(f"{meta['date']} 이미 올림: https://youtu.be/{log[meta['date']]['id']}")
+    key = meta.get("key", meta["date"])
+    if key in log or any(v.get("qid") == meta["qid"] for v in log.values()):
+        summary(f"{key} 이미 올림")
         return 0
     if os.environ.get("RAKSIL_YT_ENABLED", "").lower() != "true":
         summary(f"dry-run (RAKSIL_YT_ENABLED 꺼짐): {meta['title']}")
@@ -447,9 +451,9 @@ def upload_meta(meta: dict) -> int:
         summary("5락실 유튜브 비밀값이 없어 업로드하지 않음 (docs/RAKSIL_YOUTUBE.md)")
         return 1
     tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
-    at = publish_time(meta, dt.datetime.now(KST))
+    at = None if meta.get("key", meta["date"]) != meta["date"] else publish_time(meta, dt.datetime.now(KST))
     r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
-    log[meta["date"]] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"]}
+    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"]}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"

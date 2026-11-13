@@ -46,5 +46,18 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertIsNone(r.publish_time(m, dt.datetime(2026, 11, 14, 17, 5, tzinfo=r.KST)))
 
 
+    def test_extra_skips_used_qid(self):
+        import json, os, pathlib, tempfile
+        d = pathlib.Path(tempfile.mkdtemp())
+        old = r.LOG
+        r.LOG = d / "log.json"
+        r.LOG.write_text(json.dumps({"2026-11-13": {"id": "x", "qid": "20261113-1"}}))
+        try:
+            os.environ.pop("RAKSIL_YT_ENABLED", None)
+            self.assertEqual(r.upload_meta({"date": "2026-11-13", "key": "20261113-1", "qid": "20261113-1", "title": "t"}), 0)
+        finally:
+            r.LOG = old
+
+
 if __name__ == "__main__":
     unittest.main()

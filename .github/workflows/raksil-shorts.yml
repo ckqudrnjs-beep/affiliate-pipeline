@@ -13,6 +13,10 @@ on:
         description: "날짜 YYYY-MM-DD (비우면 오늘)"
         required: false
         default: ""
+      qid:
+        description: "추가 1편: 질문 id (예 20261113-2). 넣으면 그 질문으로 바로 공개, 매일 분과 따로 기록"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -48,6 +52,7 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          RAKSIL_QID: ${{ inputs.qid }}
         run: |
           export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
           PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
