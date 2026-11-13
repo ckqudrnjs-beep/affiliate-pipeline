@@ -1,6 +1,20 @@
 # 새 기획 영상 대본 규칙 (EPISODES.md)
 
-2026-11-11 BK 확정. 쇼츠 매일(요일별 형식, 월·목·토 = 삼촌 vs 조카 만화 상황극) + 롱폼 주 2개(수·토). 계획은 plan/YOUTUBE_PLAN.md 맨 위.
+2026-11-11 BK 확정, 2026-11-14 개정(덜 광고처럼). 쇼츠 매일 + 롱폼 주 2개(수·토).
+
+## 0. 요일 로테이션 (2026-11-14)
+| 요일 | 형식 | 상품 | 누가 씀 |
+|---|---|---|---|
+| 월 | skit-quiz 삼촌 vs 조카 얼마게? | O | 예약 작업 |
+| 화 | quiz 오늘의 얼마게 (사이트 퀴즈와 같은 날 같은 문제) | X | 코드 자동 (그날 06:10 KST, `episodes quiz`) |
+| 수 | teaser 롱폼 예고 | X | 예약 작업 |
+| 목 | skit-dont 조카야 그거 사지 마 | O | 예약 작업 |
+| 금 | quiz 오늘의 얼마게 | X | 코드 자동 |
+| 토 | skit-life 생활비 상황극 | X | 예약 작업 |
+| 일 | bank 1년 뒤 통장 | X | 예약 작업 |
+- 상품 쇼츠 끝(end)은 상품 사진이 아니라 계산 결과·꿀팁 한 줄(text). 상품 링크는 설명란·고정 댓글에만, 유료 프로모션 체크는 그대로.
+- 주제는 공감 먼저(자취 첫 겨울 난방비, 월급날 다음 날 통장, 배달 vs 집밥). 상품 없는 편 제목엔 [광고] 없음.
+- 얼마게: `pipeline.daily.schedule()` 로 그날 사이트 문제를 그대로 가져와 삼촌 질문 → 보기 4개 → 3초 → 조카 오답(땡) → 삼촌 정답·이유 → "내일 문제는 돈삼촌에서". 예약 작업의 `next` 는 화·금을 건너뛴다. 계획은 plan/YOUTUBE_PLAN.md 맨 위.
 Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.json` 대본을 쓰면, `episodes` 워크플로가 무료로 영상을 만든다
 (7번 목소리 + 사진·카드 + 재사용 삼촌 표정 영상). 쇼츠는 바로 업로드 대기, 롱폼은 미리보기 PR → BK 병합.
 
@@ -38,8 +52,8 @@ Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.js
 | bars | title, items[{label,value,text?}], say | 막대그래프 (롱폼 비교) |
 | chapter | no, text, say | 롱폼 챕터 제목 (설명란 목차가 자동으로 생김) |
 | uncle | clip (config/heygen/clips.json 이름) | 삼촌 표정 영상(대사 고정) |
-| skit | lines[2~8] {who u/n, u 포즈, n 포즈, cap[1~2줄], say, big?, sub?, sfx? buzz/ding, prop? product/heater}, photo? | 삼촌 vs 조카 만화 상황극 (쇼츠 전용). 삼촌 7번 목소리, 조카 F2 |
-| end | say, text(상품 없는 편) | 상품 편: 상품·가격·don3chon.com / 없는 편: 사이트 안내 |
+| skit | lines[2~8] {who u/n, u 포즈, n 포즈, cap[1~2줄], say, big?, sub?, sfx? buzz/ding, prop? product/heater}, photo? | 삼촌 vs 조카 만화 상황극 (쇼츠 전용). 삼촌 7번 목소리, 조카 M1 +3반음 |
+| end | say, text | 쇼츠: text 한 줄(계산 결과·꿀팁, 상품 편도 상품 사진 없음) / 롱폼 상품 편: 상품·가격·don3chon.com |
 
 삼촌 영상 대사(고정): intro-excited "조카야, 삼촌이 오늘 하나 건졌다!", intro-curious "조카야, 이거 한번 볼래?",
 react-surprised "어? 이게 이 가격이라고?", react-laugh "허허, 이거 물건이네.", react-think "흠, 근데 이건 꼭 확인해.",

@@ -41,27 +41,26 @@ SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 
              "마지막 줄은 웃기거나 첫 줄로 이어지게(다시 보게). "
              "skit 에 badge(첫 장면 노란 배지 = 썸네일, 6자 안팎 질문: \"세금 얼마?\")와 bg(room/office/store/door 중 주제에 맞게)를 꼭 넣고, "
              "포즈를 줄마다 바꾼다(삼촌 talk/wow/point/think/thumb/facepalm, 조카 talk/shock/cold/happy/think). ")
-# 요일(월=0) → 쇼츠 형식. 2026-11-11 BK "지루하지 않게": 만화 상황극(조회수 10배)을 월·목·토, 사이 날은 카드형으로 번갈아.
+# 요일(월=0) → 쇼츠 형식. 2026-11-14 BK "덜 광고처럼": 상품 나오는 쇼츠는 월·목 상황극 주 2개만,
+# 화·금 = "오늘의 얼마게"(사이트 퀴즈와 같은 날 같은 문제, 코드가 그날 아침 자동으로 씀, 상품 없음), 수·토·일 상품 없음.
+QUIZ_DAYS = {1, 4}
 SHORT_FORMATS = {
     0: ("skit-quiz", "삼촌 vs 조카 얼마게?", True,
-        SKIT_RULE + "주제: A vs B 중 돈이 더 드는 쪽 맞히기 (예: 온풍기 vs 담요). 조카가 틀리고 삼촌이 숫자로 뒤집는다."),
-    1: ("leak", "돈 새는 구멍", False,
-        "상품 없음. 생활 속에서 모르고 새는 돈 1가지(대기전력, 구독료, 보일러 설정, 통신비 등)를 1년 금액으로. "
-        "hook → list 또는 calc 2~3장 → counter(1년 금액) → end(사이트 계산기 안내). 시리즈 번호 series_no. "
-        "중간에 2줄짜리 skit(조카: \"그게 얼마나 된다고?\")를 넣어도 된다."),
-    2: ("teaser", "롱폼 예고", True,
-        "이번 주 수요일 롱폼(살까 말까 저울)의 핵심 계산 하나만 쇼츠로. hook → versus 또는 bars → calc → uncle 반응 → "
-        "end(\"전체 비교는 채널 롱폼에서\"). 롱폼 주제와 같은 상품."),
+        SKIT_RULE + "주제: A vs B 중 돈이 더 드는 쪽 맞히기 (예: 온풍기 vs 담요). 조카가 틀리고 삼촌이 숫자로 뒤집는다. "
+        "공감 상황 먼저(자취 첫 겨울 난방비, 월급날 다음 날 통장, 배달 vs 집밥). end 는 상품이 아니라 계산 결과·꿀팁 한 줄(text)."),
+    1: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
+    2: ("teaser", "롱폼 예고", False,
+        "상품 없음. 이번 주 수요일 롱폼(살까 말까 저울)의 핵심 계산 하나만 쇼츠로. hook → versus 또는 bars → calc → "
+        "end(\"전체 비교는 채널 롱폼에서\"). 상품 이름·사진 없이 '전기요 vs 온풍기'처럼 종류로만."),
     3: ("skit-dont", "조카야 그거 사지 마", True,
         SKIT_RULE + "주제: 조카가 충동구매하려는 물건을 삼촌이 '이런 사람은 사지 마' 계산으로 말리고, 이런 사람만 사라고 정리. "
-        "정직함이 핵심(단점·조건을 note·check 에서)."),
-    4: ("ox", "착각 vs 현실 O/X", False,
-        "상품 없음. 흔한 믿음 1개(예: 전기장판이 히터보다 무조건 싸다?) → ox(정답 공개) → calc로 반전 계산 → end."),
+        "정직함이 핵심(단점·조건을 note·check 에서). end 는 상품이 아니라 계산 결과·꿀팁 한 줄(text)."),
+    4: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
     5: ("skit-life", "삼촌 vs 조카 생활비", False,
-        SKIT_RULE + "주제: 이번 주 토요일 롱폼(생활비 점검) 중 하나를 생활 상황극으로 (예: 조카가 배달 앱을 켜는 순간). "
-        "상품 없이 해도 되고, 있으면 1개."),
+        SKIT_RULE + "상품 없음(prop product 금지). 주제: 공감 생활 상황극 (자취 첫 겨울 난방비, 월급날 다음 날 통장, "
+        "배달 vs 집밥). 끝 대사나 end 는 사이트 계산기·오늘의 얼마게 안내."),
     6: ("bank", "1년 뒤 통장", False,
-        "상품 없음(또는 1개). '매일 ○○ 대신 △△ 하면 1년 뒤?' → counter(0에서 1년 금액까지 올라감) → calc(근거) → "
+        "상품 없음. '매일 ○○ 대신 △△ 하면 1년 뒤?' → counter(0에서 1년 금액까지 올라감) → calc(근거) → "
         "uncle(react-surprised) → end. 숫자는 보수적으로."),
 }
 LONG_FORMATS = {
@@ -103,7 +102,10 @@ def next_short_date(today: dt.date) -> dt.date:
     last = last + dt.timedelta(days=len(pending))
     for d in pending_dates():
         last = max(last, d)
-    return last + dt.timedelta(days=1)
+    d = last + dt.timedelta(days=1)
+    while d.weekday() in QUIZ_DAYS:  # 얼마게 날은 코드가 그날 아침 자동으로 씀
+        d += dt.timedelta(days=1)
+    return d
 
 
 def next_long_date(today: dt.date) -> dt.date:
@@ -158,6 +160,122 @@ def clips_cfg() -> dict:
     if not CLIPS.exists():
         return {}
     return {k: v for k, v in json.loads(CLIPS.read_text(encoding="utf-8")).items() if not k.startswith("_")}
+
+
+# ---------- 오늘의 얼마게 (2026-11-14 BK) ----------
+DIGITS = "영일이삼사오육칠팔구"
+
+
+def num_ko(n: int) -> str:
+    """12500 -> 만 이천오백 (읽기용)."""
+    if n == 0:
+        return "영"
+    out = []
+    for unit, big in ((10 ** 8, "억"), (10 ** 4, "만"), (1, "")):
+        q, n = divmod(n, unit)
+        if not q:
+            continue
+        part = ""
+        for v, nm in ((1000, "천"), (100, "백"), (10, "십"), (1, "")):
+            x, q = divmod(q, v)
+            if x:
+                part += ("" if (x == 1 and nm) else DIGITS[x]) + nm
+        if big == "만" and part == "일":
+            part = ""
+        out.append(part + big)
+    return " ".join(out)
+
+
+def speak(text: str) -> str:
+    """숫자를 한글로, 괄호 설명은 뺀다 (TTS 용)."""
+    import re
+    text = re.sub(r"\s*\([^)]*\)", "", text)
+    text = text.replace("kWh", "킬로와트시").replace("W", "와트")
+
+    def rep(m):
+        a, _, b = m.group(0).replace(",", "").partition(".")
+        return num_ko(int(a)) + (" 점 " + "".join(DIGITS[int(c)] for c in b) if b else "")
+    return re.sub(r"\d[\d,]*(?:\.\d+)?", rep, text)
+
+
+def chunks(text: str, n: int = 40) -> list[str]:
+    """쉼표·공백에서 n자 이하로 자른다."""
+    out = []
+    for part in [x.strip() for x in text.split(", ") if x.strip()]:
+        while len(part) > n:
+            cut = part.rfind(" ", 0, n)
+            cut = cut if cut > 0 else n
+            out.append(part[:cut])
+            part = part[cut:].strip()
+        if out and len(out[-1]) + len(part) + 2 <= n:
+            out[-1] += ", " + part
+        else:
+            out.append(part)
+    return out
+
+
+def quiz_spec(d: dt.date) -> dict | None:
+    """사이트(don3chon.com/quiz)와 같은 날 같은 문제로 상황극 쇼츠 대본. 조카 오답 → 삼촌 정답 → 내일 문제는 돈삼촌에서."""
+    from . import daily
+    f = daily.OUT / f"{d.isoformat()}.json"
+    latest = json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+    q = daily.schedule(d, 1, latest).get(d.isoformat())
+    if not q:
+        return None
+    ans = q["o"][q["a"]]
+    wrong = q["o"][(q["a"] + 1) % len(q["o"])] if q["a"] == 0 else q["o"][q["a"] - 1]
+    import re
+    sq = speak(q["q"])
+    said = [sq] if len(sq) <= 42 else chunks(sq, 42)
+    why = chunks(speak(q["why"].split(". ")[0].rstrip(".") + "."), 42)[:2]
+    no = 1 + sum(1 for p in ep_files() if p.stem[11:] == "quiz" and p.stem < f"{d.isoformat()}-quiz")
+    subj = re.sub(r"\s*\([^)]*\)", "", q["q"].split(", ")[0]).strip()
+    badge = f"{subj} 얼마?" if len(subj) <= 6 else "얼마게?"
+    qs = re.sub(r"\s*\([^)]*\)", "", q["q"])
+    title = f"{qs} | 오늘의 얼마게 #{no}"
+    if len(title) > 60:
+        title = f"오늘의 얼마게 #{no}: 3초 안에 맞혀 봐"
+    return {
+        "date": d.isoformat(), "kind": "short", "format": "quiz", "format_name": "오늘의 얼마게", "series_no": no,
+        "slug": f"ep-{d.isoformat()}-quiz", "quiz_id": q["id"], "title": title,
+        "description": f"오늘 돈삼촌 퀴즈와 같은 문제예요. 내일 문제는 https://don3chon.com/quiz 에서 매일 하나씩.\n{q['why']}",
+        "scenes": [
+            {"type": "skit", "bg": "room", "badge": badge, "lines": [
+                {"who": "u", "u": "point", "n": "think", "cap": [f"오늘의 얼마게 #{no}"], "say": said[0]},
+                *({"who": "u", "u": "talk", "n": "think", "cap": ["맞혀 봐!"], "say": x} for x in said[1:2]),
+                {"who": "n", "n": "think", "u": "thumb", "cap": ["보기 줘!"], "say": "음, 보기 보여 줘!"},
+            ]},
+            {"type": "list", "title": q["q"], "items": q["o"], "say": "보기 네 개 중에 골라 봐."},
+            {"type": "countdown", "text": "3초 안에 골라 봐", "say": ""},
+            {"type": "skit", "bg": "room", "lines": [
+                {"who": "n", "n": "think", "u": "think", "cap": [f"{wrong}?"], "say": f"음, 이건 쉽지. {speak(wrong)}!"},
+                {"who": "u", "u": "facepalm", "n": "shock", "cap": ["땡!"], "sfx": "buzz", "big": ans, "sub": "정답",
+                 "say": f"땡! 정답은 {speak(ans)}."},
+                *({"who": "u", "u": "point" if j == 0 else "talk", "n": "think", "cap": ["이유는?" if j == 0 else "그래서"], "say": w}
+                  for j, w in enumerate(why)),
+                {"who": "n", "n": "happy", "u": "thumb", "cap": ["내일 문제는", "돈삼촌에서!"],
+                 "say": "내일 문제는 돈삼촌에서 맞혀야지!"},
+            ]},
+            {"type": "end", "text": "내일 문제는 돈삼촌에서", "say": "오늘의 얼마게, 매일 한 문제씩 돈삼촌에서."},
+        ],
+    }
+
+
+def write_quiz(d: dt.date) -> pathlib.Path | None:
+    """얼마게 날(화·금)이면 그날 대본을 쓴다. 이미 있거나 다른 요일이면 None."""
+    if d.weekday() not in QUIZ_DAYS:
+        return None
+    out = EP_DIR / f"{d.isoformat()}-quiz.json"
+    if out.exists() or d in pending_dates():  # 그날 쇼츠가 이미 있으면 (예: 로테이션 바뀌기 전 11/17 돈 새는 구멍)
+        return None
+    spec = quiz_spec(d)
+    if not spec:
+        return None
+    errs = check(spec)
+    if errs:
+        raise SystemExit(f"얼마게 대본 오류: {errs}")
+    out.write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return out
 
 
 # ---------- 검사 ----------
@@ -245,6 +363,11 @@ def check(spec: dict) -> list[str]:
         e.append(f"내레이션 글자 수 {words} (권장 {chars[0]}~{chars[1]})")
     if has_ad and not any(s.get("type") == "end" for s in scenes):
         e.append("상품 편은 end 장면(가격·사이트)")
+    if has_ad and kind == "short" and spec.get("date", "") >= "2026-11-16" and not any(s.get("type") == "end" and s.get("text") for s in scenes):
+        e.append("쇼츠 end 는 상품 대신 계산 결과·꿀팁 한 줄(text)")
+    allowed = {k: a for k, _, a, _ in SHORT_FORMATS.values()}
+    if kind == "short" and spec.get("product") and allowed.get(spec.get("format")) is False:
+        e.append(f"{spec.get('format')} 형식은 상품 없이 (상품 쇼츠는 월·목 상황극만)")
     if not spec.get("description"):
         e.append("description (설명란 소개 1~3줄) 없음")
     return e
@@ -378,7 +501,14 @@ def frame(cv: Canvas, spec: dict, s: dict, t: float, d: float, ctx: dict):
             for j, r in enumerate(rows):
                 _center(dr, W / 2, H * 0.58 + j * 50, r, f, "#8a857c")
     elif typ == "list":
-        _center(dr, W / 2, H * (0.16 if L else 0.18), s.get("title", ""), _font(70), "#1f5f4a")
+        y_items = H * 0.30
+        if len(s.get("title", "")) > 14 and not L:  # 긴 제목(얼마게 문제)은 3줄까지 감싸기
+            f, rows = _wrap(dr, s["title"], 64, W - 140, 3)
+            for j, r in enumerate(rows):
+                _center(dr, W / 2, H * 0.13 + j * 84, r, f, "#1f5f4a")
+            y_items = H * 0.13 + len(rows) * 84 + 110
+        else:
+            _center(dr, W / 2, H * (0.16 if L else 0.18), s.get("title", ""), _font(70), "#1f5f4a")
         items = s["items"]
         step = d / (len(items) + 1)
         for j, it in enumerate(items):
@@ -386,7 +516,7 @@ def frame(cv: Canvas, spec: dict, s: dict, t: float, d: float, ctx: dict):
                 break
             f, rows = _wrap(dr, f"{j + 1}. {it}", 60 if L else 56, W - 200, 2)
             for r_i, r in enumerate(rows):
-                dr.text((140 if L else 90, H * (0.30 if L else 0.30) + j * (150 if L else 190) + r_i * 70), r, font=f, fill="#2b2a28")
+                dr.text((140 if L else 90, y_items + j * (150 if L else 190) + r_i * 70), r, font=f, fill="#2b2a28")
     elif typ == "bars":
         _center(dr, W / 2, H * 0.10 if L else H * 0.15, s.get("title", ""), _font(64), "#1f5f4a")
         items = s["items"]
@@ -537,7 +667,8 @@ def render(path: pathlib.Path) -> pathlib.Path:
             ctx["photos"][id(s)] = photo_of(s.get("product") or product, s.get("photo", 1))
     if product:
         ctx["hook_bg"] = ImageEnhance.Brightness(cover(photo_of(product, 1), cv.W, cv.H).filter(ImageFilter.GaussianBlur(28))).enhance(0.32)
-        ctx["end_img"] = end_card_img(cv, spec)
+        if cv.long:  # 2026-11-14 BK: 쇼츠 끝 카드는 상품 대신 계산 결과·꿀팁 한 줄 (링크는 설명란·고정 댓글)
+            ctx["end_img"] = end_card_img(cv, spec)
     # 연속된 일반 장면은 한 덩어리, 삼촌 장면은 따로
     groups: list[tuple[str, list[dict]]] = []
     for s in spec["scenes"]:
@@ -610,6 +741,9 @@ def main(argv: list[str]) -> int:
     today = dt.datetime.now(KST).date()
     if cmd == "next":
         print(json.dumps(info_short(today), ensure_ascii=False, indent=1))
+    elif cmd == "quiz":  # 오늘(KST) 또는 지정 날짜의 얼마게 대본
+        d = dt.date.fromisoformat(argv[1]) if len(argv) > 1 else dt.datetime.now(KST).date()
+        print(write_quiz(d) or "얼마게 날 아님 또는 이미 있음")
     elif cmd == "next-long":
         print(json.dumps(info_long(today), ensure_ascii=False, indent=1))
     elif cmd == "check":
