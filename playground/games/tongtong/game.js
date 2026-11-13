@@ -109,7 +109,7 @@ function size(){const r=cab.getBoundingClientRect();W=Math.max(1,r.width);H=Math
  if(W*H*DPR*DPR>2.6e6)DPR=Math.sqrt(2.6e6/(W*H));cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cx.setTransform(DPR,0,0,DPR,0,0);T=Math.min(H/8,W/14);if(state!=='run')draw()}
 const HUES=[188,300,48,140,265,20,330,100];
 const hash=n=>{n=Math.imul(n^0x9e3779b9,0x85ebca6b);n^=n>>>13;n=Math.imul(n,0xc2b2ae35);return((n^n>>>16)>>>0)/4294967296};
-let state='title',P={i:0,y:0,vy:0,g:true},held=false,buf=0,acc=0,camY=0,squash=0,trail=[],parts=[],deadT=0,readyT=0,attempts=0,best=0,shownBest=0,lastSub=0,subBest=0,flash=0,beatPulse=0;
+let state='title',P={i:0,y:0,vy:0,g:true},held=false,buf=0,acc=0,camY=0,squash=0,trail=[],parts=[],deadT=0,readyT=0,pauseUsed=false,attempts=0,best=0,shownBest=0,lastSub=0,subBest=0,flash=0,beatPulse=0;
 try{best=+localStorage.getItem('tt_best_'+KST)||0}catch(e){}subBest=best;shownBest=best;
 function px(){return P.i*DX}
 function draw(){
@@ -182,6 +182,9 @@ function draw(){
   if(x>=SEC&&x%SEC<10&&state==='run'){cx.font=`900 ${Math.round(fs*1.1)}px sans-serif`;cx.fillStyle=`hsl(${hue2},100%,70%)`;cx.fillText('SECTION '+(sec+1)+' · SPEED UP',W/2,H*0.4)}}
  else{const fs=Math.round(Math.max(18,Math.min(44,H*0.1)));cx.textAlign='center';cx.font=`900 ${fs}px sans-serif`;cx.fillStyle='#fff';cx.shadowColor='#22d3ee';cx.shadowBlur=18;cx.fillText('통통 네온런',W/2,H*0.26);cx.shadowBlur=0;
   cx.font=`600 ${Math.round(fs*0.4)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(best?`오늘 최고 ${best}m · 오늘의 코스 ${KST.slice(5)}`:`오늘의 코스 ${KST.slice(5)} · 박자에 맞춰 점프!`,W/2,H*0.26+fs*0.8)}
+ if(state==='paused'){cx.fillStyle='#07031a';cx.fillRect(0,0,W,H);const fs=Math.round(Math.max(18,Math.min(40,H*0.08)));cx.textAlign='center';cx.fillStyle='#fff';cx.font=`900 ${fs}px sans-serif`;cx.fillText('일시정지',W/2,H*0.3);
+  cx.font=`600 ${Math.round(fs*0.5)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(`${Math.floor(Math.max(0,x))}m · 이번 판 남은 일시정지 ${pauseUsed?0:1}번 · 이어 달리면 3초 뒤 출발`,W/2,H*0.3+fs*0.9)}
+ if(state==='count'){const n=Math.ceil(readyT),fs=Math.round(Math.max(40,Math.min(120,H*0.25)));cx.fillStyle='rgba(7,3,26,0.45)';cx.fillRect(0,0,W,H);cx.textAlign='center';cx.font=`900 ${fs}px sans-serif`;cx.fillStyle='#ffd23f';cx.fillText(String(n),W/2,H*0.5)}
 }
 // ── 진행
 function reset(){P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
@@ -199,12 +202,16 @@ function die(){state='dead';deadT=0.75;flash=1;sfx.die();const x=px(),dist=Math.
  if(dist>best){best=dist;try{localStorage.setItem('tt_best_'+KST,best)}catch(e){}}
  if(best>subBest&&performance.now()-lastSub>15000)submit()}
 function submit(){if(DEBUG||best<=subBest||!window.submitScore)return;subBest=best;lastSub=performance.now();submitScore(best)}
-function restart(){reset();attempts++;shownBest=best;state='run'}
+function restart(){reset();attempts++;shownBest=best;pauseUsed=false;padUI();state='run'}
+// 일시정지: 한 번 달릴 때(시도마다) 직접 멈춤 1회. 탭 전환·전화 같은 자동 멈춤은 횟수에 안 셈. 멈춘 동안 코스를 가리고, 이어 달릴 때 3-2-1.
+function pause(auto){if(state!=='run'&&state!=='ready'&&state!=='count')return;if(!auto){if(pauseUsed||state!=='run')return;pauseUsed=true}state='paused';held=false;$('tt-go').hidden=false;$('tt-go').textContent='▶ 이어 달리기';padUI();draw()}
+function padUI(){const b=$('tt-pa');if(!b)return;b.disabled=pauseUsed;b.style.opacity=pauseUsed?0.35:1;b.title=pauseUsed?'이번 판 일시정지를 이미 썼어요':'일시정지(한 판에 1번)'}
 let last=0,raf=0;
 function frame(now){raf=requestAnimationFrame(frame);const rdt=Math.min(0.05,(now-last)/1000||0);last=now;
  if(state==='run'){acc+=rdt*kAt(px());let n=0;while(acc>=STEP&&n++<40){acc-=STEP;tick();if(state!=='run')break}music(px())}
  else if(state==='dead'){deadT-=rdt;if(deadT<=0)restart()}
  else if(state==='ready'){readyT-=rdt;if(readyT<=0)state='run'}
+ else if(state==='count'){readyT-=rdt;if(readyT<=0)state='run'}
  squash=Math.max(0,squash-rdt*6);flash=Math.max(0,flash-rdt*3);
  for(const p of parts){p.vy-=20*rdt;p.x+=p.vx*rdt;p.y+=p.vy*rdt;p.l-=rdt*1.4}parts=parts.filter(p=>p.l>0);
  const ty=Math.max(0,P.y-2.2);camY+=(ty-camY)*Math.min(1,rdt*5);
@@ -214,7 +221,8 @@ function full(){if(!COARSE)return;const el=document.documentElement;try{if(el.re
 function go(){audio();full();cab.classList.add('on');document.documentElement.style.overflow='hidden';$('tt-go').hidden=true;
  if(IOS&&!navigator.standalone){$('tt-ios').style.display='block';setTimeout(()=>$('tt-ios').style.display='none',4500)}
  ensure(200);size();
- if(state==='title'||state==='paused'){if(state==='title'){reset();attempts++}state='ready';readyT=0.7}
+ if(state==='title'){reset();attempts++;pauseUsed=false;state='ready';readyT=0.7}else if(state==='paused'){state='count';readyT=3}
+ padUI()
  cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(frame)}
 function exit(){cancelAnimationFrame(raf);submit();state='title';reset();cab.classList.remove('on');document.documentElement.style.overflow='';$('tt-go').hidden=false;$('tt-go').textContent='▶ 다시 달리기';
  try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
@@ -228,10 +236,12 @@ $('tt-mu').onclick=e=>{e.stopPropagation();muted=!muted;try{localStorage.setItem
 const press=()=>{if(state==='run'||state==='ready'){held=true;buf=0.12}};
 cab.addEventListener('pointerdown',e=>{if(e.target.tagName==='BUTTON')return;if(!cab.classList.contains('on'))return;e.preventDefault();press()});
 addEventListener('pointerup',()=>held=false);addEventListener('pointercancel',()=>held=false);
-addEventListener('keydown',e=>{if(!cab.classList.contains('on'))return;if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){e.preventDefault();if(!e.repeat)press();held=true}else if(e.code==='Escape')exit()});
+addEventListener('keydown',e=>{if(!cab.classList.contains('on'))return;if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){e.preventDefault();if(!e.repeat)press();held=true}else if(e.code==='KeyP')pause(false);else if(e.code==='Escape')exit()});
 addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')held=false});
 cab.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(state==='run'||state==='ready'){state='paused';$('tt-go').hidden=false;$('tt-go').textContent='▶ 이어 달리기'}submit()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){pause(true);submit()}});
+addEventListener('blur',()=>{if(cab.classList.contains('on'))pause(true)});
+$('tt-pa').onclick=e=>{e.stopPropagation();pause(false)};
 addEventListener('pagehide',submit);
 document.addEventListener('fullscreenchange',()=>setTimeout(size,50));
 if(window.ResizeObserver)new ResizeObserver(()=>size()).observe(cab);else addEventListener('resize',size);
