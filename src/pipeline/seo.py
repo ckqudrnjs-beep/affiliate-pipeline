@@ -38,11 +38,13 @@ def sitemap(base: str, entries: list[tuple[str, str]]) -> str:
             + rows + "</urlset>\n")
 
 
-def feed(base: str, brand: str, news: list[dict], arts: list[dict]) -> str:
+def feed(base: str, brand: str, news: list[dict], arts: list[dict], recs: list[dict] | None = None) -> str:
     """삼촌의 글 + 소식을 날짜순으로 합친 RSS (네이버 서치어드바이저 RSS 제출용)."""
     e = html.escape
     items = [(a["date"], a["title"], f"guide/{a['slug']}.html", a["desc"], "05:13") for a in arts]
     items += [(n["date"], n["title"], f"news/{n['id']}.html", n["body"], "07:00") for n in news]
+    from . import recipes as RC
+    items += [(r["date"], RC.title(r), f"recipe/{r['slug']}.html", RC.desc(r), "11:00") for r in recs or []]
     items.sort(key=lambda x: (x[0], x[4]), reverse=True)
     body = "".join(
         f"<item><title>{e(t)}</title><link>{base}/{e(p)}</link><guid isPermaLink=\"true\">{base}/{e(p)}</guid>"
@@ -144,6 +146,8 @@ def targets() -> list[tuple[str, str, str]]:
     out += [(f"calc-{c['slug']}.png", c["h1"], "무료 계산기") for c in CALCS]
     out += [(f"q-{q['slug']}.png", q["h1"], "삼촌의 계산") for q in Q.load()]
     out += [(f"guide-{a['slug']}.png", a["title"], "삼촌의 글") for a in A.load()]
+    from . import recipes as RC
+    out += [(f"recipe-{r['slug']}.png", f"{r['name']} 1인분 {RC.won(r['total'])}, 배달보다 {RC.won(r['save'] // 100 * 100)} 절약", "1인분 원가 레시피") for r in RC.load()]
     return out
 
 
