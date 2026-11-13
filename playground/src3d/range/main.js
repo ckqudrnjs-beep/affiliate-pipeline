@@ -77,7 +77,7 @@ const CSS = `
 .rg3 .load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Press Start 2P",monospace;font-size:12px;color:#22e5ff}
 .rg3 .res{}@media (max-width:560px){.rg3 .res{grid-template-columns:1fr 1fr}}
 .rg3 .rot{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font-size:12px;color:#a99fc9;font-family:"Noto Sans KR",sans-serif;display:none;white-space:nowrap}
-@media (max-height:520px){.rg3 h2{font-size:26px;margin-bottom:4px}.rg3 .k{display:none}.rg3 .st{display:none}.rg3 .sens{margin-top:4px}.rg3 .tip{display:none}.rg3 .grade{font-size:40px}.rg3 .big{font-size:20px;margin:4px 0 8px}.rg3 .wsel{padding:6px;margin-bottom:8px}.rg3 .go{padding:12px;font-size:18px}.rg3 .res{grid-template-columns:repeat(4,1fr)}}
+@media (max-height:520px){.rg3 h2{font-size:26px;margin-bottom:4px}.rg3 .k{display:none}.rg3 .st{display:none}.rg3 .sens{margin-top:4px}.rg3 .tip{display:none}.rg3 .grade{font-size:40px}.rg3 .big{font-size:20px;margin:4px 0 8px}.rg3 .wsel{padding:6px;margin-bottom:8px}.rg3 .go{padding:12px;font-size:18px}.rg3 .res{grid-template-columns:repeat(4,1fr)}.rg3 .result.hc .res div:nth-child(n+5){display:none}.rg3 .go.cont{padding:9px;font-size:15px;margin-bottom:6px}}
 `;
 
 const SCOPE_SVG = `<svg viewBox="-100 -100 200 200"><g stroke="#000" stroke-width=".55" fill="none"><line x1="-100" y1="0" x2="-6" y2="0"/><line x1="6" y1="0" x2="100" y2="0"/><line x1="0" y1="-100" x2="0" y2="-6"/><line x1="0" y1="6" x2="0" y2="100"/>
@@ -160,7 +160,7 @@ export function boot(opts = {}) {
  <p class="tip">${touch ? '화면을 끌어 조준 · FIRE 누르면 사격(누른 채 끌어도 조준) · 조준 버튼으로 조준경 · ⇄ 무기 교체. 가로 화면 추천!' : '마우스로 조준 · 클릭 사격 · 우클릭(누르는 동안) 조준경 · R 장전 · 1/2 또는 Q 무기 교체 · Shift 숨 참기 · Esc 일시정지'}</p></div></div>
 <div class="panel pause"><div class="box"><h2>일시정지</h2><button class="go" type="button" data-p="resume">▶ 계속하기</button><div class="row"><button type="button" data-p="restart">처음부터</button><button type="button" data-p="exit">나가기</button></div></div></div>
 <div class="panel result"><div class="box"><p class="k">RESULT · 오늘의 판</p><p class="grade">S</p><p class="big">0</p><div class="res"></div>
- <button class="go" type="button" data-r="again">↻ 다시 하기</button><div class="row"><button type="button" data-r="share">📤 결과 공유</button><button type="button" data-r="exit">나가기</button></div></div></div>
+ <button class="go cont" type="button" data-r="cont" style="display:none;background:#3ddc84;box-shadow:0 5px 0 #15803d">🪙 이어하기</button><p class="ctip" style="display:none;font-size:12px;color:#ffd23f;margin:0 0 8px">🪙 코인이 있으면 이 스테이지를 한 번 더 도전할 수 있어요. 코인은 매일 출석체크로 1개씩 무료!</p><button class="go" type="button" data-r="again">↻ 다시 하기</button><div class="row"><button type="button" data-r="share">📤 결과 공유</button><button type="button" data-r="exit">나가기</button></div></div></div>
 <div class="load">LOADING…</div><div class="rot">📱 가로로 돌리면 더 넓게 보여요</div></div>`);
   document.body.appendChild(root);
   const qc = {};
@@ -372,6 +372,7 @@ export function boot(opts = {}) {
     clearTargets();
     yaw = 0; pitch = 0.02; kickP = kickY = bloomS = adsP = 0; adsWant = adsToggle = fireHeld = false;
     reloadT = swapT = boltT = 0; nextShot = 0; breath = 1;
+    contUsed = false; lastAccBonus = 0;
     score = combo = maxCombo = shots = hits = bulls = heads = cleared = 0; kills = { plate: 0, slider: 0, drone: 0, far: 0, gold: 0, zombie: 0 };
     farMsg = goldMsg = zomMsg = 0;
     beginStage(1); root.classList.add('playing'); hud.style.display = ''; setPanel('none'); $('.cb').textContent = ''; $('.sc').textContent = '0';
@@ -392,7 +393,7 @@ export function boot(opts = {}) {
   function resume() { if (!state.startsWith('pause')) return; state = state.slice(6); setPanel('none'); lockPointer(); }
   root.querySelectorAll('[data-p]').forEach((b) => { b.onclick = () => { const p = b.dataset.p; if (p === 'resume') resume(); else if (p === 'restart') startGame(); else exit(); }; });
   root.querySelectorAll('[data-r]').forEach((b) => {
-    b.onclick = () => { const r = b.dataset.r; if (r === 'again') startGame(); else if (r === 'share') { if (opts.share) opts.share(Math.floor(score), result); } else exit(); };
+    b.onclick = () => { const r = b.dataset.r; if (r === 'cont') contGame(); else if (r === 'again') startGame(); else if (r === 'share') { if (opts.share) opts.share(Math.floor(score), result); } else exit(); };
   });
   document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && (state === 'play' || state === 'count' || state === 'inter') && !touch) pause(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -635,7 +636,7 @@ export function boot(opts = {}) {
     if (document.pointerLockElement) document.exitPointerLock();
     const acc = shots ? hits / shots : 0;
     const accBonus = Math.round(acc * 1000);
-    score += accBonus;
+    score += accBonus; lastAccBonus = accBonus;
     const s = Math.floor(score);
     const grade = cleared >= 15 ? 'S' : cleared >= 10 ? 'A' : cleared >= 6 ? 'B' : cleared >= 3 ? 'C' : 'D';
     result = { score: s, grade, stage, cleared, all: !!all, acc: Math.round(acc * 100), hits, shots, bulls, heads, maxCombo };
@@ -644,9 +645,28 @@ export function boot(opts = {}) {
     $('.grade').textContent = grade; $('.big').textContent = s.toLocaleString() + '점';
     $('.res').innerHTML = [['통과 스테이지', cleared + '단계'], ['명중률', result.acc + '%'], ['최고 콤보', maxCombo], ['좀비', kills.zombie + '마리'], ['헤드샷', heads + '발'], ['정중앙', bulls + '발'], ['원거리·드론', (kills.far + kills.drone) + '개'], ['명중률 보너스', '+' + accBonus]]
       .map(([a, b]) => `<div>${a}<b>${b}</b></div>`).join('');
+    showCont();
     setPanel('result'); hud.style.display = 'none'; root.classList.remove('playing');
     toMenuPose();
     if (opts.submit && s > 0 && !/rgdebug/.test(location.hash)) opts.submit(s, result); // 테스트·녹화 판은 순위에 안 올림
+  }
+  // 출석 코인 이어하기: 한 판에 한 번, 코인 1개로 탈락한 스테이지를 같은 판으로 다시(점수 유지, 명중률 보너스는 끝날 때 다시 계산). 코인 없어도 게임은 끝까지 무료.
+  let contUsed = false, lastAccBonus = 0;
+  function showCont() {
+    const B = opts.bonus, btn = $('.result .cont'), tip = $('.result .ctip');
+    const can = !!B && !contUsed && !result.all, n = can ? B.coins() : 0;
+    btn.style.display = can && n > 0 ? '' : 'none'; $('.panel.result').classList.toggle('hc', can); btn.textContent = `🪙 코인 1개로 STAGE ${stage} 다시 도전 (보유 ${n})`;
+    tip.style.display = can && n <= 0 ? '' : 'none';
+  }
+  function contGame() {
+    if (state !== 'end' || contUsed || !opts.bonus || !opts.bonus.spend()) return;
+    contUsed = true; score -= lastAccBonus; lastAccBonus = 0; menuGunPose = false;
+    $('.sc').textContent = Math.floor(score).toLocaleString();
+    sfx.init(); if (touch) goFull();
+    clearTargets(); fireHeld = adsWant = adsToggle = false;
+    for (const g of guns) g.root.rotation.set(0, 0, 0); showGun(cur);
+    beginStage(stage); root.classList.add('playing'); hud.style.display = ''; setPanel('none');
+    resize(); lockPointer();
   }
   function toMenuPose() { menuGunPose = true; }
   let menuGunPose = false;

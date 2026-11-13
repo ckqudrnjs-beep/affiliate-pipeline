@@ -160,10 +160,10 @@ function draw(){
  if(state!=='dead'){for(let k=0;k<trail.length;k++){const p=trail[k],a=(k+1)/trail.length;cx.fillStyle=`hsla(${hue2},100%,70%,${a*0.35})`;cx.beginPath();cx.arc(sx(p[0]),sy(p[1]+R),R*T*(0.3+a*0.5),0,7);cx.fill()}
   const X=sx(x),Y=sy(P.y+R),sq=squash>0?squash:0,st=P.g?0:Math.min(0.18,Math.abs(P.vy)/120);
   cx.save();cx.translate(X,Y+R*T*sq*0.25);cx.scale(1+sq*0.25-st*0.5,1-sq*0.25+st);
-  cx.fillStyle='rgba(34,211,238,0.25)';cx.beginPath();cx.arc(0,0,R*T*1.35,0,7);cx.fill();
-  const og=cx.createRadialGradient(-R*T*0.3,-R*T*0.35,R*T*0.1,0,0,R*T);og.addColorStop(0,'#e9fdff');og.addColorStop(0.45,'#22d3ee');og.addColorStop(1,'#0e7490');cx.fillStyle=og;cx.beginPath();cx.arc(0,0,R*T,0,7);cx.fill();
+  cx.fillStyle=SKC[1]+'40';cx.beginPath();cx.arc(0,0,R*T*1.35,0,7);cx.fill();
+  const og=cx.createRadialGradient(-R*T*0.3,-R*T*0.35,R*T*0.1,0,0,R*T);og.addColorStop(0,SKC[0]);og.addColorStop(0.45,SKC[1]);og.addColorStop(1,SKC[2]);cx.fillStyle=og;cx.beginPath();cx.arc(0,0,R*T,0,7);cx.fill();
   cx.strokeStyle='#ffffffcc';cx.lineWidth=2;cx.stroke();
-  cx.strokeStyle='#e9fdff';cx.lineWidth=2;cx.beginPath();cx.moveTo(-R*T*0.2,-R*T*0.9);cx.quadraticCurveTo(-R*T*0.1,-R*T*1.5,R*T*0.25,-R*T*1.45);cx.stroke();cx.fillStyle='#ff3d7f';cx.beginPath();cx.arc(R*T*0.25,-R*T*1.45,R*T*0.16,0,7);cx.fill();
+  cx.strokeStyle=SKC[0];cx.lineWidth=2;cx.beginPath();cx.moveTo(-R*T*0.2,-R*T*0.9);cx.quadraticCurveTo(-R*T*0.1,-R*T*1.5,R*T*0.25,-R*T*1.45);cx.stroke();cx.fillStyle='#ff3d7f';cx.beginPath();cx.arc(R*T*0.25,-R*T*1.45,R*T*0.16,0,7);cx.fill();
   const blink=(Math.floor(performance.now()/1800)%3===0&&performance.now()%1800<120)?0.15:1;cx.fillStyle='#0b1026';
   for(const ex of [0.12,0.52]){cx.beginPath();cx.ellipse(R*T*ex,-R*T*0.12,R*T*0.13,R*T*0.22*blink,0,0,7);cx.fill()}
   cx.fillStyle='#fff';for(const ex of [0.16,0.56]){cx.beginPath();cx.arc(R*T*ex,-R*T*0.2,R*T*0.05,0,7);cx.fill()}
@@ -184,7 +184,8 @@ function draw(){
   cx.font=`600 ${Math.round(fs*0.4)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(best?`오늘 최고 ${best}m · 오늘의 코스 ${KST.slice(5)}`:`오늘의 코스 ${KST.slice(5)} · 박자에 맞춰 점프!`,W/2,H*0.26+fs*0.8)}
 }
 // ── 진행
-function reset(){P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
+let SKC=['#e9fdff','#22d3ee','#0e7490'];// 출석 보너스 '내 네온 색'(겉모습만)
+function reset(){try{if(window.Bonus)SKC=Bonus.skin().c}catch(e){}P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
 function tick(){
  const wasG=P.g,jump=P.g&&(held||buf>0)||(DEBUG&&window.__ttBot&&bot());buf-=STEP;
  const ok=sim(P,jump,0);if(jump)sfx.jump();if(P.pad){P.pad=0;sfx.pad()}
@@ -195,7 +196,7 @@ function tick(){
 }
 function bot(){if(!P.g)return false;const w=clone(P);let ok=sim(w,false,0),c=0;while(ok&&!w.g&&c++<400)ok=sim(w,false,0);return !(ok&&solve([w],px()+30,0,false).length)}
 function die(){state='dead';deadT=0.75;flash=1;sfx.die();const x=px(),dist=Math.floor(x);
- for(let k=0;k<26;k++){const a=Math.random()*7,v=2+Math.random()*7;parts.push({x,y:P.y+R,vx:Math.cos(a)*v,vy:Math.sin(a)*v+3,l:1,s:3+Math.random()*6,c:k%3?'#22d3ee':'#ff3d7f'})}
+ for(let k=0;k<26;k++){const a=Math.random()*7,v=2+Math.random()*7;parts.push({x,y:P.y+R,vx:Math.cos(a)*v,vy:Math.sin(a)*v+3,l:1,s:3+Math.random()*6,c:k%3?SKC[1]:'#ff3d7f'})}
  if(dist>best){best=dist;try{localStorage.setItem('tt_best_'+KST,best)}catch(e){}}
  if(best>subBest&&performance.now()-lastSub>15000)submit()}
 function submit(){if(DEBUG||best<=subBest||!window.submitScore)return;subBest=best;lastSub=performance.now();submitScore(best)}

@@ -333,6 +333,76 @@ if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.
 """
 
 
+# 출석체크 보너스(2026-11-13 BK): 모든 게임은 코인 없이 무료로 끝까지 할 수 있고, 출석은 '덤'만 준다.
+# 코인은 출석으로만 생긴다(광고 클릭·시청과 무관, 판매·현금 교환 없음). 기록은 이 브라우저 localStorage 에만.
+BONUS_MAX_COINS = 5
+SKINS = [  # 모든 게임 공통 '내 네온 색'. d = 누적 출석 일수 조건. c = [밝은 색, 기본 색, 어두운 색]
+    {"id": "cy", "name": "네온 청록", "d": 0, "c": ["#e9fdff", "#22d3ee", "#0e7490"]},
+    {"id": "pk", "name": "체리 핑크", "d": 2, "c": ["#ffe9f3", "#ff3d9a", "#9d174d"]},
+    {"id": "gd", "name": "황금", "d": 5, "c": ["#fffbe6", "#ffd23f", "#a16207"]},
+    {"id": "gr", "name": "오로라 그린", "d": 10, "c": ["#ecfdf5", "#3ddc84", "#15803d"]},
+    {"id": "pu", "name": "보랏빛 성운", "d": 20, "c": ["#f5edff", "#b06bff", "#6b21a8"]},
+    {"id": "or", "name": "선셋 오렌지", "d": 30, "c": ["#fff1e6", "#ff8a3d", "#9a3412"]},
+]
+
+BONUS_JS = (
+    f"const SKINS={json.dumps(SKINS, ensure_ascii=False)},BONUS_MAX={BONUS_MAX_COINS};"
+    r"""
+window.Bonus=(function(){const K='nr_bonus',day=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);let s={};
+function ld(){try{s=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){s={}}s.coins=Math.max(0,Math.min(BONUS_MAX,+s.coins||0));s.days=+s.days||0;s.streak=+s.streak||0;return s}
+function sv(){try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}}
+function yday(){return new Date(Date.parse(day()+'T00:00:00Z')-864e5).toISOString().slice(0,10)}
+const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>ld().coins,
+ checkin(){ld();if(s.last===day())return -1;s.streak=s.last===yday()?s.streak+1:1;s.days++;s.last=day();const g=s.streak%7===0?2:1,before=s.coins;s.coins=Math.min(BONUS_MAX,s.coins+g);sv();B.render();return s.coins-before},
+ spend(){ld();if(s.coins<1)return false;s.coins--;sv();B.render();return true},
+ skin(){ld();return SKINS.find(k=>k.id===s.skin&&s.days>=k.d)||SKINS[0]},
+ setSkin(id){ld();const k=SKINS.find(x=>x.id===id);if(!k||s.days<k.d)return false;s.skin=id;sv();B.render();return true},
+ render(){ld();const done=s.last===day(),sk=B.skin();
+  document.querySelectorAll('.att').forEach(a=>{a.classList.toggle('new',!done);a.querySelector('b').textContent=s.coins});
+  document.querySelectorAll('.bonus-mini').forEach(el=>{const sw=el.dataset.skin?` · 내 색 <span class="sw" style="--c:${sk.c[1]}"></span> ${sk.name}`:'';
+   el.innerHTML=done?`✅ 오늘 출석 완료 · 🪙 <b>${s.coins}</b>개${sw} <a href="/bonus">출석·색 바꾸기 →</a>`
+   :`📅 오늘 출석하면 🪙 코인 +1 <small>(${el.dataset.use||'게임 오버 때 이어하기 1번'})</small> <button type="button" class="ck">출석하기</button>`;
+   const b=el.querySelector('.ck');if(b)b.onclick=()=>{const g=B.checkin();B.toast(g>0?`🪙 +${g} 출석 완료! (연속 ${s.streak}일)`:'코인이 가득 찼어요(최대 '+BONUS_MAX+'개). 출석 일수는 올라가요!')}});
+  const pg=document.getElementById('bonuspage');if(pg)B.page(pg)},
+ toast(t){const d=document.createElement('div');d.className='btoast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2400)},
+ page(pg){const done=s.last===day(),st=done?s.streak:(s.last===yday()?s.streak:0),pos=done?((st-1)%7)+1:(st%7);
+  let stamps='';for(let i=1;i<=7;i++)stamps+=`<li class="${i<=pos?'on':''}${i===7?' big':''}"><small>${i}일</small>${i<=pos?'✔':(i===7?'🪙2':'🪙')}</li>`;
+  pg.querySelector('.stamps').innerHTML=stamps;
+  pg.querySelector('.bst').innerHTML=`보유 코인 <b>🪙 ${s.coins}</b> / ${BONUS_MAX} · 연속 <b>${st}일</b> · 누적 <b>${s.days}일</b>`;
+  const ck=pg.querySelector('.bigck');ck.disabled=done;ck.textContent=done?'✅ 오늘 출석 완료! 내일 또 와요':'📅 오늘 출석하기';
+  ck.onclick=()=>{const g=B.checkin();B.toast(g>0?`🪙 +${g} 출석 완료!`:'코인이 가득 찼어요. 출석 일수는 올라가요!')};
+  const cur=B.skin();pg.querySelector('.skins').innerHTML=SKINS.map(k=>{const ok=s.days>=k.d;return `<button type="button" data-s="${k.id}" class="${k.id===cur.id?'sel':''}"${ok?'':' disabled'}><span class="sw" style="--c:${k.c[1]}"></span><b>${k.name}</b><small>${k.id===cur.id?'사용 중':ok?'고르기':'출석 '+k.d+'일 · '+Math.max(0,k.d-s.days)+'일 남음'}</small></button>`}).join('');
+  pg.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{if(B.setSkin(b.dataset.s))B.toast('색을 바꿨어요! 다음 판부터 적용돼요')})}};
+document.addEventListener('DOMContentLoaded',B.render);if(document.readyState!=='loading')B.render();
+return B})();
+"""
+)
+
+BONUS_CSS = """
+nav a.att{position:relative;color:var(--y);border-color:#ffd23f66}nav a.att b{font-weight:800}nav a.att.new::after{content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--a);box-shadow:0 0 8px var(--a)}
+.bonus-mini{margin:10px 0;padding:10px 12px;border:2px dashed #ffd23f66;border-radius:12px;background:#ffd23f0d;font-size:14px;line-height:1.6}.bonus-mini:empty{display:none}.bonus-mini small{color:var(--muted)}
+.bonus-mini .ck{margin-left:4px;font:inherit;font-weight:800;font-size:13px;padding:5px 12px;border-radius:9px;border:0;background:var(--y);color:#1a0f00;cursor:pointer;box-shadow:0 3px 0 #b8860b}
+.sw{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);vertical-align:-2px}
+.btoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483647;background:#1a1038;color:#fff;border:2px solid var(--y);border-radius:12px;padding:10px 16px;font-weight:700;box-shadow:0 0 20px #ffd23f55;max-width:90vw;text-align:center}
+#bonuspage .stamps{list-style:none;padding:0;margin:14px 0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+#bonuspage .stamps li{min-width:0;overflow:hidden;aspect-ratio:1;border:2px solid var(--line);border-radius:12px;background:var(--bg2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:15px;line-height:1.2;white-space:nowrap}
+#bonuspage .stamps li small{font-size:11px;color:var(--muted)}#bonuspage .stamps li.on{border-color:var(--y);background:#ffd23f22;color:var(--y);box-shadow:0 0 10px #ffd23f55}#bonuspage .stamps li.big{border-color:#ff3d7f88}
+#bonuspage .bigck{display:block;width:100%;font:inherit;font-size:19px;font-weight:800;padding:14px;border-radius:14px;border:0;background:var(--y);color:#1a0f00;box-shadow:0 5px 0 #b8860b,0 0 24px #ffd23f66;cursor:pointer}
+#bonuspage .bigck:disabled{background:var(--soft);color:var(--muted);box-shadow:none;cursor:default}
+#bonuspage .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+#bonuspage .skins button{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer}
+#bonuspage .skins button .sw{grid-row:span 2;width:26px;height:26px}#bonuspage .skins button small{color:var(--muted);font-size:12px}
+#bonuspage .skins button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f55}#bonuspage .skins button:disabled{opacity:.5;cursor:default}
+"""
+
+BONUS_BODY = f"""<h1>📅 출석체크</h1><p class="lead">하루 한 번 출석 버튼만 누르면 🪙 코인과 꾸미기 색을 덤으로 받아요. <b>모든 게임은 코인 없이도 처음부터 끝까지 무료</b>예요. 코인은 '덤'일 뿐이에요.</p>
+<div class="card" id="bonuspage"><p class="bst"></p><ol class="stamps"></ol><button type="button" class="bigck">📅 오늘 출석하기</button>
+<h2>🎨 내 네온 색 (스킨)</h2><p class="muted">스킨은 게임 속 <b>내 캐릭터의 겉모습(색깔)</b>만 바꾸는 꾸미기예요. 별빛 요격대의 요격기, 통통 네온런의 통통이 색이 바뀌고 점수·능력에는 영향이 없어요. 출석한 날이 쌓이면 새 색이 열려요.</p><div class="skins"></div></div>
+<h2>코인은 어디에 쓰나요?</h2><ul class="list"><li><b>별빛 요격대</b>: 게임 오버 화면에서 코인 1개로 그 자리에서 이어하기(목숨 3개로 다시). 한 판에 한 번만.</li><li><b>네온 사격장</b>: 탈락한 스테이지를 코인 1개로 한 번 더 도전(점수는 그대로 이어짐). 한 판에 한 번만.</li><li>이어하기로 낸 점수도 오늘의 순위에 올라가요. 모두가 하루 똑같이 코인 1개를 받으니 공평해요.</li></ul>
+<h2>출석 규칙</h2><ul class="list"><li>한국 시간 0시가 지나면 다시 출석할 수 있어요. 하루 1번, 🪙 1개. <b>7일 연속</b>이면 그날은 🪙 2개.</li><li>코인은 최대 {BONUS_MAX_COINS}개까지 모여요. 가득 차도 출석 일수는 계속 올라가 새 색이 열려요.</li><li>하루 빠지면 연속 일수만 1일부터 다시 세고, 누적 일수와 코인은 그대로예요.</li><li>코인은 <b>사거나 팔 수 없고, 현금·상품으로 바꿀 수 없으며, 광고를 보거나 누르는 것과도 아무 관계가 없어요.</b> 오직 출석으로만 생겨요.</li><li>가입이 없어서 기록은 지금 쓰는 <b>이 기기의 브라우저에만</b> 저장돼요. 다른 폰·브라우저에서는 따로 세고, 브라우저 기록(사이트 데이터)을 지우면 처음부터예요.</li></ul>
+<p><a class="btn" href="/games">🕹️ 게임하러 가기</a></p>"""
+
+
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
@@ -361,11 +431,11 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}</style>{head}</head><body>
-<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a></nav></div></header>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}</style>{head}</head><body>
+<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스게임</a><a href="/rank">순위</a><a class="att" href="/bonus" aria-label="출석체크, 보유 코인">🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
-<script>{SHARE_JS}{script}</script>{kakao}</body></html>"""
+<script>{SHARE_JS}{BONUS_JS}{script}</script>{kakao}</body></html>"""
 
 
 def qcard(q, n=None, link=True):
@@ -458,6 +528,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     write("rank", f"오늘의 도전 순위 | {cfg['siteName']}", "5락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
           f"<h1>🏆 오늘의 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 순위가 초기화돼요. 이름은 자동으로 붙는 별명이라 개인 정보가 없습니다.</p><div class=\"re\">{tabs}</div><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
           COMMON_JS + RANK_PAGE_JS)
+
+    write("bonus", f"출석체크 | {cfg['siteName']}", "5락실 출석체크. 하루 한 번 출석하면 이어하기 코인과 꾸미기 색(스킨)을 덤으로 받아요. 게임은 모두 무료.",
+          BONUS_BODY, noindex=True)
 
     if has_report:
         def li(x, extra=""):
