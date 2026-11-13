@@ -102,33 +102,72 @@ function buildSprites() {
     x.shadowColor = C.pk; x.shadowBlur = 8; x.fillStyle = f ? '#fff' : C.pk; x.beginPath(); x.arc(0, -2, 4, 0, TAU); x.fill(); x.shadowBlur = 0;
   }));
   S.sniper = sniper(false); S.sniper1 = sniper(true);
+  // ---- 모선: 세밀 묘사(금속 그라데이션·패널선·리벳·조명). 포탑·눈·엔진 불꽃·궤도 링은 draw에서 실시간 ----
+  const lin = (x, x0, y0, x1, y1, stops) => { const g = x.createLinearGradient(x0, y0, x1, y1); stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c)); return g; };
+  const rad = (x, cx, cy, r, stops) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c)); return g; };
+  const rivet = (x, px, py, col) => { x.fillStyle = col; x.beginPath(); x.arc(px, py, 1.1, 0, TAU); x.fill(); };
+  const lamp = (x, px, py, col, r) => { x.shadowColor = col; x.shadowBlur = 6; x.fillStyle = col; x.beginPath(); x.arc(px, py, r || 1.8, 0, TAU); x.fill(); x.shadowBlur = 0; };
+  const cracks = (x, list) => { x.strokeStyle = '#ffd0d0'; x.lineWidth = 1.2; x.shadowColor = C.rd; x.shadowBlur = 6; x.beginPath(); for (const c of list) { x.moveTo(c[0], c[1]); for (let i = 2; i < c.length; i += 2) x.lineTo(c[i], c[i + 1]); } x.stroke(); x.shadowBlur = 0; };
+  const scorch = (x, px, py, r) => { x.fillStyle = rad(x, px, py, r, ['#000000aa', '#00000000']); x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill(); };
   // 모선 1: 마더 헥스
-  const hexBoss = (rage) => sprite(130, 120, x => {
-    poly(x, hexPts(46, 40)); x.fillStyle = '#14062a'; x.fill(); glowStroke(x, rage ? C.rd : C.pu, 3, 14);
-    poly(x, hexPts(30, 26)); glowStroke(x, C.pk, 1.5, 8);
-    for (const s of [-1, 1]) { poly(x, [s * 44, -10, s * 62, -22, s * 60, 18, s * 44, 12]); x.fillStyle = '#14062a'; x.fill(); glowStroke(x, rage ? C.or : C.pu, 2, 8); x.fillStyle = C.cy; x.fillRect(s * 54 - 3, 8, 6, 10); }
-    x.fillStyle = C.cy; x.fillRect(-14, 34, 6, 10); x.fillRect(8, 34, 6, 10);
-    if (rage) { x.beginPath(); x.moveTo(-20, -30); x.lineTo(-8, -12); x.lineTo(-14, 0); x.moveTo(24, 20); x.lineTo(12, 8); x.strokeStyle = '#fff'; x.lineWidth = 1.5; x.stroke(); }
+  const hexBoss = (rage) => sprite(170, 150, x => {
+    const acc = rage ? C.rd : C.pu;
+    for (const s of [-1, 1]) { // 날개 포드
+      poly(x, [s * 44, -16, s * 70, -34, s * 78, -8, s * 70, 24, s * 46, 18]); x.fillStyle = lin(x, s * 44, -30, s * 78, 20, ['#2d1450', '#0c0420']); x.fill(); glowStroke(x, acc, 2, 8);
+      x.beginPath(); x.moveTo(s * 50, -14); x.lineTo(s * 70, -28); x.moveTo(s * 50, -2); x.lineTo(s * 76, -8); x.moveTo(s * 50, 10); x.lineTo(s * 70, 16); x.strokeStyle = acc + '77'; x.lineWidth = 1; x.stroke();
+      x.fillStyle = '#050210'; x.fillRect(s * 62 - 5, 14, 10, 12); x.strokeStyle = C.cy; x.lineWidth = 1; x.strokeRect(s * 62 - 5, 14, 10, 12); lamp(x, s * 62, 22, C.cy, 2.4);
+      lamp(x, s * 72, -32, rage ? C.rd : C.pk, 2); for (const [rx, ry] of [[56, -18], [64, -6], [58, 8]]) rivet(x, s * rx, ry, '#ffffff55');
+    }
+    poly(x, hexPts(52, 44)); x.fillStyle = rad(x, -12, -14, 70, ['#4a2378', '#1a0a33', '#07020f']); x.fill(); glowStroke(x, acc, 3, 14);
+    poly(x, hexPts(40, 34)); x.strokeStyle = acc + 'aa'; x.lineWidth = 1.3; x.stroke();
+    const o = hexPts(40, 34), i2 = hexPts(26, 22), o2 = hexPts(52, 44);
+    x.beginPath(); for (let i = 0; i < 12; i += 2) { x.moveTo(i2[i], i2[i + 1]); x.lineTo(o[i], o[i + 1]); x.moveTo(o[i], o[i + 1]); x.lineTo(o2[i], o2[i + 1]); } x.strokeStyle = acc + '66'; x.lineWidth = 1; x.stroke();
+    for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; rivet(x, Math.cos(a) * 46, Math.sin(a) * 39, '#ffffff44'); }
+    for (let i = 0; i < 6; i++) { const a = (i + .5) / 6 * TAU; x.save(); x.translate(Math.cos(a) * 33, Math.sin(a) * 28); x.rotate(a + Math.PI / 2); x.fillStyle = '#ffffff10'; x.fillRect(-7, -2.5, 14, 5); x.strokeStyle = acc + '55'; x.strokeRect(-7, -2.5, 14, 5); x.restore(); }
+    poly(x, i2); x.fillStyle = '#0b0316'; x.fill(); glowStroke(x, C.pk, 1.6, 10);
+    for (let k = -3; k <= 3; k++) lamp(x, k * 6, -36, k % 2 ? C.ye : '#fff6', 1.1);
+    x.beginPath(); x.moveTo(-10, -42); x.lineTo(-16, -60); x.moveTo(10, -42); x.lineTo(16, -60); x.moveTo(0, -44); x.lineTo(0, -66); x.strokeStyle = acc; x.lineWidth = 1.4; x.stroke(); lamp(x, -16, -60, C.pk); lamp(x, 16, -60, C.pk); lamp(x, 0, -66, C.ye);
+    for (const s of [-1, 1]) { x.fillStyle = lin(x, 0, 34, 0, 52, ['#2d1450', '#0c0420']); x.fillRect(s * 14 - 5, 34, 10, 16); x.strokeStyle = C.cy; x.lineWidth = 1; x.strokeRect(s * 14 - 5, 34, 10, 16); lamp(x, s * 14, 50, C.cy, 2); }
+    if (rage) { scorch(x, -22, -12, 16); scorch(x, 26, 18, 14); cracks(x, [[-30, -26, -18, -14, -24, -2, -14, 6], [34, 6, 22, 14, 28, 26], [6, -40, 10, -30, 2, -24]]); }
   });
   S.boss0 = [hexBoss(false), hexBoss(true)];
-  // 모선 2: 트윈 캐논(가로로 긴 전함, 레이저 포)
-  const twin = (rage) => sprite(180, 90, x => {
-    poly(x, [-80, -6, -50, -26, 50, -26, 80, -6, 60, 20, -60, 20]); x.fillStyle = '#04182a'; x.fill(); glowStroke(x, rage ? C.rd : C.cy, 3, 14);
-    poly(x, [-30, -26, 0, -38, 30, -26]); glowStroke(x, C.cy, 2, 8);
-    for (const s of [-1, 1]) { x.beginPath(); x.arc(s * 52, 8, 13, 0, TAU); x.fillStyle = '#04182a'; x.fill(); glowStroke(x, rage ? C.or : C.ye, 2, 8); x.fillStyle = rage ? C.or : C.ye; x.fillRect(s * 52 - 4, 16, 8, 16); }
-    poly(x, [-20, 20, 0, 34, 20, 20]); glowStroke(x, C.pk, 2, 8);
-    if (rage) { x.beginPath(); x.moveTo(-40, -20); x.lineTo(-28, -4); x.lineTo(-36, 8); x.strokeStyle = '#fff'; x.lineWidth = 1.5; x.stroke(); }
+  // 모선 2: 트윈 캐논(가로로 긴 전함). 포신은 실시간으로 플레이어를 조준.
+  const twin = (rage) => sprite(210, 110, x => {
+    const acc = rage ? C.rd : C.cy, hull = [-92, -8, -72, -30, -30, -36, 30, -36, 72, -30, 92, -8, 78, 16, 40, 26, -40, 26, -78, 16];
+    for (const s of [-1, 1]) { x.fillStyle = '#071a2b'; x.fillRect(s * 34 - 7, -46, 14, 12); x.strokeStyle = acc; x.lineWidth = 1; x.strokeRect(s * 34 - 7, -46, 14, 12); x.fillStyle = '#ffffff22'; x.fillRect(s * 34 - 5, -44, 10, 2); }
+    poly(x, hull); x.fillStyle = lin(x, 0, -36, 0, 26, ['#1a4a6e', '#0b2840', '#030c16']); x.fill(); glowStroke(x, acc, 3, 14);
+    x.save(); poly(x, hull); x.clip(); x.strokeStyle = '#ffffff10'; x.lineWidth = 1; x.beginPath(); for (let i = -90; i <= 90; i += 12) { x.moveTo(i, -40); x.lineTo(i, 30); } x.stroke();
+    x.fillStyle = '#ffffff0c'; x.fillRect(-92, -6, 184, 6); x.restore();
+    x.beginPath(); x.moveTo(-72, -30); x.lineTo(-84, -8); x.lineTo(-70, 14); x.moveTo(72, -30); x.lineTo(84, -8); x.lineTo(70, 14); x.strokeStyle = acc + '88'; x.lineWidth = 1.2; x.stroke();
+    for (let i = -80; i <= 80; i += 16) rivet(x, i, 20, '#ffffff40');
+    poly(x, [-20, -36, -14, -54, 14, -54, 20, -36]); x.fillStyle = lin(x, 0, -54, 0, -36, ['#24597f', '#0b2840']); x.fill(); glowStroke(x, acc, 1.6, 8);
+    for (let k = -2; k <= 2; k++) { x.fillStyle = C.ye; x.fillRect(k * 5 - 1.5, -48, 3, 3); }
+    x.beginPath(); x.moveTo(0, -54); x.lineTo(0, -64); x.strokeStyle = acc; x.lineWidth = 1.2; x.stroke(); lamp(x, 0, -64, C.rd);
+    for (const s of [-1, 1]) { x.beginPath(); x.arc(s * 54, 6, 16, 0, TAU); x.fillStyle = rad(x, s * 54 - 4, 2, 18, ['#2b6a94', '#0b2840']); x.fill(); glowStroke(x, rage ? C.or : C.ye, 2, 8); x.beginPath(); x.arc(s * 54, 6, 10, 0, TAU); x.strokeStyle = '#ffffff30'; x.lineWidth = 1; x.stroke(); }
+    poly(x, [-24, 26, 0, 42, 24, 26]); x.fillStyle = '#0b2840'; x.fill(); glowStroke(x, C.pk, 2, 8); lamp(x, 0, 34, C.pk, 2.5);
+    lamp(x, -90, -8, C.rd, 2.2); lamp(x, 90, -8, C.gr, 2.2); lamp(x, -60, -26, C.ye, 1.3); lamp(x, 60, -26, C.ye, 1.3);
+    if (rage) { scorch(x, -40, -14, 16); scorch(x, 30, 8, 14); cracks(x, [[-50, -26, -38, -12, -44, 2, -34, 12], [20, -30, 30, -16, 22, -6], [64, -4, 74, 8]]); }
   });
   S.boss1 = [twin(false), twin(true)];
-  // 모선 3: 오비트 코어(궤도 방패를 두른 구체)
+  // 모선 3: 오비트 코어(입체 구체 + 적도 띠 + 눈). 고리·눈동자·방패는 실시간.
   const orbit = (rage) => sprite(110, 110, x => {
-    x.beginPath(); x.arc(0, 0, 34, 0, TAU); x.fillStyle = '#062616'; x.fill(); glowStroke(x, rage ? C.rd : C.gr, 3, 14);
-    x.beginPath(); x.arc(0, 0, 24, 0, TAU); glowStroke(x, C.ye, 1.5, 8);
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; x.beginPath(); x.moveTo(Math.cos(a) * 24, Math.sin(a) * 24); x.lineTo(Math.cos(a) * 34, Math.sin(a) * 34); x.strokeStyle = (rage ? C.rd : C.gr) + 'aa'; x.lineWidth = 1.5; x.stroke(); }
+    const acc = rage ? C.rd : C.gr;
+    x.beginPath(); x.arc(0, 0, 38, 0, TAU); x.fillStyle = rad(x, -13, -14, 56, rage ? ['#ff9a8a', '#7a1a20', '#20050a', '#050102'] : ['#8affc4', '#1a7a4a', '#06301c', '#010a05']); x.fill(); glowStroke(x, acc, 2.5, 14);
+    x.save(); x.beginPath(); x.arc(0, 0, 38, 0, TAU); x.clip(); x.strokeStyle = '#ffffff1c'; x.lineWidth = 1;
+    for (const k of [-26, -14, 14, 26]) { x.beginPath(); x.ellipse(0, k, Math.sqrt(38 * 38 - k * k), 4, 0, 0, TAU); x.stroke(); }
+    for (const r of [12, 26]) { x.beginPath(); x.ellipse(0, 0, r, 38, 0, 0, TAU); x.stroke(); }
+    x.strokeStyle = (rage ? C.or : C.ye) + 'cc'; x.lineWidth = 4; x.beginPath(); x.ellipse(0, 0, 38, 7, 0, 0, TAU); x.stroke();
+    x.strokeStyle = '#00000066'; x.lineWidth = 1.5; for (let i = -32; i <= 32; i += 8) { x.beginPath(); x.moveTo(i, -5); x.lineTo(i, 5); x.stroke(); }
+    x.fillStyle = rad(x, 22, 24, 40, ['#00000000', '#000000aa']); x.fillRect(-40, -40, 80, 80); x.restore();
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + .2; x.save(); x.translate(Math.cos(a) * 30, Math.sin(a) * 30); x.rotate(a); x.fillStyle = '#00000080'; x.fillRect(-2, -4, 4, 8); x.fillStyle = acc + 'aa'; x.fillRect(-1, -3, 2, 6); x.restore(); }
+    x.beginPath(); x.arc(0, 0, 15, 0, TAU); x.fillStyle = '#020a05'; x.fill(); glowStroke(x, rage ? C.or : C.ye, 2, 10);
+    x.beginPath(); x.arc(0, 0, 11, 0, TAU); x.strokeStyle = '#ffffff22'; x.lineWidth = 1; x.stroke();
+    if (rage) cracks(x, [[-28, -18, -16, -8, -20, 4], [20, -26, 12, -16, 22, -10], [10, 22, 18, 30]]);
   });
   S.boss2 = [orbit(false), orbit(true)];
-  S.orb = sprite(26, 26, x => { x.beginPath(); x.arc(0, 0, 8, 0, TAU); x.fillStyle = '#062616'; x.fill(); glowStroke(x, C.gr, 2, 8); x.fillStyle = C.gr; x.beginPath(); x.arc(0, 0, 3, 0, TAU); x.fill(); });
-  S.bossRing = sprite(150, 150, x => { x.setLineDash([10, 8]); x.beginPath(); x.arc(0, 0, 66, 0, TAU); glowStroke(x, C.pu + 'aa', 2, 6); });
+  S.orb = sprite(28, 28, x => { poly(x, hexPts(10, 10)); x.fillStyle = rad(x, -3, -3, 14, ['#5cf2a6', '#0b5a35', '#021008']); x.fill(); glowStroke(x, C.gr, 1.8, 8); poly(x, hexPts(5, 5)); x.strokeStyle = '#ffffff55'; x.lineWidth = 1; x.stroke(); lamp(x, 0, 0, '#fff', 1.6); });
+  S.iris = sprite(30, 30, x => { x.beginPath(); x.arc(0, 0, 9, 0, TAU); x.fillStyle = rad(x, 0, 0, 9, ['#fff', C.pk, '#5a0730']); x.fill(); x.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; x.moveTo(Math.cos(a) * 3, Math.sin(a) * 3); x.lineTo(Math.cos(a) * 8, Math.sin(a) * 8); } x.strokeStyle = '#ffffff55'; x.lineWidth = .8; x.stroke(); x.fillStyle = '#05000a'; x.beginPath(); x.arc(0, 0, 3.2, 0, TAU); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(-2.5, -2.5, 1.4, 0, TAU); x.fill(); });
+  S.bossRing = sprite(170, 170, x => { x.setLineDash([10, 8]); x.beginPath(); x.arc(0, 0, 74, 0, TAU); glowStroke(x, C.pu + 'aa', 2, 6); x.setLineDash([]); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; x.beginPath(); x.moveTo(Math.cos(a) * 70, Math.sin(a) * 70); x.lineTo(Math.cos(a) * 78, Math.sin(a) * 78); x.strokeStyle = C.pu; x.lineWidth = 2; x.stroke(); } });
   setShip(S, skinCol(), skinDes());
   S.pod = sprite(18, 18, x => { poly(x, [0, -7, 6, 4, 0, 2, -6, 4]); x.fillStyle = '#1a0630'; x.fill(); glowStroke(x, C.pu, 1.6, 8); x.fillStyle = '#fff'; x.fillRect(-1, -2, 2, 2); });
   S.pb = sprite(10, 22, x => { x.shadowColor = C.cy; x.shadowBlur = 8; x.fillStyle = C.cy; x.fillRect(-2, -8, 4, 16); x.shadowBlur = 0; x.fillStyle = '#fff'; x.fillRect(-1, -7, 2, 14); });
@@ -139,12 +178,16 @@ function buildSprites() {
   S.cap = {}; for (const k in CAPS) { const [col, t] = CAPS[k]; S.cap[k] = sprite(26, 20, x => { x.beginPath(); x.roundRect ? x.roundRect(-10, -7, 20, 14, 5) : x.rect(-10, -7, 20, 14); x.fillStyle = '#111'; x.fill(); glowStroke(x, col, 2); x.fillStyle = col; x.font = "bold 10px " + FONT_N; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, 0.5, 1); }); }
   S.dot = {}; for (const k in C) S.dot[k] = dot(C[k], 8);
   S.flame = dot(C.or, 7);
-  const neb = document.createElement('canvas'); neb.width = W; neb.height = H; const n = neb.getContext('2d');
-  n.fillStyle = '#04020d'; n.fillRect(0, 0, W, H);
-  const blobs = [[60, 120, 160, '#5b1aa855'], [300, 330, 190, '#0e6a8a44'], [140, 520, 170, '#a81a6a40'], [330, 40, 120, '#2a1a8a44']];
-  for (const [bx, by, r, col] of blobs) for (const oy of [-H, 0, H]) { const g = n.createRadialGradient(bx, by + oy, 0, bx, by + oy, r); g.addColorStop(0, col); g.addColorStop(1, '#00000000'); n.fillStyle = g; n.fillRect(0, 0, W, H); }
-  n.strokeStyle = '#ffffff08'; n.lineWidth = 1; for (let gx = 0; gx <= W; gx += 40) { n.beginPath(); n.moveTo(gx, 0); n.lineTo(gx, H); n.stroke(); } for (let gy = 0; gy < H; gy += 40) { n.beginPath(); n.moveTo(0, gy); n.lineTo(W, gy); n.stroke(); }
-  S.neb = neb;
+  // 배경 성운 색 3종(모선 바퀴마다 바뀜): 보라·청록 / 주황·자홍 / 청·녹
+  S.nebs = [[['#5b1aa855', '#0e6a8a44', '#a81a6a40', '#2a1a8a44']], [['#a8401a50', '#8a0e5a44', '#c8781a3a', '#5a1a2a44']], [['#1a4aa855', '#0e8a5a44', '#1a6aa840', '#1a8a7a3a']]].map(([cols]) => {
+    const neb = document.createElement('canvas'); neb.width = W; neb.height = H; const n = neb.getContext('2d');
+    n.fillStyle = '#04020d'; n.fillRect(0, 0, W, H);
+    const blobs = [[60, 120, 160], [300, 330, 190], [140, 520, 170], [330, 40, 120]];
+    blobs.forEach(([bx, by, r], bi) => { for (const oy of [-H, 0, H]) { const g = n.createRadialGradient(bx, by + oy, 0, bx, by + oy, r); g.addColorStop(0, cols[bi]); g.addColorStop(1, '#00000000'); n.fillStyle = g; n.fillRect(0, 0, W, H); } });
+    n.strokeStyle = '#ffffff08'; n.lineWidth = 1; for (let gx = 0; gx <= W; gx += 40) { n.beginPath(); n.moveTo(gx, 0); n.lineTo(gx, H); n.stroke(); } for (let gy = 0; gy < H; gy += 40) { n.beginPath(); n.moveTo(0, gy); n.lineTo(W, gy); n.stroke(); }
+    return neb;
+  });
+  S.neb = S.nebs[0];
   return S;
 }
 // 캡슐: P 화력, L 레이저(관통), M 유도 미사일, S 보호막, B 필살기 +1, O 보조기
@@ -184,6 +227,80 @@ const ENTRY = [
   /* 나선 */ m => mkPath([[M(m, 180, -30), M(m, 180, 80), M(m, 320, 120), M(m, 260, 220)], [M(m, 260, 220), M(m, 180, 300), M(m, 80, 220), M(m, 130, 150)], [M(m, 130, 150), M(m, 170, 100), M(m, 230, 160), M(m, 190, 200)]]),
 ];
 const LAYOUTS = ['grid', 'v', 'arc', 'wave'];
+
+/* ---------- 배경 천체(은하·성운·행성): 미리 그려 두고 가끔 천천히 지나가게. 화면 연출만, 판정·순위와 무관 ---------- */
+let BG = null; const BGS = 1.6;
+function bgCanvas(w, h, fn) { const c = document.createElement('canvas'); c.width = Math.ceil(w * BGS); c.height = Math.ceil(h * BGS); const x = c.getContext('2d'); x.scale(BGS, BGS); x.translate(w / 2, h / 2); fn(x, w, h); return { c, w, h }; }
+function rnd(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+function glowDot(x, px, py, r, col, a) { const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, col); g.addColorStop(1, col.slice(0, 7) + '00'); x.globalAlpha = a; x.fillStyle = g; x.fillRect(px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; }
+function buildBg() {
+  const B = [];
+  // 1) 나선 은하
+  for (const [c1, c2, seed] of [['#9fd8ff', '#ff7ad9', 7], ['#ffd9a0', '#b48cff', 19]]) B.push(bgCanvas(230, 230, (x) => {
+    const r = rnd(seed); x.globalCompositeOperation = 'lighter';
+    glowDot(x, 0, 0, 70, '#ffffff', .35); glowDot(x, 0, 0, 30, '#fff6e0', .9);
+    for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 520; i++) {
+      const t = i / 520, a = arm / 3 * TAU + t * 4.2, rr = 8 + t * 100, sc = (1 - t) * 10 + 4;
+      const px = Math.cos(a) * rr + (r() - .5) * sc * 2, py = (Math.sin(a) * rr + (r() - .5) * sc * 2) * .55;
+      const col = r() < .5 ? c1 : r() < .5 ? c2 : '#ffffff'; x.globalAlpha = .25 + r() * .6 * (1 - t * .6); x.fillStyle = col; const z = r() < .08 ? 1.8 : .9; x.fillRect(px, py, z, z);
+      if (i % 9 === 0) glowDot(x, px, py, 9 + r() * 10, col, .08);
+    }
+    x.globalAlpha = 1;
+  }));
+  // 2) 고리 행성
+  B.push(bgCanvas(220, 150, (x) => {
+    const ring = (back) => { x.save(); x.rotate(-.28); x.beginPath(); x.ellipse(0, 0, 100, 24, 0, back ? Math.PI : 0, back ? TAU : Math.PI); x.strokeStyle = '#ffd9a0aa'; x.lineWidth = 7; x.stroke(); x.strokeStyle = '#ffffff55'; x.lineWidth = 2; x.beginPath(); x.ellipse(0, 0, 88, 20, 0, back ? Math.PI : 0, back ? TAU : Math.PI); x.stroke(); x.restore(); };
+    ring(true);
+    x.save(); x.beginPath(); x.arc(0, 0, 46, 0, TAU); x.clip();
+    const g = x.createLinearGradient(0, -46, 0, 46); ['#ffcf8a', '#d9874a', '#f2b070', '#a8562e', '#e8a060', '#7a3a1e'].forEach((c, i, a) => g.addColorStop(i / (a.length - 1), c)); x.fillStyle = g; x.fillRect(-50, -50, 100, 100);
+    for (let i = -40; i < 46; i += 9) { x.fillStyle = i % 2 ? '#ffffff14' : '#00000018'; x.fillRect(-50, i, 100, 4); }
+    const s = x.createRadialGradient(-18, -18, 6, 0, 0, 62); s.addColorStop(0, '#ffffff33'); s.addColorStop(.5, '#00000000'); s.addColorStop(1, '#000000d0'); x.fillStyle = s; x.fillRect(-50, -50, 100, 100); x.restore();
+    ring(false);
+  }));
+  // 3) 청색 가스 행성 + 위성
+  B.push(bgCanvas(150, 150, (x) => {
+    x.save(); x.beginPath(); x.arc(0, 0, 52, 0, TAU); x.clip();
+    const g = x.createLinearGradient(-52, -52, 52, 52); ['#7fe3ff', '#2a7bd6', '#1b3f9a', '#3aa0e0', '#0c1f5a'].forEach((c, i, a) => g.addColorStop(i / (a.length - 1), c)); x.fillStyle = g; x.fillRect(-55, -55, 110, 110);
+    x.globalAlpha = .25; for (let i = -50; i < 52; i += 7) { x.fillStyle = (i / 7) % 2 ? '#ffffff' : '#001040'; x.beginPath(); x.ellipse(0, i, 60, 2.5, .15, 0, TAU); x.fill(); } x.globalAlpha = 1;
+    const s = x.createRadialGradient(-20, -20, 8, 0, 0, 70); s.addColorStop(0, '#ffffff40'); s.addColorStop(.55, '#00000000'); s.addColorStop(1, '#000010e0'); x.fillStyle = s; x.fillRect(-55, -55, 110, 110); x.restore();
+    glowDot(x, 0, 0, 70, '#5ab8ff', .25);
+    x.beginPath(); x.arc(58, -48, 7, 0, TAU); x.fillStyle = '#c9d4e8'; x.fill(); x.beginPath(); x.arc(60, -46, 7, 0, TAU); x.fillStyle = '#00000088'; x.fill();
+  }));
+  // 4) 성운 구름(분홍·보라·청록)
+  for (const [pal, seed] of [[['#ff4fa8', '#9b5cff', '#3fd8ff'], 3], [['#ff8a3d', '#ff3d6e', '#ffd23f'], 11]]) B.push(bgCanvas(300, 240, (x) => {
+    const r = rnd(seed); x.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 70; i++) { const a = r() * TAU, d = Math.pow(r(), .7) * 100; glowDot(x, Math.cos(a) * d * 1.2, Math.sin(a) * d * .8, 20 + r() * 50, pal[i % 3], .05 + r() * .07); }
+    for (let i = 0; i < 90; i++) { const a = r() * TAU, d = r() * 110; x.globalAlpha = .4 + r() * .6; x.fillStyle = '#fff'; x.fillRect(Math.cos(a) * d * 1.2, Math.sin(a) * d * .8, 1, 1); }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 6; i++) glowDot(x, (r() - .5) * 180, (r() - .5) * 120, 18 + r() * 24, '#000000', .35);
+  }));
+  // 5) 측면 은하(먼지띠)
+  B.push(bgCanvas(220, 80, (x) => {
+    x.save(); x.rotate(.18); x.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 14; i++) { const t = i / 13 - .5; glowDot(x, t * 170, 0, 30 - Math.abs(t) * 30, '#cfe0ff', .18); }
+    glowDot(x, 0, 0, 34, '#fff3d8', .6); x.globalCompositeOperation = 'source-over';
+    x.fillStyle = '#05030c99'; x.beginPath(); x.ellipse(0, 1.5, 90, 2.2, 0, 0, TAU); x.fill(); x.restore();
+  }));
+  // 6) 성단
+  B.push(bgCanvas(140, 140, (x) => {
+    const r = rnd(29); x.globalCompositeOperation = 'lighter'; glowDot(x, 0, 0, 60, '#9fc8ff', .2);
+    for (let i = 0; i < 260; i++) { const a = r() * TAU, d = Math.pow(r(), 2) * 60, px = Math.cos(a) * d, py = Math.sin(a) * d; x.globalAlpha = .5 + r() * .5; x.fillStyle = r() < .2 ? '#ffd9a0' : '#e8f2ff'; x.fillRect(px, py, 1, 1); if (r() < .06) glowDot(x, px, py, 5, '#ffffff', .5); }
+    x.globalAlpha = 1;
+  }));
+  return B;
+}
+function bgSpawn(first) {
+  if (!BG) return; const k = Math.floor(Math.random() * BG.length), b = BG[k], sc = .75 + Math.random() * .6;
+  G.bgo.push({ b, x: 40 + Math.random() * (W - 80), y: first ? 120 + Math.random() * 200 : -b.h * sc / 2 - 10, v: 7 + Math.random() * 9, sc, a: .5 + Math.random() * .35, rot: (Math.random() - .5) * .6, k });
+}
+function bgStep(dt) {
+  G.bgT -= dt; if (G.bgT <= 0) { G.bgT = 13 + Math.random() * 10; if (G.bgo.length < 2) bgSpawn(false); }
+  for (const o of G.bgo) o.y += o.v * dt; G.bgo = G.bgo.filter(o => o.y - o.b.h * o.sc / 2 < H + 10);
+}
+function bgDraw() {
+  for (const o of G.bgo) { const w = o.b.w * o.sc, h = o.b.h * o.sc; x.globalAlpha = o.a; x.save(); x.translate(o.x, o.y); x.rotate(o.rot); x.drawImage(o.b.c, -w / 2, -h / 2, w, h); x.restore(); }
+  x.globalAlpha = 1;
+}
 
 /* ---------- 소리(Web Audio로 합성) ---------- */
 const A = { ctx: null, muted: false, next: 0, step: 0, lastShot: 0 };
@@ -329,23 +446,35 @@ const TYPES = {
   sniper: { hp: 2, pts: 400, r: 11, col: 'pu' },
 };
 const BOSSES = [
-  { name: '마더 헥스', col: C.pu, w: 48, h: 40 },
-  { name: '트윈 캐논', col: C.cy, w: 80, h: 26 },
-  { name: '오비트 코어', col: C.gr, w: 34, h: 34 },
+  { name: '마더 헥스', col: C.pu, w: 54, h: 44 },
+  { name: '트윈 캐논', col: C.cy, w: 88, h: 30 },
+  { name: '오비트 코어', col: C.gr, w: 38, h: 38 },
 ];
 const SPX = 36, SPY = 30, TOP = 96, COLS = 8;
+// 졸개 난이도: 1~10단계는 기존 그대로, 11단계부터 단계마다 조금씩 계속 오른다(BK 11/13: 보스만 강해지고 졸개는 그대로라는 피드백).
 function diff(n) {
+  const k = Math.max(0, n - 10); // 10단계 이후 초과분
   return {
-    enter: Math.min(340, 215 + n * 8), diveGap: Math.max(n > 10 ? .5 : .7, 2.9 - n * .18), divers: Math.min(n > 10 ? 10 : 8, 1 + Math.ceil(n / 1.5)),
-    dive: Math.min(n > 10 ? 320 : 300, 165 + n * 10), bullet: Math.min(n > 10 ? 315 : 295, 135 + n * 10), formFire: n >= 4 ? Math.min(n > 10 ? 1.6 : 1.2, (n - 3) * .12) : 0,
-    mult: 1 + (n - 1) * .1, hpUp: n >= 15 ? 1 : 0,
+    enter: Math.min(380, 215 + Math.min(n, 15) * 8 + Math.max(0, n - 15) * 3),
+    diveGap: n <= 10 ? Math.max(.7, 2.9 - n * .18) : Math.max(.3, .85 - k * .028),
+    divers: n <= 10 ? Math.min(8, 1 + Math.ceil(n / 1.5)) : Math.min(14, 8 + Math.floor(k / 2)),
+    dive: n <= 10 ? Math.min(300, 165 + n * 10) : Math.min(370, 265 + k * 5),
+    bullet: n <= 10 ? Math.min(295, 135 + n * 10) : Math.min(360, 235 + k * 5),
+    formFire: n < 4 ? 0 : n <= 10 ? Math.min(1.2, (n - 3) * .12) : Math.min(2.6, .84 + k * .09),
+    enterFire: n < 3 ? 0 : Math.min(.9, .1 * (n - 2)),
+    extraShots: Math.min(3, Math.floor(k / 5)),          // 15·20·25단계마다 돌진 사격 +1발
+    spread: n >= 13,                                     // 13단계부터 드론·해파리도 2~3갈래 사격
+    burst: Math.min(6, 3 + Math.floor(k / 5)),           // 저격 포드 연사 수
+    ringN: n <= 10 ? Math.min(14, (6 + n) >> 1 << 1) : Math.min(20, 14 + (k >> 2) * 2),               // 가디언 원형탄 수
+    mult: 1 + (n - 1) * .1, hpUp: n >= 25 ? 2 : n >= 15 ? 1 : 0, hpAll: n >= 30 ? 1 : 0,
   };
 }
 function newGame() {
   G = { mode: 'play', stage: 0, score: 0, disp: 0, lives: 3, power: 1, wpn: 'P', pods: 0, bombs: 2, charge: 0, shield: false, px: W / 2, py: H - 70, inv: 0, fireT: 0, dead: 0,
     en: [], pb: [], eb: [], beams: [], parts: [], caps: [], texts: [], q: [], t: 0, shake: 0, flash: 0, nova: null, nextLife: 30000, shots: 0, hits: 0, kills: 0, boss: null, debug: DEBUG, god: false,
-    podPos: [[W / 2, H - 70], [W / 2, H - 70]], pauseLeft: 1, cd: 0, autoP: false };
+    podPos: [[W / 2, H - 70], [W / 2, H - 70]], pauseLeft: 1, cd: 0, autoP: false, bgo: [], bgT: 9 };
   try { G.best = +localStorage.getItem('nr_best_starlight_' + window.KST_SL) || 0; } catch (e) { G.best = 0; }
+  bgSpawn(true);
   startStage(1);
 }
 function startStage(n) {
@@ -385,8 +514,8 @@ function startStage(n) {
     const tpl = Math.floor(R() * nT), m = gi % 2 ? -1 : 1, dual = n >= 2 && R() < .5;
     g.forEach((s, i) => {
       const mm = dual ? (i % 2 ? -m : m) : m, k = dual ? i >> 1 : i;
-      const fire = n >= 3 && R() < Math.min(.5, .1 * (n - 2)) ? .5 + R() * .3 : -1;
-      G.q.push({ t: t + k * .15, e: { ...s, hp: TYPES[s.type].hp + (s.type !== 'drone' && s.type !== 'jelly' ? D.hpUp : 0), st: 'enter', path: ENTRY[tpl](mm), d: 0, pi: 0, x: -99, y: -99, rot: 0, fire, hitT: 0, ph: R() * TAU, snT: 2 + R() * 3 } });
+      const fire = n >= 3 && R() < D.enterFire ? .5 + R() * .3 : -1;
+      G.q.push({ t: t + k * .15, e: { ...s, hp: TYPES[s.type].hp + (s.type !== 'drone' && s.type !== 'jelly' ? D.hpUp : D.hpAll), st: 'enter', path: ENTRY[tpl](mm), d: 0, pi: 0, x: -99, y: -99, rot: 0, fire, hitT: 0, ph: R() * TAU, snT: 2 + R() * 3 } });
     });
     t += dual ? 1.3 + (g.length >> 1) * .15 : 1.4 + g.length * .15;
   });
@@ -421,7 +550,7 @@ function startDive(e, tx0, delay) {
     segs = [hop, [b, [b[0], b[1] + 100], [tx, cy - 80], [tx, cy]], [[tx, cy], [tx, cy + 55], [tx + m * 70, cy + 55], [tx + m * 70, cy]], [[tx + m * 70, cy], [tx + m * 70, cy - 55], [tx, cy - 55], [tx, cy]], [[tx, cy], [tx, cy + 120], [tx - m * 40, H * .8], [tx - m * 60, H + 40]]];
   } else segs = [hop, [b, [b[0] - m * 25, b[1] + 180], [tx, H * .6], [clamp(tx + (R() - .5) * 140, 10, W - 10), H + 40]]];
   e.path = mkPath(segs); e.d = -(delay || 0); e.pi = 0; e.st = 'dive'; e.kind = kind; e.spd = D.dive * (e.type === 'drone' ? 1.05 : kind === 'kami' ? 1.35 : 1);
-  const shots = kind === 'kami' ? 0 : n === 1 ? (R() < .35 ? 1 : 0) : n < 4 ? 1 : n < 7 ? 1 + (R() < .5 ? 1 : 0) : 2 + (R() < (n > 10 ? .7 : .4) ? 1 : 0);
+  const shots = kind === 'kami' ? 0 : n === 1 ? (R() < .35 ? 1 : 0) : n < 4 ? 1 : n < 7 ? 1 + (R() < .5 ? 1 : 0) : 2 + (R() < (n > 10 ? .7 : .4) ? 1 : 0) + D.extraShots;
   e.shots = []; for (let i = 0; i < shots; i++) e.shots.push((.25 + R() * .3 + i * .08) * e.path.len);
 }
 function addScore(p) {
@@ -567,7 +696,7 @@ function update(dt) {
       if (e.st === 'enter' && e.fire > 0 && e.d > e.fire * e.path.len && e.y > 0 && e.y < H * .6) { e.fire = -1; aimShot(e.x, e.y, D.bullet * .85); }
       if (e.st === 'dive') {
         diving++;
-        while (e.shots.length && e.d >= e.shots[0]) { e.shots.shift(); if (e.y > 0 && e.y < G.py - 60) { if (e.type === 'guard') for (const s of [-.22, 0, .22]) aimShot(e.x, e.y, D.bullet, s); else aimShot(e.x, e.y, D.bullet, (G.R() - .5) * .1); } }
+        while (e.shots.length && e.d >= e.shots[0]) { e.shots.shift(); if (e.y > 0 && e.y < G.py - 60) { if (e.type === 'guard') for (const s of [-.22, 0, .22]) aimShot(e.x, e.y, D.bullet, s); else if (D.spread) { const k = G.stage >= 20 ? 3 : 2; for (let i = 0; i < k; i++) aimShot(e.x, e.y, D.bullet, (i - (k - 1) / 2) * .2); } else aimShot(e.x, e.y, D.bullet, (G.R() - .5) * .1); } }
       }
       if (done) {
         if (e.oneShot) { e.dead = true; continue; }
@@ -576,14 +705,14 @@ function update(dt) {
       }
     } else if (e.st === 'hover') {
       diving++; e.ht -= dt; e.x += Math.sin(G.t * 3) * .4;
-      if (!e.hf && e.ht < .8) { e.hf = 1; ring(e.x, e.y, Math.min(14, 6 + G.stage >> 1 << 1), Math.min(190, 110 + G.stage * 4), G.t); }
+      if (!e.hf && e.ht < .8) { e.hf = 1; ring(e.x, e.y, D.ringN, Math.min(230, 110 + G.stage * 4), G.t); }
       if (e.ht <= 0) { const m = e.x < W / 2 ? 1 : -1; e.path = mkPath([[[e.x, e.y], [e.x, e.y + 60], [e.x + m * 90, H * .7], [e.x + m * 120, H + 40]]]); e.d = 0; e.pi = 0; e.st = 'dive'; e.kind = 'std'; e.shots = []; }
     } else if (e.st === 'join') {
       const [sx, sy] = slotPos(e), dx = sx - e.x, dy = sy - e.y, d = Math.hypot(dx, dy), mv = D.enter * dt;
       if (d <= mv + 1) { e.st = 'form'; e.x = sx; e.y = sy; } else { e.x += dx / d * mv; e.y += dy / d * mv; }
     } else {
       const p = slotPos(e); e.x = p[0]; e.y = p[1]; formed.push(e);
-      if (e.type === 'sniper' && G.clearT <= 0 && G.dead <= 0) { e.snT -= dt; if (e.snT <= 0) { e.snT = Math.max(1.8, 4 - G.stage * .1) + G.R() * 1.5; e.burst = 3; e.bt = .45; } }
+      if (e.type === 'sniper' && G.clearT <= 0 && G.dead <= 0) { e.snT -= dt; if (e.snT <= 0) { e.snT = Math.max(1.8, 4 - G.stage * .1) + G.R() * 1.5; e.burst = D.burst; e.bt = .45; } }
     }
     if (e.burst) { e.bt -= dt; if (e.bt <= 0) { e.burst--; e.bt = .12; if (e.y > 0) aimShot(e.x, e.y + 8, D.bullet * 1.25, 0, 1); } }
     const vx = e.x - ox, vy = e.y - oy;
@@ -632,7 +761,7 @@ function update(dt) {
     const B = G.boss;
     if (!b.dead && B && !B.enter && B.hp > 0) {
       const bd = BOSSES[B.kind];
-      if (B.kind === 2 && B.orbs) { for (let i = 0; i < B.orbs; i++) { const a = B.spin + i / B.orbs * TAU, ox = B.x + Math.cos(a) * 52, oy = B.y + Math.sin(a) * 52; if (Math.hypot(b.x - ox, b.y - oy) < 11) { b.dead = true; SFX.block(); break; } } }
+      if (B.kind === 2 && B.orbs) { for (let i = 0; i < B.orbs; i++) { const a = B.spin + i / B.orbs * TAU, ox = B.x + Math.cos(a) * 58, oy = B.y + Math.sin(a) * 58 * .9; if (Math.hypot(b.x - ox, b.y - oy) < 11) { b.dead = true; SFX.block(); break; } } }
       if (!b.dead && Math.abs(b.x - B.x) < bd.w && Math.abs(b.y - B.y) < bd.h) {
         if (b.hitList) { if (b.hitList.includes(B)) continue; b.hitList.push(B); } else b.dead = true;
         G.hits++; B.hp -= b.dmg; B.hitT = .06; if (B.hp <= 0) bossDown(); else if (Math.random() < .3) SFX.hit();
@@ -705,6 +834,7 @@ function bossDown() {
   G.en.forEach(e => { if (e.oneShot) { boom(e.x, e.y, 'cy', 8); e.dead = true; } });
 }
 function stepFx(dt) {
+  bgStep(dt);
   for (const p of G.parts) { p.l += dt; if (!p.ring) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .97; p.vy *= .97; } }
   G.parts = G.parts.filter(p => p.l < p.m);
   for (const t of G.texts) t.t += dt; G.texts = G.texts.filter(t => t.t < 1.1);
@@ -720,7 +850,7 @@ function draw() {
   const sh = G.shake > 0 ? G.shake * 8 : 0, kx = sh ? (Math.random() - .5) * sh : 0, ky = sh ? (Math.random() - .5) * sh : 0;
   x.setTransform(s * dpr, 0, 0, s * dpr, (ox + kx * s) * dpr, (oy + ky * s) * dpr);
   x.save(); x.beginPath(); x.rect(0, 0, W, H); x.clip();
-  const ny = (G.t * 12) % H; x.drawImage(SP.neb, 0, ny - H, W, H); x.drawImage(SP.neb, 0, ny, W, H);
+  const neb = SP.nebs[Math.floor((Math.max(1, G.stage) - 1) / 5) % 3], ny = (G.t * 12) % H; x.drawImage(neb, 0, ny - H, W, H); x.drawImage(neb, 0, ny, W, H); bgDraw();
   for (const st of stars) { x.fillStyle = ['#ffffff55', '#ffffff99', '#ffffffee'][st.l]; const z = st.l + 1; x.fillRect(st.x * W, st.y * H, z * .8, z * (G.clearT > 0 ? 6 : 1.4)); }
   for (const b of G.beams) { // 경고선 → 레이저 기둥
     if (b.t < b.warn) { x.globalAlpha = .35 + .35 * Math.sin(b.t * 30); x.fillStyle = C.rd; x.fillRect(b.x - 1, b.y0, 2, H); x.globalAlpha = 1; }
@@ -739,9 +869,24 @@ function draw() {
   const B = G.boss;
   if (B) {
     const bs = SP['boss' + B.kind][B.rage ? 1 : 0], al = B.hitT > 0 ? .55 : undefined;
-    if (B.kind === 0) { spr(x, SP.bossRing, B.x, B.y, B.spin * .5); spr(x, bs, B.x, B.y, 0, 1, al); const pr = 1 + .15 * Math.sin(B.t * 6); spr(x, SP.dot[B.rage ? 'rd' : 'pk'], B.x, B.y, 0, 1.8 * pr); }
-    else if (B.kind === 1) { spr(x, bs, B.x, B.y, 0, 1, al); spr(x, SP.dot[B.rage ? 'rd' : 'cy'], B.x, B.y - 8, 0, 1.3 + .2 * Math.sin(B.t * 8)); }
-    else { spr(x, bs, B.x, B.y, B.spin * .3, 1, al); spr(x, SP.dot[B.rage ? 'rd' : 'gr'], B.x, B.y, 0, 2 + .3 * Math.sin(B.t * 5)); for (let i = 0; i < B.orbs; i++) { const a = B.spin + i / B.orbs * TAU; spr(x, SP.orb, B.x + Math.cos(a) * 52, B.y + Math.sin(a) * 52); } }
+    const fl = (fx, fy, k) => { const f = .8 + Math.random() * .4; spr(x, SP.flame, fx, fy, 0, k * f); spr(x, SP.dot.wh, fx, fy + 2, 0, k * .45 * f); };
+    const lookX = clamp((G.px - B.x) / 60, -1, 1), lookY = clamp((G.py - B.y) / 200, -1, 1);
+    if (B.kind === 0) {
+      spr(x, SP.bossRing, B.x, B.y, B.spin * .5); fl(B.x - 62, B.y - 40, 1.1); fl(B.x + 62, B.y - 40, 1.1);
+      spr(x, bs, B.x, B.y, 0, 1, al);
+      for (let i = 0; i < 6; i++) { const a = -B.spin * 1.4 + i / 6 * TAU; spr(x, SP.dot[i % 2 ? 'pk' : 'cy'], B.x + Math.cos(a) * 78, B.y + Math.sin(a) * 78, 0, .45); }
+      const pr = 1 + .12 * Math.sin(B.t * 6); spr(x, SP.dot[B.rage ? 'rd' : 'pk'], B.x, B.y, 0, 2.2 * pr, .8); spr(x, SP.iris, B.x + lookX * 5, B.y + lookY * 4, 0, 1);
+    } else if (B.kind === 1) {
+      fl(B.x - 34, B.y - 50, 1.2); fl(B.x + 34, B.y - 50, 1.2);
+      spr(x, bs, B.x, B.y, 0, 1, al);
+      for (const sd of [-1, 1]) { const tx = B.x + sd * 54, ty = B.y + 6, a = Math.atan2(G.py - ty, G.px - tx); x.save(); x.translate(tx, ty); x.rotate(a); x.fillStyle = '#0b2840'; x.fillRect(4, -4.5, 24, 9); x.strokeStyle = B.rage ? C.or : C.ye; x.lineWidth = 1.2; x.strokeRect(4, -4.5, 24, 9); x.fillStyle = '#ffffff30'; x.fillRect(6, -3, 20, 2); x.fillStyle = B.rage ? C.rd : C.ye; x.fillRect(26, -3, 3, 6); x.restore(); spr(x, SP.dot[B.rage ? 'or' : 'ye'], tx, ty, 0, .7); }
+      spr(x, SP.dot[B.rage ? 'rd' : 'cy'], B.x, B.y - 42, 0, .8 + .3 * Math.sin(B.t * 8));
+    } else {
+      const ringC = (B.rage ? C.rd : C.gr), half = (back) => { x.save(); x.translate(B.x, B.y); x.rotate(-.35); x.beginPath(); x.ellipse(0, 0, 62, 15, 0, back ? Math.PI : 0, back ? TAU : Math.PI); x.strokeStyle = ringC + (back ? '55' : 'bb'); x.lineWidth = 3; x.stroke(); x.restore(); };
+      half(true); spr(x, bs, B.x, B.y, 0, 1, al); half(false);
+      spr(x, SP.dot[B.rage ? 'rd' : 'gr'], B.x, B.y, 0, 1.6 + .2 * Math.sin(B.t * 5), .7); spr(x, SP.iris, B.x + lookX * 5, B.y + lookY * 5, 0, 1.15);
+      for (let i = 0; i < B.orbs; i++) { const a = B.spin + i / B.orbs * TAU; spr(x, SP.orb, B.x + Math.cos(a) * 58, B.y + Math.sin(a) * 58 * .9, B.spin * 2); }
+    }
   }
   if (G.dead <= 0 && G.mode === 'play' && !(G.inv > 0 && !G.nova && (G.t * 12 | 0) % 2)) {
     const fl = .8 + Math.random() * .5; spr(x, SP.flame, G.px - 4, G.py + 15, 0, fl * .8); spr(x, SP.flame, G.px + 4, G.py + 15, 0, fl * .8);
@@ -882,13 +1027,13 @@ function close() {
 function warm() { // 시작 전에 글꼴·스프라이트·경로를 미리 준비 → 첫 프레임 끊김 방지
   RES = clamp(Math.ceil(Math.min(innerWidth / W, innerHeight / H) * Math.min(window.devicePixelRatio || 1, 2)), 2, 4); SP = buildSprites();
   try { document.fonts && document.fonts.load('10px "Press Start 2P"'); document.fonts && document.fonts.load('16px "Black Han Sans"', '별빛'); } catch (e) {}
-  ENTRY.forEach(f => f(1));
+  ENTRY.forEach(f => f(1)); try { BG = buildBg(); } catch (e) { BG = null; }
 }
 window.StarlightGame = {
   boot(o) {
     opts = o; window.KST_SL = o.day; if (!ov) { mkDom(); warm(); }
     const api = { open };
-    if (DEBUG) window.__sl = { open, G: () => G, stage(n) { startStage(n); }, god(b) { G.god = b; }, pause, close, bomb, give(k) { takeCap({ k, x: G.px, y: G.py }); }, draw: () => draw() };
+    if (DEBUG) window.__sl = { open, G: () => G, stage(n) { startStage(n); }, god(b) { G.god = b; }, pause, close, bomb, give(k) { takeCap({ k, x: G.px, y: G.py }); }, bgAll() { G.bgo = BG.map((b, i) => ({ b, x: 95 + (i % 2) * 170, y: 110 + Math.floor(i / 2) * 140, v: 0, sc: .62, a: .95, rot: 0 })); }, draw: () => draw() };
     return api;
   },
 };

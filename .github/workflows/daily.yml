@@ -1,0 +1,41 @@
+name: daily
+
+# 오늘의 생활 시세 (2026-11-14): 매일 05:50 KST 공공 API(오피넷·ECOS·KAMIS)로 data/daily/<날짜>.json 을 만들어 main에 커밋.
+# 커밋되면 사이트가 다시 빌드되어 홈 '오늘의 생활 시세'와 '오늘의 얼마게'가 새 숫자로 바뀐다. 키가 하나도 없으면 아무것도 커밋하지 않는다.
+on:
+  schedule:
+    - cron: "50 20 * * *"   # 매일 05:50 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: 오늘의 시세 수집
+        env:
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          KAMIS_KEY: ${{ secrets.KAMIS_KEY }}
+          KAMIS_ID: ${{ secrets.KAMIS_ID }}
+          ECOS_KEY: ${{ secrets.ECOS_KEY }}
+        run: PYTHONPATH=src python -m pipeline.daily
+      - name: main에 기록
+        run: |
+          git config user.name "daily-bot"
+          git config user.email "daily-bot@users.noreply.github.com"
+          git add data/daily 2>/dev/null || exit 0
+          git commit -m "오늘의 생활 시세 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
