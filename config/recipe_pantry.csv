@@ -1,29 +1,36 @@
 id,name,pack,packAmount,unit,packPrice,priceDate,coupangUrl
-rice,쌀,10kg,10000,g,32000,2026-11-13,
-egg,계란,30구,30,개,8900,2026-11-13,
-kimchi,포기김치,5kg,5000,g,27000,2026-11-13,
+rice,쌀,10kg,10000,g,32000,2026-11-13,https://link.coupang.com/a/iDCUJcLxBc
+egg,계란,30구,30,개,8900,2026-11-13,https://link.coupang.com/a/iDDbX8uruK
+kimchi,포기김치,5kg,5000,g,27000,2026-11-13,https://link.coupang.com/a/iDEwAervOe
 pork,돼지고기 앞다리살,1kg,1000,g,13000,2026-11-13,
 tofu,찌개용 두부,300g,300,g,1800,2026-11-13,
 softtofu,순두부,350g,350,g,1300,2026-11-13,
-tuna,참치캔,100g×10캔,10,캔,14900,2026-11-13,
-doenjang,된장,1kg,1000,g,6500,2026-11-13,
-gochujang,고추장,1kg,1000,g,9000,2026-11-13,
-gochugaru,고춧가루,500g,500,g,15000,2026-11-13,
-soy,진간장,1.7L,1700,ml,8500,2026-11-13,
-sesame,참기름,320ml,320,ml,9500,2026-11-13,
-oil,식용유,1.8L,1800,ml,7500,2026-11-13,
-sugar,설탕,1kg,1000,g,2500,2026-11-13,
-garlic,다진 마늘,1kg,1000,g,9900,2026-11-13,
+tuna,참치캔,100g×10캔,10,캔,14900,2026-11-13,https://link.coupang.com/a/iDEQWyTeQS
+doenjang,된장,1kg,1000,g,6500,2026-11-13,https://link.coupang.com/a/iDDNeCL9tA
+gochujang,고추장,1kg,1000,g,9000,2026-11-13,https://link.coupang.com/a/iDDJbv7yqO
+gochugaru,고춧가루,500g,500,g,15000,2026-11-13,https://link.coupang.com/a/iDDq8MZylU
+soy,진간장,1.7L,1700,ml,8500,2026-11-13,https://link.coupang.com/a/iDDwAs1dWC
+sesame,참기름,320ml,320,ml,9500,2026-11-13,https://link.coupang.com/a/iDDDcXVDI4
+oil,식용유,1.8L,1800,ml,7500,2026-11-13,https://link.coupang.com/a/iDDkPmS8Gq
+sugar,설탕,1kg,1000,g,2500,2026-11-13,https://link.coupang.com/a/iDDzSGgUQm
+garlic,다진 마늘,1kg,1000,g,9900,2026-11-13,https://link.coupang.com/a/iDFdhcRLUG
 onion,양파,3kg,3000,g,6900,2026-11-13,
 greenonion,대파,1kg,1000,g,4000,2026-11-13,
 zucchini,애호박,1개,1,개,1800,2026-11-13,
 potato,감자,2kg,2000,g,7000,2026-11-13,
 carrot,당근,1kg,1000,g,3500,2026-11-13,
-stock,코인 육수,20알,20,알,6000,2026-11-13,
-curry,카레 가루,1kg,1000,g,9800,2026-11-13,
-tteok,떡볶이 떡,1kg,1000,g,4500,2026-11-13,
+stock,코인 육수,20알,20,알,6000,2026-11-13,https://link.coupang.com/a/iDDRFgVeBE
+curry,카레 가루,1kg,1000,g,9800,2026-11-13,https://link.coupang.com/a/iDEYC9GJcO
+tteok,떡볶이 떡,1kg,1000,g,4500,2026-11-13,https://link.coupang.com/a/iDE2sipvAy
 fishcake,사각 어묵,1kg,1000,g,6900,2026-11-13,
 mayo,마요네즈,800g,800,g,6000,2026-11-13,
 ketchup,케첩,1kg,1000,g,4500,2026-11-13,
-frozenveg,냉동 볶음밥 채소,1kg,1000,g,5500,2026-11-13,
+frozenveg,냉동 볶음밥 채소,1kg,1000,g,5500,2026-11-13,https://link.coupang.com/a/iDEKgxeVSm
 gim,김가루,500g,500,g,9900,2026-11-13,
+chickenstock,치킨스톡,1kg,1000,g,13000,2026-11-13,https://link.coupang.com/a/iDE9HAYmJM
+cucumber,오이,3개,3,개,3500,2026-11-13,https://link.coupang.com/a/iDFgycI5Dg
+tomato,대추방울토마토,1kg,1000,g,9900,2026-11-13,https://link.coupang.com/a/iDFiXIzh2y
+radish,무,1개(1.5kg),1500,g,2500,2026-11-13,https://link.coupang.com/a/iDFmQgLekm
+yogurt,플레인 요거트,500g,500,g,7500,2026-11-13,https://link.coupang.com/a/iDK4GHKsGi
+galbitang,뼈 없는 갈비탕,1봉(600g),1,봉,6900,2026-11-13,https://link.coupang.com/a/iDK11KqaJM
+beef,소고기 국거리,300g,300,g,8900,2026-11-13,https://link.coupang.com/a/iDKNOFePlI

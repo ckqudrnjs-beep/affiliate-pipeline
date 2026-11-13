@@ -103,8 +103,7 @@ def shop_box(rows: list[dict]) -> str:
     if not linked:
         return ""
     e = html.escape
-    li = "".join(f'<li><a href="{e(x["pantry"]["coupangUrl"])}" target="_blank" rel="sponsored nofollow noopener">{e(x["pantry"]["name"])} '
-                 f'{e(x["pantry"]["pack"])}</a><span>쿠팡에서 보기</span></li>' for x in linked)
+    li = "".join(f'<li><a href="{e(x["pantry"]["coupangUrl"])}" target="_blank" rel="sponsored nofollow noopener">{e(x["pantry"]["name"])}</a><span>쿠팡에서 보기</span></li>' for x in linked)
     return (f'<section class="shopbox"><h2>재료 한 번에 장보기</h2><p class="ad">[광고] {COUPANG_DISCLOSURE}</p>'
             f'<p class="small">큰 봉지로 사 두면 여러 레시피에 나눠 써서 1인분 원가가 내려가요. 실제 가격과 배송일은 판매 페이지에서 확인하세요.</p>'
             f'<ul>{li}</ul></section>')
