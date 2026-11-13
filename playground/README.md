@@ -43,3 +43,8 @@
 - 고친 뒤 빌드: `cd src3d && npm install && npm run build` → `static/js/range.js` 를 함께 커밋(Cloudflare 빌드는 파이썬만 돌리므로 번들을 저장소에 둔다).
 - 점수 상한은 `functions/api/score.js` MAX.range. 매일 같은 판 = `seeded('range'+KST)`.
 - 테스트용: 주소 끝에 `#rgdebug` 를 붙이면 `window.__rg` 로 조작 가능.
+
+## 리듬 점프 러너 (통통 네온런, 2026-11-13)
+- `games/tongtong/` 2D 캔버스 게임(번들 없음, game.js 하나). 그림·음악(웹오디오 합성)·코스 모두 코드로 생성, 외부 파일 없음. 특정 기존 게임의 이름·캐릭터·레벨·음악을 따라 하지 않는다.
+- 코스: `seeded('tongtong'+KST)` 로 조각을 이어 붙이고, 조각마다 같은 물리로 탐색(solve)해 **깰 수 있는 코스만** 채택(판정 여유 0.1칸). 128칸(32박)마다 구간 상승: 100→172 BPM, 장애물 종류·간격 강화.
+- 점수 = 오늘 최고 거리(m), score.js MAX.tongtong=200000. 테스트: `#ttdebug` → `window.__tt` (bot=true 자동 플레이, fast(n), jumpTo(x)), 디버그 기록은 순위 제출 안 함.
