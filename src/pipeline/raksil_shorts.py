@@ -190,7 +190,7 @@ def background(seed: int = 5):
     return img
 
 
-def header(img):
+def header(img, sub: str = "오늘의 밸런스게임"):
     from PIL import ImageDraw
     dr = ImageDraw.Draw(img)
     f = font(64)
@@ -198,7 +198,7 @@ def header(img):
     x = W / 2 - (w5 + wr + 8) / 2
     glow_text(img, (x + w5 / 2, 120), ["5"], f, 64, PINK, glow=10)
     glow_text(img, (x + w5 + 8 + wr / 2, 120), ["락실"], f, 64, CYAN, glow=10)
-    glow_text(img, (W / 2, 215), ["오늘의 밸런스게임"], font(48), 48, YEL, glow=8)
+    glow_text(img, (W / 2, 215), [sub], font(48), 48, YEL, glow=8)
 
 
 def panel(img, box, color, label: str, text: str):
@@ -420,7 +420,7 @@ PUBLISH_HOUR = 17  # KST, BK 2026-11-13: 매일 오후 5시 공개
 
 def publish_time(meta: dict, now: dt.datetime) -> dt.datetime | None:
     """그날 17:00 KST 전이면 그 시각 예약, 지났으면 None(바로 공개)."""
-    at = dt.datetime.combine(dt.date.fromisoformat(meta["date"]), dt.time(PUBLISH_HOUR), KST)
+    at = dt.datetime.combine(dt.date.fromisoformat(meta["date"]), dt.time(meta.get("hour", PUBLISH_HOUR)), KST)
     return at if now < at - dt.timedelta(minutes=2) else None
 
 
@@ -429,8 +429,8 @@ def video_body(meta: dict, publish_at: dt.datetime | None = None) -> dict:
         "privacyStatus": "private",  # publishAt 은 private 일 때만
         "publishAt": publish_at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     return {
-        "snippet": {"title": meta["title"], "description": meta["description"], "tags": TAGS,
-                    "categoryId": "24", "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
+        "snippet": {"title": meta["title"], "description": meta["description"], "tags": meta.get("tags", TAGS),
+                    "categoryId": meta.get("category", "24"), "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
         "status": {**status, "selfDeclaredMadeForKids": False,
                    "containsSyntheticMedia": bool(meta.get("voiced")), "embeddable": True},
     }
@@ -451,7 +451,8 @@ def upload_meta(meta: dict) -> int:
         summary("5락실 유튜브 비밀값이 없어 업로드하지 않음 (docs/RAKSIL_YOUTUBE.md)")
         return 1
     tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
-    at = None if meta.get("key", meta["date"]) != meta["date"] else publish_time(meta, dt.datetime.now(KST))
+    sched = meta.get("schedule", meta.get("key", meta["date"]) == meta["date"])
+    at = publish_time(meta, dt.datetime.now(KST)) if sched else None
     r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
     log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"]}
     LOG.parent.mkdir(parents=True, exist_ok=True)
