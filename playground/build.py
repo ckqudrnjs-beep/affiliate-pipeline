@@ -324,12 +324,13 @@ def stat_html(s: dict, asof: date) -> str:
 
 # 공유: 카카오 키(KAKAO_JS_KEY, Cloudflare 변수)가 있으면 "카카오톡 / 다른 앱" 선택 창, 없으면 기기 공유창·복사.
 SHARE_JS = """
-function plainShare(text){if(window.Bonus)Bonus.ach('share');if(navigator.share)navigator.share({text}).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(text);alert('링크를 복사했어요. 친구에게 붙여 넣어 보세요!')}}
+function shareOk(){if(window.Bonus)Bonus.ach('share')}
+function plainShare(text){if(navigator.share)navigator.share({text}).then(shareOk).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>{shareOk();alert('링크를 복사했어요. 친구에게 붙여 넣어 보세요!')}).catch(()=>{})}}
 function shareLink(title,url,text){if(!(window.Kakao&&Kakao.isInitialized&&Kakao.isInitialized())){plainShare(text);return}
 const m=url.match(/\\/q\\/(\\d{8}-\\d)/);const og=document.querySelector('meta[property="og:image"]');const img=m?location.origin+'/og/q/'+m[1]+'.png':(og?og.content:location.origin+'/og.png');
-const box=document.createElement('div');box.className='shsheet';box.innerHTML='<div><b>공유하기</b><button type="button" data-k="k">💬 카카오톡</button><button type="button" data-k="o">📤 다른 앱 · 링크 복사</button><button type="button" data-k="x">닫기</button></div>';
+const box=document.createElement('div');box.className='shsheet';box.innerHTML='<div><b>공유하기</b><button type="button" data-k="k">💬 카카오톡</button><button type="button" data-k="o">📤 다른 앱 · 링크 복사 (첫 공유 🪙+2)</button><button type="button" data-k="x">닫기</button></div>';
 box.onclick=e=>{const k=e.target.dataset&&e.target.dataset.k;if(e.target===box||k==='x'){box.remove();return}if(!k)return;box.remove();
-if(k==='k'){if(window.Bonus)Bonus.ach('share');try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};document.body.appendChild(box)}
+if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};document.body.appendChild(box)}
 """
 
 
@@ -356,7 +357,7 @@ DESIGNS = [
 ]
 DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"]}
 # 업적·공유 보너스 코인(각 1번만): sl5 별빛 5단계, tt500 통통 500m, rg4 사격장 4단계, share 결과 공유
-ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "share": ["게임 결과 공유하기", 2]}
+ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
 
 BONUS_JS = (
     f"const SKINS={json.dumps(SKINS, ensure_ascii=False)},BONUS_MAX={BONUS_MAX_COINS},DESIGNS={json.dumps(DESIGNS, ensure_ascii=False)},DGAMES={json.dumps(DESIGN_GAMES, ensure_ascii=False)},ACH={json.dumps(ACH, ensure_ascii=False)};"
