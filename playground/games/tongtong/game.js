@@ -24,7 +24,7 @@ function sim(s,jump,m){
   for(const o of bk){
    if(o.k===0){const top=o.y+o.h;if(Rr>o.x-m&&L<o.x+o.w+m&&s.y<top-0.001&&s.y+2*R>o.y)return false}
    else if(o.k===1){if(x+0.28>o.x+0.3-m&&x-0.28<o.x+0.7+m&&s.y+0.1<o.y+0.6+m&&s.y+0.66>o.y)return false}
-   else if(o.k===2){if(Rr>o.x+0.1&&L<o.x+0.9&&s.y<o.y+0.3&&s.y>=o.y-0.05&&s.vy<=0)hitPad=true}}}
+   else if(o.k===2){if(Rr>o.x+0.1&&L<o.x+0.9&&s.y<o.y+1&&s.y>=o.y-0.05&&s.vy<PJ*0.8)hitPad=true}}}
  if(hitPad){s.vy=PJ;s.g=false;s.pad=1}
  return s.y>-4;
 }
@@ -43,21 +43,21 @@ const PIECES=[
  {d:0,w:3,f:(c,o,r)=>{const w=2+Math.floor(r()*2);o.push(solid(c,0,w,1));return c+w}},     // 낮은 블록
  {d:1,w:3,f:(c,o)=>{o.push({k:1,x:c,y:0},{k:1,x:c+1,y:0});return c+2}},                 // 가시 2
  {d:1,w:2,f:(c,o,r,h)=>{h.push([c,c+2]);return c+2}},                                      // 구덩이 2
- {d:2,w:2,f:(c,o)=>{o.push(solid(c,0,2,1),solid(c+2,0,2,2));return c+4}},                 // 계단
+ {d:2,w:2,f:(c,o)=>{o.push(solid(c,0,3,1),solid(c+3,0,3,2));return c+6}},                 // 계단
  {d:2,w:2,f:(c,o)=>{o.push({k:2,x:c,y:0},solid(c+3,0,2,3));return c+5}},                  // 발판 + 큰 벽
- {d:2,w:2,f:(c,o)=>{o.push(solid(c,0,2,1),{k:1,x:c+2,y:0},{k:1,x:c+3,y:0},solid(c+4,0,2,1));return c+6}}, // 블록 사이 가시
+ {d:2,w:2,f:(c,o)=>{o.push(solid(c,0,3,1),{k:1,x:c+3,y:0},{k:1,x:c+4,y:0},solid(c+5,0,3,1));return c+8}}, // 블록 사이 가시
  {d:3,w:2,f:(c,o)=>{o.push({k:1,x:c,y:0},{k:1,x:c+1,y:0},{k:1,x:c+2,y:0});return c+3}}, // 가시 3
  {d:3,w:2,f:(c,o,r,h)=>{h.push([c,c+3]);return c+3}},                                      // 구덩이 3
- {d:3,w:2,f:(c,o)=>{o.push(solid(c,0,4,1),{k:1,x:c+2,y:1});return c+4}},                  // 블록 위 가시
+ {d:3,w:2,f:(c,o)=>{o.push(solid(c,0,6,1),{k:1,x:c+3,y:1});return c+6}},                  // 블록 위 가시
  {d:4,w:2,f:(c,o,r,h)=>{h.push([c,c+7]);o.push(solid(c+3,0.5,2,0.5));return c+7}},        // 공중 발판
- {d:4,w:1,f:(c,o)=>{o.push(solid(c,0,2,1),solid(c+3,0,2,2),{k:1,x:c+2,y:0});return c+5}},
+ {d:4,w:1,f:(c,o)=>{o.push(solid(c,0,3,1),solid(c+4,0,3,2),{k:1,x:c+3,y:0});return c+7}},
  {d:5,w:1,f:(c,o,r,h)=>{o.push({k:2,x:c,y:0});h.push([c+2,c+6]);o.push(solid(c+6,0,2,2));return c+8}},
 ];
 function groundFill(a,b,holes){let x=a;holes.sort((p,q)=>p[0]-q[0]);for(const [h0,h1] of holes){if(h0>x)put(solid(x,-6,h0-x,6));x=Math.max(x,h1)}if(b>x)put(solid(x,-6,b-x,6))}
 function genChunk(){
  if(!RNG)RNG=seeded('tongtong'+KST);
  if(chunkN===0){groundFill(-20,24,[]);genX=24;frontier=[{i:0,y:0,vy:0,g:true}];chunkN=1;return}
- const d=Math.min(8,Math.floor(genX/SEC));
+ const d=Math.min(8,Math.floor(Math.floor(genX/SEC)*2/3));
  const pool=PIECES.filter(p=>p.d<=d),tw=pool.reduce((a,p)=>a+p.w,0);
  for(let tries=0;tries<30;tries++){
   const objs=[],holes=[];let c=genX+(d<=1?4:2);const n=d<2?2:d<4?3:4;
@@ -135,6 +135,13 @@ function draw(){
  for(let t=Math.floor(camX/2)*2-8;t<camX+W/T+8;t+=2){const a=sx(t);cx.moveTo(a,g0);cx.lineTo(W*0.28+(a-W*0.28)*2.2,H)}cx.stroke();
  // 물체
  const t0=Math.floor(camX)-2,t1=Math.ceil(camX+W/T)+2,drawn=new Set();
+ // 구덩이: 땅 조각 사이 빈 곳을 검은 낭떠러지 + 빨간 경고선으로 그린다(바닥 격자에 묻혀 안 보이던 문제)
+ {const gs=[];for(let t=t0-8;t<=t1+8;t++){const bk=B[t];if(bk)for(const o of bk)if(o.k===0&&o.y<0&&!gs.includes(o))gs.push(o)}gs.sort((a,b)=>a.x-b.x);
+  for(let k=0;k+1<gs.length;k++){const a=gs[k].x+gs[k].w,b=gs[k+1].x;if(b-a<0.5)continue;const X=sx(a),w=(b-a)*T;
+   const pg=cx.createLinearGradient(0,g0,0,H);pg.addColorStop(0,'#000');pg.addColorStop(1,'#12000a');cx.fillStyle=pg;cx.fillRect(X,g0,w,H-g0);
+   cx.fillStyle=`rgba(255,61,127,${0.55+pulse*0.45})`;cx.fillRect(X-1,g0,3,H-g0);cx.fillRect(X+w-2,g0,3,H-g0);
+   cx.fillStyle='rgba(255,61,127,0.35)';cx.fillRect(X-4,g0,9,H-g0);cx.fillRect(X+w-5,g0,9,H-g0);
+   cx.fillStyle='#ff3d7f';cx.font=`900 ${Math.round(T*0.42)}px sans-serif`;cx.textAlign='center';for(let yy=g0+T*0.55;yy<H;yy+=T*0.8)cx.fillText('▼',X+w/2,yy)}}
  for(let t=t0;t<=t1;t++){const bk=B[t];if(!bk)continue;for(const o of bk){if(drawn.has(o))continue;drawn.add(o);
   if(o.k===0){const X=sx(o.x),Y=sy(o.y+o.h),w=o.w*T,h=Math.min(o.h*T,H);
    if(o.y<0){cx.fillStyle=`hsla(${hue2},100%,60%,${0.5+pulse*0.5})`;cx.fillRect(X,Y-1,w,3);continue}
@@ -144,7 +151,7 @@ function draw(){
   else if(o.k===1){const X=sx(o.x),Y=sy(o.y);cx.beginPath();cx.moveTo(X+T*0.12,Y);cx.lineTo(X+T*0.5,Y-T*0.82);cx.lineTo(X+T*0.88,Y);cx.closePath();
    cx.fillStyle='#2a0414';cx.fill();cx.strokeStyle='rgba(255,61,127,0.3)';cx.lineWidth=6;cx.stroke();cx.strokeStyle='#ff3d7f';cx.lineWidth=2;cx.stroke();
    cx.fillStyle='#ffd1e0';cx.fillRect(X+T*0.47,Y-T*0.55,T*0.06,T*0.2)}
-  else if(o.k===2){const X=sx(o.x),Y=sy(o.y);cx.fillStyle='#ffd23f';cx.fillRect(X+T*0.1,Y-T*0.18,T*0.8,T*0.18);cx.strokeStyle='#ffd23f';cx.lineWidth=3;
+  else if(o.k===2){const X=sx(o.x),Y=sy(o.y);const bg=cx.createLinearGradient(0,Y,0,Y-T);bg.addColorStop(0,'rgba(255,210,63,0.35)');bg.addColorStop(1,'rgba(255,210,63,0)');cx.fillStyle=bg;cx.fillRect(X+T*0.1,Y-T,T*0.8,T);cx.fillStyle='#ffd23f';cx.fillRect(X+T*0.1,Y-T*0.18,T*0.8,T*0.18);cx.strokeStyle='#ffd23f';cx.lineWidth=3;
    for(let k=0;k<2;k++){const yy=Y-T*(0.35+k*0.3)-pulse*T*0.08;cx.globalAlpha=0.9-k*0.35;cx.beginPath();cx.moveTo(X+T*0.25,yy+T*0.12);cx.lineTo(X+T*0.5,yy-T*0.05);cx.lineTo(X+T*0.75,yy+T*0.12);cx.stroke()}cx.globalAlpha=1}}}
  // 최고 기록 깃발
  if(best>8&&sx(best)>-T&&sx(best)<W+T){const X=sx(best),Y=sy(0);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.moveTo(X,Y);cx.lineTo(X,Y-T*2.6);cx.stroke();cx.fillStyle='#fff';cx.beginPath();cx.moveTo(X,Y-T*2.6);cx.lineTo(X+T*0.8,Y-T*2.35);cx.lineTo(X,Y-T*2.1);cx.fill();
@@ -231,5 +238,5 @@ if(window.ResizeObserver)new ResizeObserver(()=>size()).observe(cab);else addEve
 // 첫 화면: 코스 앞부분을 미리 만들어 둔다(시작할 때 끊김 방지)
 const warm=()=>{ensure(260);size()};if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:1200});else setTimeout(warm,300);
 size();
-if(DEBUG)window.__tt={go,exit,get state(){return state},get x(){return px()},set bot(v){window.__ttBot=v},jumpTo(x){ensure(x+120);P={i:Math.round(x/DX),y:0,vy:0,g:true};lastN=Math.floor(x)},B,ensure,solve,fast(n){for(let k=0;k<n&&state==='run';k++)tick();return [state,Math.round(px())]}};
+if(DEBUG)window.__tt={go,exit,get state(){return state},get x(){return px()},set bot(v){window.__ttBot=v},jumpTo(x){ensure(x+120);P={i:Math.round(x/DX),y:0,vy:0,g:true};lastN=Math.floor(x)},B,ensure,solve,simStep:(st,j)=>sim(st,j,0),fast(n){for(let k=0;k<n&&state==='run';k++)tick();return [state,Math.round(px())]}};
 })();
