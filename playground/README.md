@@ -53,4 +53,5 @@
 - 페이지 `games/starlight/`, 본체 `static/js/starlight.js`(번들 없이 그대로 배포, 페이지 열리고 잠시 뒤 미리 불러와 스프라이트까지 준비). 포스터 `static/img/starlight-poster.jpg`, 공유 이미지 `static/og/starlight.jpg`.
 - 매일 같은 판 = `seeded('starlight'+KST+'#'+단계)`. 점수 상한 `functions/api/score.js` MAX.starlight.
 - 성능: 픽셀 비율 최대 2, 화면 픽셀 360만 상한, 그림은 미리 그린 스프라이트만 사용. 시작하면 전체화면(아이폰은 화면 꽉 찬 오버레이).
-- 테스트용: 주소 끝 `#sldebug` → `window.__sl` (G(), stage(n), god(true)). 디버그 판은 순위에 안 올라감.
+- 2차(BK 11/13 피드백): 적은 전부 위에서 입장(경로 6종, 편대 모양 4종), 신규 적 스플리터·저격 포드, 편대 돌진·호버 사격·루프, 무기 L(관통)·M(유도)·O(보조기)·B(필살기) 캡슐, 필살기 노바 버스트(스페이스/모바일 버튼), 모선 3종 순환(마더 헥스·트윈 캐논·오비트 코어) + 체력 절반에서 2페이즈.
+- 테스트용: 주소 끝 `#sldebug` → `window.__sl` (G(), stage(n), god(true), give('L'), bomb()). 디버그 판은 순위에 안 올라감.
