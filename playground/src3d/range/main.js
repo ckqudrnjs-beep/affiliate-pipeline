@@ -51,10 +51,10 @@ const CSS = `
 .rg3 .touch button{position:absolute;border-radius:50%;border:2px solid #ffffff55;background:#ffffff14;color:#fff;backdrop-filter:blur(2px);touch-action:none}
 .rg3 .touch .f{right:calc(max(18px,env(safe-area-inset-right)) + 4px);bottom:96px;width:96px;height:96px;font-size:18px;border-color:#ff2e88;background:#ff2e8833;box-shadow:0 0 18px #ff2e8866}
 .rg3 .touch .f.on{background:#ff2e8899}
-.rg3 .touch .a{right:calc(max(18px,env(safe-area-inset-right)) + 112px);bottom:150px;width:66px;height:66px;font-size:14px;border-color:#22e5ff;background:#22e5ff22}
+.rg3 .touch .a{left:calc(max(18px,env(safe-area-inset-left)) + 6px);bottom:40px;width:84px;height:84px;font-size:16px;border-color:#22e5ff;background:#22e5ff22}
 .rg3 .touch .a.on{background:#22e5ff88}
-.rg3 .touch .r{right:calc(max(18px,env(safe-area-inset-right)) + 116px);bottom:70px;width:54px;height:54px;font-size:13px}
-.rg3 .touch .s{left:max(16px,env(safe-area-inset-left));bottom:30px;width:60px;height:60px;font-size:20px}
+.rg3 .touch .r{right:calc(max(18px,env(safe-area-inset-right)) + 114px);bottom:60px;width:56px;height:56px;font-size:13px}
+.rg3 .touch .s{left:calc(max(18px,env(safe-area-inset-left)) + 18px);bottom:140px;width:60px;height:60px;font-size:20px}
 .rg3 .pz{position:absolute;right:max(12px,env(safe-area-inset-right));top:12px;width:40px;height:40px;border-radius:10px;border:1px solid #ffffff44;background:#ffffff14;color:#fff;font-size:14px;pointer-events:auto}
 .rg3 .tr{bottom:16px}.rg3.tch .tr{bottom:auto;top:62px}
 .rg3 .panel{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px max(16px,env(safe-area-inset-right)) 22px max(16px,env(safe-area-inset-left));background:linear-gradient(180deg,#05030c00 30%,#05030ccc 62%,#05030c 100%);overflow:auto}
@@ -92,10 +92,12 @@ const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 // 스테이지 n의 난이도: 표적이 더 빨리 사라지고, 작아지고, 멀어지고, 빨라진다.
 // 끝없는 스테이지(순위 상한 없음). 10단계까지 빠르게, 그 뒤로는 천천히 계속 어려워진다.
 export function stageCfg(n) {
-  const k = n - 1, x = Math.max(0, n - 10);
-  return { n, dur: 25, quota: Math.min(6 + 2 * n, 26) + x, life: Math.max(0.42, 1 - 0.06 * Math.min(k, 9) - 0.012 * x), scale: Math.max(0.5, 1 - 0.045 * Math.min(k, 9) - 0.01 * x),
-    speed: Math.min(2.8, 1 + 0.12 * Math.min(k, 9) + 0.05 * x), push: Math.min(40, k * 2.5), gap: Math.max(0.42, 1.15 - 0.065 * Math.min(k, 9) - 0.012 * x), mult: 1 + 0.2 * k,
-    zombie: n >= 4 ? Math.min(0.5, 0.22 + 0.035 * (n - 4)) : 0 };
+  // 1~3단계는 넉넉하게(BK 11/13 피드백), 4단계부터 점점, 12단계 이후엔 천천히 계속 어려워진다.
+  const k = n - 1, m = Math.min(k, 11), x = Math.max(0, n - 12);
+  return { n, dur: n <= 3 ? 32 : 28, quota: Math.min(4 + 2 * n, 26) + x,
+    life: Math.max(0.42, 1.2 - 0.065 * m - 0.012 * x), scale: Math.max(0.5, 1.1 - 0.04 * m - 0.01 * x),
+    speed: Math.min(2.8, 0.8 + 0.11 * m + 0.05 * x), push: Math.min(40, Math.max(0, k - 2) * 2.5), gap: Math.max(0.42, 1.0 - 0.045 * m - 0.012 * x), mult: 1 + 0.2 * k,
+    zombie: n >= 4 ? Math.min(0.5, 0.18 + 0.035 * (n - 4)) : 0 };
 }
 function makeSchedule(R, n) {
   const c = stageCfg(n);
@@ -193,6 +195,11 @@ export function boot(opts = {}) {
     root.querySelector('.menu .box').appendChild(w);
   }
   if (fpsBox) fpsBox.title = gpuName;
+  if (opts.ios) {
+    const w = document.createElement('p'); w.className = 'tip'; w.style.color = '#22e5ff';
+    w.textContent = '📱 아이폰은 사파리 공유 버튼 → "홈 화면에 추가"로 열면 주소창 없이 전체 화면으로 할 수 있어요.';
+    root.querySelector('.menu .box').appendChild(w);
+  }
 
   const scene = new THREE.Scene();
   const vmScene = new THREE.Scene();
@@ -359,7 +366,7 @@ export function boot(opts = {}) {
 
   function lockPointer() { if (!touch && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* 미지원 */ } } }
   function startGame() {
-    sfx.init();
+    sfx.init(); if (touch) goFull();
     for (const g of guns) { vmRoot.add(g.root); g.ammo = g.mag; g.root.rotation.set(0, 0, 0); }
     cur = sel; showGun(cur);
     clearTargets();
@@ -646,13 +653,25 @@ export function boot(opts = {}) {
 
   function exit() {
     state = 'off'; if (document.pointerLockElement) document.exitPointerLock();
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
     root.style.display = 'none'; document.documentElement.style.overflow = '';
     if (opts.onExit) opts.onExit(result);
   }
   function open() {
+    if (touch) goFull();
     root.style.display = ''; document.documentElement.style.overflow = 'hidden';
     sel = cur; toMenu(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(loop); }
   }
+
+  // 모바일 전체 화면 + 가로 고정(되는 기기만: 안드로이드 크롬 등). 아이폰 사파리는 웹페이지 전체 화면을 지원하지 않는다.
+  function goFull() {
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) {
+      el.requestFullscreen({ navigationUI: 'hide' }).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* 미지원 */ } setTimeout(resize, 300); }).catch(() => {});
+    } else if (el.webkitRequestFullscreen && !document.webkitFullscreenElement) { try { el.webkitRequestFullscreen(); } catch (e) { /* 미지원 */ } }
+  }
+  document.addEventListener('fullscreenchange', () => setTimeout(resize, 200));
+  addEventListener('orientationchange', () => setTimeout(resize, 300));
 
   // ---------- 매 프레임 ----------
   let last = performance.now(), running = false, rangeT = 0;
