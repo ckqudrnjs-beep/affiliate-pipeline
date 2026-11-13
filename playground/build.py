@@ -74,7 +74,7 @@ def load_questions(cfg: dict, upto: date | None = None) -> list[dict]:
 
 
 CSS = """
-.shsheet{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:99}.shsheet>div{background:#fff;color:#111;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:16px;display:grid;gap:8px}.shsheet button{font:inherit;font-weight:700;padding:13px;border-radius:12px;border:0;background:#f1f1f4;color:#111;cursor:pointer}.shsheet button[data-k=k]{background:#fee500}
+.shsheet{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:2147483646}.shsheet>div{background:#fff;color:#111;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:16px;display:grid;gap:8px}.shsheet button{font:inherit;font-weight:700;padding:13px;border-radius:12px;border:0;background:#f1f1f4;color:#111;cursor:pointer}.shsheet button[data-k=k]{background:#fee500}
 .challenge{background:linear-gradient(90deg,#ff5a5f,#ff9f43);color:#fff;border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:15px;line-height:1.5}.challenge b{font-size:17px}
 :root{--bg:#0c0620;--bg2:#160b33;--card:#1a1038;--card2:#22164a;--ink:#f4f0ff;--muted:#a99fc9;--line:#3a2b6e;--a:#ff3d7f;--b:#22d3ee;--y:#ffd23f;--g:#3ddc84;--soft:#2a1d58;--btn:#ffd23f;--btn-ink:#1a0f00;--px:"Press Start 2P",monospace;--hd:"Black Han Sans","Noto Sans KR",sans-serif}
 *{box-sizing:border-box}html{background:var(--bg)}
@@ -330,7 +330,7 @@ function shareLink(title,url,text){if(!(window.Kakao&&Kakao.isInitialized&&Kakao
 const m=url.match(/\\/q\\/(\\d{8}-\\d)/);const og=document.querySelector('meta[property="og:image"]');const img=m?location.origin+'/og/q/'+m[1]+'.png':(og?og.content:location.origin+'/og.png');
 const box=document.createElement('div');box.className='shsheet';box.innerHTML='<div><b>공유하기</b><button type="button" data-k="k">💬 카카오톡</button><button type="button" data-k="o">📤 다른 앱 · 링크 복사 (첫 공유 🪙+2)</button><button type="button" data-k="x">닫기</button></div>';
 box.onclick=e=>{const k=e.target.dataset&&e.target.dataset.k;if(e.target===box||k==='x'){box.remove();return}if(!k)return;box.remove();
-if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};document.body.appendChild(box)}
+if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};['pointerdown','pointerup','touchstart','touchend','mousedown','mouseup'].forEach(t=>box.addEventListener(t,e=>e.stopPropagation()));(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(box)}
 """
 
 

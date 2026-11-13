@@ -8,4 +8,4 @@ function show(){if(i>=5){finish();return}$('prog').textContent=(i+1)+' / 5';$('h
 function answer(skip){const v=$('ans').value.replace(/\s/g,'');const ok=!skip&&v===set[i][1];res.push(ok?1:0);$('msg').textContent=(ok?'정답! ':'아쉬워요. ')+'정답은 '+set[i][1];i++;try{if(i>=5)localStorage.setItem(SK,JSON.stringify(res))}catch(e){};show()}
 function finish(){$('end').hidden=false;document.querySelector('.card').hidden=true;$('res').textContent=res.map(x=>x?'🟩':'🟥').join('')+' '+res.reduce((a,b)=>a+b,0)+'/5'}
 $('ok').onclick=()=>answer(false);$('skip').onclick=()=>answer(true);$('ans').onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing)answer(false)};
-$('sh').onclick=()=>{const t='5락실 초성 퀴즈 '+key.slice(5)+'\n'+$('res').textContent+'\n'+location.href;if(navigator.share)navigator.share({text:t}).catch(()=>{});else{navigator.clipboard&&navigator.clipboard.writeText(t);$('sh').textContent='복사됨'}};show();
+$('sh').onclick=()=>{const t='5락실 초성 퀴즈 '+key.slice(5)+'\n'+$('res').textContent+'\n'+location.href;shareText(t)};show();
