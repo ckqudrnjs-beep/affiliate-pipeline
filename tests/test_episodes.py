@@ -63,3 +63,28 @@ class SkitCheckTest(unittest.TestCase):
         self.assertEqual(ep.check(spec), [])
         spec["kind"] = "long"
         self.assertTrue(any("쇼츠 전용" in x for x in ep.check(spec)))
+
+
+class QuizShortTest(unittest.TestCase):
+    """2026-11-14 BK: 오늘의 얼마게 (사이트 퀴즈와 같은 날 같은 문제)."""
+
+    def test_num_ko(self):
+        self.assertEqual(ep.num_ko(12500), "만 이천오백")
+        self.assertEqual(ep.num_ko(210000), "이십일만")
+        self.assertEqual(ep.speak("약 1,385.2원 (참고)"), "약 천삼백팔십오 점 이원")
+
+    def test_quiz_matches_site_and_passes_check(self):
+        import datetime as dt
+        from pipeline import daily
+        for i in range(14):
+            d = dt.date(2026, 11, 17) + dt.timedelta(days=i)
+            spec = ep.quiz_spec(d)
+            self.assertEqual(ep.check(spec), [], d)
+            q = daily.schedule(d, 1, None)[d.isoformat()]
+            self.assertEqual(spec["quiz_id"], q["id"])
+            self.assertNotIn("product", spec)
+
+    def test_writer_skips_quiz_days(self):
+        import datetime as dt
+        d = ep.next_short_date(dt.date(2026, 11, 14))
+        self.assertNotIn(d.weekday(), ep.QUIZ_DAYS)
