@@ -3,7 +3,7 @@
  "kind": "short",
  "format": "skit-dont",
  "format_name": "조카야 그거 사지 마",
- "slug": "ep-2026-11-13-skit-dont",
+ "slug": "ep-2026-11-13-skit-dont-a",
  "title": "[광고] 12만 원 무선청소기, 세금은 얼마 붙을까?",
  "description": "11월 9일 알리익스프레스 가격 127,200원 기준이에요. 면세 한도(150달러) 안이라 관부가세가 붙지 않지만, 국내 A/S가 어렵고 교체 필터 판매 여부는 직접 확인해야 해요.",
  "product": "cordless-stick-vacuum-dust-sensor",
@@ -14,7 +14,7 @@
     {
      "who": "n",
      "u": "talk",
-     "n": "happy",
+     "n": "phone",
      "cap": [
       "12만 원 무선청소기",
       "장바구니 담았다!"
@@ -24,7 +24,7 @@
     {
      "who": "u",
      "u": "think",
-     "n": "talk",
+     "n": "think",
      "cap": [
       "세금은",
       "얼마 붙게?"
@@ -65,7 +65,7 @@
     {
      "who": "u",
      "u": "point",
-     "n": "talk",
+     "n": "think",
      "cap": [
       "A/S 어렵고",
       "필터도 확인"
@@ -76,7 +76,7 @@
     {
      "who": "u",
      "u": "point",
-     "n": "shock",
+     "n": "guilty",
      "cap": [
       "고장 걱정 크면",
       "사지 마!"
