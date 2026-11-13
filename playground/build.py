@@ -326,11 +326,11 @@ def stat_html(s: dict, asof: date) -> str:
 SHARE_JS = """
 function shareOk(){if(window.Bonus)Bonus.ach('share')}
 function plainShare(text){if(navigator.share)navigator.share({text}).then(shareOk).catch(()=>{});else if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>{shareOk();alert('링크를 복사했어요. 친구에게 붙여 넣어 보세요!')}).catch(()=>{})}}
-function shareLink(title,url,text){if(!(window.Kakao&&Kakao.isInitialized&&Kakao.isInitialized())){plainShare(text);return}
+function shareLink(title,url,text){if(text.indexOf(url)<0)text+='\\n'+url;if(!(window.Kakao&&Kakao.isInitialized&&Kakao.isInitialized())){plainShare(text);return}
 const m=url.match(/\\/q\\/(\\d{8}-\\d)/);const og=document.querySelector('meta[property="og:image"]');const img=m?location.origin+'/og/q/'+m[1]+'.png':(og?og.content:location.origin+'/og.png');
 const box=document.createElement('div');box.className='shsheet';box.innerHTML='<div><b>공유하기</b><button type="button" data-k="k">💬 카카오톡</button><button type="button" data-k="o">📤 다른 앱 · 링크 복사 (첫 공유 🪙+2)</button><button type="button" data-k="x">닫기</button></div>';
 box.onclick=e=>{const k=e.target.dataset&&e.target.dataset.k;if(e.target===box||k==='x'){box.remove();return}if(!k)return;box.remove();
-if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:text.split('\\n').slice(1,3).join(' ').replace(url,'').slice(0,100)||'가입 없이 바로 하는 무료 게임',imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};['pointerdown','pointerup','touchstart','touchend','mousedown','mouseup'].forEach(t=>box.addEventListener(t,e=>e.stopPropagation()));(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(box)}
+if(k==='k'){try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title.slice(0,80),description:(text.split('\\n').slice(1,3).join(' ').replace(url,'').trim().slice(0,80)||'가입 없이 바로 하는 무료 게임')+' · '+location.host.replace('www.',''),imageUrl:img,link:{mobileWebUrl:url,webUrl:url}},buttons:[{title:'나도 하러 가기',link:{mobileWebUrl:url,webUrl:url}}]})}catch(err){plainShare(text)}}else plainShare(text)};['pointerdown','pointerup','touchstart','touchend','mousedown','mouseup'].forEach(t=>box.addEventListener(t,e=>e.stopPropagation()));(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(box)}
 """
 
 
