@@ -450,7 +450,8 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
               jsonld=[{"@context": "https://schema.org", "@type": "VideoGame", "name": g["name"], "description": g["description"], "url": f"{cfg['baseUrl'].rstrip('/')}/games/{g['slug']}",
                        "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "All", "inLanguage": "ko", "isAccessibleForFree": True,
                        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}},
-                      crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])])
+                      crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])],
+              og=g.get("og") if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
