@@ -120,11 +120,27 @@ def products_with_photos() -> list[str]:
                   if json.loads(p.read_text(encoding="utf-8")).get("status", "active") == "active")
 
 
+BANK = pathlib.Path("config/shorts_bank.json")
+
+
+def pick_concept(d: dt.date, used: list[str]) -> dict | None:
+    """아이디어 은행에서 최근 15편에 안 쓴 것 중 날짜로 정해지는 무작위 하나."""
+    import random
+    if not BANK.exists():
+        return None
+    allc = json.loads(BANK.read_text(encoding="utf-8"))["concepts"]
+    pool = [c for c in allc if c["id"] not in used[-15:]] or allc
+    return random.Random(d.toordinal()).choice(pool)
+
+
 def info_short(today: dt.date) -> dict:
     d = next_short_date(today)
     key, name, product, rules = SHORT_FORMATS[d.weekday()]
-    used = [json.loads(p.read_text(encoding="utf-8")).get("product") for p in ep_files()]
-    return {"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
+    specs = [json.loads(p.read_text(encoding="utf-8")) for p in ep_files()]
+    used = [x.get("product") for x in specs]
+    concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith("skit") else None
+    return {"concept": concept, "concept_rule": "concept 의 상황·반전·루프를 이 형식에 맞게 쓰고 대본에 \"concept\": id 를 넣는다. "
+            "썸네일 문구 공식은 docs/SHORTS_BANK.md." if concept else None,"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
             "rules": rules, "file": f"data/episodes/{d.isoformat()}-{key}.json",
             "recent_products": [u for u in used if u][-10:],
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg())}

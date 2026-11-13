@@ -48,6 +48,8 @@ react-nod "그치, 이거면 충분해.", outro-1/outro-2 (광고 링크·수수
 만화 상황극(skit): 포즈 삼촌 talk/wow/point/think(턱)/thumb(엄지척)/facepalm(이마), 조카 talk/shock/cold(덜덜)/happy/think.
 skit 장면 필드: bg (room 거실 / office 사무실 / store 편의점 / door 현관·택배), badge (첫 장면 노란 배지, 썸네일 겸 훅).
 
+상황극 날은 `next` 결과의 concept(아이디어 은행 config/shorts_bank.json)을 바탕으로 쓰고 대본에 "concept": id 를 넣는다. 썸네일 문구 공식은 docs/SHORTS_BANK.md.
+
 ### 썸네일·훅·구성 원칙 (2026-11-12 BK "독창성과 구성")
 - 썸네일 = 영상 첫 장면. 0초부터 질문 자막 2줄 + 노란 배지(숫자나 반전 질문) + 두 캐릭터 표정. 인사·로고·빈 화면 금지.
 - 훅(0~2초): 조카의 구체적인 행동이나 숫자 질문으로 바로 시작 ("12만 원 청소기 장바구니 담았다!"). 시청자가 "나도 저런데"라고 느끼는 상황.
