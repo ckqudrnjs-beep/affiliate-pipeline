@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: main-writer
@@ -42,6 +41,13 @@ jobs:
           CURATE_K: ${{ inputs.count || '15' }}
           CURATE_MAX_KW: ${{ inputs.keywords && '30' || '12' }}
         run: PYTHONPATH=src python -m pipeline.curate
+      - name: 텔레그램 가격 알림 (TELEGRAM_ENABLED=true 일 때만 실제 전송)
+        if: ${{ !inputs.keywords }}
+        env:
+          TELEGRAM_ENABLED: ${{ vars.TELEGRAM_ENABLED }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.telegram || echo "텔레그램 전송 실패(가격 기록은 계속 커밋)"
       - name: 수동 검색어 후보는 브랜치에만 올림
         if: ${{ inputs.keywords }}
         run: |
@@ -52,25 +58,13 @@ jobs:
           git add data/candidates
           git commit -m "수동 검색어 후보 $b"
           git push -u origin "$b"
-      - name: 가격·판매 상태는 바로 반영 (사이트 자동 재배포)
+      - name: 가격·판매 상태·새 후보를 main에 바로 기록 (사이트 자동 재배포, 후보는 사이트에 안 보임)
         if: ${{ !inputs.keywords }}
         run: |
           git config user.name "curate-bot"
           git config user.email "curate-bot@users.noreply.github.com"
-          git add data/prices data/products data/news.json
-          git commit -m "알리 가격·판매 상태 갱신 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git add data/prices data/products data/news.json data/candidates
+          [ -f data/telegram_sent.json ] && git add data/telegram_sent.json
+          git commit -m "알리 가격·판매 상태·후보 갱신 $(TZ=Asia/Seoul date +%F)" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
-      - name: 새 후보는 PR로 (검토 후에만 사이트에 올라감)
-        if: ${{ !inputs.keywords }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          d=$(TZ=Asia/Seoul date +%F)
-          b=curate/$d
-          git ls-remote --exit-code --heads origin "$b" >/dev/null && b=curate/$d-$(TZ=Asia/Seoul date +%H%M)
-          git checkout -b "$b"
-          git add data/candidates
-          git commit -m "알리 후보 $d" || exit 0
-          git push -u origin "$b"
-          gh pr create --title "[후보] 수수료 높은 알리 상품 $d" --body-file data/candidates/$d.md --base main

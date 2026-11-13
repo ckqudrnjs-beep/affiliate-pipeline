@@ -17,6 +17,7 @@ import sys
 from .calcs import CALC_CSS, CALCS, COMMON_JS
 from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
+from . import report as R
 from . import articles as A
 from . import prices as PR
 from . import questions as Q
@@ -37,6 +38,9 @@ CATEGORIES = {"clean": "청소", "heat": "겨울 난방", "living": "생활·조
 DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
 MIN_NOTE = 40
+# 상품 정리 규칙 (docs/PRODUCTS_AUTO.md): 철 지난 계절 상품은 잠시 내렸다가 철이 오면 자동으로 다시 올린다
+NEW_DAYS = 14  # 새로 들어온 물건: 등록(addedDate) 후 14일 동안만 홈 칸·NEW 표시. 상품 자체는 남는다.
+SEASON_MONTHS = {"heat": {10, 11, 12, 1, 2, 3}, "humidify": {10, 11, 12, 1, 2, 3}}
 _cfg_path = pathlib.Path("config/site.json")
 CFG = json.loads(_cfg_path.read_text(encoding="utf-8")) if _cfg_path.exists() else {}
 # 애드센스 심사: 제휴 링크 위주의 짧은 상품 페이지는 검색 색인·사이트맵에서 빼고 광고도 넣지 않는다 (config 로 끌 수 있음)
@@ -63,13 +67,31 @@ def price_history(data_dir: str = "data") -> dict[str, list[tuple[str, int]]]:
     return hist
 
 
+def in_season(d: dict, today: dt.date | None = None) -> bool:
+    months = SEASON_MONTHS.get(d.get("category", ""))
+    return not months or (today or dt.date.today()).month in months
+
+
+def retired(data_dir: str = "data", today: dt.date | None = None) -> list[dict]:
+    """사이트에서 내린 상품(판매 종료·가격 급등·철 지남). 주소는 남겨 안내 페이지를 만든다(글 속 링크가 깨지지 않게)."""
+    out = []
+    for f in sorted(pathlib.Path(data_dir, "products").glob("*.json")):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        st = d.get("status", "active")
+        if (st == "active" and in_season(d, today)) or st == "hidden":  # hidden: 브랜드·가품 위험으로 뺀 상품은 흔적도 남기지 않는다
+            continue
+        why = {"ended": "판매가 끝났어요", "paused": "가격이 많이 올라 잠시 내렸어요"}.get(st, "철이 지나 잠시 내렸어요")
+        out.append(d | {"why": why})
+    return out
+
+
 def load(path="config/site_products.csv", allow_examples: bool = False, data_dir: str = "data") -> list[dict]:
     with open(path, encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if r.get("slug") and not r["slug"].startswith("#")]
     # 상품 원장: data/products/<slug>.json (상품당 파일 하나, 변경 이력은 Git). 판매 종료(status != active)는 뺀다.
     for f in sorted(pathlib.Path(data_dir, "products").glob("*.json")):
         d = json.loads(f.read_text(encoding="utf-8"))
-        if d.get("status", "active") == "active":
+        if d.get("status", "active") == "active" and in_season(d):
             rows.append({k: str(v) for k, v in d.items()})
     hist = price_history(data_dir)
     out = []
@@ -223,6 +245,7 @@ section.fold:not(.open)>:not(.sechead){display:none}
 .receipt div{display:flex;justify-content:space-between;gap:12px}.receipt .sum{border-top:1px solid var(--ink);margin-top:8px;padding-top:8px;color:var(--green);font-weight:600}
 .verdict{font:500 26px/1.35 var(--display);margin:28px 0 6px}.verdict span{color:var(--green)}
 .note{max-width:62ch}
+.newtag{display:inline-block;font-size:11px;letter-spacing:.06em;padding:1px 6px;border-radius:4px;background:var(--green);color:var(--coin-ink);margin-right:4px}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 6px}
 .btn{padding:14px 26px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid var(--ink);color:var(--ink)}
 .btn.main{background:var(--ink);color:var(--bg)}
@@ -295,10 +318,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}faq.html">질문</a></nav></div></header>
+<nav class="menu"><a href="{root}guide.html">글</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
 {hero}<main class="wrap">{body}{adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
@@ -331,11 +354,18 @@ def price_line(p: dict) -> str:
             f'<span class="v">{p["verdict"]}</span></span>')
 
 
+def is_new(p: dict, today: dt.date | None = None) -> bool:
+    try:
+        return ((today or dt.date.today()) - dt.date.fromisoformat(p.get("addedDate") or "")).days < NEW_DAYS
+    except ValueError:
+        return False
+
+
 def pick(p: dict, lead: bool = False) -> str:
     e = html.escape
     d = dt.date.fromisoformat(p["priceDate"])
     return f"""<a class="pick{' lead' if lead else ''}" href="p/{p['slug']}.html"><div class="ph">{media(p)}</div><div style="display:flex;flex-direction:column;gap:10px">
-<span class="cat">{e(CATEGORIES.get(p['category'], ''))}</span>{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
+<span class="cat">{'<b class="newtag">NEW</b> ' if is_new(p) else ''}{e(CATEGORIES.get(p['category'], ''))}</span>{PR.badge(HIST.get(p['slug']))}<span class="nm">{e(p['name'])}</span><p class="why">{e(p['note'])}</p>
 {price_line(p)}
 <span class="small">{d.month}월 {d.day}일 기준{'' if p.get('solo') else ' · 기능이 비슷한 제품 비교'}</span><span class="more">{'자세히 보기' if p.get('solo') else '계산 보기'}</span></div></a>"""
 
@@ -454,6 +484,17 @@ restore();window.addEventListener('pageshow',function(e){if(e.persisted)restore(
 })();"""
 
 
+def retired_page(d: dict, products: list[dict]) -> str:
+    """내린 상품 안내: 제휴 링크 없음, 검색 색인 제외, 같은 분야 상품으로 안내."""
+    e = html.escape
+    same = [p for p in products if p["category"] == d.get("category")][:4] or products[:4]
+    body = f"""<section class="wrap" style="padding:40px 0"><h1>{e(d['name'])}</h1>
+<p class="lede">{e(d['why'])}. 이 상품은 지금 사이트에서 소개하지 않습니다.</p>
+<h2 style="margin-top:32px">대신 볼 만한 물건</h2><div class="grid">{"".join(card(p, "../") for p in same)}</div>
+<p style="margin-top:24px"><a href="../index.html">전체 목록 보기</a> · <a href="../prices.html">가격 기록</a></p></section>"""
+    return page(f"{d['name']} | {BRAND}", f"{d['name']}: {d['why']}.", body, root="../", path=f"p/{d['slug']}.html", ads=False, noindex=True)
+
+
 def index_page(products: list[dict]) -> str:
     e = html.escape
     ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
@@ -474,10 +515,14 @@ def index_page(products: list[dict]) -> str:
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
 <div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
 <p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
+    fresh = sorted((p for p in products if is_new(p)), key=lambda p: p["addedDate"], reverse=True)[:8]
+    new_sec = f"""<section id="new"><div class="sechead"><h2>새로 들어온 물건</h2><span>최근 {NEW_DAYS}일 · {len(fresh)}개</span></div>
+<div class="picks compact">{"".join(pick(p) for p in fresh)}</div></section>""" if fresh else ""
     news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     body = f"""{N.home_block(news, sales)}
 {picks_sec}
+{new_sec}
 {A.home_block(A.load())}
 {all_sec}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
@@ -618,6 +663,10 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "index.html").write_text(index_page(products), encoding="utf-8")
     for p in products:
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
+    live = {p["slug"] for p in products}
+    for d in retired():
+        if d["slug"] not in live:
+            (o / "p" / f"{d['slug']}.html").write_text(retired_page(d, products), encoding="utf-8")
     news = N.load_json("data/news.json")
     (o / "news.html").write_text(page(f"삼촌 소식 | {BRAND}", "계산해서 아끼는 살림 소식을 날짜별로 모았습니다.",
         N.archive_body(news), path="news.html"), encoding="utf-8")
@@ -648,6 +697,15 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + more, root="../",
             path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
             crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
+    reps = R.load_all()
+    (o / "report").mkdir(exist_ok=True)
+    (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "기름값·장바구니 물가·환율을 공공 데이터로 매주 월요일 정리합니다.",
+        R.list_body(reps), path="report.html"), encoding="utf-8")
+    for r in reps:
+        (o / "report" / f"{r['date']}.html").write_text(page(f"{R.title(r)} | {BRAND}", " ".join(r["lines"])[:150], R.body(r), root="../",
+            path=f"report/{r['date']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": R.title(r),
+            "datePublished": r["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
+            crumbs=[("물가 리포트", "report.html"), (R.title(r), f"report/{r['date']}.html")]), encoding="utf-8")
     faq = N.load_json("data/faq.json")
     (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
@@ -667,6 +725,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES)]
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
                + [(f"news/{n['id']}.html", n["date"]) for n in news]
+               + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
                + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
                + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
