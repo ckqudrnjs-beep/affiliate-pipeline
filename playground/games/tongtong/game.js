@@ -182,7 +182,7 @@ function draw(){
   cx.fillStyle='#fff';for(const ex of [0.16,0.56]){cx.beginPath();cx.arc(R*T*ex,-R*T*0.2,R*T*0.05,0,7);cx.fill()}}
   cx.fillStyle='#ff9ec4aa';cx.beginPath();cx.ellipse(R*T*0.7,R*T*0.2,R*T*0.12,R*T*0.07,0,0,7);cx.fill();
   cx.restore()}
- for(const p of parts){cx.fillStyle=p.c;cx.globalAlpha=Math.max(0,p.l);cx.fillRect(sx(p.x)-p.s/2,sy(p.y)-p.s/2,p.s,p.s)}cx.globalAlpha=1;
+ for(const p of parts){cx.fillStyle=p.c;cx.globalAlpha=Math.max(0,Math.min(1,p.l));const X=sx(p.x),Y=sy(p.y);if(!p.sh)cx.fillRect(X-p.s/2,Y-p.s/2,p.s,p.s);else fxDraw(p,X,Y)}cx.globalAlpha=1;
  if(flash>0){cx.fillStyle=`rgba(255,255,255,${flash*0.5})`;cx.fillRect(0,0,W,H)}
  // HUD
  if(state!=='title'&&state!=='over'){const fs=Math.round(Math.max(14,Math.min(30,H*0.06)));cx.textAlign='center';cx.font=`800 ${fs}px sans-serif`;cx.fillStyle='#fff';cx.shadowColor='#000';cx.shadowBlur=6;
@@ -203,13 +203,26 @@ function draw(){
   cx.font=`900 ${fs}px sans-serif`;cx.fillStyle=newBest?'#ffd23f':'#fff';cx.shadowColor=newBest?'#ffd23f':'#22d3ee';cx.shadowBlur=18;cx.fillText(lastDist+'m',W/2,H*0.17+fs*1.05);cx.shadowBlur=0;
   cx.font=`600 ${Math.round(fs*0.24)}px sans-serif`;cx.fillStyle='#cfefff';cx.fillText(`오늘 최고 ${best}m · 시도 ${attempts}번`,W/2,H*0.17+fs*1.5)}
 }
+// 디자인 스킨별 점프·착지 효과(겉모습만, 판정·속도 동일)
+function fxDraw(p,X,Y){const r=p.s*T/26;
+ if(p.sh==='paw'){cx.beginPath();cx.ellipse(X,Y+r*0.15,r*0.5,r*0.42,0,0,7);cx.fill();for(const [a,b] of [[-0.5,-0.35],[-0.18,-0.62],[0.18,-0.62],[0.5,-0.35]]){cx.beginPath();cx.arc(X+a*r,Y+b*r,r*0.17,0,7);cx.fill()}}
+ else if(p.sh==='ring'){const k=1+(1-p.l)*2.6;cx.strokeStyle=p.c;cx.lineWidth=2;cx.beginPath();cx.ellipse(X,Y,r*k,r*k*0.32,0,0,7);cx.stroke()}
+ else if(p.sh==='puff'){const k=1+(1-p.l)*1.5;cx.beginPath();cx.arc(X,Y,r*k*0.5,0,7);cx.fill()}
+ else if(p.sh==='star'){cx.save();cx.translate(X,Y);cx.rotate(p.l*6);cx.beginPath();for(let q=0;q<10;q++){const rr=(q%2?0.2:0.5)*r,aa=q*Math.PI/5;cx.lineTo(Math.cos(aa)*rr,Math.sin(aa)*rr)}cx.fill();cx.restore()}
+ else if(p.sh==='heart'){const h=r*0.5;cx.beginPath();cx.moveTo(X,Y+h);cx.bezierCurveTo(X-h*1.6,Y-h*0.2,X-h*0.6,Y-h*1.2,X,Y-h*0.4);cx.bezierCurveTo(X+h*0.6,Y-h*1.2,X+h*1.6,Y-h*0.2,X,Y+h);cx.fill()}}
+function skinFx(k){const x=px(),y=P.y,add=o=>parts.push(Object.assign({x,y,vx:0,vy:0,l:1,s:6,c:SKC[1]},o)),rnd=Math.random;
+ if(DES==='cat'){if(k==='land'){add({sh:'paw',x:x-0.25,s:14,c:'#ff9ec4',g:0,l:0.9});add({sh:'paw',x:x+0.25,s:14,c:'#ff9ec4',g:0,l:0.9})}else for(let i=0;i<3;i++)add({sh:'heart',x:x-0.2+i*0.2,y:y+R,vx:-1+i,vy:4+rnd()*2,s:12,c:'#ff5fa2',g:0.3});return}
+ if(DES==='frog'){if(k==='land'){add({sh:'ring',s:14,c:'#7fd4ff',g:0});add({sh:'ring',s:8,c:'#bff0ff',g:0,l:0.8})}for(let i=0;i<6;i++)add({x:x+(rnd()-0.5)*0.6,y:y+0.1,vx:(rnd()-0.5)*5,vy:3+rnd()*4,s:5,c:i%2?'#7fd4ff':'#3ddc84'});return}
+ if(DES==='astro'){if(k==='jump'){for(let i=0;i<6;i++)add({sh:'puff',x:x-0.2+(rnd()-0.5)*0.4,y:y+0.15,vx:-2-rnd()*3,vy:(rnd()-0.3)*1.5,s:12,c:'rgba(230,240,255,0.75)',g:0});for(let i=0;i<8;i++)add({x:x-0.1,y:y+0.2,vx:-3-rnd()*4,vy:rnd()*2,s:6,c:i%2?'#ff8a3d':'#ffd23f',g:0.2})}else for(let i=0;i<4;i++)add({sh:'puff',x:x+(i-1.5)*0.3,vx:(i-1.5)*1.2,vy:0.5,s:10,c:'rgba(200,210,230,0.55)',g:0});return}
+ if(DES==='whale'){const n=k==='jump'?7:5;for(let i=0;i<n;i++)add({sh:'star',y:y+R*(k==='jump'?2:0.3),vx:(i-(n-1)/2)*(k==='jump'?1.6:2.6),vy:k==='jump'?7+rnd()*2:2+rnd()*2,s:12,c:i%2?'#ffd23f':'#aef7ff',g:0.6});return}
+ if(k==='land')for(let i=0;i<5;i++)add({vx:(rnd()-0.5)*6,vy:1+rnd()*2,s:4,c:SKC[0],l:0.6})}
 // ── 진행
 let SKC=['#e9fdff','#22d3ee','#0e7490'],DES='base';// 출석 보너스 '내 네온 색'·디자인 스킨(겉모습만, 판정 동일)
 function reset(){try{if(window.Bonus){SKC=Bonus.skin().c;DES=Bonus.design('tongtong');if(DES==='whale')SKC=['#9fd8ff','#4b5dff','#6a2bd8']}}catch(e){}P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
 function tick(){
  const wasG=P.g,jump=P.g&&(held||buf>0)||(DEBUG&&window.__ttBot&&bot());buf-=STEP;
  const ok=sim(P,jump,0);if(jump)sfx.jump();if(P.pad){P.pad=0;sfx.pad()}
- if(!wasG&&P.g)squash=1;
+ if(!wasG&&P.g){squash=1;skinFx('land')}if(jump&&wasG)skinFx('jump');
  if(!ok){die();return}
  const x=px();if(P.i%3===0){trail.push([x,P.y]);if(trail.length>10)trail.shift()}
  ensure(x+90);
@@ -234,7 +247,7 @@ function frame(now){raf=requestAnimationFrame(frame);const rdt=Math.min(0.05,(no
  else if(state==='ready'){readyT-=rdt;if(readyT<=0)state='run'}
  else if(state==='count'){readyT-=rdt;if(readyT<=0)state='run'}
  squash=Math.max(0,squash-rdt*6);flash=Math.max(0,flash-rdt*3);
- for(const p of parts){p.vy-=20*rdt;p.x+=p.vx*rdt;p.y+=p.vy*rdt;p.l-=rdt*1.4}parts=parts.filter(p=>p.l>0);
+ for(const p of parts){p.vy-=20*(p.g===undefined?1:p.g)*rdt;p.x+=p.vx*rdt;p.y+=p.vy*rdt;p.l-=rdt*1.4}parts=parts.filter(p=>p.l>0);
  const ty=Math.max(0,P.y-2.2);camY+=(ty-camY)*Math.min(1,rdt*5);
  draw()}
 // ── 시작·종료·전체 화면
