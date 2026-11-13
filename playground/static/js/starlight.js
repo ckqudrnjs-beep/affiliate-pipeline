@@ -334,11 +334,22 @@ const BOSSES = [
   { name: '오비트 코어', col: C.gr, w: 34, h: 34 },
 ];
 const SPX = 36, SPY = 30, TOP = 96, COLS = 8;
+// 졸개 난이도: 1~10단계는 기존 그대로, 11단계부터 단계마다 조금씩 계속 오른다(BK 11/13: 보스만 강해지고 졸개는 그대로라는 피드백).
 function diff(n) {
+  const k = Math.max(0, n - 10); // 10단계 이후 초과분
   return {
-    enter: Math.min(340, 215 + n * 8), diveGap: Math.max(n > 10 ? .5 : .7, 2.9 - n * .18), divers: Math.min(n > 10 ? 10 : 8, 1 + Math.ceil(n / 1.5)),
-    dive: Math.min(n > 10 ? 320 : 300, 165 + n * 10), bullet: Math.min(n > 10 ? 315 : 295, 135 + n * 10), formFire: n >= 4 ? Math.min(n > 10 ? 1.6 : 1.2, (n - 3) * .12) : 0,
-    mult: 1 + (n - 1) * .1, hpUp: n >= 15 ? 1 : 0,
+    enter: Math.min(380, 215 + Math.min(n, 15) * 8 + Math.max(0, n - 15) * 3),
+    diveGap: n <= 10 ? Math.max(.7, 2.9 - n * .18) : Math.max(.3, .85 - k * .028),
+    divers: n <= 10 ? Math.min(8, 1 + Math.ceil(n / 1.5)) : Math.min(14, 8 + Math.floor(k / 2)),
+    dive: n <= 10 ? Math.min(300, 165 + n * 10) : Math.min(370, 265 + k * 5),
+    bullet: n <= 10 ? Math.min(295, 135 + n * 10) : Math.min(360, 235 + k * 5),
+    formFire: n < 4 ? 0 : n <= 10 ? Math.min(1.2, (n - 3) * .12) : Math.min(2.6, .84 + k * .09),
+    enterFire: n < 3 ? 0 : Math.min(.9, .1 * (n - 2)),
+    extraShots: Math.min(3, Math.floor(k / 5)),          // 15·20·25단계마다 돌진 사격 +1발
+    spread: n >= 13,                                     // 13단계부터 드론·해파리도 2~3갈래 사격
+    burst: Math.min(6, 3 + Math.floor(k / 5)),           // 저격 포드 연사 수
+    ringN: n <= 10 ? Math.min(14, (6 + n) >> 1 << 1) : Math.min(20, 14 + (k >> 2) * 2),               // 가디언 원형탄 수
+    mult: 1 + (n - 1) * .1, hpUp: n >= 25 ? 2 : n >= 15 ? 1 : 0, hpAll: n >= 30 ? 1 : 0,
   };
 }
 function newGame() {
@@ -385,8 +396,8 @@ function startStage(n) {
     const tpl = Math.floor(R() * nT), m = gi % 2 ? -1 : 1, dual = n >= 2 && R() < .5;
     g.forEach((s, i) => {
       const mm = dual ? (i % 2 ? -m : m) : m, k = dual ? i >> 1 : i;
-      const fire = n >= 3 && R() < Math.min(.5, .1 * (n - 2)) ? .5 + R() * .3 : -1;
-      G.q.push({ t: t + k * .15, e: { ...s, hp: TYPES[s.type].hp + (s.type !== 'drone' && s.type !== 'jelly' ? D.hpUp : 0), st: 'enter', path: ENTRY[tpl](mm), d: 0, pi: 0, x: -99, y: -99, rot: 0, fire, hitT: 0, ph: R() * TAU, snT: 2 + R() * 3 } });
+      const fire = n >= 3 && R() < D.enterFire ? .5 + R() * .3 : -1;
+      G.q.push({ t: t + k * .15, e: { ...s, hp: TYPES[s.type].hp + (s.type !== 'drone' && s.type !== 'jelly' ? D.hpUp : D.hpAll), st: 'enter', path: ENTRY[tpl](mm), d: 0, pi: 0, x: -99, y: -99, rot: 0, fire, hitT: 0, ph: R() * TAU, snT: 2 + R() * 3 } });
     });
     t += dual ? 1.3 + (g.length >> 1) * .15 : 1.4 + g.length * .15;
   });
@@ -421,7 +432,7 @@ function startDive(e, tx0, delay) {
     segs = [hop, [b, [b[0], b[1] + 100], [tx, cy - 80], [tx, cy]], [[tx, cy], [tx, cy + 55], [tx + m * 70, cy + 55], [tx + m * 70, cy]], [[tx + m * 70, cy], [tx + m * 70, cy - 55], [tx, cy - 55], [tx, cy]], [[tx, cy], [tx, cy + 120], [tx - m * 40, H * .8], [tx - m * 60, H + 40]]];
   } else segs = [hop, [b, [b[0] - m * 25, b[1] + 180], [tx, H * .6], [clamp(tx + (R() - .5) * 140, 10, W - 10), H + 40]]];
   e.path = mkPath(segs); e.d = -(delay || 0); e.pi = 0; e.st = 'dive'; e.kind = kind; e.spd = D.dive * (e.type === 'drone' ? 1.05 : kind === 'kami' ? 1.35 : 1);
-  const shots = kind === 'kami' ? 0 : n === 1 ? (R() < .35 ? 1 : 0) : n < 4 ? 1 : n < 7 ? 1 + (R() < .5 ? 1 : 0) : 2 + (R() < (n > 10 ? .7 : .4) ? 1 : 0);
+  const shots = kind === 'kami' ? 0 : n === 1 ? (R() < .35 ? 1 : 0) : n < 4 ? 1 : n < 7 ? 1 + (R() < .5 ? 1 : 0) : 2 + (R() < (n > 10 ? .7 : .4) ? 1 : 0) + D.extraShots;
   e.shots = []; for (let i = 0; i < shots; i++) e.shots.push((.25 + R() * .3 + i * .08) * e.path.len);
 }
 function addScore(p) {
@@ -567,7 +578,7 @@ function update(dt) {
       if (e.st === 'enter' && e.fire > 0 && e.d > e.fire * e.path.len && e.y > 0 && e.y < H * .6) { e.fire = -1; aimShot(e.x, e.y, D.bullet * .85); }
       if (e.st === 'dive') {
         diving++;
-        while (e.shots.length && e.d >= e.shots[0]) { e.shots.shift(); if (e.y > 0 && e.y < G.py - 60) { if (e.type === 'guard') for (const s of [-.22, 0, .22]) aimShot(e.x, e.y, D.bullet, s); else aimShot(e.x, e.y, D.bullet, (G.R() - .5) * .1); } }
+        while (e.shots.length && e.d >= e.shots[0]) { e.shots.shift(); if (e.y > 0 && e.y < G.py - 60) { if (e.type === 'guard') for (const s of [-.22, 0, .22]) aimShot(e.x, e.y, D.bullet, s); else if (D.spread) { const k = G.stage >= 20 ? 3 : 2; for (let i = 0; i < k; i++) aimShot(e.x, e.y, D.bullet, (i - (k - 1) / 2) * .2); } else aimShot(e.x, e.y, D.bullet, (G.R() - .5) * .1); } }
       }
       if (done) {
         if (e.oneShot) { e.dead = true; continue; }
@@ -576,14 +587,14 @@ function update(dt) {
       }
     } else if (e.st === 'hover') {
       diving++; e.ht -= dt; e.x += Math.sin(G.t * 3) * .4;
-      if (!e.hf && e.ht < .8) { e.hf = 1; ring(e.x, e.y, Math.min(14, 6 + G.stage >> 1 << 1), Math.min(190, 110 + G.stage * 4), G.t); }
+      if (!e.hf && e.ht < .8) { e.hf = 1; ring(e.x, e.y, D.ringN, Math.min(230, 110 + G.stage * 4), G.t); }
       if (e.ht <= 0) { const m = e.x < W / 2 ? 1 : -1; e.path = mkPath([[[e.x, e.y], [e.x, e.y + 60], [e.x + m * 90, H * .7], [e.x + m * 120, H + 40]]]); e.d = 0; e.pi = 0; e.st = 'dive'; e.kind = 'std'; e.shots = []; }
     } else if (e.st === 'join') {
       const [sx, sy] = slotPos(e), dx = sx - e.x, dy = sy - e.y, d = Math.hypot(dx, dy), mv = D.enter * dt;
       if (d <= mv + 1) { e.st = 'form'; e.x = sx; e.y = sy; } else { e.x += dx / d * mv; e.y += dy / d * mv; }
     } else {
       const p = slotPos(e); e.x = p[0]; e.y = p[1]; formed.push(e);
-      if (e.type === 'sniper' && G.clearT <= 0 && G.dead <= 0) { e.snT -= dt; if (e.snT <= 0) { e.snT = Math.max(1.8, 4 - G.stage * .1) + G.R() * 1.5; e.burst = 3; e.bt = .45; } }
+      if (e.type === 'sniper' && G.clearT <= 0 && G.dead <= 0) { e.snT -= dt; if (e.snT <= 0) { e.snT = Math.max(1.8, 4 - G.stage * .1) + G.R() * 1.5; e.burst = D.burst; e.bt = .45; } }
     }
     if (e.burst) { e.bt -= dt; if (e.bt <= 0) { e.burst--; e.bt = .12; if (e.y > 0) aimShot(e.x, e.y + 8, D.bullet * 1.25, 0, 1); } }
     const vx = e.x - ox, vy = e.y - oy;
