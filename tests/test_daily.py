@@ -52,7 +52,7 @@ class DailyTest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))  # 30일 안에 같은 문제 없음
         for q in a.values():
             self.assertEqual(len(q["o"]), 4)
-            self.assertTrue(q["why"] and q["link"])
+            self.assertTrue(q["why"] and q["link"] and q["steps"])
 
     def test_live_question_only_on_its_day(self):
         latest = {"date": "2026-11-16", "fuel": DY.parse_fuel(AVG, SIDO, RECENT), "fx": DY.parse_fx(ecos([1400] * 20))}

@@ -210,6 +210,22 @@ def won(n: float) -> str:
     return f"{int(round(n)):,}원"
 
 
+def tier_note(a: float, b: float) -> str:
+    """a→b kWh 구간에 걸리는 누진 단가 설명."""
+    rates = [(200, "1구간 120원"), (400, "2구간 214.6원"), (1e9, "3구간 307.3원")]
+    hit = [n for i, (lim, n) in enumerate(rates) if b > (0 if i == 0 else rates[i - 1][0]) and a < lim]
+    return "누진 " + "·".join(hit) + "/kWh 적용"
+
+
+def power_steps(w: float, hrs: float, base: float = 250) -> list[str]:
+    kwh = w * hrs * 30 / 1000
+    a, b = Q.bill(base), Q.bill(base + kwh)
+    return [f"{w:,g}W × 하루 {hrs:g}시간 × 30일 ÷ 1,000 = {kwh:,.1f}kWh 더 씀".replace(".0kWh", "kWh"),
+            f"평소 {base:g}kWh 요금 {won(a)} → {base + kwh:,.0f}kWh 요금 {won(b)} ({tier_note(base, base + kwh)})",
+            f"늘어난 요금 = {won(b)} − {won(a)} = {won(b - a)}",
+            "요금엔 기본요금·기후환경·연료비 요금·부가세·전력기금이 포함돼요(한전 주택용 저압 기준)."]
+
+
 def bank() -> list[dict]:
     """사이트 계산 결과로만 만든 문제. id 가 바뀌지 않게 slug 를 쓴다."""
     out = []
@@ -218,28 +234,47 @@ def bank() -> list[dict]:
         out.append({"id": f"rc-{r['slug']}", "q": f"{r['name']} 1인분, 집에서 직접 만들면 재료비는 대략 얼마일까요?",
                     "v": r["total"], "link": f"recipe/{r['slug']}.html", "more": "1인분 원가 레시피 보기",
                     "why": f"재료비는 약 {won(r['total'])}이에요. 배달(배달비 포함 약 {won(r['delivery'])})보다 약 {won(r['save'])} 아껴요."})
+        rows = sorted(r["rows"], key=lambda x: -x["won"])
+        st = [f"{x['label']}: {x['pantry']['pack']} {won(x['pantry']['packPrice'])} ÷ {x['pantry']['packAmount']:,g}{x['pantry']['unit']} × {x['use']:g} = {won(x['won'])}"
+              for x in rows[:5]]
+        rest = rows[5:]
+        if rest:
+            st.append(f"나머지 {len(rest)}가지({', '.join(x['name'] for x in rest)}) = {won(sum(x['won'] for x in rest))}")
+        st.append(f"기본양념(소금·후추 등) = {won(RC.BASICS)}")
+        st.append(f"합계 = {won(r['total'])} (재료값은 {r['priceDate']} 마트·온라인 흔한 가격 기준)")
+        out[-1]["steps"] = st
         out.append({"id": f"rs-{r['slug']}", "q": f"{r['name']}, 배달(배달비 포함) 대신 집에서 1인분 해 먹으면 한 번에 얼마쯤 아낄까요?",
                     "v": r["save"], "link": f"recipe/{r['slug']}.html", "more": "1인분 원가 레시피 보기",
-                    "why": f"배달 약 {won(r['delivery'])}, 집밥 재료비 약 {won(r['total'])}이라 약 {won(r['save'])} 아껴요. 주 2번이면 한 달 약 {won(r['save'] * 8)}이에요."})
+                    "why": f"배달 약 {won(r['delivery'])}, 집밥 재료비 약 {won(r['total'])}이라 약 {won(r['save'])} 아껴요. 주 2번이면 한 달 약 {won(r['save'] * 8)}이에요.",
+                    "steps": [f"배달: 메뉴 대략 {won(r['delivery'] - RC.DELIVERY_FEE)} + 배달비 {won(RC.DELIVERY_FEE)} = {won(r['delivery'])}",
+                              f"집밥: 1인분 재료비 {won(r['total'])} (레시피 페이지에 재료별 계산)",
+                              f"아끼는 돈 = {won(r['delivery'])} − {won(r['total'])} = {won(r['save'])}"]})
     for q in Q.load():
         p = q["params"]
         if q["kind"] == "power":
             kwh, c = Q.add_cost(p["w"], p["h"], 250)
             out.append({"id": f"q-{q['slug']}", "q": f"{q['name']}({p['w']:,}W)를 하루 {p['h']:g}시간씩 한 달 쓰면, 전기요금은 얼마나 늘까요? (평소 250kWh 쓰는 집)",
                         "v": c, "link": f"q/{q['slug']}.html", "more": "우리 집 숫자로 계산해 보기",
-                        "why": f"한 달 {kwh:.0f}kWh를 더 써서 약 {won(c)} 늘어요. 누진 구간에 걸리면 더 커져요."})
+                        "why": f"한 달 {kwh:.0f}kWh를 더 써서 약 {won(c)} 늘어요. 누진 구간에 걸리면 더 커져요.",
+                        "steps": power_steps(p["w"], p["h"])})
         elif q["kind"] == "standby":
             w = p["a"] + p.get("b", 0) + p.get("c", 0)
             kwh = w * p["off"] * 30 / 1000
             y = (Q.bill(300) - Q.bill(300 - kwh)) * 12
             out.append({"id": f"q-{q['slug']}", "q": f"{q['name']}를 꺼 두지 않고 꽂아만 두면(대기전력 {w:g}W), 1년에 전기요금이 얼마나 샐까요?",
                         "v": y, "link": f"q/{q['slug']}.html", "more": "대기전력 계산해 보기",
-                        "why": f"평소 300kWh 쓰는 집 기준 1년 약 {won(y)}이에요. 멀티탭 스위치 하나로 막을 수 있어요."})
+                        "why": f"평소 300kWh 쓰는 집 기준 1년 약 {won(y)}이에요. 멀티탭 스위치 하나로 막을 수 있어요.",
+                        "steps": [f"{w:g}W × 꺼 둔 {p['off']:g}시간 × 30일 ÷ 1,000 = 한 달 {kwh:,.1f}kWh",
+                                  f"300kWh 쓰는 집에서 {kwh:,.1f}kWh 만큼의 요금 = 한 달 {won(y // 12)} ({tier_note(300 - kwh, 300)})",
+                                  f"× 12개월 = {won(y)}"]})
         elif q["kind"] == "ali":
             lim = 150 * p["fx"]
             out.append({"id": f"q-{q['slug']}", "q": f"환율이 {p['fx']:,}원일 때, 알리 직구 면세 한도 150달러는 원화로 얼마일까요?",
                         "v": lim, "link": f"q/{q['slug']}.html", "more": "면세 한도 계산해 보기",
-                        "why": f"약 {won(lim)}이에요. 넘으면 관세와 부가세가 함께 붙어요."})
+                        "why": f"약 {won(lim)}이에요. 넘으면 관세와 부가세가 함께 붙어요.",
+                        "steps": [f"면세 한도 150달러 × 환율 {p['fx']:,}원 = {won(lim)}",
+                                  "기준은 물건값+배송비(과세가격). 같은 날 같은 나라에서 산 건 합쳐서 볼 수 있어요.",
+                                  f"넘으면 관세 {p['duty']:g}%와 부가세 10%가 물건값 전체에 붙어요."]})
     return out
 
 
@@ -249,12 +284,18 @@ def live_questions(d: dict) -> list[dict]:
     if g:
         out.append({"id": f"fuel-{d['date']}", "q": f"오늘({date_label(d['date'])}) 전국 평균 휘발유 1리터는 얼마일까요?",
                     "v": g["price"], "near": True, "link": "index.html#today", "more": "오늘의 생활 시세 보기",
-                    "why": f"전국 평균 {g['price']:,.0f}원이에요. 50리터 가득이면 약 {won(g['price'] * 50)}이에요."})
+                    "why": f"전국 평균 {g['price']:,.0f}원이에요. 50리터 가득이면 약 {won(g['price'] * 50)}이에요.",
+                    "steps": [f"오피넷(한국석유공사) 전국 주유소 휘발유 평균 판매가 {g['price']:,.1f}원",
+                              f"어제보다 {abs(g.get('diff') or 0):,.1f}원 {'올랐어요' if (g.get('diff') or 0) > 0 else '내렸어요' if (g.get('diff') or 0) < 0 else '같아요'}",
+                              f"50L 가득 = {g['price']:,.1f}원 × 50 = {won(g['price'] * 50)}"]})
     x = d.get("fx")
     if x:
         out.append({"id": f"fx-{d['date']}", "q": "오늘 1달러는 우리 돈 몇 원일까요? (한국은행 매매기준율)",
                     "v": x["usd"], "near": True, "link": "index.html#today", "more": "오늘의 생활 시세 보기",
-                    "why": f"{x['usd']:,.1f}원이에요. 100달러 직구면 약 {won(x['usd'] * 100)}이에요."})
+                    "why": f"{x['usd']:,.1f}원이에요. 100달러 직구면 약 {won(x['usd'] * 100)}이에요.",
+                    "steps": [f"한국은행 원/달러 매매기준율 {x['usd']:,.1f}원 ({x['date'][4:6].lstrip('0')}월 {x['date'][6:].lstrip('0')}일 고시)",
+                              f"4주 평균 {x['avg4w']:,.1f}원보다 {abs(x['vsAvg']):.1f}% {'높아요' if x['vsAvg'] > 0 else '낮아요'}",
+                              f"카드 결제 환율은 여기에 카드사 수수료가 붙어 조금 더 비싸요."]})
     return out
 
 
@@ -280,7 +321,7 @@ def schedule(start: dt.date, days: int, latest: dict | None) -> dict[str, dict]:
             continue
         opts, ans = options(q["v"], h(q["id"] + d.isoformat()), q.get("near", False))
         out[d.isoformat()] = {"id": q["id"], "q": q["q"], "o": [f"{x:,}원" for x in opts], "a": ans,
-                              "why": q["why"], "link": q["link"], "more": q["more"]}
+                              "why": q["why"], "steps": q.get("steps", []), "link": q["link"], "more": q["more"]}
     return out
 
 
@@ -316,6 +357,8 @@ CSS = """
 .quiz .res{margin-top:14px;font-size:15px}.quiz .res b{font-size:17px}
 .quiz .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .quiz .acts a,.quiz .acts button{font:600 14px var(--body);padding:10px 14px;border:1px solid var(--ink);background:none;color:var(--ink);text-decoration:none;cursor:pointer}
+.steps{margin-top:12px;background:var(--bg);border:1px solid var(--line);padding:12px 14px;font-size:14px;font-variant-numeric:tabular-nums}
+.steps ol{margin:6px 0 4px;padding-left:20px}.steps li{padding:3px 0}
 .stamps{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
 .stamps span{width:34px;height:34px;border-radius:50%;border:1px dashed var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted)}
 .stamps span.on{border:1px solid var(--green);background:var(--greenbg);color:var(--green);font-weight:600}
@@ -347,6 +390,7 @@ h+='<p class="qq">'+esc(Q.q)+'</p><div class="opts">';
 Q.o.forEach(function(o,i){var c='';if(a){if(i===Q.a)c='ok';else if(i===a.pick)c='no'}h+='<button type="button" data-i="'+i+'" class="'+c+'"'+(a?' disabled':'')+'>'+esc(o)+'</button>'});
 h+='</div>';
 if(a){h+='<div class="res" aria-live="polite"><b>'+(a.ok?'⭕ 정답이에요!':'❌ 아쉬워요. 정답은 '+esc(Q.o[Q.a]))+'</b><br>'+esc(Q.why)+'</div>';
+if(Q.steps&&Q.steps.length)h+='<div class="steps"><b>왜 이 답일까? 삼촌의 계산</b><ol>'+Q.steps.map(function(x){return'<li>'+esc(x)+'</li>'}).join('')+'</ol><span class="small">보기는 끝자리를 반올림해 보여 드려요.</span></div>';
 h+='<div class="acts"><a href="'+D.root+Q.link+'">'+esc(Q.more)+' →</a><button type="button" id="qshare">결과 공유</button></div>';
 h+='<div class="streak">출석 도장 <b>'+total+'개</b> · 정답 '+ok+'개 · 최고 연속 '+S.best+'일 · 새 문제는 매일 0시</div>'}
 else h+='<div class="streak">문제를 풀면 오늘 출석 도장이 찍혀요.</div>';
