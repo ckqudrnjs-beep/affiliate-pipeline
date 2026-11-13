@@ -44,6 +44,10 @@
 - 점수 상한은 `functions/api/score.js` MAX.range. 매일 같은 판 = `seeded('range'+KST)`.
 - 테스트용: 주소 끝에 `#rgdebug` 를 붙이면 `window.__rg` 로 조작 가능.
 
+## 리듬 점프 러너 (통통 네온런, 2026-11-13)
+- `games/tongtong/` 2D 캔버스 게임(번들 없음, game.js 하나). 그림·음악(웹오디오 합성)·코스 모두 코드로 생성, 외부 파일 없음. 특정 기존 게임의 이름·캐릭터·레벨·음악을 따라 하지 않는다.
+- 코스: `seeded('tongtong'+KST)` 로 조각을 이어 붙이고, 조각마다 같은 물리로 탐색(solve)해 **깰 수 있는 코스만** 채택(판정 여유 0.1칸). 128칸(32박)마다 구간 상승: 100→172 BPM, 장애물 종류·간격 강화.
+- 점수 = 오늘 최고 거리(m), score.js MAX.tongtong=200000. 테스트: `#ttdebug` → `window.__tt` (bot=true 자동 플레이, fast(n), jumpTo(x)), 디버그 기록은 순위 제출 안 함.
 ## 우주 슈팅 (별빛 요격대, 2026-11-13)
 - 오리지널 세로 슈팅. 기존 유명 게임의 이름·캐릭터·그림·소리·고유 연출(포획 광선 등)은 쓰지 않는다. 기체·적·보스·효과음·배경음 모두 코드로 생성.
 - 페이지 `games/starlight/`, 본체 `static/js/starlight.js`(번들 없이 그대로 배포, 페이지 열리고 잠시 뒤 미리 불러와 스프라이트까지 준비). 포스터 `static/img/starlight-poster.jpg`, 공유 이미지 `static/og/starlight.jpg`.
