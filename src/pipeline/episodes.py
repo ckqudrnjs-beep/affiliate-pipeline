@@ -190,7 +190,7 @@ def speak(text: str) -> str:
     """숫자를 한글로, 괄호 설명은 뺀다 (TTS 용)."""
     import re
     text = re.sub(r"\s*\([^)]*\)", "", text)
-    text = text.replace("kWh", "킬로와트시").replace("W", "와트").replace(" × ", " 곱하기 ").replace(" = ", "@@ ")
+    text = text.replace("kWh", "킬로와트시").replace("W", "와트").replace(" × ", " 곱하기 ").replace(" − ", " 빼기 ").replace(" + ", " 더하기 ").replace(" = ", "@@ ")
     native = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉", "열"]
     text = re.sub(r"(?<![\d,.])(10|[1-9])(?=\s?(번|시간|개|명|잔|그릇|달)(?!러))", lambda m: native[int(m.group(1))] + " ", text)
 
