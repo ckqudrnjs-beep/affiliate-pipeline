@@ -49,6 +49,17 @@ PRODUCT_NOINDEX = bool(CFG.get("productNoindex", True))
 BASE = CFG.get("baseUrl", "https://don3chon.com").rstrip("/")  # 판단 글이 이보다 짧으면 페이지를 만들지 않는다
 
 
+TELEGRAM_URL = "https://t.me/don3chon_deal"
+
+
+def tg_box() -> str:
+    """텔레그램 가격 알림 구독 버튼 (BK OK 2026-11-13). 채널 글에는 제휴 링크가 있으므로 그 사실을 함께 적는다."""
+    return (f'<aside class="tgbox"><p><b>가격 내려가면 알려 드릴까요?</b><br>'
+            f'삼촌이 소개한 물건이 30일 최저가로 내려가면 텔레그램으로 하루 최대 3개만 보내 드려요.</p>'
+            f'<a class="btn" href="{TELEGRAM_URL}" target="_blank" rel="noopener">텔레그램으로 알림 받기</a>'
+            f'<p class="small">알림 글에는 알리익스프레스 제휴 링크가 들어가며, 구매 시 수수료를 받을 수 있어요.</p></aside>')
+
+
 def won(n: int) -> str:
     return f"{n:,}원"
 
@@ -155,6 +166,7 @@ main.wrap{padding-block:8px 80px}
 /* 쿠팡 가이드(공지 160): 상단 표시는 본문보다 크거나 눈에 띄는 색. 본문 16px과 같은 크기 + 초록 강조 */
 .adbar{font-size:16px;font-weight:600;color:var(--green);background:var(--greenbg);border-bottom:1px solid var(--line);line-height:1.6}
 .adbar .wrap{padding-block:8px}
+.tgbox{border:1px solid var(--line);background:var(--greenbg);padding:16px 18px;margin:32px 0}.tgbox p{margin:0 0 12px}.tgbox .small{margin:12px 0 0;color:var(--muted)}
 header.top{border-bottom:1px solid var(--line);background:var(--bg)}
 header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px}
 .logo{font:600 22px/1 var(--display);color:var(--ink);text-decoration:none;letter-spacing:-.02em}
@@ -430,6 +442,7 @@ def product_page(p: dict) -> str:
 <p class="small">구매 전 확인: {e(p['check'])}</p>
 <p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
 <div class="btns">{btns}</div>
+{tg_box()}
 <p><button type="button" class="zzim" id="zzimbtn" aria-pressed="false" data-item="{e(json.dumps({"slug": p["slug"], "name": p["name"], "price": int(p["aliPrice"]), "date": p["priceDate"]}, ensure_ascii=False))}">찜하기</button></p>
 <script>{N.PRODUCT_JS}{BACK_JS}</script>"""
     if head:  # 알리 단독
@@ -656,7 +669,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             encoding="utf-8")
     (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
     (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
-        PR.page_body(products, HIST), path="prices.html"), encoding="utf-8")
+        PR.page_body(products, HIST) + tg_box(), path="prices.html"), encoding="utf-8")
     (o / "about.html").write_text(page(f"소개 | {BRAND}", "돈 줍는 삼촌은 사기 전에 한 번 계산해 보는 살림 사이트입니다. 운영 원칙과 광고·제휴 안내.", ABOUT, path="about.html"), encoding="utf-8")
     (o / "contact.html").write_text(page(f"문의 | {BRAND}", "돈 줍는 삼촌에 글 오류, 계산기 문제, 제휴 문의를 보내는 방법.", contact_body(), path="contact.html"), encoding="utf-8")
     client = adsense_client()
@@ -696,7 +709,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         others = same + [x for x in arts if x is not a and x not in same]
         more += link_list("같이 보면 좋은 글", [(f"{x['slug']}.html", x["title"], x["desc"]) for x in others[:3]]
                           + [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in qs if cl and Q.cluster(q) == cl][:2])
-        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + more, root="../",
+        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + tg_box() + more, root="../",
             path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
             crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
     reps = R.load_all()
