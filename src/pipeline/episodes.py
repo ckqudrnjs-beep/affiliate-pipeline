@@ -565,6 +565,9 @@ def render(path: pathlib.Path) -> pathlib.Path:
                 t_acc += dur
             elif k == "skit":
                 from .skit import render_part
+                from . import webtoon
+                if spec.get("style", "webtoon") == "webtoon" and webtoon.available():  # 2026-11-13 BK: 그림체 A
+                    render_part = webtoon.render_part
                 cut = ASSETS / (product or "") / "cutout.png"
                 img = None
                 if product:  # 배경 없는 상품 사진(cutout)이 있으면 그걸로 (광고 배너 글씨가 덜 보이게)
