@@ -380,6 +380,7 @@ export function boot(opts = {}) {
     resize(); lockPointer();
   }
   function beginStage(n) {
+    if (n >= 4 && opts.bonus && opts.bonus.ach && !/rgdebug/.test(location.hash)) opts.bonus.ach('rg4'); // 업적 보너스 코인(1번만)
     stage = n; cfg = stageCfg(n);
     sched = makeSchedule(opts.rngFactory ? opts.rngFactory(n) : R, n); schedI = 0;
     gameT = 0; bonusT = 0; stageKills = 0; countT = 3; lastBeep = 4; state = 'count';

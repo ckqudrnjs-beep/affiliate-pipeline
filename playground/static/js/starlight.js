@@ -22,7 +22,31 @@ function dot(col, r) {
 }
 /* 출석 보너스 '내 네온 색'(스킨): 요격기 테두리 색만 바뀌는 꾸미기. 점수·능력과 무관 */
 function skinCol() { try { const k = opts && opts.skin && opts.skin(); return (k && k.c && k.c[1]) || C.cy; } catch (e) { return C.cy; } }
-function shipSprite(col) {
+function skinDes() { try { return (opts && opts.design && opts.design()) || 'base'; } catch (e) { return 'base'; } }
+function shipSprite(col, des) {
+  // 디자인 스킨(겉모습만, 맞는 범위 동일): 드래곤 파이터 / 냥냥 요격기 / 원반 UFO
+  if (des === 'dragon') return sprite(36, 38, x => {
+    poly(x, [0, -17, 3, -11, 7, -16, 6, -7, 5, -1, 16, -6, 13, 3, 17, 8, 9, 9, 5, 13, 0, 18, -5, 13, -9, 9, -17, 8, -13, 3, -16, -6, -5, -1, -6, -7, -7, -16, -3, -11]);
+    x.fillStyle = '#1a0b2e'; x.fill(); glowStroke(x, col, 2, 10); x.strokeStyle = '#fff'; x.lineWidth = .8; x.stroke();
+    x.strokeStyle = col + 'aa'; x.lineWidth = 1; x.beginPath(); x.moveTo(5, -1); x.lineTo(12, 6); x.moveTo(5, 3); x.lineTo(10, 9); x.moveTo(-5, -1); x.lineTo(-12, 6); x.moveTo(-5, 3); x.lineTo(-10, 9); x.stroke();
+    x.fillStyle = C.ye; poly(x, [-3.6, -9, -1, -7.6, -1.4, -6.4, -3.6, -7.4]); x.fill(); poly(x, [3.6, -9, 1, -7.6, 1.4, -6.4, 3.6, -7.4]); x.fill();
+    x.fillStyle = C.or; for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(0, -2 + i * 4, 1.2, 0, TAU); x.fill(); }
+  });
+  if (des === 'cat') return sprite(36, 36, x => {
+    poly(x, [-9, -17, -3, -10, 3, -10, 9, -17, 10, -5, 15, 6, 14, 12, 5, 10, 0, 13, -5, 10, -14, 12, -15, 6, -10, -5]);
+    x.fillStyle = '#0b1a3a'; x.fill(); glowStroke(x, col, 2, 10); x.strokeStyle = '#fff'; x.lineWidth = .8; x.stroke();
+    x.fillStyle = '#ff9ec4'; poly(x, [-7.5, -14, -4, -10.5, -8.5, -9.5]); x.fill(); poly(x, [7.5, -14, 4, -10.5, 8.5, -9.5]); x.fill();
+    for (const s of [-1, 1]) { x.fillStyle = C.ye; x.beginPath(); x.ellipse(s * 3.6, -5, 2.4, 2.8, 0, 0, TAU); x.fill(); x.fillStyle = '#111'; x.fillRect(s * 3.6 - .5, -7.2, 1, 4.4); }
+    x.fillStyle = '#ff9ec4'; poly(x, [-1.4, -1.2, 1.4, -1.2, 0, .6]); x.fill();
+    x.strokeStyle = '#ffffffcc'; x.lineWidth = .7; x.beginPath(); for (const s of [-1, 1]) { x.moveTo(s * 5, -.5); x.lineTo(s * 14, -2.5); x.moveTo(s * 5, 1); x.lineTo(s * 14, 2); } x.stroke();
+  });
+  if (des === 'ufo') return sprite(38, 30, x => {
+    x.beginPath(); x.arc(0, -2, 7.5, Math.PI, 0); x.closePath(); x.fillStyle = col + '55'; x.fill(); glowStroke(x, col, 1.5, 8);
+    x.fillStyle = '#ffffffaa'; x.beginPath(); x.ellipse(-2.6, -5.5, 1.6, 2.6, -.5, 0, TAU); x.fill();
+    x.beginPath(); x.ellipse(0, 2, 17, 6, 0, 0, TAU); x.fillStyle = '#16102e'; x.fill(); glowStroke(x, col, 2, 10); x.strokeStyle = '#fff'; x.lineWidth = .8; x.stroke();
+    for (let i = 0; i < 5; i++) { x.fillStyle = i % 2 ? C.pk : C.ye; x.beginPath(); x.arc(-11 + i * 5.5, 3 + (i === 0 || i === 4 ? -1 : 0), 1.5, 0, TAU); x.fill(); }
+    x.fillStyle = col + '88'; x.beginPath(); x.ellipse(0, 9.5, 6, 2, 0, 0, TAU); x.fill();
+  });
   return sprite(34, 36, x => {
     poly(x, [0, -16, 5, -6, 5, 4, 14, 10, 14, 14, 4, 11, 0, 14, -4, 11, -14, 14, -14, 10, -5, 4, -5, -6]); x.fillStyle = '#0b1a3a'; x.fill(); glowStroke(x, col, 2, 10);
     x.strokeStyle = '#fff'; x.lineWidth = 1; x.stroke(); x.fillStyle = col === C.ye ? C.cy : C.ye; x.beginPath(); x.ellipse(0, -5, 2.4, 4.5, 0, 0, TAU); x.fill();
@@ -94,7 +118,7 @@ function buildSprites() {
   S.boss2 = [orbit(false), orbit(true)];
   S.orb = sprite(26, 26, x => { x.beginPath(); x.arc(0, 0, 8, 0, TAU); x.fillStyle = '#062616'; x.fill(); glowStroke(x, C.gr, 2, 8); x.fillStyle = C.gr; x.beginPath(); x.arc(0, 0, 3, 0, TAU); x.fill(); });
   S.bossRing = sprite(150, 150, x => { x.setLineDash([10, 8]); x.beginPath(); x.arc(0, 0, 66, 0, TAU); glowStroke(x, C.pu + 'aa', 2, 6); });
-  S.shipCol = skinCol(); S.ship = shipSprite(S.shipCol);
+  S.shipCol = skinCol(); S.shipDes = skinDes(); S.ship = shipSprite(S.shipCol, S.shipDes);
   S.pod = sprite(18, 18, x => { poly(x, [0, -7, 6, 4, 0, 2, -6, 4]); x.fillStyle = '#1a0630'; x.fill(); glowStroke(x, C.pu, 1.6, 8); x.fillStyle = '#fff'; x.fillRect(-1, -2, 2, 2); });
   S.pb = sprite(10, 22, x => { x.shadowColor = C.cy; x.shadowBlur = 8; x.fillStyle = C.cy; x.fillRect(-2, -8, 4, 16); x.shadowBlur = 0; x.fillStyle = '#fff'; x.fillRect(-1, -7, 2, 14); });
   S.lz = sprite(10, 34, x => { x.shadowColor = C.pk; x.shadowBlur = 8; x.fillStyle = C.pk; x.fillRect(-1.8, -15, 3.6, 30); x.shadowBlur = 0; x.fillStyle = '#fff'; x.fillRect(-.8, -14, 1.6, 28); });
@@ -314,6 +338,7 @@ function newGame() {
   startStage(1);
 }
 function startStage(n) {
+  if (n >= 5 && !G.debug && opts.bonus && opts.bonus.ach) opts.bonus.ach('sl5'); // 업적 보너스 코인(1번만)
   G.stage = n; G.st = 0; G.clearT = 0; G.miss = 0; G.D = diff(n); G.R = opts.rng(n); G.diveT = 2.5; G.formT = 0; G.eb = []; G.beams = []; G.q = []; G.boss = null;
   G.layout = LAYOUTS[(n - 1) % LAYOUTS.length];
   const R = G.R, D = G.D;
@@ -771,7 +796,7 @@ function fs() {
 }
 function open() {
   ov.hidden = false; document.documentElement.style.overflow = 'hidden';
-  if (SP) { const c = skinCol(); if (c !== SP.shipCol) { SP.ship = shipSprite(c); SP.shipCol = c; } }
+  if (SP) { const c = skinCol(), d = skinDes(); if (c !== SP.shipCol || d !== SP.shipDes) { SP.ship = shipSprite(c, d); SP.shipCol = c; SP.shipDes = d; } }
   fs(); layout(); audioInit(); paused = false; panel.hidden = true; newGame();
   last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
 }
