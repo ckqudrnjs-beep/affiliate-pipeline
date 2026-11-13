@@ -45,16 +45,16 @@ const CSS = `
 .rg3 .pop{position:absolute;transform:translate(-50%,-50%);font-family:"Press Start 2P",monospace;font-size:14px;white-space:nowrap;text-shadow:0 0 8px currentColor,0 2px 0 #000;animation:rgpop .9s ease-out forwards}
 .rg3 .pop small{display:block;font-family:"Black Han Sans",sans-serif;font-size:15px;text-align:center}
 @keyframes rgpop{0%{opacity:0;margin-top:6px;scale:.6}15%{opacity:1;scale:1.15}30%{scale:1}100%{opacity:0;margin-top:-46px}}
-.rg3 .arw{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid #ff2e88;filter:drop-shadow(0 0 6px #ff2e88);display:none}
+.rg3 .arw{position:absolute;left:0;top:0;will-change:transform;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid #ff2e88;filter:drop-shadow(0 0 6px #ff2e88);display:none}
 .rg3 .touch{position:absolute;inset:0;display:none}
 .rg3.tch.playing .touch{display:block}
 .rg3 .touch button{position:absolute;border-radius:50%;border:2px solid #ffffff55;background:#ffffff14;color:#fff;backdrop-filter:blur(2px);touch-action:none}
 .rg3 .touch .f{right:calc(max(18px,env(safe-area-inset-right)) + 4px);bottom:96px;width:96px;height:96px;font-size:18px;border-color:#ff2e88;background:#ff2e8833;box-shadow:0 0 18px #ff2e8866}
 .rg3 .touch .f.on{background:#ff2e8899}
-.rg3 .touch .a{right:calc(max(18px,env(safe-area-inset-right)) + 112px);bottom:150px;width:66px;height:66px;font-size:14px;border-color:#22e5ff;background:#22e5ff22}
+.rg3 .touch .a{left:calc(max(18px,env(safe-area-inset-left)) + 6px);bottom:40px;width:84px;height:84px;font-size:16px;border-color:#22e5ff;background:#22e5ff22}
 .rg3 .touch .a.on{background:#22e5ff88}
-.rg3 .touch .r{right:calc(max(18px,env(safe-area-inset-right)) + 116px);bottom:70px;width:54px;height:54px;font-size:13px}
-.rg3 .touch .s{left:max(16px,env(safe-area-inset-left));bottom:30px;width:60px;height:60px;font-size:20px}
+.rg3 .touch .r{right:calc(max(18px,env(safe-area-inset-right)) + 114px);bottom:60px;width:56px;height:56px;font-size:13px}
+.rg3 .touch .s{left:calc(max(18px,env(safe-area-inset-left)) + 18px);bottom:140px;width:60px;height:60px;font-size:20px}
 .rg3 .pz{position:absolute;right:max(12px,env(safe-area-inset-right));top:12px;width:40px;height:40px;border-radius:10px;border:1px solid #ffffff44;background:#ffffff14;color:#fff;font-size:14px;pointer-events:auto}
 .rg3 .tr{bottom:16px}.rg3.tch .tr{bottom:auto;top:62px}
 .rg3 .panel{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-end;padding:16px max(16px,env(safe-area-inset-right)) 22px max(16px,env(safe-area-inset-left));background:linear-gradient(180deg,#05030c00 30%,#05030ccc 62%,#05030c 100%);overflow:auto}
@@ -92,10 +92,12 @@ const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 // 스테이지 n의 난이도: 표적이 더 빨리 사라지고, 작아지고, 멀어지고, 빨라진다.
 // 끝없는 스테이지(순위 상한 없음). 10단계까지 빠르게, 그 뒤로는 천천히 계속 어려워진다.
 export function stageCfg(n) {
-  const k = n - 1, x = Math.max(0, n - 10);
-  return { n, dur: 25, quota: Math.min(6 + 2 * n, 26) + x, life: Math.max(0.42, 1 - 0.06 * Math.min(k, 9) - 0.012 * x), scale: Math.max(0.5, 1 - 0.045 * Math.min(k, 9) - 0.01 * x),
-    speed: Math.min(2.8, 1 + 0.12 * Math.min(k, 9) + 0.05 * x), push: Math.min(40, k * 2.5), gap: Math.max(0.42, 1.15 - 0.065 * Math.min(k, 9) - 0.012 * x), mult: 1 + 0.2 * k,
-    zombie: n >= 4 ? Math.min(0.5, 0.22 + 0.035 * (n - 4)) : 0 };
+  // 1~3단계는 넉넉하게(BK 11/13 피드백), 4단계부터 점점, 12단계 이후엔 천천히 계속 어려워진다.
+  const k = n - 1, m = Math.min(k, 11), x = Math.max(0, n - 12);
+  return { n, dur: n <= 3 ? 32 : 28, quota: Math.min(4 + 2 * n, 26) + x,
+    life: Math.max(0.42, 1.2 - 0.065 * m - 0.012 * x), scale: Math.max(0.5, 1.1 - 0.04 * m - 0.01 * x),
+    speed: Math.min(2.8, 0.8 + 0.11 * m + 0.05 * x), push: Math.min(40, Math.max(0, k - 2) * 2.5), gap: Math.max(0.42, 1.0 - 0.045 * m - 0.012 * x), mult: 1 + 0.2 * k,
+    zombie: n >= 4 ? Math.min(0.5, 0.18 + 0.035 * (n - 4)) : 0 };
 }
 function makeSchedule(R, n) {
   const c = stageCfg(n);
@@ -161,7 +163,12 @@ export function boot(opts = {}) {
  <button class="go" type="button" data-r="again">↻ 다시 하기</button><div class="row"><button type="button" data-r="share">📤 결과 공유</button><button type="button" data-r="exit">나가기</button></div></div></div>
 <div class="load">LOADING…</div><div class="rot">📱 가로로 돌리면 더 넓게 보여요</div></div>`);
   document.body.appendChild(root);
-  const $ = (s) => root.querySelector(s);
+  const qc = {};
+  const $ = (s) => qc[s] || (qc[s] = root.querySelector(s));
+  // 같은 값이면 DOM을 건드리지 않는다(매 프레임 레이아웃·페인트 줄이기)
+  const setTxt = (e, v) => { if (e._t !== v) { e._t = v; e.textContent = v; } };
+  const setHtml = (e, v) => { if (e._h !== v) { e._h = v; e.innerHTML = v; } };
+  const setSt = (e, k, v) => { const kk = '_' + k; if (e[kk] !== v) { e[kk] = v; e.style[k] = v; } };
   const canvas = $('canvas');
   const hud = $('.hud');
 
@@ -171,7 +178,28 @@ export function boot(opts = {}) {
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = !Q.low;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  let dprMax = Q.low ? 1.5 : 2;
+  // 화질 단계: 해상도(픽셀 수 상한)와 블룸을 프레임 시간에 맞춰 자동 조절. 그림자는 시작 때만 정한다(바꾸면 셰이더 재컴파일로 끊김).
+  const TIERS = [{ px: 2.4e6, bloom: true }, { px: 1.6e6, bloom: true }, { px: 1.1e6, bloom: true }, { px: 0.8e6, bloom: false }, { px: 0.5e6, bloom: false }];
+  const lockTier = /rghq/.test(location.hash);
+  let tier = Q.low && !lockTier ? 2 : 0, ftAcc = 0, ftN = 0, goodWin = 0;
+  const fpsBox = /fps/.test(location.hash) ? document.createElement('div') : null;
+  if (fpsBox) { fpsBox.style.cssText = 'position:absolute;left:8px;bottom:8px;font:12px monospace;color:#3ddc84;z-index:5;pointer-events:none'; root.appendChild(fpsBox); }
+
+  // 브라우저가 그래픽카드를 안 쓰고 소프트웨어로 그리는 경우(하드웨어 가속 꺼짐) 안내
+  let gpuName = '';
+  try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); gpuName = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''; } catch (e) { /* 없음 */ }
+  if (/swiftshader|llvmpipe|software|basic render/i.test(gpuName)) {
+    Q.low = true; if (!lockTier) tier = 3; renderer.shadowMap.enabled = false;
+    const w = document.createElement('p'); w.className = 'tip'; w.style.color = '#ffd23f';
+    w.textContent = '⚠️ 지금 브라우저가 그래픽카드를 쓰지 않고 있어 끊길 수 있어요. 크롬 설정 > 시스템 > "가능한 경우 그래픽 가속 사용"을 켜고 브라우저를 다시 시작해 주세요.';
+    root.querySelector('.menu .box').appendChild(w);
+  }
+  if (fpsBox) fpsBox.title = gpuName;
+  if (opts.ios) {
+    const w = document.createElement('p'); w.className = 'tip'; w.style.color = '#22e5ff';
+    w.textContent = '📱 아이폰은 사파리 공유 버튼 → "홈 화면에 추가"로 열면 주소창 없이 전체 화면으로 할 수 있어요.';
+    root.querySelector('.menu .box').appendChild(w);
+  }
 
   const scene = new THREE.Scene();
   const vmScene = new THREE.Scene();
@@ -201,7 +229,7 @@ export function boot(opts = {}) {
 
   let composer = null, bloom = null;
   function makeComposer() {
-    const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: Q.low ? 0 : 4 });
+    const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: Q.low ? 0 : 2 });
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     const vp = new RenderPass(vmScene, vmCam); vp.clear = false; vp.clearDepth = true; composer.addPass(vp);
@@ -292,14 +320,16 @@ export function boot(opts = {}) {
   let gameT = 0, bonusT = 0, countT = 0, score = 0, combo = 0, maxCombo = 0, shots = 0, hits = 0, bulls = 0, kills = { plate: 0, slider: 0, drone: 0, far: 0, gold: 0 };
   let sched = [], schedI = 0, farMsg = 0, goldMsg = 0, zomMsg = 0, lastBeep = 0, stage = 1, cfg = stageCfg(1), stageKills = 0, interT = 0, heads = 0, cleared = 0;
   const vm = { kz: 0, kr: 0, lagX: 0, lagY: 0, vkz: 0, vkr: 0 };
-  let lookDX = 0, lookDY = 0, now = 0, fpsAcc = 0, fpsN = 0, degraded = false;
+  let lookDX = 0, lookDY = 0, now = 0;
 
   function resize() {
     W = root.clientWidth; H = root.clientHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, dprMax);
+    const T = TIERS[tier];
+    const dpr = Math.max(0.5, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(T.px / Math.max(1, W * H))));
     renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
     composer.setPixelRatio(dpr); composer.setSize(W, H);
     if (bloom) bloom.setSize(Math.round(W * dpr / 2), Math.round(H * dpr / 2));
+    root._menuTop = null;
     const asp = W / H;
     camera.aspect = vmCam.aspect = asp;
     vmCam.fov = asp >= 1.2 ? 55 : Math.min(85, 2 * Math.atan(Math.tan(25 * Math.PI / 180) / asp) * 180 / Math.PI);
@@ -336,7 +366,7 @@ export function boot(opts = {}) {
 
   function lockPointer() { if (!touch && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* 미지원 */ } } }
   function startGame() {
-    sfx.init();
+    sfx.init(); if (touch) goFull();
     for (const g of guns) { vmRoot.add(g.root); g.ammo = g.mag; g.root.rotation.set(0, 0, 0); }
     cur = sel; showGun(cur);
     clearTargets();
@@ -616,20 +646,32 @@ export function boot(opts = {}) {
       .map(([a, b]) => `<div>${a}<b>${b}</b></div>`).join('');
     setPanel('result'); hud.style.display = 'none'; root.classList.remove('playing');
     toMenuPose();
-    if (opts.submit && s > 0) opts.submit(s, result);
+    if (opts.submit && s > 0 && !/rgdebug/.test(location.hash)) opts.submit(s, result); // 테스트·녹화 판은 순위에 안 올림
   }
   function toMenuPose() { menuGunPose = true; }
   let menuGunPose = false;
 
   function exit() {
     state = 'off'; if (document.pointerLockElement) document.exitPointerLock();
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
     root.style.display = 'none'; document.documentElement.style.overflow = '';
     if (opts.onExit) opts.onExit(result);
   }
   function open() {
+    if (touch) goFull();
     root.style.display = ''; document.documentElement.style.overflow = 'hidden';
     sel = cur; toMenu(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(loop); }
   }
+
+  // 모바일 전체 화면 + 가로 고정(되는 기기만: 안드로이드 크롬 등). 아이폰 사파리는 웹페이지 전체 화면을 지원하지 않는다.
+  function goFull() {
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) {
+      el.requestFullscreen({ navigationUI: 'hide' }).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* 미지원 */ } setTimeout(resize, 300); }).catch(() => {});
+    } else if (el.webkitRequestFullscreen && !document.webkitFullscreenElement) { try { el.webkitRequestFullscreen(); } catch (e) { /* 미지원 */ } }
+  }
+  document.addEventListener('fullscreenchange', () => setTimeout(resize, 200));
+  addEventListener('orientationchange', () => setTimeout(resize, 300));
 
   // ---------- 매 프레임 ----------
   let last = performance.now(), running = false, rangeT = 0;
@@ -638,24 +680,30 @@ export function boot(opts = {}) {
     if (state === 'off') { running = false; return; }
     requestAnimationFrame(loop);
     const dt = Math.min(window.__rgDtMax || 0.05, (t - last) / 1000); last = t; now += dt;
-    if (state === 'play' && !degraded) {
-      fpsAcc += dt; fpsN++;
-      if (fpsN === 150) { if (fpsAcc / fpsN > 0.034) { degraded = true; dprMax = 1; Q.low = true; renderer.shadowMap.enabled = false; scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; }); resize(); } fpsAcc = fpsN = 0; }
+    // 1초마다 평균 프레임 시간을 보고 화질 단계 조절(느리면 즉시 낮추고, 아주 여유 있으면 천천히 올림)
+    ftAcc += Math.min(0.2, (t - (loop.prev || t)) / 1000); loop.prev = t; ftN++;
+    if (ftAcc >= 1) {
+      const avg = ftAcc / ftN;
+      if (fpsBox) fpsBox.textContent = Math.round(1 / avg) + 'fps · Q' + tier;
+      if (lockTier) { /* 녹화용 고정 */ } else if (avg > 1 / 50 && tier < TIERS.length - 1) { tier++; goodWin = 0; resize(); }
+      else if (avg < 1 / 90 && tier > 0 && ++goodWin >= 4) { tier--; goodWin = 0; resize(); }
+      else if (avg >= 1 / 90) goodWin = 0;
+      ftAcc = ftN = 0;
     }
     world.update(now);
     const g = G();
     const playing = state === 'play';
     if (state === 'count') {
       countT -= dt; const n = Math.ceil(countT);
-      $('.cnt').innerHTML = `<small>STAGE ${stage}</small>${n > 0 ? n : 'GO!'}<em>표적 ${cfg.quota}개 맞히면 통과${stage >= 4 ? ' · 좀비 주의' : ''}</em>`;
+      setHtml($('.cnt'), `<small>STAGE ${stage}</small>${n > 0 ? n : 'GO!'}<em>표적 ${cfg.quota}개 맞히면 통과${stage >= 4 ? ' · 좀비 주의' : ''}</em>`);
       if (n !== lastBeep && n >= 0) { lastBeep = n; sfx.beep(n === 0); }
-      if (countT <= -0.4) { state = 'play'; $('.cnt').textContent = ''; }
+      if (countT <= -0.4) { state = 'play'; setHtml($('.cnt'), ''); }
     }
     if (playing) {
       gameT += dt;
       while (schedI < sched.length && sched[schedI].t <= gameT) spawn(sched[schedI++]);
       const left = cfg.dur + bonusT - gameT;
-      const tc = $('.tc'); tc.textContent = Math.max(0, left).toFixed(1); tc.classList.toggle('low', left < 6 && stageKills < cfg.quota);
+      const tc = $('.tc'); setTxt(tc, Math.max(0, left).toFixed(1)); const low = left < 6 && stageKills < cfg.quota; if (tc._low !== low) { tc._low = low; tc.classList.toggle('low', low); }
       if (left < 5.5 && Math.ceil(left) !== lastBeep) { lastBeep = Math.ceil(left); sfx.beep(false); }
       if (left <= 0) stageEnd();
     }
@@ -674,7 +722,7 @@ export function boot(opts = {}) {
       adsP = damp(adsP, wantAds ? 1 : 0, g.id === 'sniper' ? 11 : 14, dt);
       if (playing && fireHeld && (g.auto || !firedOnce)) { const before = g.ammo; fire(); if (g.ammo !== before) firedOnce = true; }
       bloomS = Math.max(0, bloomS - dt * (fireHeld ? 0.02 : 0.09));
-      $('.rb i').style.width = (reloadT > 0 ? (1 - reloadT / reloadDur) * 100 : boltT > 0 ? (1 - boltT / g.rate) * 100 : 0) + '%';
+      setSt($('.rb i'), 'width', Math.round(reloadT > 0 ? (1 - reloadT / reloadDur) * 100 : boltT > 0 ? (1 - boltT / g.rate) * 100 : 0) + '%');
     }
     // 반동 회복
     const rec = Math.min(1, dt * 7);
@@ -692,7 +740,7 @@ export function boot(opts = {}) {
       breath = clamp(breath + (steady ? -dt / 3.2 : dt / 4), 0, 1);
       const amp = (steady ? 0.0006 : 0.0034) * (touch ? 0.55 : 1) * (breath <= 0 && holdBreath ? 2 : 1);
       sx = Math.sin(now * 0.9) * Math.cos(now * 0.53) * amp; sy = Math.sin(now * 1.3 + 1) * amp * 0.8;
-      $('.scope .br i').style.width = breath * 100 + '%';
+      setSt($('.scope .br i'), 'width', Math.round(breath * 100) + '%');
     }
     if (state === 'menu' || state === 'end' || state.startsWith('pause:menu')) {
       camera.position.set(Math.sin(now * 0.12) * 3, 2.3, -4);
@@ -704,19 +752,19 @@ export function boot(opts = {}) {
 
     // HUD
     if (playing || state === 'count' || state === 'inter') {
-      $('.scope').style.display = scoped ? 'block' : 'none';
-      const xh = $('.xh'); xh.style.opacity = scoped || (g.id === 'rifle' && adsP > 0.6) ? 0 : 1;
+      setSt($('.scope'), 'display', scoped ? 'block' : 'none');
+      const xh = $('.xh'); setSt(xh, 'opacity', scoped || (g.id === 'rifle' && adsP > 0.6) ? '0' : '1');
       const spread = g.spreadHip + (g.spreadAds - g.spreadHip) * adsP + bloomS;
-      const gap = 5 + spread / (camera.fov * Math.PI / 180) * H;
+      const gap = Math.round(5 + spread / (camera.fov * Math.PI / 180) * H);
       const is = xh.children;
-      is[0].style.top = (-gap - 10) + 'px'; is[1].style.top = gap + 'px'; is[2].style.left = (-gap - 10) + 'px'; is[3].style.left = gap + 'px';
+      setSt(is[0], 'top', (-gap - 10) + 'px'); setSt(is[1], 'top', gap + 'px'); setSt(is[2], 'left', (-gap - 10) + 'px'); setSt(is[3], 'left', gap + 'px');
       if (scoped && (rangeT -= dt) < 0) {
         rangeT = 0.12; ray.set(camera.position, camera.getWorldDirection(dir)); ray.far = 600;
         const rh = ray.intersectObjects(hittables.concat(world.colliders), false)[0];
-        $('.rng').textContent = rh ? Math.round(rh.distance) + 'M' : '---M';
+        setTxt($('.rng'), rh ? Math.round(rh.distance) + 'M' : '---M');
       }
       // 화면 밖 표적 화살표
-      const arws = root.querySelectorAll('.arw'); let ai = 0;
+      const arws = qc.arws || (qc.arws = [...root.querySelectorAll('.arw')]); let ai = 0;
       for (const tt of active) {
         if (tt.state !== 'up' || ai >= arws.length) continue;
         tt.o.pivot.getWorldPosition(tmpA); tmpA.y += 1.4;
@@ -725,10 +773,11 @@ export function boot(opts = {}) {
         if (inView || scoped) continue;
         let vx = s.x - W / 2, vy = s.y - H / 2; if (s.z > 1) { vx = -vx; vy = -vy; }
         const ang = Math.atan2(vy, vx), m = Math.min((W / 2 - 30) / Math.abs(Math.cos(ang) || 1e-3), (H / 2 - 30) / Math.abs(Math.sin(ang) || 1e-3));
-        const a = arws[ai++]; a.style.display = 'block'; a.style.left = (W / 2 + Math.cos(ang) * m - 9) + 'px'; a.style.top = (H / 2 + Math.sin(ang) * m - 8) + 'px'; a.style.transform = `rotate(${ang + Math.PI / 2}rad)`;
-        a.style.borderBottomColor = tt.type === 'far' ? '#ff2e88' : tt.type === 'gold' ? '#ffd23f' : '#22e5ff';
+        const a = arws[ai++]; setSt(a, 'display', 'block');
+        a.style.transform = `translate(${Math.round(W / 2 + Math.cos(ang) * m - 9)}px,${Math.round(H / 2 + Math.sin(ang) * m - 8)}px) rotate(${ang + Math.PI / 2}rad)`;
+        setSt(a, 'borderBottomColor', tt.type === 'far' ? '#ff2e88' : tt.type === 'gold' ? '#ffd23f' : tt.type === 'zombie' ? '#3ddc84' : '#22e5ff');
       }
-      for (; ai < arws.length; ai++) arws[ai].style.display = 'none';
+      for (; ai < arws.length; ai++) setSt(arws[ai], 'display', 'none');
     }
     if (msgT > 0 && (msgT -= dt) <= 0) $('.msg').style.opacity = 0;
     if (hmT > 0 && (hmT -= dt) <= 0) $('.hm').style.opacity = 0;
@@ -763,8 +812,11 @@ export function boot(opts = {}) {
       showPivot.visible = state !== 'end';
       if (g2.root.parent !== showPivot) menuGun();
       // 메뉴 상자 위 빈 공간에 총이 들어가도록 거리 계산
-      const box = root.querySelector('.panel.on .box');
-      const top = box ? Math.max(H * 0.22, box.getBoundingClientRect().top - root.getBoundingClientRect().top - 8) : H * 0.4;
+      if (root._menuTop == null || root._menuFor !== state) {
+        const box = root.querySelector('.panel.on .box');
+        root._menuTop = box ? Math.max(H * 0.22, box.getBoundingClientRect().top - root.getBoundingClientRect().top - 8) : H * 0.4; root._menuFor = state;
+      }
+      const top = root._menuTop;
       const tf = Math.tan(vmCam.fov * Math.PI / 360);
       const fitW = g2.length / (0.86 * 2 * tf * (W / H)), fitH = (g2.length * 0.3) / (0.86 * 2 * tf * (top / H));
       const d = Math.max(0.6, fitW, fitH);
@@ -788,14 +840,45 @@ export function boot(opts = {}) {
     for (const m of tracers) if (m.visible) { m.userData.life -= dt; m.material.opacity = Math.max(0, m.userData.life / 0.07); if (m.userData.life <= 0) m.visible = false; }
     for (const m of shells) if (m.visible) { const v = m.userData.v; v.y -= 7 * dt; m.position.addScaledVector(v, dt); m.rotation.x += m.userData.spin * dt; m.rotation.y += dt * 9; if ((m.userData.life -= dt) <= 0) m.visible = false; }
 
-    composer.render(dt);
+    if (TIERS[tier].bloom) composer.render(dt);
+    else {
+      renderer.autoClear = false; renderer.setRenderTarget(null); renderer.clear();
+      renderer.render(scene, camera); renderer.clearDepth(); renderer.render(vmScene, vmCam);
+    }
+  }
+
+  // 처음 한 번: 모든 표적·효과를 미리 만들고 셰이더를 컴파일해 둔다(첫 등장 때 끊김 방지)
+  function prewarm() {
+    const tmp = [];
+    for (const [type, n] of [['plate', 6], ['slider', 4], ['far', 2], ['gold', 2], ['drone', 4], ['zombie', 6]]) {
+      for (let i = 0; i < n; i++) { const o = getObj(type); o.pivot.position.set(i * 2 - 6, type === 'drone' ? 3 : 0, -12 - tmp.length); tmp.push(o); }
+    }
+    const vis = [...guns.map((g) => g.root), ...guns.map((g) => g.flash), ...glows, ...tracers, ...shells];
+    const was = vis.map((o) => o.visible);
+    vis.forEach((o) => { o.visible = true; });
+    for (const s2 of glows) s2.position.set(0, 1.5, -10);
+    for (const m of tracers) { m.position.set(0, 1.5, -10); m.scale.set(0.02, 0.02, 1); }
+    burst(new THREE.Vector3(0, 1.5, -10), 4, COL_SPARK, 1);
+    vmFlash.intensity = 1; worldFlash.intensity = 1;
+    $('.scope').style.display = 'block'; $('.hud').style.display = '';
+    camera.lookAt(0, 1, -12); camera.updateMatrixWorld();
+    try {
+      renderer.compile(scene, camera); renderer.compile(vmScene, vmCam);
+      composer.render(0.016);
+      renderer.autoClear = false; renderer.setRenderTarget(null); renderer.clear(); renderer.render(scene, camera); renderer.clearDepth(); renderer.render(vmScene, vmCam);
+    } catch (e) { /* 미지원이어도 게임은 진행 */ }
+    tmp.forEach(freeObj);
+    vis.forEach((o, i) => { o.visible = was[i]; });
+    vmFlash.intensity = 0; worldFlash.intensity = 0;
+    $('.scope').style.display = 'none'; $('.hud').style.display = 'none';
   }
 
   // 시작
   resize();
+  prewarm();
   $('.load').remove();
   const api = { open, exit, startGame, get state() { return state; }, get score() { return score; }, debug: { camera, get active() { return active; }, aim: (y, p) => { yaw = y; pitch = p; }, fire: () => fire(), setAds: (v) => { adsToggle = v; }, swap, guns, sched: () => sched, stage: (n) => beginStage(n) } };
-  if (location.hash === '#rgdebug') window.__rg = api;
+  if (/rgdebug/.test(location.hash)) window.__rg = api;
   open();
   return api;
 }
