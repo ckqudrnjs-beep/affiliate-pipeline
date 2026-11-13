@@ -228,7 +228,7 @@ RANK_JS = """
 (function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
 $r('renick').onclick=()=>{location.href='/profile'};
 async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST)).json();const me=myNick();
-$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>'}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
+$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>'}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
 window.submitScore=async function(score){score=Math.floor(score);let best=0;try{best=+localStorage.getItem('nr_best_'+G+'_'+KST)||0}catch(e){}
 if(score<=best){load();return}try{localStorage.setItem('nr_best_'+G+'_'+KST,score)}catch(e){}
 try{await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick()})})}catch(e){}load()};load()})();
@@ -237,7 +237,7 @@ try{await fetch('/api/score',{method:'POST',headers:{'content-type':'application
 RANK_PAGE_JS = """
 let cur=document.querySelector('[data-g]').dataset.g;const me=myNick();
 async function show(g){cur=g;document.querySelectorAll('[data-g]').forEach(b=>b.style.fontWeight=b.dataset.g===g?'800':'400');
-try{const r=await (await fetch('/api/score?game='+g+'&day='+KST)).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
+try{const r=await (await fetch('/api/score?game='+g+'&day='+KST)).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
 document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>show(b.dataset.g));show(cur);
 """
 
@@ -462,6 +462,39 @@ document.addEventListener('DOMContentLoaded',()=>{P.pull();P.render()});
 return P})();
 """
 
+# 관리자 페이지(/admin, 링크 없음·noindex). 비밀번호는 Cloudflare 비밀 변수 ADMIN_KEY, 이 브라우저 탭에만 잠깐 보관.
+ADMIN_BODY = """<h1>🔧 관리자</h1><p class="lead">테스터 프로필에 코인·스킨을 주고, 테스터로 지정하면 순위에 '테스터' 표시가 붙고, '순위 제외'를 켜면 공개 순위에서 빠져요. 바꾼 내용은 그 기기에서 사이트를 새로 열면 적용돼요.</p>
+<div class="card adm"><label>관리자 비밀번호 <input type="password" id="ak" autocomplete="off"></label>
+<form id="af"><input id="aq" placeholder="별명 일부 또는 복구 코드" maxlength="20"> <button class="share" type="submit">찾기</button></form><p id="am" class="muted"></p><div id="al"></div></div>
+<div class="card"><h2>최근 관리자 작업</h2><button class="share" type="button" id="alog">불러오기</button><ol id="alist" class="list"></ol></div>"""
+ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:block;margin-bottom:10px}.adm input{font:inherit;padding:8px 10px;border-radius:9px;border:2px solid #ffffff33;background:#0b0620;color:#fff;max-width:100%}
+.ap{border:2px solid #ffffff22;border-radius:12px;padding:12px;margin:10px 0}.ap h3{margin:0 0 6px}.ap .row{margin:8px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ap .own{display:flex;flex-wrap:wrap;gap:6px}.ap .own label{display:inline-flex;gap:4px;margin:0;padding:4px 8px;border:1px solid #ffffff33;border-radius:8px;font-size:13px}.ap select{font:inherit;padding:6px;border-radius:8px;background:#0b0620;color:#fff}"""
+ADMIN_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak');try{ak.value=sessionStorage.getItem('nr_admk')||''}catch(e){}
+ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}};
+const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)$('am').textContent=j.msg||('오류 '+r.status);return r.ok?j:null};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ITEMS=SKINS.filter(k=>k.p>0).map(k=>['c:'+k.id,'🎨 '+k.name]).concat(DESIGNS.map(d=>['d:'+d.g+':'+d.id,d.icon+' '+d.name+(d.leg?' (전설)':'')]));
+function card(it){const d=it.data||{},own=d.own||{},des=d.des||{};const el=document.createElement('div');el.className='ap';
+ el.innerHTML=`<h3>${esc(it.nick)} ${it.tester?'<span class="tag">테스터</span>':''}${it.hide?' <span class="tag">순위 제외</span>':''}</h3><small class="muted">🪙 ${d.coins||0} · 출석 ${d.days||0}일 · 마지막 저장 ${esc(it.updated)}</small>
+ <div class="row">코인 <input type="number" class="co" min="0" max="${BONUS_MAX}" value="${d.coins||0}" style="width:80px"> <button class="share" data-x="coins">코인 저장</button> <small class="muted">최대 ${BONUS_MAX}</small></div>
+ <div class="row"><b>스킨 열기</b></div><div class="own">${ITEMS.map(([k,n])=>`<label><input type="checkbox" value="${k}"${own[k]?' checked':''}>${esc(n)}</label>`).join('')}</div>
+ <div class="row"><button class="share" data-x="all">전부 체크</button><button class="share" data-x="own">스킨 저장</button></div>
+ <div class="row">적용 ${Object.keys(DGAMES).map(g=>`${DGAMES[g][0]} <select data-g="${g}"><option value="base">${DGAMES[g][1]}</option>${DESIGNS.filter(x=>x.g===g).map(x=>`<option value="${x.id}"${des[g]===x.id?' selected':''}>${x.icon} ${x.name}</option>`).join('')}</select>`).join(' ')}
+ 색 <select class="sk">${SKINS.map(k=>`<option value="${k.id}"${(d.skin||'cy')===k.id?' selected':''}>${k.name}</option>`).join('')}</select> <button class="share" data-x="apply">적용 저장</button></div>
+ <div class="row"><button class="share" data-x="tester">${it.tester?'테스터 해제':'테스터로 지정'}</button> <button class="share" data-x="hide">${it.hide?'순위 제외 끄기 (지금: 순위에서 빠짐)':'순위 제외 켜기 (지금: 순위에 보임)'}</button></div>`;
+ const done=j=>{if(j&&j.item){el.replaceWith(card(j.item));$('am').textContent='저장했어요. 그 기기에서 사이트를 새로 열면 적용돼요.'}};
+ el.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{const x=b.dataset.x;
+  if(x==='all'){el.querySelectorAll('.own input').forEach(c=>c.checked=true);return}
+  if(x==='coins')return done(await api({a:'set',h:it.h,coins:+el.querySelector('.co').value}));
+  if(x==='own'){const cs=[...el.querySelectorAll('.own input')];return done(await api({a:'set',h:it.h,own:cs.filter(c=>c.checked).map(c=>c.value),unown:cs.filter(c=>!c.checked).map(c=>c.value)}))}
+  if(x==='apply'){const des={},need=[];el.querySelectorAll('select[data-g]').forEach(s=>{des[s.dataset.g]=s.value;if(s.value!=='base')need.push('d:'+s.dataset.g+':'+s.value)});const sk=el.querySelector('.sk').value;if(sk!=='cy')need.push('c:'+sk);return done(await api({a:'set',h:it.h,des,skin:sk,own:need}))}
+  if(x==='tester')return done(await api({a:'tester',h:it.h,on:!it.tester}));
+  if(x==='hide')return done(await api({a:'hide',h:it.h,on:!it.hide}))});
+ return el}
+$('af').onsubmit=async e=>{e.preventDefault();$('am').textContent='찾는 중…';$('al').innerHTML='';const j=await api({a:'find',q:$('aq').value});if(!j)return;$('am').textContent=j.list.length?j.list.length+'개 찾았어요':'찾은 프로필이 없어요';j.list.forEach(it=>$('al').appendChild(card(it)))};
+$('alog').onclick=async()=>{const j=await api({a:'log'});if(j)$('alist').innerHTML=j.list.map(r=>`<li>${esc(r.t)} · ${esc(r.act)} · ${esc(r.nick)} <small class="muted">${esc(r.detail)}</small></li>`).join('')||'<li>아직 없어요</li>'}})();"""
+
 PROFILE_PAGE_JS = r"""
 Profile.page=function(pg){if(pg._busy)return;const own=(window.Bonus&&Bonus.state().own)||{},n=Profile.nick(),code=Profile.code();
  const cur=n?n.split(' ')[0]:'🐱',name=n?n.slice(n.indexOf(' ')+1):'';
@@ -540,7 +573,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}</style>{head}</head><body>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스<span class="hs">게임</span></a><a href="/rank">순위</a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크, 보유 코인">🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
@@ -647,6 +680,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY, COMMON_JS + PROFILE_PAGE_JS, noindex=True)
     write("bonus", f"출석체크·스킨 상점 | {cfg['siteName']}", "5락실 출석체크. 하루 한 번 출석하면 코인을 받아 이어하기나 스킨(캐릭터 겉모습)에 써요. 게임은 모두 무료.",
           BONUS_BODY, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY, ADMIN_JS, noindex=True)
 
     if has_report:
         def li(x, extra=""):
