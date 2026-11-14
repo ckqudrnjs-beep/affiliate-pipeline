@@ -335,9 +335,9 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}{DY.CSS}</style></head><body>
 <div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}guide.html">글</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}index.html#picks">삼촌의 선택</a><a href="{root}index.html#calcs">계산기</a><a href="{root}prices.html">가격 기록</a><a href="{root}report.html">물가 리포트</a><a href="{root}faq.html">질문</a></nav></div></header>
-{hero}<main class="wrap">{body}{adfit_slot(ads)}</main>
-<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
+<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
+{hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
+<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS}</script>
 </body></html>"""
 
@@ -468,7 +468,7 @@ var b=document.createElement('span');b.className='foldbtn';b.setAttribute('aria-
 head.setAttribute('role','button');head.setAttribute('tabindex','0');head.setAttribute('aria-expanded',open?'true':'false');
 function t(e){if(e&&e.target.closest('a'))return;var o=el.classList.toggle('open');head.setAttribute('aria-expanded',o?'true':'false');}
 head.addEventListener('click',t);head.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});}
-document.querySelectorAll('main>section').forEach(function(s){var h=s.querySelector(':scope>.sechead');if(h&&!s.hidden)setup(s,h,s.id==='today');});
+document.querySelectorAll('main>section').forEach(function(s){var h=s.querySelector(':scope>.sechead');if(h&&!s.hidden)setup(s,h,s.id==='today'||s.id==='calcs');});
 function openTo(id){var el=id&&document.getElementById(id);if(!el)return;
 for(var n=el;n;n=n.parentElement){if(n.classList&&n.classList.contains('fold')&&!n.classList.contains('open')){n.classList.add('open');var h=n.querySelector(':scope>.sechead,:scope>h3');if(h)h.setAttribute('aria-expanded','true');}}
 el.scrollIntoView();}
@@ -538,18 +538,19 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     days = days if days is not None else DY.load_all()
     latest = days[0] if days else None
     body = f"""{DY.today_block(latest)}
-{N.home_block(news, sales)}
+<section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
+<div class="toolrow">{tools}</div>{qrow}</section>
 {A.home_block(A.load())}
 {RC.home_block(RC.load())}
-{picks_sec}
-{new_sec}
-{all_sec}
+{N.home_block(news, sales)}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
 <div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
 <div><b>기다림에도 값을 매깁니다</b><p>해외 배송을 하루 더 기다릴 때마다 얼마를 아끼는지 보여 드립니다. 몇천 원 차이면 빠른 배송을 권합니다.</p></div>
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
-<section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
-<div class="toolrow">{tools}</div>{qrow}</section>
+<!--ADFIT-->
+{picks_sec}
+{new_sec}
+{all_sec}
 <script>window.PRICES={prices};{N.HOME_JS}</script>
 {DY.data_script(latest, days, BASE)}
 <script>{FOLD_JS}{ALL_JS}</script>"""
@@ -618,8 +619,10 @@ ABOUT = """<h1>돈 줍는 삼촌 소개</h1>
 <p class="note">'돈 줍는 삼촌'은 가전 전기요금, 해외 직구 세금, 난방비처럼 물건을 사기 전에 궁금한 것을 숫자로 풀어 보는 개인 사이트입니다. 같은 돈을 써도 덜 새게 쓰는 방법을 조카에게 알려 주듯 쉽게 적는 것이 목표예요.</p>
 <h2>여기서 할 수 있는 것</h2>
 <ul class="note">
-<li><a href="guide.html">삼촌의 글</a>: 생활비·가전·직구에 관한 계산 글</li>
 <li><a href="index.html#calcs">무료 계산기</a>: 전기요금, 알리 직구 실제가, 난방기기 비교, 대기전력, 가습기 종류별 요금</li>
+<li><a href="guide.html">삼촌의 글</a>: 생활비·가전·직구에 관한 계산 글</li>
+<li><a href="quiz.html">오늘의 얼마게</a>: 하루 한 문제, 생활 물가 숫자 맞히기</li>
+<li><a href="report.html">물가 리포트</a>: 기름값·환율·장바구니 시세를 공공 자료로 정리</li>
 <li><a href="prices.html">알리 가격 기록</a>: 소개한 물건의 가격을 매일 기록하고, 지금이 싼 편인지 판정</li>
 <li><a href="news.html">삼촌 소식</a>: 날짜별 살림 소식</li>
 <li><a href="index.html#picks">삼촌의 선택</a>: 가격을 계산해 보고 고른 물건</li>
@@ -629,11 +632,24 @@ ABOUT = """<h1>돈 줍는 삼촌 소개</h1>
 <li>숫자는 출처(한전 요금표, 관세청 기준, 판매 페이지 가격)와 기준 날짜를 함께 적습니다.</li>
 <li>직접 써 보지 않은 물건을 써 본 것처럼 쓰지 않습니다.</li>
 <li>가격은 바뀌므로 구매 전 판매 페이지에서 최종 가격을 확인하도록 안내합니다.</li>
+<li>틀린 숫자를 알려 주시면 확인 후 고치고, 고친 날짜를 글에 적어 둡니다.</li>
+<li>의약품·건강 효능처럼 전문 판단이 필요한 내용은 다루지 않습니다.</li>
 </ul>
 <h2>광고와 제휴</h2>
 <p class="note">사이트 운영비는 광고와 제휴 수수료로 충당합니다. 상품 링크는 쿠팡 파트너스·알리익스프레스 어필리에이트·네이버 쇼핑 커넥트 제휴 링크이며, 링크가 있는 곳에는 [광고] 표시를 붙입니다. 수수료를 받는다고 추천 순서나 계산 결과를 바꾸지 않습니다.</p>
 <h2>운영자</h2>
 <p class="note">돈 줍는 삼촌 (사업자 운영). 유튜브·인스타그램에서도 같은 이름으로 활동합니다. 문의는 <a href="contact.html">문의 페이지</a>로 보내 주세요.</p>"""
+
+
+TERMS = """<h1>이용약관</h1>
+<p class="lede">시행일: 2026-11-15</p>
+<h2>1. 목적</h2><p class="note">이 약관은 돈 줍는 삼촌(https://don3chon.com, 이하 '사이트')이 제공하는 계산기, 글, 물가 리포트, 퀴즈, 가격 기록 서비스의 이용 조건을 정합니다.</p>
+<h2>2. 서비스</h2><p class="note">모든 서비스는 무료이며 회원 가입 없이 이용합니다. 계산기와 글의 숫자는 공개된 요금표·공공 자료·판매 페이지 가격을 기준 날짜와 함께 정리한 참고 정보입니다. 서비스 내용은 예고 없이 바뀌거나 중단될 수 있습니다.</p>
+<h2>3. 정보의 한계</h2><p class="note">요금 체계, 세율, 상품 가격은 수시로 바뀝니다. 계산 결과는 입력값과 기준 날짜에 따른 추정치이므로, 실제 청구액·세금·결제 금액은 해당 기관이나 판매처에서 최종 확인해 주세요. 사이트는 이 정보를 근거로 한 결정의 결과에 대해 고의나 중대한 과실이 없는 한 책임지지 않습니다.</p>
+<h2>4. 광고와 제휴 링크</h2><p class="note">사이트에는 제3자 광고와 쿠팡 파트너스·알리익스프레스 어필리에이트·네이버 쇼핑 커넥트 제휴 링크가 있으며, 제휴 링크가 있는 곳에는 [광고] 표시를 붙입니다. 사이트는 물건을 직접 팔지 않으므로 주문·배송·환불은 해당 쇼핑몰의 약관과 고객센터를 따릅니다.</p>
+<h2>5. 금지 행위</h2><ul class="note"><li>자동 프로그램으로 페이지를 대량 수집하거나 서버에 부담을 주는 행위</li><li>광고나 제휴 링크를 반복해서 누르는 등 부정한 클릭</li><li>사이트의 글·표·이미지를 출처 없이 복제·배포하는 행위</li></ul>
+<h2>6. 저작권</h2><p class="note">사이트의 글, 계산 방식, 표, 이미지는 운영자에게 저작권이 있습니다. 출처(링크)를 밝힌 짧은 인용과 공유는 자유롭게 하셔도 됩니다.</p>
+<h2>7. 문의</h2><p class="note">약관에 관한 문의는 <a href="contact.html">문의 페이지</a>로 보내 주세요. 약관이 바뀌면 이 페이지에 시행일과 함께 알립니다.</p>"""
 
 
 def contact_body() -> str:
@@ -676,6 +692,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
         PR.page_body(products, HIST) + tg_box(), path="prices.html"), encoding="utf-8")
     (o / "about.html").write_text(page(f"소개 | {BRAND}", "돈 줍는 삼촌은 사기 전에 한 번 계산해 보는 살림 사이트입니다. 운영 원칙과 광고·제휴 안내.", ABOUT, path="about.html"), encoding="utf-8")
+    (o / "terms.html").write_text(page(f"이용약관 | {BRAND}", "돈 줍는 삼촌 이용약관: 서비스 범위, 정보의 한계, 광고·제휴 링크, 금지 행위, 저작권.", TERMS, path="terms.html"), encoding="utf-8")
     (o / "contact.html").write_text(page(f"문의 | {BRAND}", "돈 줍는 삼촌에 글 오류, 계산기 문제, 제휴 문의를 보내는 방법.", contact_body(), path="contact.html"), encoding="utf-8")
     client = adsense_client()
     if client:  # ads.txt: 게시자 ID 가 있을 때만
@@ -768,7 +785,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
                + ([("recipe.html", max(max(r["date"], r["priceDate"]) for r in recs))] if recs else [])
                + [(f"recipe/{r['slug']}.html", max(r.get("updated", r["date"]), r["priceDate"])) for r in recs]
                + ([] if PRODUCT_NOINDEX else [(f"p/{p['slug']}.html", today) for p in products])
-               + [("about.html", SITE_PAGES), ("contact.html", SITE_PAGES), ("privacy.html", SITE_PAGES)])
+               + [("about.html", SITE_PAGES), ("contact.html", SITE_PAGES), ("terms.html", SITE_PAGES), ("privacy.html", SITE_PAGES)])
     (o / "sitemap.xml").write_text(S.sitemap(BASE, entries), encoding="utf-8")
     S.clean_urls(o, BASE)
     (o / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n", encoding="utf-8")
