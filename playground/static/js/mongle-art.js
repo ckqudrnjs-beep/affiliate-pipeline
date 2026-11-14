@@ -1,4 +1,4 @@
-// 몽글숲 아지트 — 코드로 그리는 그림 모음 (외부 이미지 없음)
+// 몽글숲 아지트 — 그림 모음. 몽글이 몸은 3D 렌더 아틀라스(/img/mongle/mongle3d.webp), 나머지는 코드로 그림
 // 모든 함수는 (ctx, x, y, s, opt) 형태. s = 배율(1 = 기본 크기 약 100px)
 (function (W) {
   'use strict';
@@ -30,6 +30,18 @@
 
   // ── 몽글이: stage 0 씨앗 · 1 새싹 · 2 꼬마 · 3 어른(갈래 branch: 'power'|'wise'|'heart')
   // opt: {pal, stage, branch, t(시간), blink, look(-1..1), mood('happy'|'idle'|'sleep'), hat, scarf, bag}
+  // ── 3D 렌더 몸 아틀라스 (원본 src3d/chars/render.html renderMongle, 칸 400x420, 1단위=3px, 기준점 200,395)
+  const M3 = { img: null, ok: false, pals: ['mint', 'peach', 'sky', 'lilac'], cb: [] };
+  try { const im = new Image(); im.onload = () => { M3.ok = true; M3.cb.forEach(f => { try { f(); } catch (e) {} }); }; im.src = '/img/mongle/mongle3d.webp?v=1'; M3.img = im; } catch (e) {}
+  function draw3d(c, S, pal, st, br) {
+    if (!M3.ok) return false; const r = M3.pals.indexOf(pal); if (r < 0 || st < 1) return false;
+    const col = st === 1 ? 0 : st === 2 ? 1 : br === 'power' ? 2 : br === 'wise' ? 3 : 4;
+    c.drawImage(M3.img, col * 400, r * 420, 400, 420, -200 / 3 * S, -395 / 3 * S, 400 / 3 * S, 420 / 3 * S);
+    if (st === 3 && br === 'wise') glow(c, 0, -(st === 3 ? 74 : 66) * S - 18 * S, 22 * S, '#fff0a0', 0.4);
+    return true;
+  }
+  A.ready3d = () => M3.ok;
+  A.on3d = f => { if (M3.ok) f(); else M3.cb.push(f); };
   A.mongle = function (c, x, y, s, opt) {
     opt = opt || {};
     const P = A.PAL[opt.pal || 'mint'];
@@ -49,49 +61,52 @@
     const S = s * size;
     c.translate(0, bob * 0.4);
     c.scale(1 / sq, sq);
-    // 발
-    for (const sx of [-1, 1]) {
-      c.save(); c.translate(sx * 17 * S, -4 * S);
-      const fg = c.createLinearGradient(0, -8 * S, 0, 6 * S); fg.addColorStop(0, P.mid); fg.addColorStop(1, P.lo);
-      c.fillStyle = fg; c.strokeStyle = P.line; c.lineWidth = 2.4 * s;
-      c.beginPath(); c.ellipse(0, 0, 11 * S, 7 * S, 0, 0, TAU); c.fill(); c.stroke(); c.restore();
-    }
-    // 몸 (아래가 넓은 찹쌀떡 모양)
     const H = st === 3 ? 74 : 66, Wd = st === 3 ? 44 : 42;
-    c.beginPath();
-    c.moveTo(0, -H * S);
-    c.bezierCurveTo(26 * S, -H * S, Wd * S, -46 * S, Wd * S, -22 * S);
-    c.bezierCurveTo(Wd * S, -4 * S, 26 * S, 2 * S, 0, 2 * S);
-    c.bezierCurveTo(-26 * S, 2 * S, -Wd * S, -4 * S, -Wd * S, -22 * S);
-    c.bezierCurveTo(-Wd * S, -46 * S, -26 * S, -H * S, 0, -H * S);
-    c.closePath();
-    const bg = c.createRadialGradient(-14 * S, -48 * S, 4 * S, 0, -26 * S, 56 * S);
-    bg.addColorStop(0, P.hi); bg.addColorStop(0.45, P.mid); bg.addColorStop(1, P.lo);
-    c.fillStyle = bg; c.fill();
-    c.save(); c.clip();
-    // 배 무늬
-    const bl = c.createRadialGradient(0, -12 * S, 2 * S, 0, -12 * S, 26 * S);
-    bl.addColorStop(0, rgba(P.belly.length === 7 ? P.belly : '#ffffff', 0.95)); bl.addColorStop(1, rgba(P.belly, 0));
-    c.fillStyle = bl; c.beginPath(); c.ellipse(0, -10 * S, 26 * S, 20 * S, 0, 0, TAU); c.fill();
-    // 오른쪽 아래 그늘 + 테두리 빛(림 라이트)
-    const sd = c.createLinearGradient(-Wd * S, 0, Wd * S, 0);
-    sd.addColorStop(0.55, 'rgba(0,0,0,0)'); sd.addColorStop(1, rgba(P.line, 0.22));
-    c.fillStyle = sd; c.fillRect(-60 * S, -90 * S, 120 * S, 100 * S);
-    c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 3 * S;
-    c.beginPath(); c.arc(-4 * S, -26 * S, 38 * S, -2.6, -1.9); c.stroke();
-    c.restore();
-    c.strokeStyle = P.line; c.lineWidth = 2.6 * s; c.lineJoin = 'round';
-    c.stroke();
-    // 팔(작은 손)
-    const wave = opt.mood === 'happy' ? Math.sin(t * 8) * 0.35 : 0;
-    for (const sx of [-1, 1]) {
-      c.save(); c.translate(sx * (Wd - 3) * S, -24 * S); c.rotate(sx * (0.5 + (sx > 0 ? wave : 0)));
-      const ag = c.createLinearGradient(0, -6 * S, 0, 8 * S); ag.addColorStop(0, P.mid); ag.addColorStop(1, P.lo);
-      c.fillStyle = ag; c.strokeStyle = P.line; c.lineWidth = 2.2 * s;
-      c.beginPath(); c.ellipse(sx * 6 * S, 4 * S, 6.5 * S, 9 * S, 0, 0, TAU); c.fill(); c.stroke(); c.restore();
+    // 3D 렌더 몸(발·몸·팔·새싹). 못 불러왔으면 예전 2D 그림.
+    if (!draw3d(c, S, opt.pal || 'mint', st, opt.branch)) {
+      // 발
+      for (const sx of [-1, 1]) {
+        c.save(); c.translate(sx * 17 * S, -4 * S);
+        const fg = c.createLinearGradient(0, -8 * S, 0, 6 * S); fg.addColorStop(0, P.mid); fg.addColorStop(1, P.lo);
+        c.fillStyle = fg; c.strokeStyle = P.line; c.lineWidth = 2.4 * s;
+        c.beginPath(); c.ellipse(0, 0, 11 * S, 7 * S, 0, 0, TAU); c.fill(); c.stroke(); c.restore();
+      }
+      // 몸 (아래가 넓은 찹쌀떡 모양)
+      c.beginPath();
+      c.moveTo(0, -H * S);
+      c.bezierCurveTo(26 * S, -H * S, Wd * S, -46 * S, Wd * S, -22 * S);
+      c.bezierCurveTo(Wd * S, -4 * S, 26 * S, 2 * S, 0, 2 * S);
+      c.bezierCurveTo(-26 * S, 2 * S, -Wd * S, -4 * S, -Wd * S, -22 * S);
+      c.bezierCurveTo(-Wd * S, -46 * S, -26 * S, -H * S, 0, -H * S);
+      c.closePath();
+      const bg = c.createRadialGradient(-14 * S, -48 * S, 4 * S, 0, -26 * S, 56 * S);
+      bg.addColorStop(0, P.hi); bg.addColorStop(0.45, P.mid); bg.addColorStop(1, P.lo);
+      c.fillStyle = bg; c.fill();
+      c.save(); c.clip();
+      // 배 무늬
+      const bl = c.createRadialGradient(0, -12 * S, 2 * S, 0, -12 * S, 26 * S);
+      bl.addColorStop(0, rgba(P.belly.length === 7 ? P.belly : '#ffffff', 0.95)); bl.addColorStop(1, rgba(P.belly, 0));
+      c.fillStyle = bl; c.beginPath(); c.ellipse(0, -10 * S, 26 * S, 20 * S, 0, 0, TAU); c.fill();
+      // 오른쪽 아래 그늘 + 테두리 빛(림 라이트)
+      const sd = c.createLinearGradient(-Wd * S, 0, Wd * S, 0);
+      sd.addColorStop(0.55, 'rgba(0,0,0,0)'); sd.addColorStop(1, rgba(P.line, 0.22));
+      c.fillStyle = sd; c.fillRect(-60 * S, -90 * S, 120 * S, 100 * S);
+      c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 3 * S;
+      c.beginPath(); c.arc(-4 * S, -26 * S, 38 * S, -2.6, -1.9); c.stroke();
+      c.restore();
+      c.strokeStyle = P.line; c.lineWidth = 2.6 * s; c.lineJoin = 'round';
+      c.stroke();
+      // 팔(작은 손)
+      const wave = opt.mood === 'happy' ? Math.sin(t * 8) * 0.35 : 0;
+      for (const sx of [-1, 1]) {
+        c.save(); c.translate(sx * (Wd - 3) * S, -24 * S); c.rotate(sx * (0.5 + (sx > 0 ? wave : 0)));
+        const ag = c.createLinearGradient(0, -6 * S, 0, 8 * S); ag.addColorStop(0, P.mid); ag.addColorStop(1, P.lo);
+        c.fillStyle = ag; c.strokeStyle = P.line; c.lineWidth = 2.2 * s;
+        c.beginPath(); c.ellipse(sx * 6 * S, 4 * S, 6.5 * S, 9 * S, 0, 0, TAU); c.fill(); c.stroke(); c.restore();
+      }
+      // 머리 위 잎(단계·갈래별)
+      drawSprout(c, 0, -H * S + 2 * S, S, P, st, opt.branch, t);
     }
-    // 머리 위 잎(단계·갈래별)
-    drawSprout(c, 0, -H * S + 2 * S, S, P, st, opt.branch, t);
     // 얼굴
     const lk = (opt.look || 0) * 3 * S;
     const blink = opt.mood === 'sleep' || (opt.blink && opt.blink > 0);

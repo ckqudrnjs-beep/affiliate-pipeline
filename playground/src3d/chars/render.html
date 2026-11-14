@@ -231,5 +231,78 @@ window.renderBoss = async function () {
   });
   return out.toDataURL('image/png');
 };
+
+// ---------- 몽글이(몽글숲 아지트): 직접 만든 3D 찹쌀떡 몸 + 발 + 팔 + 새싹. 얼굴·꾸미기는 게임에서 2D로 얹는다 ----------
+// 칸 400x420, 1단위 = 3px, 발 기준점 (200,395). 순서: 팔레트(mint,peach,sky,lilac) x 모습(1, 2, 3power, 3wise, 3heart)
+const MPAL = {
+  mint: { hi: '#f4fff6', mid: '#a8ecc8', lo: '#5fbf98', line: '#2f7d68', belly: '#fffbe9', leaf: '#7fd36a', leafLo: '#3f9a47' },
+  peach: { hi: '#fff6ef', mid: '#ffc4a8', lo: '#ee8f78', line: '#a5524a', belly: '#fff6e6', leaf: '#ffb35c', leafLo: '#d1712c' },
+  sky: { hi: '#f4fbff', mid: '#b4dcff', lo: '#6fa6e8', line: '#3b5f9e', belly: '#fffaf0', leaf: '#9be0ff', leafLo: '#4b9fd1' },
+  lilac: { hi: '#fbf5ff', mid: '#d9c2ff', lo: '#9f80e6', line: '#5b4596', belly: '#fff8f2', leaf: '#ff9ccf', leafLo: '#c45a92' },
+};
+const MFORMS = [[1, null], [2, null], [3, 'power'], [3, 'wise'], [3, 'heart']];
+function softMat(extra) { return new THREE.MeshPhysicalMaterial(Object.assign({ vertexColors: true, roughness: .55, sheen: .8, sheenRoughness: .5, sheenColor: new THREE.Color(0xffffff), clearcoat: .25, clearcoatRoughness: .4 }, extra || {})); }
+function vcol(geo, fn) { const p = geo.attributes.position, n = geo.attributes.normal, c = new Float32Array(p.count * 3), col = new THREE.Color(); for (let i = 0; i < p.count; i++) { fn(col, p.getX(i), p.getY(i), p.getZ(i), n.getX(i), n.getY(i), n.getZ(i)); c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; } geo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
+function ol2(m, col, k) { const om = new THREE.MeshBasicMaterial({ color: col, side: THREE.BackSide }); const s = new THREE.Mesh(m.geometry, om); s.scale.setScalar(k || 1.04); m.add(s); }
+function leafMesh(len, wid, P) {
+  const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.bezierCurveTo(len * .3, wid, len * .75, wid, len, 0); sh.bezierCurveTo(len * .75, -wid * .8, len * .3, -wid * .8, 0, 0);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: .6, bevelEnabled: true, bevelThickness: .6, bevelSize: .8, bevelSegments: 3, curveSegments: 16 });
+  const p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, p.getZ(i) + Math.sin(x / len * Math.PI) * len * .12); } geo.computeVertexNormals();
+  const hi = new THREE.Color(P.leaf), lo = new THREE.Color(P.leafLo);
+  vcol(geo, (c, x, y) => c.copy(lo).lerp(hi, THREE.MathUtils.clamp(.5 + y / wid * .6, 0, 1)));
+  const m = new THREE.Mesh(geo, softMat({ roughness: .4, sheen: .3 })); ol2(m, new THREE.Color(P.leafLo).multiplyScalar(.55), 1.0); return m;
+}
+function flowerMesh(r, a, b, n) {
+  const g = new THREE.Group();
+  for (let i = 0; i < n; i++) { const pg = new THREE.SphereGeometry(r * .5, 20, 14); pg.scale(1, 1.6, .45); const ca = new THREE.Color(a), cb = new THREE.Color(b); vcol(pg, (c, x, y) => c.copy(cb).lerp(ca, THREE.MathUtils.clamp(.5 + y / r, 0, 1))); const pm = new THREE.Mesh(pg, softMat({ roughness: .35 })); const h = new THREE.Group(); pm.position.y = r * .75; h.add(pm); h.rotation.z = i / n * Math.PI * 2; g.add(h); }
+  const c = new THREE.Mesh(new THREE.SphereGeometry(r * .38, 20, 14), new THREE.MeshStandardMaterial({ color: 0xffcf4d, roughness: .4 })); c.position.z = r * .2; g.add(c); return g;
+}
+function acornMesh(s) {
+  const g = new THREE.Group(); const nut = new THREE.SphereGeometry(12 * s, 28, 20); const p = nut.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < 0) p.setY(i, y * 1.9); } nut.computeVertexNormals();
+  const n = new THREE.Mesh(nut, new THREE.MeshPhysicalMaterial({ color: 0xd27e3c, roughness: .3, clearcoat: .8 })); n.position.y = -2 * s; g.add(n); ol2(n, 0x5f3216, 1.04);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(15 * s, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8a5e34, roughness: .9 })); cap.scale.y = .62; cap.position.y = -1 * s; g.add(cap); ol2(cap, 0x5f3216, 1.04);
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(1.4 * s, 1.6 * s, 7 * s, 10), new THREE.MeshStandardMaterial({ color: 0x5f3216 })); st.position.set(1.5 * s, 10 * s, 0); st.rotation.z = -.4; g.add(st); return g;
+}
+function mongleModel(pal, stage, branch) {
+  const P = MPAL[pal], g = new THREE.Group(), H = stage === 3 ? 74 : 66, Wd = stage === 3 ? 44 : 42;
+  // 몸: 옆모습 윤곽을 돌려 만든 찹쌀떡 (y 위가 +)
+  const prof = [[0, -2], [22, -1.5], [Wd - 6, 4], [Wd, 20], [Wd - 2, 34], [Wd * .78, 48], [26, H - 10], [14, H - 2], [0, H]];
+  const curve = new THREE.CatmullRomCurve3(prof.map(([x, y]) => new THREE.Vector3(x, y, 0)));
+  const pts = curve.getPoints(40).map(v => new THREE.Vector2(Math.max(0, v.x), v.y)); pts[0].x = 0; pts[pts.length - 1].x = 0;
+  const bgeo = new THREE.LatheGeometry(pts, 64); bgeo.scale(1, 1, .82); bgeo.computeVertexNormals();
+  const hi = new THREE.Color(P.hi), mid = new THREE.Color(P.mid), lo = new THREE.Color(P.lo), bel = new THREE.Color(P.belly);
+  vcol(bgeo, (c, x, y, z, nx, ny, nz) => { const t = THREE.MathUtils.clamp(y / H, 0, 1); c.copy(lo).lerp(mid, THREE.MathUtils.smoothstep(t, 0, .45)).lerp(hi, THREE.MathUtils.smoothstep(t, .55, 1) * .6);
+    const bd = Math.hypot(x / 27, (y - 16) / 19); if (nz > .15 && bd < 1) c.lerp(bel, Math.min(1, (1 - bd) * 1.6) * Math.min(1, nz * 1.4) * .9); });
+  const body = new THREE.Mesh(bgeo, softMat()); ol2(body, P.line, 1.035); g.add(body);
+  // 발·팔
+  const limbMat = () => softMat();
+  for (const sx of [-1, 1]) {
+    const fg = new THREE.SphereGeometry(1, 24, 16); fg.scale(11, 7, 9); vcol(fg, (c, x, y) => c.copy(lo).lerp(mid, THREE.MathUtils.clamp(.5 + y / 14, 0, 1)));
+    const f = new THREE.Mesh(fg, limbMat()); f.position.set(sx * 17, 3, 16); ol2(f, P.line, 1.06); g.add(f);
+    const ag = new THREE.SphereGeometry(1, 24, 16); ag.scale(6.5, 9, 6); vcol(ag, (c, x, y) => c.copy(lo).lerp(mid, THREE.MathUtils.clamp(.5 + y / 18, 0, 1)));
+    const a = new THREE.Mesh(ag, limbMat()); a.position.set(sx * (Wd + 1), 22, 6); a.rotation.z = sx * .5; ol2(a, P.line, 1.07); g.add(a);
+  }
+  // 새싹
+  const sp = new THREE.Group(); sp.position.set(0, H - 2, 0); g.add(sp);
+  const stem = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, -2, 0), new THREE.Vector3(2, 8, 0), new THREE.Vector3(0, 14, 0)), 12, 1.5, 8), new THREE.MeshStandardMaterial({ color: P.leafLo, roughness: .6 })); sp.add(stem);
+  const addLeaf = (len, wid, ang, y) => { const l = leafMesh(len, wid, P); const h = new THREE.Group(); h.position.set(0, y, 0); h.rotation.z = -ang; h.add(l); l.position.z = -.3; sp.add(h); };
+  if (stage === 1) { addLeaf(16, 6, -2.6, 13); addLeaf(16, 6, -.5, 13); }
+  else if (stage === 2) { addLeaf(22, 8, -2.7, 13); addLeaf(22, 8, -.45, 13); addLeaf(14, 5, -1.6, 14); }
+  else { addLeaf(24, 8.5, -2.75, 13); addLeaf(24, 8.5, -.4, 13);
+    if (branch === 'power') { const a = acornMesh(.75); a.position.set(0, 20, 2); sp.add(a); }
+    else if (branch === 'wise') { const fl = flowerMesh(9, '#fff6b8', '#ffd24a', 5); fl.position.set(0, 21, 3); sp.add(fl); }
+    else { const fl = flowerMesh(9, '#ffd1e3', '#ff7fae', 6); fl.position.set(0, 21, 3); sp.add(fl); } }
+  return g;
+}
+window.renderMongle = async function () {
+  const W = 400, Hc = 420, PPU = 3, AX = 200, AY = 395, pals = Object.keys(MPAL);
+  const out = document.createElement('canvas'); out.width = W * MFORMS.length; out.height = Hc * pals.length; const o = out.getContext('2d');
+  const rr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rr.setSize(W * SS, Hc * SS); rr.outputColorSpace = THREE.SRGBColorSpace; rr.toneMapping = THREE.NeutralToneMapping; rr.setClearColor(0, 0);
+  const sc = new THREE.Scene(); const pm = new THREE.PMREMGenerator(rr); sc.environment = pm.fromScene(new RoomEnvironment(), .04).texture; sc.environmentIntensity = .55;
+  sc.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b0, 1.1)); const k = new THREE.DirectionalLight(0xfff6ea, 1.8); k.position.set(-3, 5, 6); sc.add(k); const rim = new THREE.DirectionalLight(0xffffff, 1.2); rim.position.set(4, 3, -5); sc.add(rim);
+  const wpp = 1 / PPU; const cam = new THREE.OrthographicCamera(-AX * wpp, (W - AX) * wpp, AY * wpp, -(Hc - AY) * wpp, -500, 500); cam.position.set(0, 0, 100); cam.lookAt(0, 0, 0);
+  pals.forEach((pal, r) => MFORMS.forEach(([st, br], i) => { const m = mongleModel(pal, st, br), h = new THREE.Group(); h.add(m); h.rotation.x = .1; sc.add(h); rr.render(sc, cam); o.drawImage(rr.domElement, i * W, r * Hc, W, Hc); sc.remove(h); }));
+  return out.toDataURL('image/png');
+};
 window.READY = 1;
 </script></body></html>

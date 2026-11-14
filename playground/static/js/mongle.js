@@ -600,6 +600,7 @@ function fs() { const d = document; if (d.fullscreenElement || d.webkitFullscree
 function open() {
   load(); decay(); care(); ov.hidden = false; document.documentElement.style.overflow = 'hidden'; layout(); audioInit(); if (!DEBUG) fs();
   tab = 'home'; modal = SV.born ? null : { k: 'intro', t: 0 }; parts = []; last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  if (A.on3d) A.on3d(() => { bgCache.k = ''; mapCache.k = ''; for (const k in cardCache) delete cardCache[k]; }); // 3D 몸 그림이 늦게 오면 캐시 다시 그리기
   if (document.fonts && document.fonts.load) document.fonts.load('16px Jua').then(() => { bgCache.k = ''; mapCache.k = ''; for (const k in cardCache) delete cardCache[k]; }).catch(() => {});
 }
 function close() { cancelAnimationFrame(raf); save(); ov.hidden = true; document.documentElement.style.overflow = ''; if (AU.ctx) AU.ctx.suspend(); const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} } if (opts.onExit) opts.onExit({ lv: SV.lv, stage: STAGE_N[stage()], walk: !!SV.walk }); }
