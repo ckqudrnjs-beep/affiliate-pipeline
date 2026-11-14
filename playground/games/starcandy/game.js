@@ -4,11 +4,13 @@ const $=id=>document.getElementById(id);
 const cab=$('sc-cab'),cv=$('sc-c'),cx=cv.getContext('2d');
 const DEBUG=location.hash.indexOf('scdebug')>=0;
 // ── 세계 좌표(단위): 병 안쪽 x 0~JW, 병 입구 y=0, 바닥 y=JH. 화면은 X0~X1, Y0~Y1.
-const JW=100,JH=136,LINE=14,X0=-7,X1=107,Y0=-36,Y1=156,WW=X1-X0,WH=Y1-Y0;
+const JW=100,JH=136,LINE0=14,X0=-7,X1=107,Y0=-36,Y1=156,WW=X1-X0,WH=Y1-Y0;
 const RAD=[4.4,6,7.8,9.6,11.6,14,16.6,19.4,22.6,26,30];
 const NAME=['별가루','꼬마별','레몬별','딸기별','박하별','소다별','포도별','귤별','무지개별','달사탕','은하수 사탕'];
 const COL=['#dfe8ff','#7fe7ff','#ffe45c','#ff6fa5','#5cf2a8','#4da3ff','#b07bff','#ff9a3d','#ff5fd2','#fff1b8','#6a4bff'];
 const PTS=[0,1,3,6,10,15,21,28,36,45,55],DROPW=[30,28,22,12,8];
+// 은하수 단계(BK 11/14 무제한): 은하수 사탕이 사라질 때마다 gal+1 → 점수 배수 +0.1, 넘침선 2씩 내려옴(최대 +10), 큰 별사탕(박하별)도 떨어짐
+let gal=0,LINE=LINE0;const mult=()=>1+gal*.1,dropW=()=>gal?[30,28,22,12+gal,8+gal*2,Math.min(12,gal*2)]:DROPW;
 const G=640,H=1/240,DAMP=0.998,ITER=4;
 // ── 상태
 let balls=[],fx=[],R=null,seq=0,cur=0,nxt=0,aim=JW/2,cool=0,score=0,best=0,run=false,over=false,overT=0,combo=0,comboT=0,maxT=0,last=0,acc=0,tm=0,keys={},drag=false,muted=false,uid=1,merges=0,dropped=0;
@@ -67,8 +69,8 @@ function background(){const th=theme(),key=th+'|'+CW+'|'+dpr;if(key===bgKey)retu
  if(th==='berry'){c.font=(14*dpr)+'px sans-serif';c.globalAlpha=.12;for(let i=0;i<12;i++)c.fillText('♥',r()*bg.width,r()*bg.height);c.globalAlpha=1}
  parts=[];const n=th==='snow'?40:th==='sea'?18:th==='berry'?10:0;for(let i=0;i<n;i++)parts.push({x:X0+r()*WW,y:Y0+r()*WH,v:4+r()*8,s:.4+r()*.9,p:r()*7})}
 // ── 판 시작
-function pick(){const r=R(),tw=DROPW.reduce((a,b)=>a+b,0);let x=r*tw;for(let i=0;i<DROPW.length;i++){if((x-=DROPW[i])<0)return i}return 0}
-function reset(){R=seeded('starcandy'+KST);balls=[];fx=[];seq=0;cur=pick();nxt=pick();aim=JW/2;cool=0;score=0;over=false;overT=0;combo=0;comboT=0;maxT=0;acc=0;tm=0;merges=0;dropped=0}
+function pick(){const W=dropW(),r=R(),tw=W.reduce((a,b)=>a+b,0);let x=r*tw;for(let i=0;i<W.length;i++){if((x-=W[i])<0)return i}return 0}
+function reset(){gal=0;LINE=LINE0;R=seeded('starcandy'+KST);balls=[];fx=[];seq=0;cur=pick();nxt=pick();aim=JW/2;cool=0;score=0;over=false;overT=0;combo=0;comboT=0;maxT=0;acc=0;tm=0;merges=0;dropped=0}
 function drop(){if(!run||over||cool>0)return;const r=RAD[cur],x=Math.max(r,Math.min(JW-r,aim));balls.push({id:uid++,t:cur,x,y:-r-4,px:x,py:-r-4,a:0,age:0,pop:0});dropped++;
  cur=nxt;nxt=pick();cool=.42;tone(240,.08,.06,'triangle')}
 function addFx(x,y,t,txt){const n=8+t*2;for(let i=0;i<n;i++){const a=i/n*Math.PI*2,s=20+RAD[t]*3;fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:.5,c:t===10?'#c9b8ff':COL[t],k:0})}fx.push({x,y,vx:0,vy:-14,l:.9,c:'#fff',k:1,txt})}
@@ -87,8 +89,8 @@ function step(){
  // 합치기
  for(const [a,b] of mg){if(a.dead||b.dead)continue;a.dead=b.dead=1;const x=(a.x+b.x)/2,y=(a.y+b.y)/2;
   if(comboT>0)combo++;else combo=1;comboT=1.1;merges++;
-  if(a.t===10){const p=100+(combo>1?combo*5:0);score+=p;addFx(x,y,10,'+'+p+' 은하수!');popSnd(12);continue}
-  const t=a.t+1,p=PTS[t]+(combo>1?combo*2:0);score+=p;
+  if(a.t===10){const p=Math.round((100+(combo>1?combo*5:0))*mult());score+=p;gal++;LINE=LINE0+Math.min(10,gal*2);addFx(x,y,10,'+'+p+' 은하수 ×'+gal+'!');popSnd(12);continue}
+  const t=a.t+1,p=Math.round((PTS[t]+(combo>1?combo*2:0))*mult());score+=p;
   balls.push({id:uid++,t,x,y,px:x-((a.x-a.px)+(b.x-b.px))/2,py:y-((a.y-a.py)+(b.y-b.py))/2,a:(a.a+b.a)/2,age:1,pop:1});
   if(t>maxT)maxT=t;addFx(x,y,t,combo>1?'+'+p+' 연쇄 '+combo:'+'+p);popSnd(t);
   if(t>=8&&B())B().ach('sc8')}
@@ -125,8 +127,8 @@ function draw(){sprites();background();const c=cx,K=S*dpr;c.setTransform(1,0,0,1
   else{c.globalAlpha=Math.max(0,f.l*2);c.fillStyle=f.c;c.beginPath();c.arc(wx(f.x),wy(f.y),1*K,0,7);c.fill()}}c.globalAlpha=1;
  // 위쪽 정보: 점수·최고·다음
  c.textAlign='left';c.fillStyle='#fff';c.font='800 '+Math.round(7*K)+'px sans-serif';c.fillText(score.toLocaleString(),wx(-4),wy(-27));
- c.font=Math.round(3.6*K)+'px sans-serif';c.fillStyle='#ffffffaa';c.fillText('오늘 최고 '+Math.max(best,score).toLocaleString(),wx(-4),wy(-21));
- c.textAlign='right';c.fillText('다음',wx(JW-27),wy(-26));blit(nxt,JW-20,-27.5,0,0,Math.min(1,5.5/RAD[nxt]));
+ c.font=Math.round(3.6*K)+'px sans-serif';c.fillStyle='#ffffffaa';c.fillText('오늘 최고 '+Math.max(best,score).toLocaleString(),wx(-4),wy(-21));if(gal){c.fillStyle='#ffd23f';c.font='800 '+Math.round(3.6*K)+'px sans-serif';c.fillText('🌌 은하수 ×'+gal+' · 점수 ×'+mult().toFixed(1),wx(-4),wy(-15.5))}
+ c.textAlign='right';c.fillStyle='#ffffffaa';c.font=Math.round(3.6*K)+'px sans-serif';c.fillText('다음',wx(JW-27),wy(-26));blit(nxt,JW-20,-27.5,0,0,Math.min(1,5.5/RAD[nxt]));
  // 아래: 11단계 사다리
  const y=JH+10;let x=1.5;for(let t=0;t<11;t++){const s=Math.min(1,(1.6+t*.3)/RAD[t]),rr=RAD[t]*s;x+=rr;c.globalAlpha=t<=maxT||t<5?1:.3;blit(t,x,y,0,0,s);x+=rr+1.1}c.globalAlpha=1;
  c.textAlign='center';c.font=Math.round(3*K)+'px sans-serif';c.fillStyle='#ffffff88';c.fillText(maxT>=1?'지금까지: '+NAME[maxT]:'같은 별사탕끼리 합쳐요',wx(JW/2),wy(JH+18.5))}
@@ -137,9 +139,9 @@ function frame(now){if(!run)return;const dt=Math.min(.05,(now-last)/1000);last=n
 function start(){size();reset();run=true;over=false;last=performance.now();$('sc-go').style.display='none';$('sc-ov').style.display='none';$('sc-msg').textContent='';requestAnimationFrame(frame);try{AC&&AC.resume()}catch(e){}}
 function end(){if(over)return;over=true;const s=score;if(s>best){best=s;try{localStorage.setItem('nr_best_starcandy_'+KST,s)}catch(e){}}
  tone(200,.4,.12,'sawtooth');$('sc-go').textContent='↻ 다시 시작';$('sc-go').style.display='block';$('sc-ov').style.display='flex';
- $('sc-msg').innerHTML='끝! <b>'+s.toLocaleString()+'점</b> · 최고 단계 '+NAME[maxT]+' · 합체 '+merges+'번';
+ $('sc-msg').innerHTML='끝! <b>'+s.toLocaleString()+'점</b> · 최고 단계 '+NAME[maxT]+' · 합체 '+merges+'번'+(gal?' · 🌌 은하수 '+gal+'개':'');
  if(!DEBUG&&window.submitScore)submitScore(s);else if(B())B().played('starcandy');if(B())B().render()}
-$('sc-sh').onclick=()=>shareText('5락실 별사탕 합치기 '+KST.slice(5)+'\n🍬 '+score.toLocaleString()+'점 · '+NAME[maxT]+'까지 만들었어요. 이겨 볼래?\n'+challengeUrl(score));
+$('sc-sh').onclick=()=>shareText('5락실 별사탕 합치기 '+KST.slice(5)+'\n🍬 '+score.toLocaleString()+'점 · '+(gal?'은하수 사탕 '+gal+'개 터뜨렸어요':NAME[maxT]+'까지 만들었어요')+'. 이겨 볼래?\n'+challengeUrl(score));
 $('sc-rk').onclick=()=>{const b=$('rankbox');if(b)b.scrollIntoView({behavior:'smooth',block:'center'})};
 $('sc-go').onclick=e=>{e.stopPropagation();start()};
 $('sc-mu').onclick=e=>{e.stopPropagation();muted=!muted;$('sc-mu').textContent=muted?'🔇':'🔊';try{localStorage.setItem('sc_mute',muted?'1':'0')}catch(e){}};$('sc-mu').textContent=muted?'🔇':'🔊';
@@ -168,7 +170,7 @@ function idle(){size();reset();const r=seeded('sc-demo');for(let i=0;i<9;i++){co
  for(const b of balls)b.py=b.y;for(let i=0;i<600;i++)step();for(const b of balls){b.px=b.x;b.py=b.y}score=0;fx=[];maxT=0;combo=0;draw()}
 function init(){idle();shop()}
 if(document.readyState==='loading')addEventListener('DOMContentLoaded',init);else setTimeout(init,0);
-if(DEBUG)window.__sc={start,drop,state:()=>({score,balls:balls.length,maxT,over,merges,overT:+overT.toFixed(2),ys:balls.map(b=>[b.t,+b.x.toFixed(1),+b.y.toFixed(1),+b.age.toFixed(2)])}),aim:x=>{aim=x},
+if(DEBUG)window.__sc={start,drop,state:()=>({gal,line:LINE,score,balls:balls.length,maxT,over,merges,overT:+overT.toFixed(2),ys:balls.map(b=>[b.t,+b.x.toFixed(1),+b.y.toFixed(1),+b.age.toFixed(2)])}),aim:x=>{aim=x},
  bot(n){let k=0;const go=()=>{if(over||k++>=n)return;aim=8+R()*84;cool=0;drop();setTimeout(go,260)};go()},
  fill(ts){for(const t of ts){const r=RAD[t],x=r+Math.random()*(JW-2*r);balls.push({id:uid++,t,x,y:JH-r-Math.random()*60,px:x,py:0,a:0,age:2,pop:0});balls[balls.length-1].py=balls[balls.length-1].y}},
  settle(n){for(let i=0;i<(n||600);i++)step()},draw};
