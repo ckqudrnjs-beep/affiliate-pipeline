@@ -16,5 +16,6 @@
  "check": "설치 방식(시가잭·USB 전원), 구성 개수(18 in 1), 앱 지원",
  "commission": 7.0,
  "status": "active",
- "addedDate": "2026-11-11"
+ "addedDate": "2026-11-11",
+ "missingDays": 1
 }
