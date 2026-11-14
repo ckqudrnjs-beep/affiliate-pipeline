@@ -222,22 +222,24 @@ COMMON_JS = (
     "function myNick(){let n=null;try{n=localStorage.getItem('nr_nick')}catch(e){}if(!n||!(/^\\S+ \\S+ \\d{1,2}$/.test(n)||profileNickOk(n))){n=ADJ[Math.floor(Math.random()*ADJ.length)]+' '+ANI[Math.floor(Math.random()*ANI.length)]+' '+Math.floor(Math.random()*100);try{localStorage.setItem('nr_nick',n)}catch(e){}}return n}"
 )
 
-RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 오늘의 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명·프로필 설정</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p><a href="/rank">전체 순위 보기 →</a></p><p class="mkp" hidden><a class="btn" href="/profile">✨ 별명 정하고 순위 올리기</a></p></div>"""
+RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 도전 순위</h2><p class="muted">오늘은 모두 같은 판이에요. 내 별명: <b id="mynick"></b> <button class="share" type="button" id="renick">별명·프로필 설정</button></p><p class="re"><button class="share" type="button" data-w="0" style="font-weight:800">오늘</button> <button class="share" type="button" data-w="1">최근 7일 (프로필)</button></p><ol id="rk" class="list"><li class="muted">불러오는 중…</li></ol><p class="muted rnote">📌 오늘 순위는 매일 0시(한국 시간)에 새로 시작해요. <b>프로필을 만든 사람의 기록은 7일 동안 보관</b>돼서 \'최근 7일\' 순위와 내 프로필에서 볼 수 있어요. 자동 별명 기록은 그날만 보여요.</p><p><a href="/rank">전체 순위 보기 →</a></p><p class="mkp" hidden><a class="btn" href="/profile">✨ 별명 정하고 순위 올리기</a></p></div>"""
 
 RANK_JS = """
 (function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
 $r('renick').onclick=()=>{location.href='/profile'};
-async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST)).json();const me=myNick();
-$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>'}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
+let W=0;document.querySelectorAll('#rankbox [data-w]').forEach(b=>b.onclick=()=>{W=+b.dataset.w;document.querySelectorAll('#rankbox [data-w]').forEach(x=>x.style.fontWeight=x===b?'800':'400');load()});
+async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST+(W?'&week=1':''))).json();const me=myNick();
+$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):(W?'<li class="muted">최근 7일 프로필 기록이 아직 없어요. 프로필을 만들고 도전해 보세요!</li>':'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>')}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
 window.submitScore=async function(score){score=Math.floor(score);let best=0;try{best=+localStorage.getItem('nr_best_'+G+'_'+KST)||0}catch(e){}
 if(score<=best){load();return}try{localStorage.setItem('nr_best_'+G+'_'+KST,score)}catch(e){}
-try{await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick()})})}catch(e){}load()};load()})();
+try{await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick(),code:(window.Profile&&Profile.code())||undefined})})}catch(e){}load()};load()})();
 """
 
 RANK_PAGE_JS = """
-let cur=document.querySelector('[data-g]').dataset.g;const me=myNick();
+let cur=document.querySelector('[data-g]').dataset.g,W=0;const me=myNick();
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{W=+b.dataset.w;document.querySelectorAll('[data-w]').forEach(x=>x.style.fontWeight=x===b?'800':'400');show(cur)});
 async function show(g){cur=g;document.querySelectorAll('[data-g]').forEach(b=>b.style.fontWeight=b.dataset.g===g?'800':'400');
-try{const r=await (await fetch('/api/score?game='+g+'&day='+KST)).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
+try{const r=await (await fetch('/api/score?game='+g+'&day='+KST+(W?'&week=1':''))).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
 document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>show(b.dataset.g));show(cur);
 """
 
@@ -522,6 +524,7 @@ BOARD_RULES = """<h1>📜 게시판 이용 지침</h1><p class="lead">5락실 �
 <li>비밀글은 쓴 사람(그 프로필)과 관리자만 볼 수 있어요.</li></ul></div>
 <div class="card"><h2>권리 침해 신고·삭제 요청</h2><p>내 권리를 침해하는 글은 글의 [신고] 버튼이나 <a href="/contact">문의</a> 메일로 알려 주세요. 확인 후 바로 숨기고 처리해요(정보통신망법상 임시조치).</p></div>"""
 BOARD_BODY = """<h1>💬 게시판</h1><p class="lead">게임 이야기·건의·오류 제보·프로필 문의. 글을 쓰기 전에 <a href="/board-rules"><b>이용 지침</b></a>을 꼭 읽어 주세요. 지침을 어기면 글이 숨겨지고 글쓰기가 제한돼요.</p>
+<div class="card"><h2>📌 공지</h2><ul class="list"><li><b>순위 기록 보관:</b> 오늘 순위는 매일 0시(한국 시간)에 새로 시작해요. <b>프로필을 만든 사람의 기록은 7일 동안 보관</b>되고, <a href="/rank">순위</a>의 '최근 7일' 탭과 <a href="/profile">내 프로필</a>에서 볼 수 있어요. 자동 별명 기록은 그날만 보여요.</li><li>프로필을 만들기 전의 기록은 보관되지 않아요. 기록을 남기고 싶다면 먼저 프로필을 만들어 주세요.</li></ul></div>
 <div class="card" id="bv" hidden></div>
 <div class="card" id="bw"><h2>✏️ 글쓰기</h2><div id="bwf"></div></div>
 <div class="card"><h2>글 목록</h2><ol id="bl" class="list blist"></ol><button class="share" type="button" id="bmore" hidden>더 보기</button></div>"""
@@ -564,6 +567,13 @@ async function load(more){if(!more){pg=0;$('bpa').innerHTML=''}const j=await api
   if(x==='b7'||x==='b0'||x==='ub'){if(!confirm(esc(p.nick)+' 님의 글쓰기를 '+(x==='ub'?'풀까요?':x==='b7'?'7일 제한할까요?':'영구 제한할까요?')))return;r=await api({a:'ban',id:p.id,days:x==='ub'?0:x==='b7'?7:9999})}
   if(r)load()});$('bpa').appendChild(el)})}
 $('bpl').onclick=()=>load();$('bpm').onclick=()=>load(true)})();"""
+
+# 내 최근 7일 기록(프로필 있는 사람만 서버에 7일 보관, functions/api/score.js pscores)
+MYREC_BODY = """<div class="card" id="myrec"><h2>📅 내 최근 7일 기록</h2><p class="muted">프로필이 있는 상태로 세운 순위 게임 기록이 7일 동안 보관돼요. 8일이 지난 기록은 자동으로 지워져요.</p><div id="mrl" class="muted">불러오는 중…</div></div>"""
+MYREC_JS = r"""(async function(){const el=document.getElementById('mrl');const c=window.Profile&&Profile.code();if(!c){el.innerHTML='프로필을 만들면 이때부터 기록이 7일 동안 보관돼요.';return}
+try{const r=await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({a:'mine',code:c})});const j=await r.json();const L=j.list||[];
+if(!L.length){el.innerHTML='아직 보관된 기록이 없어요. 순위 게임을 해 보세요!';return}const by={};L.forEach(x=>(by[x.game]=by[x.game]||[]).push(x));
+el.innerHTML=Object.keys(by).map(g=>{const a=by[g],best=Math.max(...a.map(x=>x.score));return '<p style="margin:10px 0 4px;color:var(--ink)"><b>'+(GN[g]||g)+'</b> · 7일 최고 <b>'+best.toLocaleString()+'점</b></p><small>'+a.map(x=>x.day.slice(5)+' '+x.score.toLocaleString()+'점').join(' · ')+'</small>'}).join('')}catch(e){el.textContent='기록을 불러오지 못했어요.'}})();"""
 
 PROFILE_PAGE_JS = r"""
 Profile.page=function(pg){if(pg._busy)return;const own=(window.Bonus&&Bonus.state().own)||{},n=Profile.nick(),code=Profile.code();
@@ -742,12 +752,13 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
-    write("rank", f"오늘의 도전 순위 | {cfg['siteName']}", "5락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
-          f"<h1>🏆 오늘의 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 순위가 초기화돼요. 이름은 자동으로 붙는 별명이라 개인 정보가 없습니다.</p><div class=\"re\">{tabs}</div><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
+    write("rank", f"도전 순위 | {cfg['siteName']}", "5락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
+          f"<h1>🏆 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 오늘 순위가 새로 시작돼요. <b>프로필을 만든 사람의 기록은 7일 동안 보관</b>돼서 '최근 7일' 순위와 <a href=\"/profile\">내 프로필</a>에서 볼 수 있어요. 자동 별명 기록은 그날만 보여요.</p><div class=\"re\">{tabs}</div><p class=\"re\"><button class=\"share\" type=\"button\" data-w=\"0\" style=\"font-weight:800\">오늘</button> <button class=\"share\" type=\"button\" data-w=\"1\">최근 7일 (프로필)</button></p><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
           COMMON_JS + RANK_PAGE_JS)
 
+    gnames = json.dumps({g["slug"]: g["name"] for g in ranked}, ensure_ascii=False)
     write("profile", f"내 프로필 | {cfg['siteName']}", "5락실 프로필. 가입 없이 별명·아바타를 정하고 복구 코드로 다른 기기에서도 코인·스킨을 이어 써요.",
-          PROFILE_BODY, COMMON_JS + PROFILE_PAGE_JS, noindex=True)
+          PROFILE_BODY + MYREC_BODY, COMMON_JS + PROFILE_PAGE_JS + f"const GN={gnames};" + MYREC_JS, noindex=True)
     write("bonus", f"출석체크·스킨 상점 | {cfg['siteName']}", "5락실 출석체크. 하루 한 번 출석하면 코인을 받아 이어하기나 스킨(캐릭터 겉모습)에 써요. 게임은 모두 무료.",
           BONUS_BODY, noindex=True)
     write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_BOARD, ADMIN_JS + ADMIN_BOARD_JS, noindex=True)
