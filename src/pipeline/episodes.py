@@ -69,13 +69,18 @@ SHORT_FORMATS = {
         "상품 없음. '매일 ○○ 대신 △△ 하면 1년 뒤?' → counter(0에서 1년 금액까지 올라감) → calc(근거) → "
         "uncle(react-surprised) → end. 숫자는 보수적으로."),
 }
+# 2026-11-14 BK 선택 1·2번 (HeyGen 없이, 사이트 유입): 수 = 실제 사이트 계산기 화면으로 세 집 숫자 넣어 보기,
+# 토 = 이번 주 얼마게 7문제 몰아보기 (코드가 금요일 아침 자동으로 씀, 미리보기 없이 바로 업로드 대기).
 LONG_FORMATS = {
-    2: ("scale", "살까 말까 저울", False, 20,
-        "7~8분. 같은 목적의 3가지 방법 총비용 비교(예: 전기요 vs 온수매트 vs 온풍기). chapter 5~6개: 질문 → 방법별 계산 → "
-        "bars(총비용 비교) → 상황별 추천 → 주의점 → 마무리. 상품 없음(종류로만 비교), 마무리는 don3chon.com 계산기."),
-    5: ("checkup", "삼촌의 생활비 점검", False, 20,
-        "6~8분. 이번 주 생활비 새는 구멍 5개 모음(상품 없음). chapter 마다 calc·counter·list. 마무리에 사이트 계산기."),
+    2: ("site", "우리 집 숫자 넣어 보기", False, 20,
+        "6~8분, 상품 없음. 사이트 계산기 1개(필요하면 2개)를 골라 세 집(예: 자취생 원룸, 4인 가족 아파트, 맞벌이 투룸)의 숫자를 차례로 넣는다. "
+        "구성: hook(질문) → chapter(집 1) → screen(calc=계산기 slug, set=[[입력 id, 값], ...] 넣는 값, say=무엇을 왜 넣는지) → "
+        "calc(그 집 결과 숫자, sub=가정) → (집 2, 집 3 반복) → bars(세 집 비교) → list(아끼는 법 3가지) → "
+        "end(text=\"우리 집 숫자는 don3chon.com\", say=설명란 계산기 주소 안내). "
+        "screen 의 say 는 화면에서 바뀌는 숫자를 따라 읽는다. 값은 현실적인 가정, 가정임을 말로 밝힌다. calcs 목록의 id 만 쓴다."),
+    5: ("quiz-week", "이번 주 얼마게 몰아보기", False, 20, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
 }
+AUTO_LONG = {5}
 
 LONG_HOUR = 20  # 롱폼 공개 시각 (쇼츠 19:00 과 겹치지 않게)
 
@@ -118,7 +123,7 @@ def next_long_date(today: dt.date) -> dt.date:
     have = {json.loads(p.read_text(encoding="utf-8"))["date"] for p in ep_files()
             if json.loads(p.read_text(encoding="utf-8")).get("kind") == "long"}
     d = today + dt.timedelta(days=2)
-    while d.weekday() not in LONG_FORMATS or d.isoformat() in have:
+    while d.weekday() not in LONG_FORMATS or d.weekday() in AUTO_LONG or d.isoformat() in have:
         d += dt.timedelta(days=1)
     return d
 
@@ -159,7 +164,13 @@ def info_long(today: dt.date) -> dict:
     key, name, product, _, rules = LONG_FORMATS[d.weekday()]
     return {"date": d.isoformat(), "kind": "long", "format": key, "format_name": name, "product_allowed": product,
             "rules": rules, "file": f"data/episodes/{d.isoformat()}-{key}.json",
-            "products": products_with_photos(), "clips": sorted(k for k in clips_cfg())}
+            "calcs": calcs_info(), "clips": sorted(k for k in clips_cfg())}
+
+
+def calcs_info() -> dict:
+    """screen 장면에 쓸 계산기: slug → 제목·입력 id."""
+    from .calcs import CALCS
+    return {c["slug"]: {"title": c["h1"], "ids": c["ids"]} for c in CALCS}
 
 
 def clips_cfg() -> dict:
@@ -313,8 +324,63 @@ def write_quiz(d: dt.date) -> pathlib.Path | None:
     return out
 
 
+
+def quiz_week_spec(sat: dt.date) -> dict | None:
+    """토요일 롱폼: 지난 토~금 7일 사이트 얼마게 문제를 보기·3초·정답·풀이로 몰아보기. 끝은 다음 주 문제는 돈삼촌에서."""
+    from . import daily
+    days = [sat - dt.timedelta(days=7 - i) for i in range(7)]
+    scenes = [{"type": "hook", "text": "이번 주 얼마게 7문제, 몇 개 맞힐 수 있어?",
+               "say": "이번 주 돈 줍는 삼촌 사이트에 나온 얼마게 일곱 문제, 한 번에 풀어 보자. 몇 개 맞히는지 손가락으로 세어 봐."}]
+    for n, d in enumerate(days, 1):
+        f = daily.OUT / f"{d.isoformat()}.json"
+        latest = json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+        q = daily.schedule(d, 1, latest).get(d.isoformat())
+        if not q:
+            continue
+        ans = q["o"][q["a"]]
+        steps = reasons(q)
+        scenes += [
+            {"type": "chapter", "no": f"{n}번", "text": f"{d.month}월 {d.day}일 문제", "say": f"{num_ko(n)}번 문제. {d.month}월 {d.day}일에 나온 문제야."},
+            {"type": "list", "title": q["q"], "items": q["o"], "say": speak(q["q"]) + " 보기 네 개 중에 골라 봐."},
+            {"type": "countdown", "text": "3초 안에 골라 봐", "say": ""},
+            {"type": "calc", "title": "정답", "value": ans, "sub": f"{n}번 문제", "say": f"정답은 {speak(ans)}."},
+            {"type": "list", "title": f"왜 {ans}일까?", "items": steps, "say": " ".join(speak(x) + "." for x in steps)},
+        ]
+    if len(scenes) < 20:
+        return None
+    no = 1 + sum(1 for p in ep_files() if p.stem[11:] == "quiz-week" and p.stem < f"{sat.isoformat()}-quiz-week")
+    scenes += [
+        {"type": "list", "title": "이번 주 점수는?", "items": ["7개: 생활비 고수", "4~6개: 삼촌 조카급", "0~3개: 다음 주에 다시"],
+         "say": "몇 개 맞혔어? 일곱 개면 생활비 고수, 네 개에서 여섯 개면 삼촌 조카급이야. 세 개 이하면 다음 주에 다시 도전해 보자."},
+        {"type": "end", "text": "다음 주 문제는 don3chon.com/quiz", "say": "다음 주 문제는 돈 줍는 삼촌 닷컴 퀴즈에서 매일 하나씩 나와. 출석 도장도 찍고, 맞힌 숫자로 우리 집 계산도 해 봐."},
+    ]
+    return {"date": sat.isoformat(), "kind": "long", "format": "quiz-week", "format_name": "이번 주 얼마게 몰아보기",
+            "series_no": no, "auto": True, "slug": f"ep-{sat.isoformat()}-quiz-week",
+            "title": f"생활비 감각 테스트 7문제, 몇 개 맞힐까? | 이번 주 얼마게 #{no}",
+            "description": "이번 주 돈 줍는 삼촌 사이트에 나온 얼마게 일곱 문제를 풀이와 함께 모았어요. 매일 새 문제는 https://don3chon.com/quiz",
+            "scenes": scenes}
+
+
+def write_quiz_week(today: dt.date) -> pathlib.Path | None:
+    """금요일 아침: 내일(토) 20:00 롱폼 대본. 이미 있으면 None."""
+    if today.weekday() != 4:
+        return None
+    sat = today + dt.timedelta(days=1)
+    out = EP_DIR / f"{sat.isoformat()}-quiz-week.json"
+    if out.exists() or any(json.loads(p.read_text(encoding="utf-8")).get("kind") == "long" and
+                           json.loads(p.read_text(encoding="utf-8"))["date"] == sat.isoformat() for p in ep_files()):
+        return None
+    spec = quiz_week_spec(sat)
+    if not spec:
+        return None
+    errs = check(spec)
+    if errs:
+        raise SystemExit(f"얼마게 몰아보기 대본 오류: {errs}")
+    out.write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return out
+
 # ---------- 검사 ----------
-TYPES = {"hook", "photo", "calc", "versus", "countdown", "ox", "counter", "list", "bars", "chapter", "uncle", "skit", "end"}
+TYPES = {"hook", "photo", "calc", "versus", "countdown", "ox", "counter", "list", "bars", "chapter", "uncle", "skit", "end", "screen"}
 BANNED = ["써 봤", "써봤", "직접 사용", "무조건", "100%", "최고의", "완치", "효능"]
 
 
@@ -374,6 +440,17 @@ def check(spec: dict) -> list[str]:
                 if b in json.dumps(s, ensure_ascii=False):
                     e.append(f"장면 {i}: 금지 표현 '{b}'")
             continue
+        if t == "screen":
+            from .calcs import CALCS
+            c = next((c for c in CALCS if c["slug"] == s.get("calc")), None)
+            if kind != "long":
+                e.append(f"장면 {i}: screen 은 롱폼 전용")
+            if c is None:
+                e.append(f"장면 {i}: calc 는 {[c['slug'] for c in CALCS]}")
+            else:
+                for st in s.get("set") or []:
+                    if not (isinstance(st, list) and len(st) == 2 and st[0] in c["ids"]):
+                        e.append(f"장면 {i}: set 은 [[입력 id, 값], ...], id 는 {c['ids']}")
         say = s.get("say", "")
         if not say and t not in ("countdown",):
             e.append(f"장면 {i}: say 없음")
@@ -536,11 +613,11 @@ def frame(cv: Canvas, spec: dict, s: dict, t: float, d: float, ctx: dict):
                 _center(dr, W / 2, H * 0.58 + j * 50, r, f, "#8a857c")
     elif typ == "list":
         y_items = H * 0.30
-        if len(s.get("title", "")) > 14 and not L:  # 긴 제목(얼마게 문제)은 3줄까지 감싸기
-            f, rows = _wrap(dr, s["title"], 64, W - 140, 3)
+        if len(s.get("title", "")) > (30 if L else 14):  # 긴 제목(얼마게 문제)은 3줄까지 감싸기
+            f, rows = _wrap(dr, s["title"], 64, W - (400 if L else 140), 3)
             for j, r in enumerate(rows):
-                _center(dr, W / 2, H * 0.13 + j * 84, r, f, "#1f5f4a")
-            y_items = H * 0.13 + len(rows) * 84 + 110
+                _center(dr, W / 2, H * (0.10 if L else 0.13) + j * 84, r, f, "#1f5f4a")
+            y_items = H * (0.10 if L else 0.13) + len(rows) * 84 + (60 if L else 110)
         else:
             _center(dr, W / 2, H * (0.16 if L else 0.18), s.get("title", ""), _font(70), "#1f5f4a")
         items = s["items"]
@@ -562,6 +639,28 @@ def frame(cv: Canvas, spec: dict, s: dict, t: float, d: float, ctx: dict):
             ln = bw * it["value"] / mx * ease(min(1, (t - 0.2 * j) / 0.8))
             dr.rounded_rectangle((100, y + 64, 100 + max(8, ln), y + 120), 12, fill="#1f5f4a" if j else "#d6452f")
             dr.text((110 + max(8, ln), y + 64), it.get("text", won(it["value"])), font=_font(48), fill="#2b2a28")
+    elif typ == "screen":  # 실제 사이트 계산기 화면: 처음 → 값 하나씩 → 결과(빨간 테두리)
+        shots = ctx["screens"][id(s)]
+        if s.get("show") == "result":  # 결과 화면만
+            shots = shots[-1:]
+        n = len(shots)
+        w0, w_res = 0.15, 0.35
+        per = (1 - w0 - w_res) / max(1, n - 2)
+        x = t / max(d, 0.01)
+        idx = 0 if x < w0 else min(n - 2, 1 + int((x - w0) / per)) if n > 2 and x < 1 - w_res else n - 1
+        shot = shots[idx]
+        z = 1.0 + (0.05 * max(0.0, min(1.0, (x - (1 - w_res)) / w_res)) if idx == n - 1 else 0)
+        sw, sh = 1680, 945
+        img = shot.resize((int(sw * z), int(sh * z)))
+        img = img.crop(((img.width - sw) // 2, (img.height - sh) // 2, (img.width - sw) // 2 + sw, (img.height - sh) // 2 + sh))
+        dr.rectangle((W / 2 - sw / 2 - 8, 112, W / 2 + sw / 2 + 8, 112 + sh + 16), fill="#ffd166")
+        im.paste(img, (int(W / 2 - sw / 2), 120))
+        dr = ImageDraw.Draw(im)
+        if s.get("cap"):
+            f = _font(48)
+            tw = dr.textlength(s["cap"], font=f)
+            dr.rounded_rectangle((W / 2 - tw / 2 - 30, H - 150, W / 2 + tw / 2 + 30, H - 70), 20, fill=(24, 60, 50))
+            _center(dr, W / 2, H - 140, s["cap"], f, "white")
     elif typ == "end":
         if ctx.get("end_img") is not None:
             im.paste(ctx["end_img"], (0, 0))
@@ -683,6 +782,32 @@ def scene_part(cv: Canvas, spec: dict, scenes: list[dict], voices: list, ctx: di
     ctx["durs"].extend(durs)
 
 
+def screens(spec: dict, stem: str) -> dict:
+    """screen 장면의 사이트 화면(PNG)을 video_assets/screens/<stem>/ 에 찍어 두고(있으면 재사용) 장면별 이미지 목록으로."""
+    from PIL import Image
+    folder = ASSETS / "screens" / stem
+    todo, out = [], {}
+    for n, s in enumerate(spec["scenes"]):
+        if s["type"] != "screen":
+            continue
+        pre = folder / f"s{n:02d}"
+        files = [pathlib.Path(f"{pre}-{k}.png") for k in range(len(s.get("set") or []) + 1)] + [pathlib.Path(f"{pre}-r.png")]
+        out[n] = files
+        if not all(f.exists() for f in files):
+            todo.append({"calc": s["calc"], "steps": s.get("set") or [], "prefix": str(pre.resolve())})
+    if todo:
+        from . import site
+        folder.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory() as td:
+            site.build(out=f"{td}/site")
+            for j in todo:
+                j["url"] = pathlib.Path(f"{td}/site/calc/{j.pop('calc')}.html").resolve().as_uri()
+            job = pathlib.Path(td) / "job.json"
+            job.write_text(json.dumps({"jobs": todo}), encoding="utf-8")
+            subprocess.run(["node", "tools/screens.js", str(job)], check=True)
+    return {id(spec["scenes"][n]): [Image.open(f).convert("RGB") for f in files] for n, files in out.items()}
+
+
 def render(path: pathlib.Path) -> pathlib.Path:
     from PIL import ImageEnhance, ImageFilter
     from .shorts import cover
@@ -699,6 +824,8 @@ def render(path: pathlib.Path) -> pathlib.Path:
     for s in spec["scenes"]:
         if s["type"] == "photo":
             ctx["photos"][id(s)] = photo_of(s.get("product") or product, s.get("photo", 1))
+    if any(s["type"] == "screen" for s in spec["scenes"]):
+        ctx["screens"] = screens(spec, path.stem)
     if product:
         ctx["hook_bg"] = ImageEnhance.Brightness(cover(photo_of(product, 1), cv.W, cv.H).filter(ImageFilter.GaussianBlur(28))).enhance(0.32)
         if cv.long:  # 2026-11-14 BK: 쇼츠 끝 카드는 상품 대신 계산 결과·꿀팁 한 줄 (링크는 설명란·고정 댓글)
@@ -778,6 +905,7 @@ def main(argv: list[str]) -> int:
     elif cmd == "quiz":  # 오늘(KST) 또는 지정 날짜의 얼마게 대본
         d = dt.date.fromisoformat(argv[1]) if len(argv) > 1 else dt.datetime.now(KST).date()
         print(write_quiz(d) or "얼마게 날 아님 또는 이미 있음")
+        print(write_quiz_week(d) or "몰아보기: 금요일 아님 또는 이미 있음")
     elif cmd == "next-long":
         print(json.dumps(info_long(today), ensure_ascii=False, indent=1))
     elif cmd == "check":
@@ -787,7 +915,8 @@ def main(argv: list[str]) -> int:
         files = [pathlib.Path(f) for f in argv[1:]] or unrendered()
         kind = os.environ.get("EP_KIND")
         for f in files:
-            if kind and json.loads(f.read_text(encoding="utf-8")).get("kind", "short") != kind:
+            sp = json.loads(f.read_text(encoding="utf-8"))
+            if kind and sp.get("kind", "short") != kind and not (kind == "short" and sp.get("auto")):  # 자동 롱폼은 미리보기 없이
                 continue
             render(f)
     return 0

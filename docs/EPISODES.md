@@ -20,6 +20,10 @@
 Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.json` 대본을 쓰면, `episodes` 워크플로가 무료로 영상을 만든다
 (7번 목소리 + 사진·카드 + 재사용 삼촌 표정 영상). 쇼츠는 바로 업로드 대기, 롱폼은 미리보기 PR → BK 병합.
 
+### 롱폼 (2026-11-14 BK 1·2번, HeyGen 없이)
+- 수 `site` 우리 집 숫자 넣어 보기: 사이트 계산기에 세 집 숫자를 넣는 화면(screen) + 결과 calc + bars 비교 + 정리 + end(계산기 주소). 예: data/episodes/2026-11-25-site.json. 결과 숫자는 사이트 계산기와 같아야 한다.
+- 토 `quiz-week` 이번 주 얼마게 몰아보기: 코드가 금요일 06:10 KST 자동 작성(`episodes quiz`), 미리보기 PR 없이 바로 만들어 토 20:00 공개.
+
 ## 1. 순서 (예약 작업)
 1. `PYTHONPATH=src python -m pipeline.episodes next` (롱폼은 `next-long`) → 날짜·형식·규칙·쓸 파일 이름·상품 목록·삼촌 영상 이름이 나온다.
 2. 그 파일이 이미 있으면 끝.
@@ -55,6 +59,7 @@ Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.js
 | chapter | no, text, say | 롱폼 챕터 제목 (설명란 목차가 자동으로 생김) |
 | uncle | clip (config/heygen/clips.json 이름) | 삼촌 표정 영상(대사 고정) |
 | skit | lines[2~8] {who u/n, u 포즈, n 포즈, cap[1~2줄], say, big?, sub?, sfx? buzz/ding, prop? product/heater}, photo? | 삼촌 vs 조카 만화 상황극 (쇼츠 전용). 삼촌 7번 목소리, 조카 M1 +3반음 |
+| screen | calc(계산기 slug), set[[입력 id, 값], ...], show("result"면 결과 화면만), cap, say | 롱폼 전용. 실제 사이트 계산기 화면에 값이 하나씩 들어가고 결과에 빨간 테두리 (tools/screens.js, Playwright) |
 | end | say, text | 쇼츠: text 한 줄(계산 결과·꿀팁, 상품 편도 상품 사진 없음) / 롱폼 상품 편: 상품·가격·don3chon.com |
 
 삼촌 영상 대사(고정): intro-excited "조카야, 삼촌이 오늘 하나 건졌다!", intro-curious "조카야, 이거 한번 볼래?",

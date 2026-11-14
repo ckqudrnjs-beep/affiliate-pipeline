@@ -88,3 +88,22 @@ class QuizShortTest(unittest.TestCase):
         import datetime as dt
         d = ep.next_short_date(dt.date(2026, 11, 14))
         self.assertNotIn(d.weekday(), ep.QUIZ_DAYS)
+
+
+class LongSiteQuizWeekTest(unittest.TestCase):
+    """2026-11-14 BK 1·2번: 수 사이트 계산기 화면, 토 얼마게 몰아보기 (상품 없음)."""
+
+    def test_quiz_week_passes_check(self):
+        s = ep.quiz_week_spec(dt.date(2026, 11, 21))
+        self.assertEqual(ep.check(s), [])
+        self.assertTrue(s["auto"])
+        self.assertNotIn("product", s)
+
+    def test_screen_scene_checked(self):
+        s = {"type": "screen", "calc": "heater", "set": [["nope", "1"]], "say": "x"}
+        spec = {"kind": "long", "date": "2026-11-25", "title": "테스트 제목", "scenes": [s]}
+        self.assertTrue(any("set 은" in x for x in ep.check(spec)))
+
+    def test_long_writer_skips_saturday(self):
+        d = ep.next_long_date(dt.date(2026, 11, 26))
+        self.assertNotIn(d.weekday(), ep.AUTO_LONG)
