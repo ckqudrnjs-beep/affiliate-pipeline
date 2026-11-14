@@ -224,14 +224,14 @@ function bake(fn, arg, k, rim, rim2, box) {
   const wh = mkc(W, H), w2 = wh.getContext('2d'); w2.drawImage(flat, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, W, H);
   return { c: out, wh, ox: ox / k, oy: oy / k, w: W / k, h: H / k };
 }
-function put(g, sp, x, y, dir, sc, flash, rotA) {
-  g.save(); g.translate(x, y); if (rotA) g.rotate(rotA); g.scale(dir * sc, sc); g.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h);
+function put(g, sp, x, y, dir, sc, flash, rotA, sx, sy) {
+  g.save(); g.translate(x, y); if (rotA) g.rotate(rotA); g.scale(dir * sc * (sx || 1), sc * (sy || 1)); g.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h);
   if (flash > 0) { g.globalAlpha = Math.min(1, flash); g.drawImage(sp.wh, -sp.ox, -sp.oy, sp.w, sp.h); } g.restore();
 }
 
 /* ---------- 3D 렌더 캐릭터 아틀라스 (원본 src3d/chars, 모델 KayKit CC0) ---------- */
 // 5x4 칸, 칸 360x320px, 발 (155,295), 1 게임 단위 = 1.2px. 칸 순서 = ATL.F. 못 불러오면 예전 코드 그림을 쓴다.
-const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 3, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult',
+const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 4, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult',
   'idle1', 'idle3', 'run4', 'run5', 'run6', 'run7', 'hurt2', 'dash2'].concat(['c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'].flatMap(k => [k + '_p', k + '_f'])), p: {}, sp: {} }; // 8x6 칸 — src3d/chars/classes.js FRAMES 와 같게
 const ATL_E = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'wind0', 'wind', 'hit', 'hit2', 'hurt', 'hurt2'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 4x4 칸(걷기 8 + 준비·휘두르기·맞음 2장씩)
 function atlasLoad(key) {
@@ -769,10 +769,12 @@ function hit(e, h, dir, hx) {
 }
 // 맞은 뒤 밀림·띄우기·쓰러짐 (내 타격과 협동 동료의 타격이 같이 쓴다)
 function react(e, h, dir, big) {
+  e.hrT = G.t; e.hrD = dir; e.hrB = big ? 1 : 0; // 맞은 순간 모습(뒤로 젖힘·찌그러짐)용 — 그림만 바꾼다
+  if (!e.crate && e.z <= 0 && !isB(e)) burst(e.x - dir * 6, e.y, 2, '#a8acc8', big ? 8 : 4, big ? 140 : 90); // 발밑 먼지
   if (e.crate) { dieCheck(e, dir); return; }
   if (!ET[e.t]) return;
   const armor = ET[e.t].armor || isB(e);
-  if (isB(e)) { dieCheck(e, dir); return; }
+  if (isB(e)) { dieCheck(e, dir); return; } // 보스: hrT 로 몸만 움찔
   const kbm = armor && e.st !== 'stun' ? .25 : 1;
   e.vx = dir * h.kb * kbm * 2.2; e.f = -dir;
   if ((h.lift || e.z > 0) && !(armor && e.z <= 0 && h.lift < 300)) {
@@ -790,7 +792,7 @@ function kill(e, dir) {
   SV.dex.m[e.t] = (SV.dex.m[e.t] || 0) + 1;
   G.drops.xp += Math.round(ET[e.t].exp * G.am); burst(ex, ey, 30, ET[e.t].rim, isB(e) ? 80 : 26, isB(e) ? 420 : 260); sfx('die');
   // 빛 조각으로 흩어짐(잔인한 표현 없음)
-  G.fx.push({ k: 'ghost', e, x: e.x, y: e.y, z: e.z, t: 0, life: .45, f: e.f, dir });
+  G.fx.push({ k: 'ghost', e, x: e.x, y: e.y, z: e.z, t: 0, life: .6, f: e.f, dir });
   const lastOne = !G.en.some(o => !o.dead && !o.crate);
   if (lastOne || e.t === 'elite' || isB(e)) { G.slow = isB(e) ? 1.6 : .7; G.stop = Math.max(G.stop, .12); G.shake = Math.max(G.shake, 10); }
   const dr = (k, n) => { for (let i = 0; i < n; i++) G.it.push({ k, x: e.x + rnd(-20, 20), y: clamp(e.y + rnd(-10, 10), FY0, FY1), z: 20, vz: rnd(180, 280), t: 0 }); };
@@ -818,8 +820,8 @@ function enemyUpdate(e, dt) {
   const P = NET.on ? tgt(e) : G.P, d = ET[e.t]; e.fl -= dt; e.curse -= dt;
   if (e.spawnT > 0) { e.spawnT -= dt; return; }
   if (e.frz > 0) { e.frz -= dt; physE(e, dt); return; }
-  if (e.st === 'air') { physE(e, dt); if (e.z <= 0 && e.vz <= 0) { e.st = 'down'; e.tm = .55; e.jug = 0; G.shake = Math.max(G.shake, 2); burst(e.x, e.y, 6, '#ffffff', 5, 60); } return; }
-  if (e.st === 'down') { e.tm -= dt; physE(e, dt); if (e.tm <= 0) { e.st = 'walk'; e.tm = .3; } return; }
+  if (e.st === 'air') { physE(e, dt); if (e.z <= 0 && e.vz <= 0) { e.bnT = G.t; e.st = 'down'; e.tm = .55; e.jug = 0; G.shake = Math.max(G.shake, 2); burst(e.x, e.y, 6, '#ffffff', 5, 60); } return; }
+  if (e.st === 'down') { e.tm -= dt; physE(e, dt); if (e.tm <= 0) { e.st = 'walk'; e.tm = .3; e.guT = G.t; } return; }
   if (e.st === 'hurt') { e.tm -= dt; physE(e, dt); if (e.tm <= 0) { e.st = 'walk'; e.tm = rnd(.1, .4); } return; }
   physE(e, dt); e.tm -= dt; const dx = P.x - e.x, dy = P.y - e.y;
   if (e.t === 'ad') { adUpdate(e, dt, P, d, dx, dy); return; }
@@ -1136,7 +1138,7 @@ function spiderAI(b, dt, P, A) {
   if (b.st === 'leap') {
     if (!b.up) { if (b.tm > 0) return; b.up = 1; b.tm = 1.05; b.lx = clamp(P.x, 100, G.L - 100); b.ly = clamp(P.y, FY0 + 10, FY1 - 10); hpush({ k: 'zone', art: 'slam', x: b.lx, y: b.ly, r: 110, warn: 1.05, t: 0, d: Math.round(A * 1.25), kb: 1, end: 1.4 }); sfx('jump'); }
     const u = clamp(1 - b.tm / 1.05, 0, 1); b.z = Math.sin(u * Math.PI) * 340; b.x = lerp(b.x, b.lx, Math.min(1, dt * 3)); b.y = lerp(b.y, b.ly, Math.min(1, dt * 3));
-    if (b.tm <= 0) { b.up = 0; b.z = 0; b.x = b.lx; b.y = b.ly; b.st = 'land'; b.tm = b.ph2 ? 1.8 : 2.4; b.core = b.tm; G.shake = 14; sfx('boom'); burst(b.x, b.y, 10, '#ff5ad8', 30, 320); tx(b.x, b.y - 150, '다리가 박혔어요!', '#ffd166', 16); }
+    if (b.tm <= 0) { b.up = 0; b.z = 0; b.x = b.lx; b.y = b.ly; b.st = 'land'; b.lnT = G.t; b.tm = b.ph2 ? 1.8 : 2.4; b.core = b.tm; G.shake = 14; sfx('boom'); burst(b.x, b.y, 10, '#ff5ad8', 30, 320); tx(b.x, b.y - 150, '다리가 박혔어요!', '#ffd166', 16); }
     return;
   }
   if (b.st === 'land') { if (b.tm <= 0) { b.st = 'idle'; b.tm = b.ph2 ? .7 : 1.1; } return; }
@@ -1315,10 +1317,12 @@ function drawE(g, e) {
   const S = SPR.e[e.t] || spx(e.t); if (!S) return; let sp = S.w0; if (e.st === 'blink') { g.save(); g.globalAlpha = clamp(e.tm / .35, 0, 1); }
   if (e.st === 'walk') sp = S.w7 ? [S.w0, S.w1, S.w2, S.w3, S.w4, S.w5, S.w6, S.w7][Math.floor(e.ph * 2) % 8] : S.w5 ? [S.w0, S.w1, S.w2, S.w3, S.w4, S.w5][Math.floor(e.ph * 1.5) % 6] : [S.w0, S.w1, S.w0, S.w2][Math.floor(e.ph) % 4];
   else if (e.st === 'wind') sp = S.wind0 && e.tm > .3 ? S.wind0 : S.wind; else if (e.st === 'swing') sp = S.hit2 && e.tm < .2 ? S.hit2 : S.hit; else if (e.st === 'hurt' || e.st === 'air' || e.st === 'down') sp = S.hurt2 && (e.st === 'down' || e.tm < .12) ? S.hurt2 : S.hurt;
-  let rot = 0; if (e.st === 'air') rot = -e.f * clamp(e.vz / -400 + .4, -.2, 1.3); if (e.st === 'down') rot = -e.f * 1.45;
+  let rot = 0, sqx = 1, sqy = 1, yo = 0; if (e.st === 'air') rot = -e.f * clamp(e.vz / -400 + .4, -.2, 1.3); if (e.st === 'down') { rot = -e.f * 1.45; const bt = G.t - (e.bnT || -9); if (bt < .35) yo = -Math.abs(Math.sin(bt / .35 * Math.PI)) * 14 * (1 - bt / .35); } // 바닥에 튕김
+  const gt = G.t - (e.guT || -9); if (e.st === 'walk' && gt < .28) { const k = 1 - gt / .28; rot = -e.f * 1.45 * k * k; sp = S.hurt2 || S.hurt; sqy = 1 - .08 * k; } // 일어나기
+  const ht = G.t - (e.hrT || -9), hd = .16 + (e.hrB ? .12 : 0); if (ht < hd && e.st !== 'air' && e.st !== 'down') { const k = 1 - ht / hd, kk = k * k; rot += (e.hrD || 1) * (e.hrB ? .32 : .18) * kk; sqx = 1 + .14 * kk * (ht < .05 ? 1 : -.4); sqy = 1 - .1 * kk * (ht < .05 ? 1 : -.5); } // 맞은 쪽으로 젖힘 + 찌그러짐
   const shk = e.fl > 0 ? rnd(-2, 2) : 0, sc = ET[e.t].sc;
   if (e.st === 'wind') { const pu = .5 + .5 * Math.sin(G.t * 40); glw(g, e.x, e.y - e.z - e.h - 18, 14 + pu * 6, '#ff3d6a', .9); glw(g, e.x, e.y - e.z - e.h - 18, 5, '#ffffff', pu); glw(g, e.x + e.f * 30, e.y - e.z - e.h * .55, 26, hexA(ET[e.t].rim), .35 + pu * .3); }
-  put(g, sp, e.x + shk, e.y - e.z - (e.st === 'down' ? 8 : 0), e.f, sc, e.fl > 0 ? Math.min(.55, e.fl * 9) : e.frz > 0 ? .35 : 0, rot);
+  put(g, sp, e.x + shk, e.y - e.z - (e.st === 'down' ? 8 : 0) + yo, e.f, sc, e.fl > 0 ? Math.min(.55, e.fl * 9) : e.frz > 0 ? .35 : 0, rot, sqx, sqy);
   if (e.st === 'blink') g.restore();
   if (e.frz > 0) { g.fillStyle = 'rgba(180,240,255,.35)'; g.beginPath(); g.roundRect(e.x - e.w - 4, e.y - e.h - 6, e.w * 2 + 8, e.h + 8, 6); g.fill(); }
   if (e.curse > 0) dot(g, e.x, e.y - e.z - e.h - 12, 3, '#7dff9a');
@@ -1414,7 +1418,8 @@ function drawFx(g) {
     else if (f.k === 'dash') { g.save(); g.globalAlpha = .6 * (1 - u); g.fillStyle = f.col; for (let i = 0; i < 5; i++) g.fillRect(f.x - f.f * (20 + i * 22), f.y - f.z - 30 - i * 9, -f.f * 40, 2); g.restore(); }
     else if (f.k === 'slam') { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 1 - u; const rx = 30 + u * 90, ry = 10 + u * 26; g.strokeStyle = '#ff2a6a'; g.lineWidth = 12 * (1 - u) + 2; g.globalAlpha = (1 - u) * .35; g.beginPath(); g.ellipse(f.x, f.y, rx, ry, 0, 0, TAU); g.stroke(); g.globalAlpha = 1 - u; g.lineWidth = 3; g.strokeStyle = '#ffd0dc'; g.beginPath(); g.ellipse(f.x, f.y, rx, ry, 0, 0, TAU); g.stroke(); glw(g, f.x, f.y, 60 * (1 - u), '#ff2a6a', .7); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; glw(g, f.x + Math.cos(a) * rx, f.y + Math.sin(a) * ry - u * 20, 6, '#ff9ac0', 1 - u); } g.restore(); }
     else if (f.k === 'bolt' || f.k === 'petz') { g.save(); g.globalAlpha = 1 - u; g.shadowColor = f.k === 'bolt' ? '#e3b8ff' : '#ffd6f5'; g.shadowBlur = 14; g.strokeStyle = '#fff'; g.lineWidth = f.k === 'bolt' ? 2.5 : 1.5; g.beginPath(); g.moveTo(f.x, f.y); for (let i = 1; i < 6; i++) g.lineTo(lerp(f.x, f.x2, i / 6) + rnd(-8, 8), lerp(f.y, f.y2, i / 6) + rnd(-8, 8)); g.lineTo(f.x2, f.y2); g.stroke(); g.restore(); }
-    else if (f.k === 'ghost') { const e = f.e; g.save(); g.globalAlpha = (1 - u) * .8; g.globalCompositeOperation = 'lighter'; if (e.t === 'drone') dot(g, f.x, f.y - f.z, 20 * (1 + u), '#4fd8ff'); else if (SPR.e[e.t] || spx(e.t)) put(g, (SPR.e[e.t] || spx(e.t)).hurt, f.x + f.dir * u * 30, f.y - f.z - u * 20, f.f, ET[e.t].sc * (1 + u * .3), .5); g.restore(); }
+    else if (f.k === 'ghost') { const e = f.e; g.save(); g.globalAlpha = (1 - u) * .8; g.globalCompositeOperation = 'lighter'; if (e.t === 'drone') dot(g, f.x, f.y - f.z, 20 * (1 + u), '#4fd8ff'); else if (SPR.e[e.t] || spx(e.t)) { const S2 = SPR.e[e.t] || spx(e.t), d = f.dir || 1, arc = Math.sin(Math.min(1, u * 1.6) * Math.PI) * 40; g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1 - u * u; put(g, S2.hurt2 || S2.hurt, f.x + d * u * 70, f.y - f.z - arc, f.f, ET[e.t].sc * (1 - u * .25), .25 + u * .6, -f.f * Math.min(1.45, u * 3), 1 + u * .2, 1 - u * .3);
+        g.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) glw(g, f.x + d * u * 70 + Math.sin(i * 2.4) * 22 * u, f.y - f.z - arc - 20 - i * 12 - u * 40, 9 * (1 - u), hexA(ET[e.t].rim), 1 - u); } g.restore(); }
     else if (f.k === 'area') drawArea(g, f, u);
     else if (f.k === 'shock') { const c2 = hexA(f.col), e2 = 1 - Math.pow(1 - u, 3); g.save(); g.globalCompositeOperation = 'lighter'; for (let j = 0; j < 3; j++) { const v = clamp(e2 - j * .12, 0, 1), rx = f.r * v, ry = rx * .32; if (v <= 0) continue; g.globalAlpha = (1 - u) * (j ? .5 : .9); g.strokeStyle = j ? c2 : '#ffffff'; g.lineWidth = (j ? 10 : 4) * (1 - u) + 1; g.beginPath(); g.ellipse(f.x, f.y, rx, ry, 0, 0, TAU); g.stroke(); }
       g.globalAlpha = (1 - u) * .8; g.strokeStyle = c2; g.lineWidth = 2; for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .3, L1 = 30 + e2 * f.r * .7; g.beginPath(); g.moveTo(f.x + Math.cos(a) * 20, f.y + Math.sin(a) * 7); g.lineTo(f.x + Math.cos(a) * L1 * .6 + Math.sin(i * 7) * 12, f.y + Math.sin(a) * L1 * .2); g.lineTo(f.x + Math.cos(a) * L1, f.y + Math.sin(a) * L1 * .32); g.stroke(); }
@@ -1645,14 +1650,15 @@ function drawSign(g, x0, y0, col, ci, a) {
 /* ---------- 보스 그리기 ---------- */
 function drawBoss2(g, b) { if (b.t === 'spider') drawSpider(g, b); else if (b.t === 'hydra') drawHydra(g, b); else drawEcho(g, b); }
 function drawSpider(g, b) {
-  const y = b.y - b.z, f = b.f || -1, fl = b.fl > 0, land = b.st === 'land', crouch = (b.st === 'leap' && !b.up) ? 10 : 0, air = b.z > 4, ph = (b.walk || 0) + (NET.guest ? G.t * 3 : 0);
+  const y = b.y - b.z, f = b.f || -1, fl = b.fl > 0, land = b.st === 'land', air = b.z > 4, lt = G.t - (b.lnT || -9), ez = t => 1 - (1 - t) * (1 - t), crouch = (b.st === 'leap' && !b.up) ? 18 * ez(clamp(1 - b.tm / .6, 0, 1)) : air ? -6 : land && lt < .3 ? 20 * (1 - lt / .3) : 0, ph = (b.walk || 0) + (NET.guest ? G.t * 3 : 0);
   const body = fl ? '#b8a8e0' : null;
   const leg = (i, back) => { const s = i < 2 ? 1 : -1, j = i % 2, hipX = (j ? 18 : -10) * s, hipY = -74 + crouch, swing = air ? -10 : land ? 18 : Math.sin(ph + i * 1.7 + (back ? .8 : 0)) * 14,
       footX = (j ? 104 : 74) * s + swing * s * .5 + (back ? -8 * s : 0), footY = air ? -20 : (back ? -6 : 4), kneeX = (j ? 70 : 46) * s + (back ? -4 * s : 0), kneeY = -130 + crouch + (air ? 30 : 0) - (land ? -20 : 0) + Math.max(0, Math.sin(ph + i * 1.7)) * (air ? 0 : 10);
     if (ATL.b2) { const sp = back ? ATL.b2.splegd : ATL.b2.spleg, w = fl ? .45 : 0; seg3(g, sp, hipX, hipY, kneeX, kneeY, back ? .85 : 1, w); seg3(g, sp, kneeX, kneeY, footX, footY, back ? .7 : .85, w); glw(g, kneeX, kneeY, back ? 6 : 9, '#ff5ad8', back ? .4 : .8); return; }
     g.strokeStyle = 'rgba(8,4,14,.95)'; g.lineWidth = back ? 12 : 14; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(hipX, hipY); g.lineTo(kneeX, kneeY); g.lineTo(footX, footY); g.stroke();
     g.strokeStyle = body || (back ? '#3a2e52' : '#5a4a78'); g.lineWidth = back ? 8 : 9; g.stroke(); g.strokeStyle = body || '#ff5ad8'; g.globalAlpha = back ? .3 : .6; g.lineWidth = 1.6; g.beginPath(); g.moveTo(kneeX, kneeY); g.lineTo(footX, footY); g.stroke(); g.globalAlpha = 1; dot(g, kneeX, kneeY, 3, back ? '#a04a90' : '#ff9ae8'); };
-  g.save(); g.translate(b.x, y); g.scale(-f, 1);
+  const ht = G.t - (b.hrT || -9), rec = ht < .15 ? (b.hrD || 0) * 7 * (1 - ht / .15) : 0, bob = air ? 0 : (Math.abs(Math.sin(ph)) * 5 - 2.5), tilt = air ? (b.vz0 = b.z - (b.pz || 0), b.pz = b.z, clamp(-b.vz0 * .02, -.18, .18)) : (b.pz = 0, Math.sin(ph * .5) * .02);
+  g.save(); g.translate(b.x + rec, y + bob); g.scale(-f, 1); g.rotate(tilt); // 걸음에 맞춰 몸 흔들림·점프 때 기울기·맞으면 움찔
   for (let i = 0; i < 4; i++) leg(i, 1);
   if (ATL.b2) { put(g, ATL.b2.spbody, 0, crouch, 1, 1, fl ? .45 : 0); glw(g, -46, -84 + crouch, land ? 22 : 14, land ? '#ffd166' : '#ff5ad8', .8); glw(g, 46, -100 + crouch, 50, '#ff5ad8', .18); }
   else {
@@ -1670,21 +1676,23 @@ function drawSpider(g, b) {
   if (b.core > 0) { g.save(); const r = 34 + Math.sin(G.t * 10) * 4; g.fillStyle = rg(g, b.x, y - 76, 0, r, [[0, 'rgba(255,255,255,.9)'], [.4, 'rgba(255,214,102,.6)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(b.x, y - 76, r, 0, TAU); g.fill(); g.restore(); for (let i = 0; i < 3; i++) dot(g, b.x + Math.cos(G.t * 5 + i * 2) * 50, y - 150 + Math.sin(G.t * 5 + i * 2) * 8, 3, '#ffd166'); }
 }
 function drawHydra(g, b) {
-  const r = b.st === 'enter' ? Math.min(1, b.rise || 1 - Math.max(0, b.tm) / 2.2) : 1, y = b.y + (1 - r) * 150, fl = b.fl > 0, tired = b.st === 'tired', beam = b.st === 'beam';
-  g.save(); g.globalAlpha = .3 + .7 * r; g.translate(b.x, y);
+  const r = b.st === 'enter' ? Math.min(1, b.rise || 1 - Math.max(0, b.tm) / 2.2) : 1, y = b.y + (1 - r) * 150, fl = b.fl > 0, tired = b.st === 'tired', beam = b.st === 'beam', ht = G.t - (b.hrT || -9), rec = ht < .15 ? 6 * (1 - ht / .15) : 0;
+  b.td = lerp(b.td || 0, tired ? 1 : 0, .07); const td = b.td, br = Math.sin(G.t * 2.2) * .012; // 지쳐 고개 숙이기·숨쉬기를 부드럽게
+  g.save(); g.globalAlpha = .3 + .7 * r; g.translate(b.x + rec, y);
   // 몸통: 서버 더미
   const blk = (x0, y0, w, h) => { g.fillStyle = fl ? '#4a7aa0' : lg(g, x0, 0, x0 + w, 0, [[0, '#0a1626'], [.5, '#1a3450'], [1, '#08121e']]); g.beginPath(); g.roundRect(x0, y0, w, h, 6); g.fill(); g.strokeStyle = '#2a5070'; g.lineWidth = 1.5; g.stroke();
     for (let yy = y0 + 8; yy < y0 + h - 6; yy += 11) { g.fillStyle = '#06101c'; g.fillRect(x0 + 6, yy, w - 12, 7); for (let l = 0; l < 4; l++) { const on2 = Math.sin(G.t * (3 + l) + yy + x0) > 0; g.fillStyle = on2 ? ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l] : '#1a2a3a'; g.fillRect(x0 + 10 + l * 7, yy + 2, 3, 3); } } };
-  if (ATL.b2) { put(g, ATL.b2.hybody, 0, 0, 1, 1, fl ? .7 : 0); for (let l = 0; l < 4; l++) glw(g, -50 + l * 30, -60 - l * 40, 12, ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l], .4 + .4 * Math.sin(G.t * (3 + l))); }
+  if (ATL.b2) { put(g, ATL.b2.hybody, 0, 0, 1, 1, fl ? .7 : 0, 0, 1 - br * .5, 1 + br); for (let l = 0; l < 4; l++) glw(g, -50 + l * 30, -60 - l * 40, 12, ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l], .4 + .4 * Math.sin(G.t * (3 + l))); }
   else { blk(-70, -120, 130, 120); blk(-50, -190, 96, 74); blk(-20, -232, 60, 46); }
   if (b.core > 0) { const rr = 30 + Math.sin(G.t * 10) * 4; g.fillStyle = rg(g, -6, -150, 0, rr, [[0, 'rgba(255,255,255,1)'], [.35, 'rgba(255,214,102,.9)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(-6, -150, rr, 0, TAU); g.fill(); }
   // 목(케이블) + 머리 3개
   for (let i = 0; i < 3; i++) {
-    const sway = Math.sin(G.t * 2 + i * 2.1) * 8, lunge = b.st === 'bite' && b.hd === i && b.tm < .45 ? -70 : 0, hx = -150 - i * 18 + sway + lunge, hy = (tired ? -60 : -200) + i * 52 + Math.cos(G.t * 1.6 + i) * 6, bx0 = -50, by0 = -150 + i * 30;
+    const sway = Math.sin(G.t * 2 + i * 2.1 + Math.sin(G.t * .7) * .6) * 9, bt = b.st === 'bite' && b.hd === i ? b.tm : 9, lunge = bt < 1.1 ? (bt > .45 ? 22 * Math.sin((1.1 - bt) / .65 * Math.PI * .5) : -92 * Math.pow(clamp((.45 - bt) / .12, 0, 1), .5) * clamp(bt / .2, 0, 1)) : 0, bm = beam ? Math.sin(G.t * 40 + i) * 2 + 10 : 0,
+      hx = -150 - i * 18 + sway + lunge + bm, hy = lerp(-200, -60, td) + i * 52 + Math.cos(G.t * 1.6 + i) * 6 * (1 - td * .7), bx0 = -50, by0 = -150 + i * 30;
     g.strokeStyle = 'rgba(4,8,16,.95)'; g.lineWidth = 20; g.lineCap = 'round'; g.beginPath(); g.moveTo(bx0, by0); g.bezierCurveTo(bx0 - 40, by0 - 60 + i * 20, hx + 60, hy - 30, hx + 20, hy); g.stroke();
     g.strokeStyle = fl ? '#6a9ac0' : ['#1e4a6a', '#2a3a6a', '#1a5a5a'][i]; g.lineWidth = 14; g.stroke();
     g.strokeStyle = 'rgba(79,216,255,.5)'; g.lineWidth = 2; g.setLineDash([3, 7]); g.stroke(); g.setLineDash([]);
-    g.save(); g.translate(hx, hy); if (tired) g.rotate(-.5); const open = beam || (b.st === 'bite' && b.hd === i) ? 1 : 0;
+    g.save(); g.translate(hx, hy); g.rotate(-.5 * td + (bt < .45 ? -.12 : bt < 1.1 ? .1 : 0)); const open = beam || (b.st === 'bite' && b.hd === i) ? 1 : 0;
     if (ATL.b2) { put(g, open ? ATL.b2.hyh1 : ATL.b2.hyh0, 0, 0, 1, 1, fl ? .7 : 0); if (!tired) glw(g, -10, -8, 10, beam ? '#ffffff' : '#4fd8ff', .7); if (beam) dot(g, -52, 4, 6 + Math.sin(G.t * 30) * 2, '#bff4ff'); g.restore(); continue; }
     shape(g, [[16, -18], [-30, -14], [-56, -4 - open * 6], [-34, 0], [16, 4]], fl ? '#8ab8e0' : lg(g, 0, -18, 0, 4, [[0, '#3a6a90'], [1, '#14283a']]), .2);
     shape(g, [[16, 6], [-30, 4 + open * 10], [-50, 10 + open * 16], [-28, 16], [14, 16]], fl ? '#4a7aa0' : '#12243a', .2);
@@ -1696,10 +1704,11 @@ function drawHydra(g, b) {
   if (tired) for (let i = 0; i < 3; i++) dot(g, b.x - 150 + Math.cos(G.t * 5 + i * 2) * 40, y - 120 + Math.sin(G.t * 5 + i * 2) * 8, 3, '#ffd166');
 }
 function drawEcho(g, b) {
-  const f = b.f || -1, fl = b.fl > 0, y = b.y - b.z, tired = b.st === 'tired';
+  const f = b.f || -1, fl = b.fl > 0, y = b.y - b.z, tired = b.st === 'tired', ht = G.t - (b.hrT || -9), rec = ht < .15 ? (b.hrD || 0) * 6 * (1 - ht / .15) : 0;
+  b.td = lerp(b.td || 0, tired ? 1 : 0, .08); const dx = b.x - (b.dpx == null ? b.x : b.dpx); b.dpx = b.x; b.lean = lerp(b.lean || 0, Math.abs(dx) > 40 ? 0 : clamp(dx * .06, -.22, .22), .12); // 움직이는 쪽으로 기울기
   let al = 1; if (b.st === 'enter') al = clamp(1 - b.tm / 2.2, 0, 1); if (b.st === 'blink') al = clamp(b.tm / .45, 0, 1);
-  g.save(); g.globalAlpha = al; g.translate(b.x + (b.st === 'blink' ? rnd(-3, 3) : 0), y + (tired ? 14 : 0)); g.scale(f, 1);
-  const wv = Math.sin(G.t * 3) * 8, sl = b.st === 'slash' ? clamp(1 - b.tm / .6, 0, 1) : 0;
+  g.save(); g.globalAlpha = al; g.translate(b.x + rec + (b.st === 'blink' ? rnd(-3, 3) : 0), y + b.td * 14); g.rotate(b.lean + (ht < .15 ? (b.hrD || 0) * .08 * (1 - ht / .15) : 0)); g.scale(f, 1); g.rotate(b.td * .12);
+  const wv = Math.sin(G.t * 3) * 8 + b.lean * f * 30, sl0 = b.st === 'slash' ? clamp(1 - b.tm / .6, 0, 1) : 0, sl = sl0 < .3 ? -.25 * Math.sin(sl0 / .3 * Math.PI * .5) : 1 - Math.pow(1 - (sl0 - .3) / .7, 3); // 베기: 뒤로 젖혔다가 빠르게
   const E3 = ATL.b2, fw = fl ? .7 : 0;
   if (E3) { g.save(); g.translate(0, -118); g.transform(1, 0, -wv * .012, 1, 0, 0); g.translate(0, 118); put(g, E3.eccape, 0, 0, 1, 1, fw); g.restore(); put(g, E3.ecbody, 0, 0, 1, 1, fw); }
   else {
@@ -1713,7 +1722,7 @@ function drawEcho(g, b) {
   if (tired || b.core > 0) { const rr = 16 + Math.sin(G.t * 10) * 3; g.fillStyle = rg(g, 0, -84, 0, rr * 1.8, [[0, 'rgba(255,255,255,1)'], [.4, 'rgba(255,214,102,.8)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(0, -84, rr * 1.8, 0, TAU); g.fill(); }
   else if (E3) glw(g, 0, -84, 14, '#c084ff', .9); else dot(g, 0, -84, 5, '#c084ff');
   // 칼을 든 팔
-  g.save(); g.translate(14, -104); g.rotate(tired ? 1.2 : -1.1 + sl * 2.6 + Math.sin(G.t * 2) * .05);
+  g.save(); g.translate(14, -104); g.rotate(lerp(-1.1 + sl * 2.6 + Math.sin(G.t * 2) * .05, 1.2, b.td));
   if (E3) { put(g, E3.ecsw, 0, 0, 1, 1, fw); for (let j = 0; j < 3; j++) glw(g, 0, 50 + j * 24, 16, '#c084ff', .35 + (sl ? .4 : 0)); } else {
   g.strokeStyle = fl ? '#6a4a90' : '#3a2050'; g.lineWidth = 8; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 30); g.stroke();
   g.shadowColor = '#c084ff'; g.shadowBlur = 16; shape(g, [[-3, 30], [3, 30], [6, 96], [0, 112], [-6, 96]], lg(g, 0, 30, 0, 112, [[0, '#f6eaff'], [1, '#a06aff']]), .1); } g.restore();

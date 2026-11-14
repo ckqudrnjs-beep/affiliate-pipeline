@@ -113,7 +113,7 @@ window.renderClass = async function (cls, label) {
   o.imageSmoothingQuality = 'high';
   if (label) { o.fillStyle = '#1a1438'; o.fillRect(0, 0, out.width, out.height); }
   FR.forEach((f, i) => {
-    const [an, t] = C.frames[f], clip = clips.find(a => a.name === an); if (!clip) throw new Error(cls + ': no clip ' + an);
+    const [an, t, yaw] = C.frames[f], clip = clips.find(a => a.name === an); if (!clip) throw new Error(cls + ': no clip ' + an); root.rotation.y = Math.PI / 2 * .72 + (yaw || 0);
     mixer.stopAllAction(); const ac = mixer.clipAction(clip); ac.reset().play(); mixer.setTime(clip.duration * t);
     r.render(scene, cam);
     const x = (i % COLS) * CW, y = Math.floor(i / COLS) * CH * (label ? 1.12 : 1);
