@@ -1,0 +1,145 @@
+{
+ "note": "관리자(/admin) 지급용 게임 안 아이템(도토리·코인으로 사는 꾸미기). own 키 g:mongle:<k>:<id>",
+ "items": [
+  {
+   "k": "wall",
+   "kn": "벽지",
+   "id": "mint",
+   "name": "민트 벽지",
+   "icon": "🧱"
+  },
+  {
+   "k": "wall",
+   "kn": "벽지",
+   "id": "sky",
+   "name": "하늘 벽지",
+   "icon": "🧱"
+  },
+  {
+   "k": "wall",
+   "kn": "벽지",
+   "id": "lilac",
+   "name": "라일락 벽지",
+   "icon": "🧱"
+  },
+  {
+   "k": "curtain",
+   "kn": "커튼",
+   "id": "mint",
+   "name": "민트 커튼",
+   "icon": "🪟"
+  },
+  {
+   "k": "curtain",
+   "kn": "커튼",
+   "id": "butter",
+   "name": "버터 커튼",
+   "icon": "🪟"
+  },
+  {
+   "k": "curtain",
+   "kn": "커튼",
+   "id": "lav",
+   "name": "보라 커튼",
+   "icon": "🪟"
+  },
+  {
+   "k": "rug",
+   "kn": "러그",
+   "id": "pink",
+   "name": "분홍 러그",
+   "icon": "🟫"
+  },
+  {
+   "k": "rug",
+   "kn": "러그",
+   "id": "butter",
+   "name": "버터 러그",
+   "icon": "🟫"
+  },
+  {
+   "k": "rug",
+   "kn": "러그",
+   "id": "lav",
+   "name": "보라 러그",
+   "icon": "🟫"
+  },
+  {
+   "k": "cushion",
+   "kn": "방석",
+   "id": "mint",
+   "name": "민트 방석",
+   "icon": "🛋️"
+  },
+  {
+   "k": "cushion",
+   "kn": "방석",
+   "id": "sky",
+   "name": "하늘 방석",
+   "icon": "🛋️"
+  },
+  {
+   "k": "cushion",
+   "kn": "방석",
+   "id": "butter",
+   "name": "버터 방석",
+   "icon": "🛋️"
+  },
+  {
+   "k": "x",
+   "kn": "방 장식",
+   "id": "garland",
+   "name": "전구 줄",
+   "icon": "✨"
+  },
+  {
+   "k": "x",
+   "kn": "방 장식",
+   "id": "mobile",
+   "name": "별 모빌",
+   "icon": "✨"
+  },
+  {
+   "k": "x",
+   "kn": "방 장식",
+   "id": "frame",
+   "name": "엽서 액자",
+   "icon": "✨"
+  },
+  {
+   "k": "w",
+   "kn": "옷",
+   "id": "scarf",
+   "name": "목도리",
+   "icon": "🧣"
+  },
+  {
+   "k": "w",
+   "kn": "옷",
+   "id": "hat",
+   "name": "밀짚모자",
+   "icon": "👒"
+  },
+  {
+   "k": "p",
+   "kn": "몽글이 색",
+   "id": "peach",
+   "name": "복숭아 몽글이",
+   "icon": "🎨"
+  },
+  {
+   "k": "p",
+   "kn": "몽글이 색",
+   "id": "sky",
+   "name": "하늘 몽글이",
+   "icon": "🎨"
+  },
+  {
+   "k": "p",
+   "kn": "몽글이 색",
+   "id": "lilac",
+   "name": "라일락 몽글이",
+   "icon": "🎨"
+  }
+ ]
+}
