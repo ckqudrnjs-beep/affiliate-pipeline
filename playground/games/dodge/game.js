@@ -17,7 +17,7 @@ function frame(now){if(!run)return;const dt=Math.min(.05,(now-last)/1000);last=n
 function start(){size();reset();run=true;last=performance.now();$('dg-start').hidden=true;$('dg-msg').textContent='';requestAnimationFrame(frame)}
 function end(){run=false;const s=Math.floor(score);$('dg-start').hidden=false;$('dg-start').textContent='다시 하기';$('dg-msg').innerHTML='끝! '+s+'점 · <button class="share" type="button" id="dg-sh">결과 공유</button>';
  $('dg-sh').onclick=()=>shareText('5락실 별똥별 피하기 '+KST.slice(5)+'\n🌠 '+s+'점 버텼어요. 이겨 볼래?\n'+challengeUrl(s));if(window.submitScore)submitScore(s)}
-$('dg-start').onclick=start;addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')&&run)e.preventDefault();keys[e.key]=1});addEventListener('keyup',e=>keys[e.key]=0);
-const pos=e=>{const b=c.getBoundingClientRect();return e.clientX-b.left};c.addEventListener('pointerdown',e=>{drag=pos(e);c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(drag!==null)drag=pos(e)});c.addEventListener('pointerup',()=>drag=null);
-reset();x.fillStyle='#fff';x.font='16px sans-serif';x.textAlign='center';x.fillText('시작 버튼을 누르세요',W/2,H/2);
+$('dg-start').onclick=start;c.style.touchAction='none';addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')&&run)e.preventDefault();keys[e.key]=1});addEventListener('keyup',e=>keys[e.key]=0);
+const pos=e=>{const b=c.getBoundingClientRect();return e.clientX-b.left};c.addEventListener('pointerdown',e=>{if(!run)start();drag=pos(e);c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(drag!==null)drag=pos(e)});c.addEventListener('pointerup',()=>drag=null);
+reset();x.fillStyle='#fff';x.font='16px sans-serif';x.textAlign='center';x.fillText('여기를 눌러 시작',W/2,H/2);x.font='13px sans-serif';x.fillText('누른 채 좌우로 움직이세요 (PC는 ← →)',W/2,H/2+24);
 })();
