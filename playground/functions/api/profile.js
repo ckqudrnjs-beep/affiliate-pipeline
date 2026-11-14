@@ -3,6 +3,7 @@
 // POST /api/profile {a:"get", code}              → {nick, data, rev}  다른 기기에서 불러오기
 // POST /api/profile {a:"put", code, nick, data, rev} → {rev}     저장(코드 아는 사람만)
 // POST /api/profile {a:"del", code}              → {ok}       프로필 삭제
+// POST /api/profile {a:"tester", code}           → {tester}   테스터 전용 체험판(네온 레이드) 입장 확인
 // 개인정보(이메일·전화·이름) 없음. 원본 IP 저장 안 함: (IP+날짜+비밀값) 해시로 하루 시도 횟수만 센다.
 import { profileNickOk } from "../../lib/nick.js";
 
@@ -77,9 +78,9 @@ export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error: "nodb" }, 500);
   await ensure(env.DB);
   const a = b && b.a, ip = request.headers.get("cf-connecting-ip") || "0", salt = env.VOTE_SALT || "";
-  if (!["new", "get", "put", "del"].includes(a)) return json({ error: "bad" }, 400);
+  if (!["new", "get", "put", "del", "tester"].includes(a)) return json({ error: "bad" }, 400);
   if (!(await hit(env, ip, "bad", 0))) return json({ error: "limit", msg: "틀린 코드를 너무 많이 넣었어요. 내일 다시 해 주세요." }, 429);
-  if (!(await hit(env, ip, a))) return json({ error: "limit", msg: "오늘 요청이 너무 많아요. 내일 다시 해 주세요." }, 429);
+  if (!(await hit(env, ip, a === "tester" ? "get" : a))) return json({ error: "limit", msg: "오늘 요청이 너무 많아요. 내일 다시 해 주세요." }, 429);
   const today = kst();
   if (a === "new") {
     if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
@@ -101,6 +102,9 @@ export async function onRequestPost({ request, env }) {
   const row = h && (await env.DB.prepare("SELECT nick, data, rev, updated FROM profiles WHERE h = ?").bind(h).first());
   if (!row) { await hit(env, ip, "bad"); return json({ error: "nocode", msg: "그런 복구 코드가 없어요. 다시 확인해 주세요." }, 404); }
   if (a === "get") return json({ nick: row.nick, data: JSON.parse(row.data), rev: row.rev });
+  if (a === "tester") { // 테스터 전용 체험판 입장 확인(관리자 페이지에서 테스터로 지정한 프로필만)
+    try { const t = await env.DB.prepare("SELECT 1 AS ok FROM testers WHERE h = ?").bind(h).first(); return json({ tester: !!t }); } catch { return json({ tester: false }); }
+  }
   if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); try { await env.DB.prepare("DELETE FROM pscores WHERE h = ?").bind(h).run(); } catch { /* 표 없음 */ } return json({ ok: true }); }
   // put
   if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);

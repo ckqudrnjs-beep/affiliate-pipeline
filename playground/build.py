@@ -997,7 +997,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
             pages.append(path)
 
     cards = "".join(qcard(q, f"오늘의 질문 {i + 1}") for i, q in enumerate(todays))
-    games = load_games()
+    allgames = load_games()
+    # meta.json "hidden": true = 테스터 전용 체험판(BK 11/14 네온 레이드). 목록·순위 탭·사이트맵에서 빼고 페이지만 noindex로 만든다.
+    games = [g for g in allgames if not g.get("hidden")]
     grid = game_grid(games)
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
@@ -1033,7 +1035,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         "WORDS": json.loads((HERE / "data" / "chosung_words.json").read_text(encoding="utf-8")),
         "POOL": [{"id": q["id"], "a": q["a"], "b": q["b"]} for q in qs if q["date"] < latest][:30],
     }
-    for g in games:
+    for g in allgames:
         pre = "".join(f"const {k}={json.dumps(inject[k], ensure_ascii=False)};" for k in g.get("inject", []))
         body = g["body"]
         # 시작 전 공유(BK 11/13): 하기 전에도 친구에게 보낼 수 있게. 선택 사항, 공유해야 시작되는 것 아님.
@@ -1056,7 +1058,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
               jsonld=[{"@context": "https://schema.org", "@type": "VideoGame", "name": g["name"], "description": g["description"], "url": f"{cfg['baseUrl'].rstrip('/')}/games/{g['slug']}",
                        "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "All", "inLanguage": "ko", "isAccessibleForFree": True,
                        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}},
-                      crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])],
+                      crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])], noindex=bool(g.get("hidden")),
               og=g.get("og") if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
 
     ranked = [g for g in games if g.get("ranked")]
