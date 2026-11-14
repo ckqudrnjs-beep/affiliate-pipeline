@@ -11,7 +11,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url)), ROOT = path.resolve(H
 const OUT = path.resolve(ROOT, '../static/img/raid');
 const args = process.argv.slice(2), sheet = args.includes('--sheet');
 const list = args.filter(a => !a.startsWith('--'));
-const classes = list.length ? list : ['knight', 'fairy', 'mage', 'archer', 'voodoo'];
+const classes = list.length ? list : ['knight', 'fairy', 'mage', 'archer', 'voodoo', 'grunt', 'shield', 'elite', 'props', 'boss'];
 const TYPES = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary' };
 const srv = http.createServer((q, s) => {
   const p = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
@@ -27,7 +27,10 @@ await pg.goto(`http://localhost:${port}/chars/render.html`);
 await pg.waitForFunction('window.READY', null, { timeout: 60000 });
 fs.mkdirSync(OUT, { recursive: true });
 for (const c of classes) {
-  const url = await pg.evaluate(([c, l]) => window.renderClass(c, l), [c, sheet]);
+  let url;
+  if (c === 'boss') url = await pg.evaluate(() => window.renderBoss());
+  else if (c === 'props') { const r = await pg.evaluate(() => window.renderProps()); url = r.url; console.log('props meta', JSON.stringify(r.meta)); }
+  else url = await pg.evaluate(([c, l]) => window.renderClass(c, l), [c, sheet]);
   const png = Buffer.from(url.split(',')[1], 'base64');
   if (sheet) { const f = path.join(HERE, 'sheet-' + c + '.png'); fs.writeFileSync(f, png); console.log('sheet', f); continue; }
   // PNG → WebP (브라우저로 변환: 투명 유지, 품질 0.86)

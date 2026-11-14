@@ -78,3 +78,13 @@ export const ENEMIES = {
     frames: EF('2H_Melee_Attack_Chop', .15, .5),
   },
 };
+
+// 소품·아이템: 칸 128x128, 가운데 정렬. n = 회전 프레임 수. 출처: KayKit Dungeon Remastered(CC0) 또는 직접 만든 도형(gem·orb·jelly).
+export const PROPS = [
+  { key: 'coin', file: 'coin.gltf.glb', n: 8, rx: Math.PI / 2, tilt: .1, tint: '#ffd166', glowI: .3 },
+  { key: 'gem', proc: 'gem', n: 8, tilt: .2 },
+  { key: 'chest', file: 'chest_gold.glb', n: 1, yaw: -.6, tilt: .35 },
+  { key: 'orb', proc: 'orb', n: 1 },
+  { key: 'jelly', proc: 'jelly', n: 1, yaw: -.4, tilt: .3 },
+  { key: 'crate', file: 'box_small.gltf.glb', n: 1, yaw: -.5, tilt: .25 },
+];

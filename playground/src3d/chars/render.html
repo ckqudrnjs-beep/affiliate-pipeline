@@ -5,7 +5,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
-import { CLASSES, FRAMES, ENEMIES, EFRAMES } from './classes.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { CLASSES, FRAMES, ENEMIES, EFRAMES, PROPS } from './classes.js';
 
 // 아틀라스 칸: CW x CH 픽셀, 발 위치 (FX, FY). 게임 단위로 1단위 = PXU 픽셀.
 export const CW = 360, CH = 320, FX = 155, FY = 295, PXU = 1.2, HEIGHT_U = 176, SS = 2;
@@ -123,5 +124,112 @@ window.renderClass = async function (cls, label) {
   return out.toDataURL('image/png');
 };
 window.dbg = async c => { const { root } = await build(c); const L = []; root.traverse(n => { if (n.isMesh) L.push(n.name + '|' + (n.parent && n.parent.name) + '|' + n.material.type + '|' + n.visible); }); return L; };
+
+// ---------- 소품 아틀라스 ----------
+function procProp(kind) {
+  const g = new THREE.Group();
+  if (kind === 'gem') {
+    const geo = new THREE.OctahedronGeometry(.5, 0); geo.scale(.8, 1.25, .8);
+    const m = new THREE.MeshPhysicalMaterial({ color: 0x7df9ff, emissive: 0x2a8cff, emissiveIntensity: .35, roughness: .08, metalness: .1, clearcoat: 1, flatShading: true });
+    g.add(new THREE.Mesh(geo, m));
+    const inner = new THREE.Mesh(new THREE.OctahedronGeometry(.22, 0), new THREE.MeshBasicMaterial({ color: 0xffffff })); inner.scale.set(.8, 1.3, .8); g.add(inner);
+  } else if (kind === 'orb') {
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(.5, 40, 30), new THREE.MeshPhysicalMaterial({ color: 0x6bff9a, emissive: 0x2acb6a, emissiveIntensity: .6, roughness: .1, clearcoat: 1, transparent: true, opacity: .92 })));
+    const c = new THREE.Mesh(new THREE.SphereGeometry(.26, 24, 18), new THREE.MeshBasicMaterial({ color: 0xeaffef })); g.add(c);
+    const cr = new THREE.Mesh(new THREE.BoxGeometry(.36, .1, .1), new THREE.MeshBasicMaterial({ color: 0x1f8a4a })); cr.position.z = .5; g.add(cr);
+    const cr2 = cr.clone(); cr2.rotation.z = Math.PI / 2; g.add(cr2);
+  } else if (kind === 'jelly') {
+    const geo = new THREE.SphereGeometry(.5, 40, 30); const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setY(i, y < -.15 ? -.15 - (y + .15) * .25 : y * .95); }
+    geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ color: 0xff8fd0, emissive: 0xff4fa8, emissiveIntensity: .25, roughness: .15, clearcoat: 1, transmission: 0, sheen: 1, sheenColor: new THREE.Color(0xffd6f0) })));
+    for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.055, 12, 10), new THREE.MeshBasicMaterial({ color: 0x4a1a34 })); e.position.set(sx * .14, .16, .44); g.add(e); }
+  }
+  return g;
+}
+window.renderProps = async function () {
+  const PC = 128, cols = 8, rows = PROPS.reduce((a, p) => a + Math.ceil(p.n / cols), 0);
+  const out = document.createElement('canvas'); out.width = cols * PC; out.height = rows * PC; const o = out.getContext('2d');
+  const rr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rr.setSize(PC * SS, PC * SS); rr.outputColorSpace = THREE.SRGBColorSpace; rr.toneMapping = THREE.ACESFilmicToneMapping; rr.setClearColor(0, 0);
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x3a2850, 1.6)); const k2 = new THREE.DirectionalLight(0xfff4e0, 2.6); k2.position.set(2, 4, 5); sc.add(k2); const b2 = new THREE.DirectionalLight(0x7df9ff, 1.2); b2.position.set(-4, 2, -3); sc.add(b2);
+  let row = 0; const meta = {};
+  for (const P of PROPS) {
+    let obj = P.file ? (await load(P.file.replace(/\.glb$/, ''))).scene.clone(true) : procProp(P.proc);
+    if (P.rx) { const w = new THREE.Group(); w.add(obj); obj.rotation.x = P.rx; obj = w; }
+    const ms = []; obj.traverse(m => { if (m.isMesh) ms.push(m); });
+    for (const m of ms) { if (P.file) m.material = rimMat(m.material, P.tint, '#ffffff', '#7df9ff', P.tint, P.glowI); outline(m); }
+    const piv = new THREE.Group(), tiltG = new THREE.Group(); piv.add(obj); tiltG.add(piv); sc.add(tiltG); tiltG.rotation.x = P.tilt || 0;
+    const bb = new THREE.Box3().setFromObject(obj); const ctr = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+    obj.position.sub(ctr); const R = Math.max(sz.x, sz.y, sz.z) * .72;
+    const cam2 = new THREE.OrthographicCamera(-R, R, R, -R, .1, 50); cam2.position.set(0, 0, 10); cam2.lookAt(0, 0, 0);
+    if (P.bottom) { cam2.top = R * 2 - sz.y * .55 * 1.1; cam2.bottom = -sz.y * .55 * 1.1; cam2.top = cam2.bottom + 2 * R; cam2.updateProjectionMatrix(); }
+    meta[P.key] = { row, n: P.n };
+    for (let i = 0; i < P.n; i++) {
+      piv.rotation.y = (P.yaw || 0) + i / P.n * Math.PI * 2; rr.render(sc, cam2);
+      o.drawImage(rr.domElement, (i % cols) * PC, (row + Math.floor(i / cols)) * PC, PC, PC);
+    }
+    row += Math.ceil(P.n / cols); sc.remove(tiltG);
+  }
+  return { url: out.toDataURL('image/png'), meta };
+};
+
+// ---------- 보스(기계 열차 지네)·드론: 직접 만든 3D 도형 (칸 400x300) ----------
+// [키, 1단위당 px, 기준점(x,y px)] — raid.js BOSSA 와 같아야 한다.
+const BCELL = [['car', 1.45, 200, 286], ['head', .95, 250, 262], ['drone0', 4, 200, 150], ['drone1', 4, 200, 150]];
+const U = .01; // 게임 1단위 = 0.01 월드
+function ext(pts, depth, bev, mat, curve) {
+  const sh = new THREE.Shape(); sh.moveTo(pts[0][0] * U, -pts[0][1] * U);
+  for (let i = 1; i < pts.length; i++) sh.lineTo(pts[i][0] * U, -pts[i][1] * U);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 4, curveSegments: 8 });
+  geo.translate(0, 0, -depth / 2); return new THREE.Mesh(geo, mat);
+}
+// 주의: 위 좌표는 화면식(y 아래가 +)이라 -y 로 뒤집는다 → 위쪽이 +y
+function steel(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: .6, roughness: .32 }); }
+function glowM(c, i) { return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: (i || 2.2) * .45, roughness: .3 }); }
+function bossPart(kind) {
+  const g = new THREE.Group();
+  if (kind === 'car') {
+    g.add(ext([[-72, -112], [66, -114], [78, -98], [76, -34], [62, -24], [-66, -24], [-78, -36], [-80, -96]], .5, .06, steel(0x4a5272)));
+    for (let i = 0; i < 4; i++) { const w = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .04), glowM(0xff2a4a, 2.6)); w.position.set((-47 + i * 32) * U, 81 * U, .3); g.add(w); }
+    const st = new THREE.Mesh(new THREE.BoxGeometry(1.5, .025, .04), glowM(0xff5a7a, 1.6)); st.position.set(-.01, .56, .31); g.add(st);
+    for (const x of [-.44, .44]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .62, 28), steel(0x15161f)); wh.rotation.x = Math.PI / 2; wh.position.set(x, .16, 0); g.add(wh);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .64, 16), glowM(0xff6a6a, 2)); hub.rotation.x = Math.PI / 2; hub.position.copy(wh.position); g.add(hub); }
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(.3, .14, .3), steel(0x2b2f44)); vent.position.set(0, 1.2, 0); g.add(vent);
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(.04, 16, 12), glowM(0xffb347, 3)); lamp.position.set(0, 1.28, .1); g.add(lamp);
+    for (let i = 0; i < 3; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(.06, .2, 6), steel(0x6a7298)); sp.position.set((-.45 + i * .45), 1.18, -.12); g.add(sp); }
+  } else if (kind === 'head') {
+    g.add(ext([[80, -150], [20, -160], [-30, -158], [-80, -130], [-108, -96], [-120, -50], [-110, -18], [-40, 0], [80, -8], [96, -60], [94, -120]], .62, .09, steel(0x535c84)));
+    const jaw = ext([[-104, -30], [-150, -8], [-138, 14], [-40, 14], [-50, -14]], .5, .05, steel(0x20243a)); g.add(jaw);
+    for (let i = 0; i < 7; i++) { const t = new THREE.Mesh(new THREE.ConeGeometry(.045, .16, 5), new THREE.MeshStandardMaterial({ color: 0xe8ecf8, metalness: .4, roughness: .3 })); t.rotation.z = Math.PI; t.position.set((-136 + i * 14) * U, -.06, .3); g.add(t); }
+    const eye = ext([[-82, -98], [-40, -110], [-26, -90], [-70, -76]], .1, .02, glowM(0xff2244, 3)); eye.position.z = .36; g.add(eye);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(.05, 16, 12), glowM(0xffffff, 3)); pupil.position.set(-.56, .95, .48); g.add(pupil);
+    for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.SphereGeometry(.035, 12, 10), glowM(0xffb347, 3)); l.position.set((20 + i * 18) * U, .8, .4); g.add(l); }
+    const st = new THREE.Mesh(new THREE.BoxGeometry(.9, .025, .04), glowM(0xff5a7a, 1.6)); st.position.set(.2, 1.4, .38); st.rotation.z = -.08; g.add(st);
+    for (let i = 0; i < 4; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(.07, .28, 6), steel(0x7a84aa)); sp.position.set((-.2 + i * .28), 1.62 - Math.abs(i - 1) * .04, -.1); sp.rotation.z = .25; g.add(sp); }
+  } else {
+    const body = new THREE.Mesh(new THREE.SphereGeometry(.21, 32, 20), steel(0x56688f)); body.scale.set(1, .4, .7); g.add(body);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.2, .012, 8, 40), glowM(0x4fd8ff, 2)); ring.rotation.x = Math.PI / 2; ring.scale.set(1, .7, 1); g.add(ring);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.05, 16, 12), glowM(0x4fd8ff, 3)); eye.position.set(.13, -.02, .08); g.add(eye);
+    for (const sx of [-1, 1]) { const arm = new THREE.Mesh(new THREE.BoxGeometry(.16, .025, .03), steel(0x232b44)); arm.position.set(sx * .27, .07, 0); g.add(arm);
+      const rot = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .005, 32), new THREE.MeshBasicMaterial({ color: 0xb4e6ff, transparent: true, opacity: kind === 'drone0' ? .45 : .25 })); rot.position.set(sx * .3, .1, 0); rot.scale.z = kind === 'drone0' ? 1 : .6; g.add(rot); }
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .1), steel(0x232b44)); ant.position.set(-.05, .12, 0); g.add(ant);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(.018, 10, 8), glowM(0xff5a7a, 3)); tip.position.set(-.05, .17, 0); g.add(tip);
+  }
+  const ms = []; g.traverse(m => { if (m.isMesh && m.material.type !== 'MeshBasicMaterial') ms.push(m); });
+  for (const m of ms) { const mm = m.material; mm.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nfloat fr=pow(1.0-abs(dot(normalize(vNormal),normalize(vViewPosition))),3.0);totalEmissiveRadiance+=vec3(1.0,0.25,0.4)*fr*0.35;'); }; outline(m); }
+  return g;
+}
+window.renderBoss = async function () {
+  const W = 400, H = 300, out = document.createElement('canvas'); out.width = W * BCELL.length; out.height = H; const o = out.getContext('2d');
+  const rr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rr.setSize(W * SS, H * SS); rr.outputColorSpace = THREE.SRGBColorSpace; rr.toneMapping = THREE.ACESFilmicToneMapping; rr.setClearColor(0, 0);
+  const sc = new THREE.Scene(); const pm = new THREE.PMREMGenerator(rr); sc.environment = pm.fromScene(new RoomEnvironment(), .04).texture; sc.environmentIntensity = .9; sc.add(new THREE.HemisphereLight(0xc8d0ff, 0x2a1830, .8)); const k2 = new THREE.DirectionalLight(0xfff0e8, 2.4); k2.position.set(2, 5, 6); sc.add(k2); const b2 = new THREE.DirectionalLight(0xff3d6a, 1.6); b2.position.set(-4, 2, -4); sc.add(b2);
+  BCELL.forEach(([kind, ppu, ax, ay], i) => {
+    const part = bossPart(kind), hold = new THREE.Group(); hold.add(part); part.rotation.y = kind.startsWith('drone') ? -.5 : -.32; hold.rotation.x = .12; sc.add(hold);
+    const wpp = U / ppu; // 월드/px
+    const cam = new THREE.OrthographicCamera(-ax * wpp, (W - ax) * wpp, ay * wpp, -(H - ay) * wpp, .1, 50); cam.position.set(0, 0, 10); cam.lookAt(0, 0, 0);
+    rr.render(sc, cam); o.drawImage(rr.domElement, i * W, 0, W, H); sc.remove(hold);
+  });
+  return out.toDataURL('image/png');
+};
 window.READY = 1;
 </script></body></html>
