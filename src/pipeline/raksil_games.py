@@ -28,6 +28,16 @@ GAMES = pathlib.Path("playground/games")
 # 2026-11-14 이전부터 있던 게임: 소개 쇼츠 없이 목요일 로테이션에만 들어감.
 OLD_GAMES = {"chosung", "dodge", "majority", "range", "reaction", "spot", "starlight", "stop", "tongtong"}
 MAX_PLAY = 16.0
+# 새 게임 소개 쇼츠 잠시 멈춤 (BK 2026-11-14: 주말에 그래픽·캐릭터 전면 정리 → 끝나면 새 화면으로).
+# 파일에 {"hold_new": true} 이면 소개 쇼츠·월 네온 사격장·목 로테이션 모두 쉰다. 정리 끝나면 false 로.
+HOLD = pathlib.Path("config/raksil_games.json")
+
+
+def hold_new(path: pathlib.Path = HOLD) -> bool:
+    try:
+        return bool(json.loads(path.read_text(encoding="utf-8")).get("hold_new"))
+    except (OSError, ValueError):
+        return False
 
 
 def discover(root: pathlib.Path = GAMES) -> list[dict]:
@@ -63,8 +73,10 @@ def intro_done(log: dict) -> set[str]:
     return {k.split("-game-", 1)[1].removesuffix("-new") for k in log if "-game-" in k and k.endswith("-new")}
 
 
-def plan(day: dt.date, games: list[dict], log: dict) -> tuple[str, str | None, str | None]:
-    """그날 20:00 슬롯에 무엇을 올릴지."""
+def plan(day: dt.date, games: list[dict], log: dict, hold: bool = False) -> tuple[str, str | None, str | None]:
+    """그날 20:00 슬롯에 무엇을 올릴지. hold 면 게임 화면 쇼츠는 모두 쉼(밸런스 쇼츠는 그대로)."""
+    if hold:
+        return ("none", None, None)
     done = intro_done(log)
     for g in games:
         if g["slug"] not in OLD_GAMES and g["slug"] not in done:
@@ -208,7 +220,7 @@ def main(argv: list[str]) -> int:
     today = dt.datetime.now(rs.KST).date()
     if len(argv) > 1 and argv[1] == "plan":
         day = dt.date.fromisoformat(argv[2]) if len(argv) > 2 and argv[2] else today
-        what, slug, kind = plan(day, discover(), load_log())
+        what, slug, kind = plan(day, discover(), load_log(), hold_new())
         print(" ".join(x for x in (what, slug, kind) if x))
         return 0
     rec, cmd, slug, kind = pathlib.Path(argv[1]), argv[2], argv[3], argv[4]
