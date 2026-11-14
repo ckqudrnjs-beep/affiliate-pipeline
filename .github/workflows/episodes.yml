@@ -9,7 +9,7 @@ on:
     branches: [main]
     paths: ["data/episodes/*.json"]
   schedule:
-    - cron: "10 21 * * 1,4"   # 화·금 06:10 KST: 오늘의 얼마게 (05:50 시세 수집 뒤, 사이트 퀴즈와 같은 문제) + 금: 토 롱폼 얼마게 몰아보기
+    - cron: "10 21 * * 1,4"   # 화·금 06:10 KST: 오늘의 얼마게 (05:50 시세 수집 뒤, 사이트 퀴즈와 같은 문제)
   workflow_dispatch:
 
 permissions:
@@ -33,8 +33,6 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
           pip install -q pillow numpy supertonic==1.3.1
-          # 롱폼 '우리 집 숫자 넣어 보기' 사이트 화면 찍기 (tools/screens.js)
-          npm i -g -q playwright@1.48.2 && npx -y playwright@1.48.2 install --with-deps chromium
       - uses: actions/cache@v4
         with:
           path: ~/.cache/supertonic3
