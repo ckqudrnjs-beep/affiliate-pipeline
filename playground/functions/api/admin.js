@@ -7,10 +7,12 @@
 // POST /api/admin {a:"list", page}                 → 별명 목록(최근 사용 순, 50개씩)
 // POST /api/admin {a:"reissue", h}                  → 새 복구 코드 발급(옛 코드 즉시 무효, 새 코드는 응답에 한 번만. 원본은 저장 안 함)
 // 게시판: {a:"posts", page} 전체 글(숨김·비밀 포함) / {a:"phide", id, on} / {a:"pdel", id} / {a:"reply", id, text} / {a:"ban", id, days(0=해제, 7, 9999=영구)}
+// 질문 제안: {a:"qprops"} 대기 목록 / {a:"qadopt", id} 채택(칭호 「출제자」 + 🪙10 돌려줌, rev+1) / {a:"qreject", id} 반려
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
 import { clean, normCode } from "./profile.js";
 import { ensureBoard } from "./board.js";
+import { ensureQ } from "./qprop.js";
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
@@ -54,6 +56,26 @@ export async function onRequestPost({ request, env }) {
   const a = b && b.a;
   const view = async (r) => { const t = await env.DB.prepare("SELECT hide FROM testers WHERE h = ?").bind(r.h).first(); return { h: r.h, nick: r.nick, data: JSON.parse(r.data), rev: r.rev, updated: r.updated, tester: !!t, hide: !!(t && t.hide) }; };
 
+  if (["qprops", "qadopt", "qreject"].includes(a)) {
+    await ensureQ(env.DB);
+    if (a === "qprops") {
+      const { results } = await env.DB.prepare("SELECT id, nick, a, b, created, st FROM qprops ORDER BY st ASC, id DESC LIMIT 60").all();
+      return json({ list: results || [] });
+    }
+    const q = await env.DB.prepare("SELECT * FROM qprops WHERE id = ?").bind(Math.floor(+b.id || 0)).first();
+    if (!q || q.st) return json({ error: "none", msg: "이미 처리했거나 없는 제안이에요." }, 404);
+    if (a === "qreject") { await env.DB.prepare("UPDATE qprops SET st = 2 WHERE id = ?").bind(q.id).run(); await log(env, "qreject", q.nick, { a: q.a, b: q.b }); return json({ ok: true }); }
+    const p = await env.DB.prepare("SELECT * FROM profiles WHERE h = ?").bind(q.h).first();
+    if (p) {
+      let d = {}; try { d = JSON.parse(p.data); } catch {}
+      d.own = Object.assign({}, d.own, { "t:author": 1 }); d.coins = (+d.coins || 0) + 10;
+      const c = clean(d);
+      if (c) await env.DB.prepare("UPDATE profiles SET data = ?, rev = rev + 1 WHERE h = ?").bind(JSON.stringify(c), q.h).run();
+    }
+    await env.DB.prepare("UPDATE qprops SET st = 1 WHERE id = ?").bind(q.id).run();
+    await log(env, "qadopt", q.nick, { a: q.a, b: q.b });
+    return json({ ok: true, msg: p ? "채택했어요. 그 사람에게 칭호 「출제자」와 🪙10 을 줬어요. 질문은 사이트 질문 목록에 따로 넣어 주세요." : "채택했어요(프로필이 지워져서 보상은 못 줬어요)." });
+  }
   if (["posts", "phide", "pdel", "reply", "ban"].includes(a)) {
     await ensureBoard(env.DB);
     const id = Math.floor(+b.id || 0);
