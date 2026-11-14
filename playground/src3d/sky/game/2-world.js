@@ -14,12 +14,12 @@ function makeWorld(seed) {
   const g = new Uint8Array(W * H), isl = new Int16Array(W * H).fill(-1), depth = new Float32Array(W * H);
   const id = (x, y) => y * W + x, inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const islands = [];
+  // 섬 모양 = 각도마다 반지름이 다른 둥근 땅(잡음). 칸은 가운데 점이 땅 안이면 땅.
+  const shape = (s, x, y) => { const dx = x - s.cx, dy = y - s.cy, a = Math.atan2(dy, dx); return s.r * (1 + .18 * Math.sin(a * 3 + s.ph) + .12 * Math.sin(a * 5 + s.ph * 2) + .07 * Math.sin(a * 11 + s.ph * 3) + .22 * (nz(x * .15, y * .15) - .5)); };
   function blob(cx, cy, r, kind) {
-    const k = islands.length; islands.push({ cx, cy, r, kind, k });
-    const ph = R() * 10;
-    for (let y = Math.floor(cy - r * 1.4); y <= cy + r * 1.4; y++) for (let x = Math.floor(cx - r * 1.4); x <= cx + r * 1.4; x++) {
-      if (!inb(x, y)) continue; const dx = x - cx, dy = y - cy, a = Math.atan2(dy, dx), d = Math.hypot(dx, dy);
-      const rr = r * (1 + .18 * Math.sin(a * 3 + ph) + .12 * Math.sin(a * 5 + ph * 2) + .22 * (nz(x * .15, y * .15) - .5));
+    const k = islands.length, s = { cx, cy, r, kind, k, ph: R() * 10 }; islands.push(s);
+    for (let y = Math.floor(cy - r * 1.6); y <= cy + r * 1.6; y++) for (let x = Math.floor(cx - r * 1.6); x <= cx + r * 1.6; x++) {
+      if (!inb(x, y)) continue; const d = Math.hypot(x + .5 - cx, y + .5 - cy), rr = shape(s, x + .5, y + .5);
       if (d < rr) { g[id(x, y)] = 1; isl[id(x, y)] = k; depth[id(x, y)] = 1 - d / rr; }
     }
     return k;
@@ -36,11 +36,13 @@ function makeWorld(seed) {
   function bridge(a, b, broken) {
     const A = islands[a], B = islands[b], cells = [];
     let x = Math.round(A.cx), y = Math.round(A.cy); const tx = Math.round(B.cx), ty = Math.round(B.cy);
-    const put = (x, y) => { for (const [ox, oy] of [[0, 0], [0, 1], [1, 0]]) { const X = x + ox, Y = y + oy; if (inb(X, Y) && g[id(X, Y)] === 0) { g[id(X, Y)] = broken ? 4 : 3; cells.push(id(X, Y)); } } };
+    const put = (x, y) => { for (const [ox, oy] of [[0, 0], [0, 1], [1, 0]]) { const X = x + ox, Y = y + oy; if (!inb(X, Y)) continue; const i = id(X, Y); if (g[i] === 0) { g[i] = broken ? 4 : 3; cells.push(i); } else if (g[i] !== 3 && g[i] !== 4) land.push(i); } }, land = [];
     const vert = Math.abs(ty - y) > Math.abs(tx - x);
     if (!vert) { while (x !== tx) { put(x, y); x += Math.sign(tx - x); } while (y !== ty) { put(x, y); y += Math.sign(ty - y); } }
     else { while (y !== ty) { put(x, y); y += Math.sign(ty - y); } while (x !== tx) { put(x, y); x += Math.sign(tx - x); } }
-    bridges.push({ a, b, cells, broken: !!broken }); return bridges.length - 1;
+    // 다리 끝은 땅 쪽으로 1~2칸 더 깐다(둥근 섬 가장자리와 이어지게)
+    const ends = land.filter(i => { const X = i % W, Y = (i / W) | 0; for (let yy = Y - 2; yy <= Y + 2; yy++) for (let xx = X - 2; xx <= X + 2; xx++) if (inb(xx, yy) && (g[id(xx, yy)] === 3 || g[id(xx, yy)] === 4) && Math.hypot(xx - X, yy - Y) < 2.2) return true; return false; });
+    bridges.push({ a, b, cells, ends, broken: !!broken }); return bridges.length - 1;
   }
   bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]); bridge(fi[2], fi[4]);
   const bq = bridge(fi[3], hill, true);
@@ -49,16 +51,32 @@ function makeWorld(seed) {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = id(x, y); if (g[i] !== 1) continue;
     const dT = Math.hypot(x - tI.cx, y - tI.cy); if (isl[i] === town && dT < 3.2) g[i] = 5;
     else if (nz2(x * .22, y * .22) > .7 && isl[i] !== town) { let ok = 1; for (let yy = y - 2; yy <= y + 2; yy++) for (let xx = x - 2; xx <= x + 2; xx++) if (!inb(xx, yy) || !g[id(xx, yy)]) ok = 0; if (ok) g[i] = 2; } }
-  return { W, H, g, isl, depth, islands, bridges, bq, town, fi, hill, id, inb, nz, seed };
+  const bm = new Uint8Array(W * H); for (const b of bridges) { for (const i of b.cells) bm[i] = 1; for (const i of b.ends) bm[i] = 2; }
+  const Wd = { W, H, g, isl, depth, islands, bridges, bq, town, fi, hill, id, inb, nz, seed, bm, shape };
+  for (const s2 of islands) s2.poly = contour(Wd, s2);
+  return Wd;
 }
-const walk = (Wd, x, y) => { const X = Math.floor(x), Y = Math.floor(y); if (!Wd.inb(X, Y)) return false; const t = Wd.g[Wd.id(X, Y)]; return t > 0 && t !== 4 && !Wd.block[Wd.id(X, Y)]; };
-const ground = (Wd, x, y) => { const X = Math.floor(x), Y = Math.floor(y); if (!Wd.inb(X, Y)) return 0; const t = Wd.g[Wd.id(X, Y)]; return t > 0 && t !== 4 ? t : 0; };
+// 섬 둘레 점(월드 좌표): 각도마다 바깥으로 걸어가며 땅이 끝나는 곳
+function contour(Wd, s) {
+  const N = Math.round(clamp(s.r * 16, 36, 180)), out = [];
+  for (let i = 0; i < N; i++) { const a = i / N * TAU, c = Math.cos(a), sn = Math.sin(a); let t = 0; while (t < s.r * 2 && Math.hypot(c * t, sn * t) < Wd.shape(s, s.cx + c * t, s.cy + sn * t)) t += .03; out.push([s.cx + c * t, s.cy + sn * t]); }
+  return out;
+}
+function onLand(Wd, x, y) { // 정확한(둥근) 땅 판정
+  const X = Math.floor(x), Y = Math.floor(y); let k = Wd.isl[Wd.id(X, Y)];
+  if (k < 0) for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (!Wd.inb(X + ox, Y + oy)) continue; const k2 = Wd.isl[Wd.id(X + ox, Y + oy)]; if (k2 >= 0) { k = k2; break; } }
+  if (k < 0) return false; const s = Wd.islands[k]; return Math.hypot(x - s.cx, y - s.cy) < Wd.shape(s, x, y);
+}
+const ground = (Wd, x, y) => { const X = Math.floor(x), Y = Math.floor(y); if (!Wd.inb(X, Y)) return 0; const i = Wd.id(X, Y), t = Wd.g[i]; if (Wd.bm[i]) return t === 4 ? 0 : 3; return onLand(Wd, x, y) ? (t || 1) : 0; };
+const walk = (Wd, x, y) => { const X = Math.floor(x), Y = Math.floor(y); if (!Wd.inb(X, Y) || Wd.block && Wd.block[Wd.id(X, Y)]) return false; return ground(Wd, x, y) > 0; };
 
 // 소품 배치. 소품 = {k: 아틀라스 키, x, y, foot}
 function placeProps(Wd, PM) {
   const R = srand(Wd.seed + 99), props = [], block = Wd.block = new Uint8Array(Wd.W * Wd.H);
   const free = (x, y, r) => { for (let yy = Math.floor(y - r); yy <= y + r; yy++) for (let xx = Math.floor(x - r); xx <= x + r; xx++) { if (!Wd.inb(xx, yy)) return false; const t = Wd.g[Wd.id(xx, yy)]; if (t !== 1 && t !== 2 || block[Wd.id(xx, yy)] === 2) return false; } return true; };
   const add = (k, x, y, solid) => { const m = PM[k]; if (!m) return; const foot = m[6] * (/^(home|tavern|market|smithy|windmill|ruin|grain)/.test(k) ? .62 : 1);
+    // 섬 가장자리에 걸치지 않게 안쪽으로 당김
+    { const X0 = Math.floor(x), Y0 = Math.floor(y), kk = Wd.isl[Wd.id(X0, Y0)], S = Wd.islands[kk >= 0 ? kk : 0], rr = foot + .9; for (let n = 0; n < 16; n++) { let ok = true; for (let j = 0; j < 8; j++) { const a = j / 8 * TAU; if (!onLand(Wd, x + Math.cos(a) * rr, y + Math.sin(a) * rr)) { ok = false; break; } } if (ok) break; const dx = S.cx - x, dy = S.cy - y, d = Math.hypot(dx, dy) || 1; x += dx / d * .3; y += dy / d * .3; } }
     props.push({ k, x, y, foot });
     if (solid !== false) for (let yy = Math.floor(y - foot); yy <= y + foot; yy++) for (let xx = Math.floor(x - foot); xx <= x + foot; xx++) if (Wd.inb(xx, yy) && Math.hypot(xx + .5 - x, yy + .5 - y) < foot + .35) block[Wd.id(xx, yy)] = 1;
     // 길 막지 않게 주변 1칸 예약
@@ -85,6 +103,12 @@ function placeProps(Wd, PM) {
       const r = R(), k = r < .55 ? TREES[Math.floor(R() * TREES.length)] : r < .85 ? ROCK[Math.floor(R() * ROCK.length)] : ['lumber', 'stone', 'crateO', 'barrel'][Math.floor(R() * 4)]; const f = PM[k][6];
       if (free(x, y, f)) add(k, x, y); }
   }
+  // 작은 장식(덤불·버섯·그루터기·민들레 솜털): 길을 막지 않는 것은 통과 가능
+  const DECO = [['bush1', 1], ['bush2', 1], ['bush1', 1], ['mush', 0], ['stump', 1], ['log', 1], ['reeds', 0], ['puffs', 0], ['puffs', 0], ['reeds', 0]];
+  for (const s of Wd.islands) { if (s.kind === 'rock') continue; const n = s.kind === 'town' ? 6 : s.kind === 'hill' ? 8 : 12;
+    for (let i = 0; i < n * 3 && n; i++) { const a = R() * TAU, d = s.r * (.25 + R() * .68), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, [k, sol] = DECO[Math.floor(R() * DECO.length)];
+      if (s.kind === 'town' && k === 'log') continue; const f = PM[k] ? PM[k][6] : .3; if (free(x, y, f + .2) && onLand(Wd, x, y)) add(k, x, y, !!sol); } }
+  if (PM.sign) { const T2 = Wd.islands[Wd.town]; add('sign', T2.cx + 5.5, T2.cy + 5.2); }
   for (let i = 0; i < block.length; i++) if (block[i] === 2) block[i] = 0;
   return props;
 }
@@ -96,7 +120,7 @@ let TILES = null;
 function bakeTiles(S) { // S = 화면 배율(1배 px → 캔버스 px)
   const mk = (w, h, f) => { const c = document.createElement('canvas'); c.width = Math.ceil(w * S); c.height = Math.ceil(h * S); const g = c.getContext('2d'); g.scale(S, S); f(g); return c; };
   const dia = g => { g.beginPath(); g.moveTo(TW / 2, -.6); g.lineTo(TW + .8, TH / 2); g.lineTo(TW / 2, TH + .6); g.lineTo(-.8, TH / 2); g.closePath(); };
-  const R = srand(5), out = { grass: [], dirt: [], path: [], plaza: [], bridge: [], broken: [], faceL: [], faceR: [], tuft: [], flower: [] };
+  const R = srand(5), out = { grass: [], dirt: [], path: [], plaza: [], bridge: [], broken: [], tuft: [], flower: [] };
   const GR = ['#80b95b', '#83bc5d', '#86bf5f', '#89c261', '#8cc563', '#8fc865'];
   for (const base of GR) for (let v = 0; v < 2; v++) out.grass.push(mk(TW, TH, g => { dia(g); g.fillStyle = base; g.fill(); g.save(); dia(g); g.clip();
     for (let i = 0; i < 26; i++) { g.fillStyle = R() < .5 ? 'rgba(255,255,220,.07)' : 'rgba(30,70,20,.07)'; g.beginPath(); g.ellipse(R() * TW, R() * TH, 2 + R() * 5, 1 + R() * 2.5, 0, 0, TAU); g.fill(); } g.restore(); }));
@@ -115,19 +139,6 @@ function bakeTiles(S) { // S = 화면 배율(1배 px → 캔버스 px)
       const q = [P(u0, 0), P(u1, 0), P(u1, 1), P(u0, 1)]; g.beginPath(); g.moveTo(...q[0]); for (const p of q.slice(1)) g.lineTo(...p); g.closePath(); g.fillStyle = ['#a87b4f', '#9c7046', '#b08455', '#a0744a'][i]; g.fill(); g.strokeStyle = '#5a3a20'; g.lineWidth = .8; g.stroke();
       g.beginPath(); g.moveTo(q[2][0], q[2][1]); g.lineTo(q[2][0], q[2][1] + 4); g.lineTo(q[3][0], q[3][1] + 4); g.lineTo(q[3][0], q[3][1]); g.fillStyle = '#6a4628'; g.fill(); }
     g.strokeStyle = '#7a5532'; g.lineWidth = 1.6; for (const v of [.06, .94]) { const a = P(0, v), b = P(1, v); g.beginPath(); g.moveTo(a[0], a[1] + 2); g.lineTo(b[0], b[1] + 2); g.stroke(); }
-  }));
-  // 낭떠러지 면: 높이 단계별(흙·돌 줄무늬 + 매달린 뿌리)
-  for (const h of [26, 38, 52, 68, 86]) for (const side of [0, 1]) (side ? out.faceR : out.faceL).push(mk(TW / 2 + 2, TH / 2 + h + 6, g => {
-    // 면 = 마름모 아래 변에서 아래로 늘어진 평행사변형. 오른쪽 면(side 1): 아래 꼭짓점(0,16)→오른 꼭짓점(32,0), 왼쪽 면: 왼 꼭짓점(0,0)→아래(32,16)
-    const top = [[0, side ? TH / 2 : 0], [TW / 2, side ? 0 : TH / 2]];
-    const bot = top.map(([x, y]) => [x, y + h]);
-    const gr = g.createLinearGradient(0, 0, 0, h + TH / 2); gr.addColorStop(0, '#6a4a2e'); gr.addColorStop(.18, side ? '#7d5a38' : '#8e6a44'); gr.addColorStop(.6, side ? '#5c4630' : '#6e5438'); gr.addColorStop(1, side ? '#3e3226' : '#4a3c2c');
-    g.beginPath(); g.moveTo(...top[0]); g.lineTo(...top[1]); g.lineTo(...bot[1]); g.lineTo(...bot[0]); g.closePath(); g.fillStyle = gr; g.fill();
-    g.save(); g.clip(); // 지층: 칸마다 같은 높이 → 이웃 칸과 이어져 보임
-    for (const [yy, a, w] of [[9, .16, 2], [17, .1, 1.2], [27, .18, 2.5], [39, .12, 1.5], [52, .16, 2], [66, .12, 1.4], [80, .14, 2]]) { if (yy > h + 4) break; g.strokeStyle = `rgba(40,25,10,${a})`; g.lineWidth = w; g.beginPath(); g.moveTo(-1, yy + top[0][1]); g.lineTo(TW / 2 + 2, yy + top[1][1]); g.stroke(); g.strokeStyle = `rgba(255,230,190,${a * .5})`; g.lineWidth = 1; g.beginPath(); g.moveTo(-1, yy + top[0][1] + w); g.lineTo(TW / 2 + 2, yy + top[1][1] + w); g.stroke(); }
-    for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(150,140,130,.4)'; g.beginPath(); const x2 = R() * TW / 2, t2 = x2 / (TW / 2); g.ellipse(x2, lerp(top[0][1], top[1][1], t2) + 12 + R() * h * .75, 2 + R() * 3, 1.5 + R() * 2, 0, 0, TAU); g.fill(); } g.restore();
-    g.strokeStyle = '#4a6a2a'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(...top[0]); g.lineTo(...top[1]); g.stroke(); // 풀 끝선
-    g.strokeStyle = 'rgba(90,110,50,.75)'; g.lineWidth = 1.2; for (let i = 0; i < (R() < .5 ? 1 : 0); i++) { const x = 4 + R() * (TW / 2 - 8), y = side ? TH / 2 - x / 2 : x / 2; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 3, y + h * .5, x - 2, y + h * (.6 + R() * .5)); g.stroke(); }
   }));
   // 풀 포기·민들레
   for (let v = 0; v < 4; v++) out.tuft.push(mk(16, 12, g => { g.strokeStyle = ['#5a9a3a', '#6aaa44', '#4f8a34', '#76b84c'][v]; g.lineWidth = 1.3; g.lineCap = 'round'; for (let i = 0; i < 6; i++) { const x = 3 + R() * 10; g.beginPath(); g.moveTo(x, 12); g.quadraticCurveTo(x + R() * 4 - 2, 6, x + R() * 6 - 3, 1 + R() * 4); g.stroke(); } }));
