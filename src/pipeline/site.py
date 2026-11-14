@@ -738,14 +738,14 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         if err := RC.validate(r, pantry):
             raise ValueError(f"레시피 {r['slug']}: {err}")
     (o / "recipe").mkdir(exist_ok=True)
-    (o / "recipe.html").write_text(page(f"1인분 원가 레시피 | {BRAND}", "김치찌개·제육볶음·떡볶이처럼 자주 먹는 한 그릇을 1인분 재료비로 계산하고 배달보다 얼마나 아끼는지 정리했어요.",
+    (o / "recipe.html").write_text(page(f"1인분 원가 레시피 | {BRAND}", "김치찌개·제육볶음 같은 한 그릇과 연말 홈파티 메뉴를 재료비로 계산하고 배달보다 얼마나 아끼는지 정리했어요.",
         RC.list_body(recs, pantry), path="recipe.html"), encoding="utf-8")
     for r in recs:
         og = S.og_path("recipe", r["slug"])
-        others = [x for x in recs if x is not r][:4]
+        others = [x for x in recs if x is not r]
         (o / "recipe" / f"{r['slug']}.html").write_text(page(f"{RC.title(r)} | {BRAND}", RC.desc(r), RC.page_body(r, others), root="../",
             path=f"recipe/{r['slug']}.html", ld=RC.ld(r, BASE, og), og=og,
-            crumbs=[("1인분 원가 레시피", "recipe.html"), (f"{r['name']} 1인분", f"recipe/{r['slug']}.html")]), encoding="utf-8")
+            crumbs=[("1인분 원가 레시피", "recipe.html"), (f"{r['name']} {RC.yield_label(r)}", f"recipe/{r['slug']}.html")]), encoding="utf-8")
     (o / "feed.xml").write_text(S.feed(BASE, BRAND, news, arts, recs), encoding="utf-8")
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)

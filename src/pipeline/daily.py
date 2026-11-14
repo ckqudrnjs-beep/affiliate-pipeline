@@ -231,24 +231,31 @@ def bank() -> list[dict]:
     out = []
     pantry = RC.load_pantry()
     for r in RC.load(pantry=pantry):
-        out.append({"id": f"rc-{r['slug']}", "q": f"{r['name']} 1인분, 집에서 직접 만들면 재료비는 대략 얼마일까요?",
-                    "v": r["total"], "link": f"recipe/{r['slug']}.html", "more": "1인분 원가 레시피 보기",
-                    "why": f"재료비는 약 {won(r['total'])}이에요. 배달(배달비 포함 약 {won(r['delivery'])})보다 약 {won(r['save'])} 아껴요."})
+        pt = RC.is_party(r)
+        yl = f"{RC.yield_label(r)}(홈파티)" if pt else "1인분"
+        home, dlv, sv = r["batch"], r["deliveryBatch"], r["saveBatch"]
+        more = "홈파티 레시피 보기" if pt else "1인분 원가 레시피 보기"
+        out.append({"id": f"rc-{r['slug']}", "q": f"{r['name']} {yl}, 집에서 직접 만들면 재료비는 대략 얼마일까요?",
+                    "v": home, "link": f"recipe/{r['slug']}.html", "more": more,
+                    "why": f"재료비는 약 {won(home)}이에요. 배달(배달비 포함 약 {won(dlv)})보다 약 {won(sv)} 아껴요."})
         rows = sorted(r["rows"], key=lambda x: -x["won"])
         st = [f"{x['label']}: {x['pantry']['pack']} {won(x['pantry']['packPrice'])} ÷ {x['pantry']['packAmount']:,g}{x['pantry']['unit']} × {x['use']:g} = {won(x['won'])}"
               for x in rows[:5]]
         rest = rows[5:]
         if rest:
             st.append(f"나머지 {len(rest)}가지({', '.join(x['name'] for x in rest)}) = {won(sum(x['won'] for x in rest))}")
-        st.append(f"기본양념(소금·후추 등) = {won(RC.BASICS)}")
-        st.append(f"합계 = {won(r['total'])} (재료값은 {r['priceDate']} 마트·온라인 흔한 가격 기준)")
+        st.append(f"기본양념(소금·후추 등) = {won(RC.BASICS * r['serves'])}")
+        st.append(f"합계 = {won(home)} (재료값은 {r['priceDate']} 마트·온라인 흔한 가격 기준)")
+        if pt:
+            st.append(f"1인분으로 나누면 {won(home)} ÷ {r['serves']} ≈ {won(r['total'])}")
         out[-1]["steps"] = st
-        out.append({"id": f"rs-{r['slug']}", "q": f"{r['name']}, 배달(배달비 포함) 대신 집에서 1인분 해 먹으면 한 번에 얼마쯤 아낄까요?",
-                    "v": r["save"], "link": f"recipe/{r['slug']}.html", "more": "1인분 원가 레시피 보기",
-                    "why": f"배달 약 {won(r['delivery'])}, 집밥 재료비 약 {won(r['total'])}이라 약 {won(r['save'])} 아껴요. 주 2번이면 한 달 약 {won(r['save'] * 8)}이에요.",
-                    "steps": [f"배달: 메뉴 대략 {won(r['delivery'] - RC.DELIVERY_FEE)} + 배달비 {won(RC.DELIVERY_FEE)} = {won(r['delivery'])}",
-                              f"집밥: 1인분 재료비 {won(r['total'])} (레시피 페이지에 재료별 계산)",
-                              f"아끼는 돈 = {won(r['delivery'])} − {won(r['total'])} = {won(r['save'])}"]})
+        out.append({"id": f"rs-{r['slug']}", "q": f"{r['name']}, 배달(배달비 포함) 대신 집에서 {yl} 해 먹으면 한 번에 얼마쯤 아낄까요?",
+                    "v": sv, "link": f"recipe/{r['slug']}.html", "more": more,
+                    "why": f"배달 약 {won(dlv)}, 집에서 재료비 약 {won(home)}이라 약 {won(sv)} 아껴요."
+                           + ("" if pt else f" 주 2번이면 한 달 약 {won(sv * 8)}이에요."),
+                    "steps": [f"배달: 메뉴 대략 {won(dlv - RC.DELIVERY_FEE)} + 배달비 {won(RC.DELIVERY_FEE)} = {won(dlv)}",
+                              f"집밥: {RC.yield_label(r)} 재료비 {won(home)} (레시피 페이지에 재료별 계산)",
+                              f"아끼는 돈 = {won(dlv)} − {won(home)} = {won(sv)}"]})
     for q in Q.load():
         p = q["params"]
         if q["kind"] == "power":

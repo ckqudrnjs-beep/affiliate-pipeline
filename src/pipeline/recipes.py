@@ -19,6 +19,9 @@ from .compliance import ALLOWED_LINK_HOSTS
 DELIVERY_FEE = 3000  # 배달비 가정 (가게·지역마다 다름)
 BASICS = 50  # 소금·후추 등 기본양념 몫
 MIN_STEPS, MIN_TIPS = 4, 2
+# 연말 홈파티 (2026-11-14): "serves": 4 인 레시피는 재료 양·배달가가 4인분 기준이다.
+# 원가 표는 4인분 전체 값, total/delivery/save 는 1인분으로 나눈 값(목록·퀴즈 비교용), batch/deliveryBatch/saveBatch 는 4인분 값.
+PARTY_SET = ["party-millefeuille-nabe", "party-gambas", "party-sausage-veggie"]  # 목록 "4명 한 상 예시"
 COUPANG_DISCLOSURE = "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
 
 CSS = """
@@ -66,15 +69,26 @@ def load_pantry(path: str = "config/recipe_pantry.csv") -> dict[str, dict]:
 
 
 def cost(rec: dict, pantry: dict[str, dict]) -> dict:
-    """재료별 값과 1인분 원가, 배달과의 차이."""
+    """재료별 값과 1인분 원가, 배달과의 차이. serves 가 2 이상이면 전체(batch)를 사람 수로 나눈다."""
     rows = []
     for i in rec["ingredients"]:
         p = pantry[i["id"]]
         rows.append({**i, "name": p["name"], "won": r10(p["packPrice"] * i["use"] / p["packAmount"]), "pantry": p})
-    total = sum(x["won"] for x in rows) + BASICS
-    delivery = int(rec["delivery"]) + DELIVERY_FEE
-    return {"rows": rows, "total": total, "delivery": delivery, "save": delivery - total,
+    n = int(rec.get("serves", 1))
+    batch = sum(x["won"] for x in rows) + BASICS * n
+    dbatch = int(rec["delivery"]) + DELIVERY_FEE
+    total, delivery = (batch, dbatch) if n == 1 else (r10(batch / n), r10(dbatch / n))
+    return {"rows": rows, "total": total, "delivery": delivery, "save": delivery - total, "serves": n,
+            "batch": batch, "deliveryBatch": dbatch, "saveBatch": dbatch - batch,
             "priceDate": max(x["pantry"]["priceDate"] for x in rows)}
+
+
+def is_party(r: dict) -> bool:
+    return r.get("collection") == "party"
+
+
+def yield_label(r: dict) -> str:
+    return f"{r.get('serves', 1)}인분"
 
 
 def load(data_dir: str = "data", pantry: dict | None = None) -> list[dict]:
@@ -89,10 +103,15 @@ def load(data_dir: str = "data", pantry: dict | None = None) -> list[dict]:
 
 
 def title(r: dict) -> str:
+    if is_party(r):
+        return f"연말 홈파티 {r['name']} {yield_label(r)} 재료비 {won(r['batch'])}, 1인분 원가 {won(r['total'])} 레시피"
     return f"{r['name']} 1인분 원가 {won(r['total'])}, 배달보다 {won(r['save'] // 100 * 100)} 아끼는 레시피"
 
 
 def desc(r: dict) -> str:
+    if is_party(r):
+        return (f"{r['name']} {yield_label(r)}을 집에서 만들면 재료비 약 {won(r['batch'])}(1인분 {won(r['total'])})이에요. "
+                f"배달(약 {won(r['deliveryBatch'])})보다 {won(r['saveBatch'] // 100 * 100)} 아껴요. 재료별 원가와 만드는 법을 정리했어요.")
     return (f"{r['name']} 1인분을 집에서 만들면 재료비 약 {won(r['total'])}이에요. 배달(약 {won(r['delivery'])})보다 "
             f"{won(r['save'] // 100 * 100)} 아껴요. 재료별 원가와 만드는 법을 정리했어요.")
 
@@ -114,41 +133,81 @@ def page_body(r: dict, others: list[dict]) -> str:
     d = dt.date.fromisoformat(r["date"])
     pd = dt.date.fromisoformat(r["priceDate"])
     trs = "".join(f'<tr><td>{e(x["label"])}</td><td class="n">{won(x["won"])}</td></tr>' for x in r["rows"])
-    trs += f'<tr><td>소금·후추 등 기본양념</td><td class="n">{won(BASICS)}</td></tr>'
+    trs += f'<tr><td>소금·후추 등 기본양념</td><td class="n">{won(BASICS * r["serves"])}</td></tr>'
     month = r["save"] * 12  # 한 달에 12번(주 3번) 배달 대신 해 먹을 때
+    party = is_party(r)
+    yl = yield_label(r)
+    if party:
+        hero = (f'<div class="costhero"><div><span>집에서 {yl}</span><b>{won(r["batch"])}</b></div>'
+                f'<div><span>배달로 {yl} (대략)</span><b>{won(r["deliveryBatch"])}</b></div>'
+                f'<div class="save"><span>한 번 모임에 아끼는 돈</span><b>{won(r["saveBatch"])}</b></div></div>'
+                f'<p class="small">왜 이 값인가요? 배달은 {e(r.get("deliveryNote", ""))}에 배달비 {won(DELIVERY_FEE)}을 더한 대략값이에요. 가게·지역마다 다릅니다. '
+                f'1인분으로 나누면 집에서 <b>{won(r["total"])}</b>, 배달은 약 {won(r["delivery"])}이에요.</p>')
+        top = max(r["rows"], key=lambda x: x["won"])
+        why = (f'<p class="small">{yl} 재료비 중 가장 큰 몫은 {e(top["name"])}({won(top["won"])}, 전체의 {round(top["won"] * 100 / r["batch"])}%)이에요. '
+               f'예산을 줄이려면 이 재료 양부터 조절하세요.</p>')
+    else:
+        hero = (f'<div class="costhero"><div><span>집에서 1인분</span><b>{won(r["total"])}</b></div>'
+                f'<div><span>배달로 1인분 (대략)</span><b>{won(r["delivery"])}</b></div>'
+                f'<div class="save"><span>한 그릇에 아끼는 돈</span><b>{won(r["save"])}</b></div></div>'
+                f'<p class="small">배달 가격은 {e(r["name"])} 1인분 흔한 메뉴 가격 {won(int(r["delivery"]) - DELIVERY_FEE)}에 배달비 {won(DELIVERY_FEE)}을 더한 대략값이에요. 가게·지역마다 다릅니다.\n'
+                f'배달 대신 주 3번만 해 먹어도 한 달에 약 <b>{won(month // 1000 * 1000)}</b>을 아껴요.</p>')
+        why = ""
+    same = [o for o in others if is_party(o) == party]
     steps = "".join(f"<li>{e(s)}</li>" for s in r["steps"])
     tips = "".join(f"<li>{e(s)}</li>" for s in r["tips"])
-    more = "".join(f'<li><a href="{o["slug"]}.html"><b>{e(o["name"])}</b><span>1인분 {won(o["total"])}</span></a></li>' for o in others)
-    return f"""<article class="recipe"><p class="small"><a href="../recipe.html">1인분 원가 레시피</a></p>
+    more = "".join(f'<li><a href="{o["slug"]}.html"><b>{e(o["name"])}</b><span>{yield_label(o) + " " + won(o["batch"]) if is_party(o) else "1인분 " + won(o["total"])}</span></a></li>'
+                   for o in (same + [o for o in others if o not in same])[:4])
+    return f"""<article class="recipe"><p class="small"><a href="../recipe.html{'#party' if party else ''}">{'연말 홈파티 레시피' if party else '1인분 원가 레시피'}</a></p>
 <h1>{e(title(r))}</h1><p class="meta">{d.year}년 {d.month}월 {d.day}일 · 돈 줍는 삼촌</p>
 <p class="lede">{e(r["intro"])}</p>
-<div class="costhero"><div><span>집에서 1인분</span><b>{won(r["total"])}</b></div>
-<div><span>배달로 1인분 (대략)</span><b>{won(r["delivery"])}</b></div>
-<div class="save"><span>한 그릇에 아끼는 돈</span><b>{won(r["save"])}</b></div></div>
-<p class="small">배달 가격은 {e(r["name"])} 1인분 흔한 메뉴 가격 {won(int(r["delivery"]) - DELIVERY_FEE)}에 배달비 {won(DELIVERY_FEE)}을 더한 대략값이에요. 가게·지역마다 다릅니다.
-배달 대신 주 3번만 해 먹어도 한 달에 약 <b>{won(month // 1000 * 1000)}</b>을 아껴요.</p>
-<h2>재료와 1인분 원가</h2>
-<table class="ingtable"><thead><tr><th>재료 (1인분)</th><th class="n">원가</th></tr></thead><tbody>{trs}</tbody>
-<tfoot><tr><td>합계</td><td class="n">{won(r["total"])}</td></tr></tfoot></table>
+{hero}
+<h2>재료와 {yl} 원가</h2>
+<table class="ingtable"><thead><tr><th>재료 ({yl})</th><th class="n">원가</th></tr></thead><tbody>{trs}</tbody>
+<tfoot><tr><td>합계</td><td class="n">{won(r["batch"])}</td></tr></tfoot></table>
+{why}
 <p class="small">삼촌 장보기 기준가({pd.year}년 {pd.month}월 {pd.day}일, 대형마트·온라인 장보기 흔한 가격대)로 큰 봉지 한 개 값을 쓴 양만큼 나눠 계산했어요. 실제 가격은 사는 곳과 시기에 따라 달라요. <a href="../recipe.html#pantry">기준가 전체 보기</a></p>
 <h2>만드는 법</h2><ol>{steps}</ol>
 <h2>삼촌의 아끼는 팁</h2><ul>{tips}</ul>
 {shop_box(r["rows"])}
-<section class="related"><h2>다른 1인분 레시피</h2><ul class="rlist">{more}</ul></section></article>"""
+<section class="related"><h2>{'다른 홈파티 레시피' if party else '다른 1인분 레시피'}</h2><ul class="rlist">{more}</ul></section></article>"""
 
 
 def list_body(recs: list[dict], pantry: dict[str, dict]) -> str:
     e = html.escape
     items = "".join(f'<li><a href="recipe/{r["slug"]}.html"><b>{e(r["name"])}</b><span>1인분 {won(r["total"])} · 배달보다 {won(r["save"] // 100 * 100)} ↓</span></a></li>'
-                    for r in sorted(recs, key=lambda r: -r["save"]))
+                    for r in sorted((r for r in recs if not is_party(r)), key=lambda r: -r["save"]))
+    party = party_block(recs)
     used = {i["id"] for r in recs for i in r["ingredients"]}
     ptr = "".join(f'<tr><td>{e(p["name"])}</td><td>{e(p["pack"])}</td><td class="n">{won(p["packPrice"])}</td></tr>'
                   for k, p in pantry.items() if k in used)
     pd = max((p["priceDate"] for k, p in pantry.items() if k in used), default="")
     return (f'<article class="recipe"><h1>1인분 원가 레시피</h1><p class="lede">배달 한 번 값이면 며칠을 해 먹습니다. 자주 먹는 한 그릇 메뉴를 '
-            f'1인분 재료비로 계산하고, 배달보다 얼마나 아끼는지 적었어요.</p><ul class="rlist" style="margin-top:20px">{items}</ul>'
+            f'1인분 재료비로 계산하고, 배달보다 얼마나 아끼는지 적었어요.</p>{party}<h2>한 그릇 1인분 레시피</h2><ul class="rlist" style="margin-top:20px">{items}</ul>'
             f'<h2 id="pantry">삼촌 장보기 기준가</h2><p class="small">{pd} 기준 대형마트·온라인 장보기 흔한 가격대예요. 레시피 원가는 이 값으로 계산합니다. 실제 가격은 사는 곳과 시기에 따라 달라요.</p>'
             f'<table class="ingtable"><thead><tr><th>재료</th><th>단위</th><th class="n">가격</th></tr></thead><tbody>{ptr}</tbody></table></article>')
+
+
+def party_block(recs: list[dict]) -> str:
+    """연말 홈파티 칸: 4인분 레시피 목록 + 4명 한 상 예시(재료비 합 vs 배달 합)."""
+    ps = [r for r in recs if is_party(r)]
+    if not ps:
+        return ""
+    e = html.escape
+    items = "".join(f'<li><a href="recipe/{r["slug"]}.html"><b>{e(r["name"])}</b><span>{yield_label(r)} {won(r["batch"])} · 1인분 {won(r["total"])}</span></a></li>'
+                    for r in sorted(ps, key=lambda r: -r["saveBatch"]))
+    bys = {r["slug"]: r for r in ps}
+    st = [bys[s] for s in PARTY_SET if s in bys]
+    combo = ""
+    if len(st) >= 2:
+        home, dlv = sum(r["batch"] for r in st), sum(r["deliveryBatch"] - DELIVERY_FEE for r in st) + DELIVERY_FEE
+        combo = (f'<div class="costhero"><div><span>4명 한 상, 집에서</span><b>{won(home)}</b></div>'
+                 f'<div><span>같은 메뉴 배달 (대략)</span><b>{won(dlv)}</b></div>'
+                 f'<div class="save"><span>아끼는 돈</span><b>{won(dlv - home)}</b></div></div>'
+                 f'<p class="small">한 상 예시: {" + ".join(e(r["name"]) for r in st)}. 1인당 재료비 약 {won(r10(home / 4))}이에요. '
+                 f'배달은 메뉴 대략가 합에 배달비 {won(DELIVERY_FEE)}을 한 번만 더했어요(한 가게에서 다 시킨다고 가정). 메뉴별 계산 근거는 각 레시피에 있어요.</p>')
+    return (f'<h2 id="party">연말 홈파티 레시피 (4인 기준)</h2><p class="small">손님 넷이 와도 배달 대신 차리면 얼마나 드는지, 4인분 재료비와 1인분 값을 같이 적었어요.</p>'
+            f'{combo}<ul class="rlist">{items}</ul>')
 
 
 def home_block(recs: list[dict]) -> str:
@@ -162,12 +221,12 @@ def home_block(recs: list[dict]) -> str:
 
 
 def ld(r: dict, base: str, image: str) -> dict:
-    return {"@context": "https://schema.org", "@type": "Recipe", "name": f"{r['name']} 1인분", "description": desc(r),
-            "image": [f"{base}/{image}"], "datePublished": r["date"], "inLanguage": "ko", "recipeYield": "1인분",
+    return {"@context": "https://schema.org", "@type": "Recipe", "name": f"{r['name']} {yield_label(r)}", "description": desc(r),
+            "image": [f"{base}/{image}"], "datePublished": r["date"], "inLanguage": "ko", "recipeYield": yield_label(r),
             "author": {"@type": "Organization", "name": "돈 줍는 삼촌"}, "keywords": ", ".join(r.get("keywords", [])),
             "recipeIngredient": [x["label"] for x in r["rows"]],
             "recipeInstructions": [{"@type": "HowToStep", "text": s} for s in r["steps"]],
-            "estimatedCost": {"@type": "MonetaryAmount", "currency": "KRW", "value": r["total"]}}
+            "estimatedCost": {"@type": "MonetaryAmount", "currency": "KRW", "value": r["batch"]}}
 
 
 def validate(r: dict, pantry: dict[str, dict]) -> list[str]:

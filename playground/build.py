@@ -362,10 +362,18 @@ DESIGNS = [
     {"g": "tongtong", "id": "frog", "name": "개구리 통통", "icon": "🐸", "p": 7},
     {"g": "tongtong", "id": "astro", "name": "우주인 통통", "icon": "🧑‍🚀", "p": 10},
     {"g": "tongtong", "id": "whale", "name": "별고래", "icon": "🐋", "p": 50, "leg": 1},
+    {"g": "survivor", "id": "cat", "name": "냥이 루미", "icon": "🐱", "p": 5},
+    {"g": "survivor", "id": "robot", "name": "로봇 루미", "icon": "🤖", "p": 8},
+    {"g": "survivor", "id": "ghost", "name": "유령 루미", "icon": "👻", "p": 12},
+    {"g": "survivor", "id": "phoenix", "name": "불사조 루미", "icon": "🔥", "p": 50, "leg": 1},
+    {"g": "tower", "id": "cake", "name": "케이크 탑", "icon": "🍰", "p": 5},
+    {"g": "tower", "id": "brick", "name": "벽돌 성", "icon": "🧱", "p": 7},
+    {"g": "tower", "id": "ice", "name": "얼음 궁전", "icon": "🧊", "p": 10},
+    {"g": "tower", "id": "crystal", "name": "무지개 크리스털 탑", "icon": "💎", "p": 50, "leg": 1},
 ]
-DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"]}
+DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"], "tower": ["하늘 탑 쌓기", "네온 빌딩 기본", "🏢"], "survivor": ["네온 생존자", "루미 기본", "🧿"]}
 # 업적·공유 보너스 코인(각 1번만): sl5 별빛 5단계, tt500 통통 500m, rg4 사격장 4단계, share 결과 공유
-ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
+ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "tw30": ["하늘 탑 쌓기 30층 도달", 3], "sv3": ["네온 생존자 3분 생존", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
 ACH["np5"] = ["오늘의 숫자 퍼즐 5판 모두 힌트 없이 풀기", 3]  # 2026-11-14 숫자 퍼즐
 # 코인 쓰임 1단계(BK 2026-11-14 "코인을 모아야 하는 이유"): 오늘의 미션·첫 플레이 보너스·아바타 30종·칭호·출석 보호권·통통 이어하기
 # 하루에 버는 양 ≈ 출석 1 + 미션 3 + 다 깨면 1 = 🪙5. 쓰는 곳은 모두 꾸미기·편의(점수·능력 영향 없음).
@@ -393,6 +401,12 @@ THEMES = [  # 게임 배경 테마. own 키 h:<게임>:<id>
     {"g": "tongtong", "id": "sunset", "name": "노을", "icon": "🌇", "p": 10},
     {"g": "tongtong", "id": "jungle", "name": "네온정글", "icon": "🌴", "p": 15},
     {"g": "tongtong", "id": "snow", "name": "눈 오는 밤", "icon": "⛄", "p": 20},
+    {"g": "survivor", "id": "desert", "name": "신기루 사막", "icon": "🏜️", "p": 10},
+    {"g": "survivor", "id": "deep", "name": "심해 네온", "icon": "🌊", "p": 15},
+    {"g": "survivor", "id": "sakura", "name": "벚꽃 밤", "icon": "🌸", "p": 20},
+    {"g": "tower", "id": "sunset", "name": "노을 하늘", "icon": "🌇", "p": 10},
+    {"g": "tower", "id": "blossom", "name": "벚꽃 하늘", "icon": "🌸", "p": 15},
+    {"g": "tower", "id": "aurora", "name": "오로라 밤", "icon": "🌌", "p": 20},
 ]
 # 오늘의 숫자 퍼즐 미니 상점(게임 안 탭, BK 11/14): 타일 테마. 코인은 사이트 공통. own 키 h:numpuzzle:<id>
 THEMES += [
@@ -444,7 +458,7 @@ GAME_ITEMS = [
     {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
     {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "hearts", "name": "하트 비", "icon": "💗", "p": 6},
 ]
-GSHOP_SHARED = ["starlight", "tongtong"]  # 디자인·배경 테마·꼬리·사운드·네온 색을 쓰는 게임
+GSHOP_SHARED = ["starlight", "tongtong", "survivor"]  # 디자인·배경 테마·꼬리·사운드·네온 색을 쓰는 게임
 
 BONUS_JS = (
     f"const SKINS={json.dumps(SKINS, ensure_ascii=False)},BONUS_MAX={BONUS_MAX_COINS},DESIGNS={json.dumps(DESIGNS, ensure_ascii=False)},DGAMES={json.dumps(DESIGN_GAMES, ensure_ascii=False)},ACH={json.dumps(ACH, ensure_ascii=False)},"
@@ -512,8 +526,8 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   if(THEMES.some(d=>d.g===g))grp('배경 테마',[['base','🌃','기본 배경',0,1]].concat(THEMES.filter(d=>d.g===g).map(d=>[d.id,d.icon,d.name,d.p,own('h:'+g+':'+d.id,d.p)])),B.theme(g),'h');
   const ks=[...new Set(GITEMS.filter(d=>d.g===g).map(d=>d.k))];
   for(const k of ks){const L=GITEMS.filter(d=>d.g===g&&d.k===k);grp(L[0].kn,[['','⚪','기본',0,1]].concat(L.map(d=>[d.id,d.icon,d.name,d.p,own('g:'+g+':'+k+':'+d.id,d.p)])),B.gitem(g,k),'g:'+k)}
-  if(GSHARED.includes(g)){grp('꼬리 효과 (별빛·통통 같이)',[['','💨','끄기',0,1]].concat(TRAILS.map(d=>[d.id,d.icon,d.name,d.p,own('r:'+d.id,d.p)])),B.trail(),'r');
-   grp('사운드 팩 (별빛·통통 같이)',[['','🔊','기본 소리',0,1]].concat(SOUNDS.map(d=>[d.id,d.icon,d.name,d.p,own('s:'+d.id,d.p)])),B.sound(),'s');
+  if(GSHARED.includes(g)){grp('꼬리 효과 (여러 게임 같이)',[['','💨','끄기',0,1]].concat(TRAILS.map(d=>[d.id,d.icon,d.name,d.p,own('r:'+d.id,d.p)])),B.trail(),'r');
+   grp('사운드 팩 (여러 게임 같이)',[['','🔊','기본 소리',0,1]].concat(SOUNDS.map(d=>[d.id,d.icon,d.name,d.p,own('s:'+d.id,d.p)])),B.sound(),'s');
    const sk=B.skin();grp('네온 색 (모든 게임 같이)',SKINS.map(k=>[k.id,`<i class="sw" style="--c:${k.c[1]}"></i>`,k.name,k.p,own('c:'+k.id,k.p)]),sk.id,'c')}
   if(!h)return;const body=el.querySelector('.gsb');body.innerHTML=h+'<p class="muted">모두 겉모습·소리만 바뀌는 꾸미기예요. 점수·판정은 그대로예요. 다음 판부터 적용돼요. <a href="/bonus">전체 상점(아바타·칭호) →</a></p>';
   el.querySelector('summary b').textContent=s.coins;
@@ -621,8 +635,8 @@ BONUS_BODY = f"""<h1>📅 출석체크 · 코인 상점</h1><p class="lead">출�
 <h2>🏷️ 칭호</h2><p class="muted">프로필과 '최근 7일' 순위에서 별명 옆에 보여요. 하나만 달 수 있고 언제든 바꿀 수 있어요.</p><div class="skins titles"></div>
 <h2>🎮 게임별 꾸미기</h2><p class="muted">게임마다 어울리는 꾸미기예요. 각 게임 화면의 '🛒 이 게임 상점'에서도 사고 바꿀 수 있어요.</p><div class="gshops"></div>
 <h2>🌌 게임 배경 테마</h2><p class="muted">게임 배경 분위기를 바꿔요. 장애물·적·총알은 그대로라 난이도는 같아요.</p><div class="themes"></div>
-<h2>💫 꼬리 효과</h2><p class="muted">별빛 요격대 우주선과 통통이 뒤에 따라오는 효과예요.</p><div class="skins trails"></div>
-<h2>🎵 사운드 팩</h2><p class="muted">별빛 요격대·통통 네온런의 효과음과 음악 음색이 옛날 오락기 소리로 바뀌어요.</p><div class="skins sounds"></div>
+<h2>💫 꼬리 효과</h2><p class="muted">별빛 요격대 우주선, 통통이, 네온 생존자 루미 뒤에 따라오는 효과예요.</p><div class="skins trails"></div>
+<h2>🎵 사운드 팩</h2><p class="muted">별빛 요격대·통통 네온런·네온 생존자의 효과음과 음악 음색이 옛날 오락기 소리로 바뀌어요.</p><div class="skins sounds"></div>
 <h2>🖍️ 별명 색</h2><p class="muted">'최근 7일' 순위에서 내 별명이 이 색으로 빛나요(프로필이 있어야 보여요).</p><div class="skins ncols"></div>
 <h2>💡 밸런스 질문 제안</h2><p class="muted">🪙 {QPROP_PRICE}개로 밸런스게임 질문을 제안해요. 관리자가 골라서 채택하면 사이트에 올라가고, 칭호 「출제자」와 🪙 {QPROP_PRICE}개를 돌려받아요. 프로필이 있어야 하고 하루 1번이에요. 욕설·개인정보·광고는 바로 걸러져요.</p>
 <div class="qprop"><input name="qa" maxlength="30" placeholder="A (예: 평생 여름)"> <b>vs</b> <input name="qb" maxlength="30" placeholder="B (예: 평생 겨울)"> <button type="button" class="share">🪙 {QPROP_PRICE} 제안하기</button><p class="qmsg muted"></p></div>
