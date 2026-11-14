@@ -41,15 +41,20 @@ function dots(){$('np-dots').innerHTML=[0,1,2,3,4].map(i=>{const r=S().res[i];re
 function msg(t){$('np-msg').textContent=t||''}
 function startRound(){const s=S();cur=(P?P.pz:PZ)[s.r];tiles=cur.nums.map(v=>({v}));hist=[];log=[];sel=-1;op='';hintR=false;giveArm=0;s.r0=s.r0!=null&&s.rr===s.r?s.r0:el();s.rr=s.r;save();
  $('np-stage').textContent=(P?'연습 · ':'')+(s.r+1)+'단계 '+LV[s.r];$('np-target').textContent=cur.t;dots();draw();msg('')}
+// 효과(2026-11-14 품질 개편): 웹오디오 효과음 + 합치기·정답 입자. 규칙·점수는 그대로.
+let AU=null;const ac=()=>{if(!AU){const C=window.AudioContext||window.webkitAudioContext;if(C)try{AU=new C()}catch(e){}}if(AU&&AU.state==='suspended')AU.resume()};
+const tn=(f,d,a,t,dl)=>{if(!AU)return;const z=AU.currentTime+(dl||0),o=AU.createOscillator(),g=AU.createGain();o.type=t||'triangle';o.frequency.value=f;g.gain.setValueAtTime(0,z);g.gain.linearRampToValueAtTime(a,z+.005);g.gain.exponentialRampToValueAtTime(.0005,z+d);o.connect(g);g.connect(AU.destination);o.start(z);o.stop(z+d+.02)};
+const SFX={tap:()=>tn(880,.05,.06,'square'),join:r=>tn(440*Math.pow(2,(Math.min(24,Math.log2(r+1)*3))/12),.16,.12),bad:()=>tn(150,.25,.12,'sawtooth'),ok:()=>[523,659,784,1047].forEach((f,k)=>tn(f,.22,.12,'triangle',k*.07)),end:()=>[523,659,784,1047,1319,1568].forEach((f,k)=>tn(f,.28,.12,'triangle',k*.09))};
+function npBurst(el,n,cols){if(!el)return;const b=el.getBoundingClientRect(),w=root.getBoundingClientRect();for(let k=0;k<n;k++){const e=document.createElement('i');e.className='np-cf';e.style.left=(b.left-w.left+b.width/2)+'px';e.style.top=(b.top-w.top+b.height/2)+'px';e.style.background=cols[k%cols.length];e.style.setProperty('--dx',(Math.random()*240-120)+'px');e.style.setProperty('--dy',(Math.random()*-160-10)+'px');e.style.setProperty('--r',(Math.random()*720-360)+'deg');root.appendChild(e);setTimeout(()=>e.remove(),900)}}
 function draw(pop){$('np-tiles').innerHTML=tiles.map((t,i)=>'<button type="button" class="np-tile'+(t.gone?' gone':'')+(i===sel?' sel':'')+(i===pop?' pop':'')+'" data-i="'+i+'">'+(t.gone?'':t.v)+'</button>').join('');
  document.querySelectorAll('.np-op').forEach(b=>b.classList.toggle('sel',b.dataset.op===op));$('np-log').innerHTML=log.map(x=>'<li>'+x+'</li>').join('')}
 function live(){return tiles.map((t,i)=>t.gone?-1:i).filter(i=>i>=0)}
-function tapTile(i){if(busy||!tiles[i]||tiles[i].gone)return;clearHint();
- if(sel<0||sel===i||!op){sel=sel===i?-1:i;draw();return}
+function tapTile(i){if(busy||!tiles[i]||tiles[i].gone)return;clearHint();ac();
+ if(sel<0||sel===i||!op){sel=sel===i?-1:i;SFX.tap();draw();return}
  const a=tiles[sel].v,b=tiles[i].v,r=calc(a,op,b);
- if(!r){const tl=document.querySelector('.np-tile[data-i="'+i+'"]');if(tl){tl.classList.remove('bad');void tl.offsetWidth;tl.classList.add('bad')}msg(op==='÷'?'나누어떨어지지 않아요. 다른 숫자로 해 보세요':'결과가 0이 되면 안 돼요(1 이상만)');return}
+ if(!r){SFX.bad();const tl=document.querySelector('.np-tile[data-i="'+i+'"]');if(tl){tl.classList.remove('bad');void tl.offsetWidth;tl.classList.add('bad')}msg(op==='÷'?'나누어떨어지지 않아요. 다른 숫자로 해 보세요':'결과가 0이 되면 안 돼요(1 이상만)');return}
  hist.push({t:tiles.map(x=>Object.assign({},x)),l:log.slice()});
- tiles[sel]={v:0,gone:1};tiles[i]={v:r};log.push(Math.max(a,b)+' '+op+' '+Math.min(a,b)+' = '+r);sel=-1;op='';msg('');draw(i);
+ tiles[sel]={v:0,gone:1};tiles[i]={v:r};log.push(Math.max(a,b)+' '+op+' '+Math.min(a,b)+' = '+r);sel=-1;op='';msg('');draw(i);SFX.join(r);npBurst(document.querySelector('.np-tile[data-i="'+i+'"]'),10,['#ffd23f','#22d3ee','#ff3d9a']);
  if(live().length===1){if(r===cur.t)solved();else{msg('아쉬워요! '+r+' 은(는) 목표 '+cur.t+'와 달라요. ↶ 되돌리기로 고쳐 보세요');$('np-tg').classList.remove('ok')}}}
 function clearHint(){document.querySelectorAll('.hint').forEach(e=>e.classList.remove('hint'))}
 function undo(){if(busy||!hist.length)return;const h=hist.pop();tiles=h.t;log=h.l;sel=-1;op='';msg('');draw()}
@@ -61,7 +66,7 @@ function hint(){if(busy)return;clearHint();let nums=live().map(i=>tiles[i].v),M=
  const ob=document.querySelector('.np-op[data-op="'+o+'"]');if(ob)ob.classList.add('hint');msg('💡 '+a+' '+o+' '+b+' 부터 해 보세요 (이 판은 🟨)')}
 function give(){if(busy)return;const b=$('np-give');if(!giveArm){giveArm=1;b.textContent='정말 포기?';b.classList.add('warn');setTimeout(()=>{giveArm=0;b.textContent='🏳 포기';b.classList.remove('warn')},3000);return}
  giveArm=0;b.textContent='🏳 포기';b.classList.remove('warn');const e=solveAll(cur.nums).get(cur.t);log=(e?e.path:cur.path).map(([a,o,c,r])=>a+' '+o+' '+c+' = '+r);sel=-1;op='';draw();msg('풀이를 확인하고 다음 판으로 넘어가요');endRound('r',2600)}
-function solved(){$('np-tg').classList.remove('ok');void $('np-tg').offsetWidth;$('np-tg').classList.add('ok');msg(hintR?'정답! (힌트 사용 🟨)':'정답! 🎉');endRound(hintR?'y':'g',900)}
+function solved(){$('np-tg').classList.remove('ok');void $('np-tg').offsetWidth;$('np-tg').classList.add('ok');SFX.ok();npBurst($('np-tg'),34,['#ffd23f','#3ddc84','#22d3ee','#ff3d9a','#b06bff']);msg(hintR?'정답! (힌트 사용 🟨)':'정답! 🎉');endRound(hintR?'y':'g',900)}
 function endRound(s,wait){busy=true;const st=S();st.res[st.r]={s,t:Math.round((el()-(st.r0||0))/1000)};st.r++;st.r0=el();st.rr=st.r;save();dots();
  setTimeout(()=>{busy=false;if(st.r>=5)finish();else startRound()},wait)}
 function score(s){const sec=s.el/1000,base=s.res.reduce((a,r)=>a+(r.s==='g'?1000:r.s==='y'?600:0),0);return base?base+Math.max(0,Math.round((600-sec)*3)):0}
@@ -70,7 +75,7 @@ function finish(){pause();const s=S();s.done=1;s.score=score(s);save();
  if(!P&&!DBG){const st=bumpStreak();s.st=st.n;save();if(s.score>0&&window.submitScore)submitScore(s.score);else if(window.Bonus)Bonus.played(G);if(window.Bonus&&s.res.every(r=>r.s==='g'))Bonus.ach('np5')}
  result()}
 function nextIn(){const n=new Date(Date.parse(KST+'T00:00:00Z')+864e5-9*3600e3)-Date.now();const h=Math.floor(n/36e5),m=Math.floor(n%36e5/6e4);return h+'시간 '+m+'분'}
-function result(){const s=S(),[g1,g2]=grid(s),st=streak(),sc=s.score;$('np-board').hidden=true;$('np-msg').textContent='';const r=$('np-res');r.hidden=false;
+function result(){if(AU&&S().done&&!result.p){result.p=1;SFX.end()}const s=S(),[g1,g2]=grid(s),st=streak(),sc=s.score;$('np-board').hidden=true;$('np-msg').textContent='';const r=$('np-res');r.hidden=false;
  $('np-stage').textContent=P?'연습 결과':'오늘의 결과';$('np-time').textContent='⏱ '+fmt(s.el/1000);dots();
  r.innerHTML='<h3>'+(P?'🧩 연습 문제 완료':'🔢 '+KST.slice(5).replace('-','/')+' 숫자 퍼즐 완료')+'</h3><div class="np-grid">'+g1+'<br>'+g2+'</div>'
   +'<p><b>⏱ '+fmtK(s.el/1000)+'</b> · <b>'+sc.toLocaleString()+'점</b>'+(P?' <small>(순위 없음)</small>':'')+'</p>'
