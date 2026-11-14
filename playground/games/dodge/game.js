@@ -21,5 +21,8 @@ function end(){run=false;const s=Math.floor(score);$('dg-start').hidden=false;$(
  $('dg-sh').onclick=()=>shareText('5락실 별똥별 피하기 '+KST.slice(5)+'\n🌠 '+s+'점 버텼어요. 이겨 볼래?\n'+challengeUrl(s));if(window.submitScore)submitScore(s)}
 $('dg-start').onclick=start;c.style.touchAction='none';addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')&&run)e.preventDefault();keys[e.key]=1});addEventListener('keyup',e=>keys[e.key]=0);
 const pos=e=>{const b=c.getBoundingClientRect();return e.clientX-b.left};c.addEventListener('pointerdown',e=>{if(!run)start();drag=pos(e);c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(drag!==null)drag=pos(e)});c.addEventListener('pointerup',()=>drag=null);
-reset();x.fillStyle='#fff';x.font='16px sans-serif';x.textAlign='center';x.fillText('여기를 눌러 시작',W/2,H/2);x.font='13px sans-serif';x.fillText('누른 채 좌우로 움직이세요 (PC는 ← →)',W/2,H/2+24);
+function idle(){x.fillStyle='#fff';x.font='16px sans-serif';x.textAlign='center';x.fillText('여기를 눌러 시작',W/2,H/2);x.font='13px sans-serif';x.fillText('누른 채 좌우로 움직이세요 (PC는 ← →)',W/2,H/2+24)}
+reset();idle();
+// 화면을 가로로 돌리거나 전체 화면이 되면 캔버스 크기를 다시 맞춘다(가로 화면 모드).
+addEventListener('resize',()=>{const w=W;size();if(run){px*=W/w}else if(!t)idle()});
 })();
