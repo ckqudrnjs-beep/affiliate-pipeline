@@ -187,6 +187,8 @@ def load_games() -> list[dict]:
         g["slug"] = d.name
         g["body"] = (d / "body.html").read_text(encoding="utf-8")
         g["js"] = (d / "game.js").read_text(encoding="utf-8")
+        # 게임 스크립트 주소에 내용 해시를 붙여 폰·앱 브라우저가 예전 파일을 계속 쓰지 않게 (BK 11/14: 배포 후에도 예전 네온 레이드가 보임)
+        g["js"] = re.sub(r"(/js/([\w-]+)\.js)(?=['\"])", lambda m: m.group(1) + ("?v=" + __import__("hashlib").md5((HERE / "static/js" / (m.group(2) + ".js")).read_bytes()).hexdigest()[:8] if (HERE / "static/js" / (m.group(2) + ".js")).exists() else ""), g["js"])
         for k in ("name", "short", "title", "description"):
             if not g.get(k):
                 raise ValueError(f"{d.name}: {k} 없음")
