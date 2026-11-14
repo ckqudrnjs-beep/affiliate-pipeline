@@ -231,11 +231,12 @@ function put(g, sp, x, y, dir, sc, flash, rotA) {
 
 /* ---------- 3D 렌더 캐릭터 아틀라스 (원본 src3d/chars, 모델 KayKit CC0) ---------- */
 // 5x4 칸, 칸 360x320px, 발 (155,295), 1 게임 단위 = 1.2px. 칸 순서 = ATL.F. 못 불러오면 예전 코드 그림을 쓴다.
-const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 1, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'], p: {}, sp: {} };
-const ATL_E = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'wind', 'hit', 'hurt'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 3x3 칸(걷기 6프레임)
+const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 3, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult',
+  'idle1', 'idle3', 'run4', 'run5', 'run6', 'run7', 'hurt2', 'dash2'].concat(['c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'].flatMap(k => [k + '_p', k + '_f'])), p: {}, sp: {} }; // 8x6 칸 — src3d/chars/classes.js FRAMES 와 같게
+const ATL_E = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'wind0', 'wind', 'hit', 'hit2', 'hurt', 'hurt2'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 4x4 칸(걷기 8 + 준비·휘두르기·맞음 2장씩)
 function atlasLoad(key) {
   const en = ATL_EN.includes(key);
-  if (!ATL.p[key]) ATL.p[key] = new Promise(ok => { const im = new Image(); im.decoding = 'async'; im.onload = () => { try { ATL.sp[key] = atlasCut(im, en ? ATL_E : ATL.F, en ? 3 : 5, en); } catch (e) {} ok(!!ATL.sp[key]); }; im.onerror = () => ok(false); im.src = '/img/raid/' + key + '.webp?v=' + ATL.V; });
+  if (!ATL.p[key]) ATL.p[key] = new Promise(ok => { const im = new Image(); im.decoding = 'async'; im.onload = () => { try { ATL.sp[key] = atlasCut(im, en ? ATL_E : ATL.F, en ? 4 : 8, en); } catch (e) {} ok(!!ATL.sp[key]); }; im.onerror = () => ok(false); im.src = '/img/raid/' + key + '.webp?v=' + ATL.V; });
   return ATL.p[key];
 }
 function atlasCut(im, list, cols, flip) { // flip: 적 그림은 왼쪽을 보는 게 기본
@@ -260,6 +261,20 @@ function bossLoad() {
   if (!ATL.p.boss) ATL.p.boss = new Promise(ok => { const im = new Image(); im.onload = () => { try { const o = {}; BOSSA.forEach(([k, pp, ax, ay], i) => { const c = mkc(400, 300); c.getContext('2d').drawImage(im, i * 400, 0, 400, 300, 0, 0, 400, 300); const wh = mkc(400, 300), w2 = wh.getContext('2d'); w2.drawImage(c, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, 400, 300); o[k] = { c, wh, ox: ax / pp, oy: ay / pp, w: 400 / pp, h: 300 / pp }; }); ATL.boss = o; } catch (e) {} ok(!!ATL.boss); }; im.onerror = () => ok(false); im.src = '/img/raid/boss.webp?v=' + ATL.V; });
   return ATL.p.boss;
 }
+// 4장 적·보스 부품(boss2.webp): 칸 400x300, 4열 [키, 1단위당 px, 기준점 x, y] — src3d/chars/render.html B2 와 같게
+const BOSS2 = [['ad_w0', 2, 200, 280], ['ad_w1', 2, 200, 280], ['ad_w2', 2, 200, 280], ['ad_wind', 2, 200, 280], ['ad_hit', 2, 200, 280], ['ad_hurt', 2, 200, 280],
+  ['spbody', 1.6, 120, 260], ['spleg', 2.6, 40, 150], ['hybody', 1.2, 130, 292], ['hyh0', 3, 240, 150], ['hyh1', 3, 240, 150],
+  ['ecbody', 1.8, 200, 280], ['eccape', 1.8, 200, 280], ['ecsw', 2.4, 200, 20]];
+function boss2Load() {
+  if (!ATL.p.b2) ATL.p.b2 = new Promise(ok => { const im = new Image(); im.onload = () => { try { const o = {}; BOSS2.forEach(([k, pp, ax, ay], i) => { const c = mkc(400, 300); c.getContext('2d').drawImage(im, (i % 4) * 400, Math.floor(i / 4) * 300, 400, 300, 0, 0, 400, 300); const wh = mkc(400, 300), w2 = wh.getContext('2d'); w2.drawImage(c, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, 400, 300); o[k] = { c, wh, ox: ax / pp, oy: ay / pp, w: 400 / pp, h: 300 / pp }; });
+    const d = mkc(400, 300), dg = d.getContext('2d'); dg.drawImage(o.spleg.c, 0, 0); dg.globalCompositeOperation = 'source-atop'; dg.fillStyle = 'rgba(14,6,26,.5)'; dg.fillRect(0, 0, 400, 300); o.splegd = Object.assign({}, o.spleg, { c: d }); // 뒤쪽 다리는 어둡게
+    ATL.b2 = o; } catch (e) {} ok(!!ATL.b2); }; im.onerror = () => ok(false); im.src = '/img/raid/boss2.webp?v=' + ATL.V; });
+  return ATL.p.b2;
+}
+function seg3(g, sp, x0, y0, x1, y1, th, fl) { // 3D 부품(가로 100단위)을 두 점 사이에 늘여 그림
+  g.save(); g.translate(x0, y0); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.scale(Math.hypot(x1 - x0, y1 - y0) / 100, th || 1); g.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h);
+  if (fl) { g.globalAlpha = fl; g.drawImage(sp.wh, -sp.ox, -sp.oy, sp.w, sp.h); } g.restore();
+}
 // 빛 번짐 스프라이트(shadowBlur 대신: 폰에서 훨씬 가볍고 더 부드러움). 색마다 한 번만 굽는다.
 const GLOW = {};
 function glowTex(col) {
@@ -269,7 +284,7 @@ function glowTex(col) {
 }
 function glw(g, x, y, r, col, a) { if (r <= 0) return; const o = g.globalCompositeOperation, al = g.globalAlpha; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * (a == null ? 1 : a); g.drawImage(glowTex(col), x - r, y - r, r * 2, r * 2); g.globalCompositeOperation = o; g.globalAlpha = al; }
 function hexA(col) { return col.length === 4 ? '#' + col[1] + col[1] + col[2] + col[2] + col[3] + col[3] : col.slice(0, 7); }
-function atlasAll() { return Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad()])); }
+function atlasAll() { return Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad(), boss2Load()])); }
 
 /* =================== 직업·기술 데이터 =================== */
 // 공격 판정 h: x0..x1 앞쪽 거리, dy 깊이 허용, z0..z1 높이, d 피해 배율, kb 밀기, lift 띄우기, st 경직, stop 히트스톱, sh 흔들림, n 다단 수, iv 간격
@@ -628,7 +643,7 @@ function playerUpdate(dt) {
     if (P.cd[i] > 0) { tip(P, '⏳'); continue; } if (P.mp < s.mp) { tip(P, '기력 부족'); continue; }
     if (canCancel && !(A_ && A_.kind === 'sk' && A_.idx === i)) { if (mx) P.f = Math.sign(mx); P.mp -= s.mp; P.cd[i] = s.cd; startAct(s, 'sk', i); G.flash = Math.max(G.flash, .08); }
   }
-  if (inp.ult) { inp.ult = 0; if (P.ult >= 100 && canCancel && P.hurt <= 0) { P.ult = 0; startAct(c.ult, 'ult', 0); P.act.isUlt = 1; P.inv = c.ult.t + .3; G.slow = .5; G.ultFx = 1; sfx('ult'); G.shake = 5; } else if (P.ult < 100) tip(P, '필살기 ' + Math.floor(P.ult) + '%'); }
+  if (inp.ult) { inp.ult = 0; if (P.ult >= 100 && canCancel && P.hurt <= 0) { P.ult = 0; startAct(c.ult, 'ult', 0); P.act.isUlt = 1; P.inv = c.ult.t + .3; G.slow = .5; G.ultFx = 1; G.ultCut = { t: 0 }; burst(P.x, P.y, 60, c.col, 26, 260); ring(P.x, P.y, 140, c.col); sfx('ult'); G.shake = 5; } else if (P.ult < 100) tip(P, '필살기 ' + Math.floor(P.ult) + '%'); }
   if (inp.atk || inp.atkH) {
     if (!P.act && P.hurt <= 0) { P.ci = 0; if (mx) P.f = Math.sign(mx); startAct(c.combo[0], 'combo', 0); inp.atk = 0; }
     else if (P.act && P.act.kind === 'combo' && P.act.t > P.act.def.at * .6) P.cq = 1;
@@ -711,7 +726,9 @@ function areaUpdate(dt) {
       hit(e, h, Math.sign(dx) || r.f, e.x);
       if (a.frz) e.frz = a.frz; if (a.curse) { e.curse = a.curse; tx(e.x, e.y - e.h - 20, '저주!', '#7dff9a', 12); }
     }
-    if (big) { G.flash = .6; G.shake = 14; G.slow = .4; sfx('boom'); burst(r.x, r.y, 20, G.c.col, 40, 380); ring(r.x, r.y, a.r, G.c.col); }
+    if (big) { G.flash = .6; G.flashC = G.c.col; G.shake = 18; G.slow = .55; G.stop = Math.max(G.stop, .1); sfx('boom'); burst(r.x, r.y, 20, G.c.col, 60, 460); burst(r.x, r.y, 10, '#ffffff', 20, 300); shards(r.x, r.y - 10, 14, G.c.col, 1); shards(r.x, r.y - 10, 14, G.c.col, -1);
+      ring(r.x, r.y, a.r, G.c.col); G.fx.push({ k: 'shock', x: r.x, y: r.y, r: a.r * 1.6, t: 0, life: .75, col: G.c.col }, { k: 'pillar', x: r.x, y: r.y, t: 0, life: .6, col: G.c.col }); }
+    else if (a.k === 'stars') { sfx('magic'); burst(r.x, r.y, 10, G.c.col, 10, 200); G.fx.push({ k: 'impact', x: r.x, y: r.y - 10, t: 0, life: .2, col: G.c.col }); ring(r.x, r.y, 70, G.c.col); }
     else if (a.k === 'ice') { sfx('ice'); burst(r.x, r.y, 60, '#bdf6ff', 18, 200); }
     else if (a.k === 'trap' || a.k === 'needles' || a.k === 'hex' || a.k === 'nova') { sfx(a.k === 'nova' ? 'magic' : 'blunt'); burst(r.x, r.y, 30, G.c.col, 16, 200); ring(r.x, r.y, a.r, G.c.col); }
     else if (a.k === 'curse') { sfx('magic'); ring(r.x, r.y, a.r, '#7dff9a'); }
@@ -1024,6 +1041,7 @@ let SPX = {};
 function spCopy(sp) { const c = mkc(sp.c.width, sp.c.height); c.getContext('2d').drawImage(sp.c, 0, 0); return Object.assign({}, sp, { c }); } // 3D 아틀라스 그림을 복제체용으로 복사
 function spx(t) {
   if (t !== 'ad' && t !== 'clone') return null;
+  if (t === 'ad' && ATL.b2) { const B = ATL.b2; return { w0: B.ad_w0, w1: B.ad_w1, w2: B.ad_w2, wind: B.ad_wind, hit: B.ad_hit, hurt: B.ad_hurt }; } // 3D 광고 드론
   const k = lay.s * lay.dpr, key = t === 'clone' ? (G ? G.cls : 'knight') + (ATL.sp[G ? G.cls : 'knight'] ? '3d' : '') : ''; const o = SPX[t]; if (o && o.k === k && o.key === key) return o.s;
   let s = {};
   if (t === 'ad') { const ek = k * ET.ad.sc, A2 = [{ ph: 0 }, { ph: 1 }, { ph: 2 }, { ph: 0, wind: 1 }, { ph: 1, lunge: 1 }, { ph: 2, hurt: 1 }]; ['w0', 'w1', 'w2', 'wind', 'hit', 'hurt'].forEach((n, i) => { s[n] = bake(adArt, A2[i], ek, '#ff5ad8', '#7df9ff', [140, 140, 20]); }); }
@@ -1247,6 +1265,7 @@ function draw() {
   if (G.boss && G.boss.st === 'charge' && G.boss.tm > 0) { const b = G.boss, al = .15 + .15 * Math.sin(G.t * 30); g.fillStyle = lg(g, 0, b.lane - 30, 0, b.lane + 30, [[0, 'rgba(255,40,70,0)'], [.5, 'rgba(255,40,70,' + (al + .1) + ')'], [1, 'rgba(255,40,70,0)']]); g.fillRect(cx - 20, b.lane - 30, VW + 40, 60); g.fillStyle = 'rgba(255,200,210,' + (al + .3) + ')'; for (let ax = cx + ((G.t * 300) % 80) - 40; ax < cx + VW + 40; ax += 80) { g.beginPath(); g.moveTo(ax, b.lane - 8); g.lineTo(ax + 12, b.lane); g.lineTo(ax, b.lane + 8); g.fill(); } }
   if (G.boss && G.boss.st === 'laser') for (const lx of G.boss.cols) { const on = G.boss.tm < 1.1 && G.boss.tm > .4; if (!on) { g.fillStyle = lg(g, lx - 26, 0, lx + 26, 0, [[0, 'rgba(255,40,70,0)'], [.5, 'rgba(255,40,70,' + (.18 + .12 * Math.sin(G.t * 26)) + ')'], [1, 'rgba(255,40,70,0)']]); g.fillRect(lx - 26, 0, 52, VH); g.strokeStyle = 'rgba(255,90,120,.6)'; g.setLineDash([6, 8]); g.beginPath(); g.moveTo(lx, 0); g.lineTo(lx, VH); g.stroke(); g.setLineDash([]); } else { g.save(); g.globalCompositeOperation = 'lighter'; const w = 30 + Math.sin(G.t * 60) * 4; g.fillStyle = lg(g, lx - w, 0, lx + w, 0, [[0, 'rgba(255,40,90,0)'], [.3, 'rgba(255,60,110,.55)'], [.5, 'rgba(255,245,250,1)'], [.7, 'rgba(255,60,110,.55)'], [1, 'rgba(255,40,90,0)']]); g.fillRect(lx - w, 0, w * 2, VH); g.restore(); glw(g, lx, (FY0 + FY1) / 2, 60, '#ff3d6a', .8); for (let i = 0; i < 3; i++) glw(g, lx + rnd(-20, 20), rnd(FY0, FY1), 6, '#ffd0dc', 1); } }
   for (const q of G.ep) if (q.k === 'bomb') { const v = 1 - q.life / q.T; g.fillStyle = rg(g, q.tx, q.ty, 0, 46, [[0, 'rgba(255,90,60,' + (.1 + v * .35) + ')'], [1, 'rgba(255,90,60,0)']]); g.beginPath(); g.ellipse(q.tx, q.ty, 46, 14, 0, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,170,140,.9)'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(q.tx, q.ty, 40 * v + 6, 12 * (v * .8 + .2), 0, 0, TAU); g.stroke(); g.strokeStyle = 'rgba(255,90,60,.5)'; g.beginPath(); g.ellipse(q.tx, q.ty, 46, 14, 0, 0, TAU); g.stroke(); }
+  if (G.P.act && G.P.act.isUlt) ultCircle(g, G.P);
   // 깊이 순서대로
   const L = []; for (const e of G.en) if (!e.dead) L.push(e); L.push(G.P); for (const q of peerShadows()) L.push(q); if (G.pet) L.push(G.pet); for (const t of G.totems) L.push({ totem: t, y: t.y }); for (const q of G.it) L.push({ item: q, y: q.y });
   L.sort((a, b) => a.y - b.y);
@@ -1259,9 +1278,9 @@ function draw() {
   if (G.gate && G.room < ROOMS.length - 1) { const ax = G.L - 60, pulse = Math.sin(G.t * 6) * 6; g.save(); g.shadowColor = '#7df9ff'; g.shadowBlur = 16; g.fillStyle = '#7df9ff'; g.font = '400 26px ' + FONT_K; g.textAlign = 'center'; g.fillText('GO ▶', ax + pulse, FY0 - 30); g.restore(); }
   g.restore();
   // 화면 효과
-  if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(.6, G.flash) + ')'; g.fillRect(0, 0, VW, VH); }
+  if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(.6, G.flash) + ')'; g.fillRect(0, 0, VW, VH); if (G.flashC) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.min(.5, G.flash); g.fillStyle = rg(g, VW / 2, VH / 2, 0, VW * .7, [[0, hexA(G.flashC) + '00'], [1, hexA(G.flashC)]]); g.fillRect(0, 0, VW, VH); g.restore(); } }
   if (G.redT > 0) { g.fillStyle = rg(g, VW / 2, VH / 2, VH * .3, VW * .7, [[0, 'rgba(255,0,40,0)'], [1, 'rgba(255,0,40,' + G.redT + ')']]); g.fillRect(0, 0, VW, VH); }
-  if (G.ultFx > 0) { g.fillStyle = 'rgba(0,0,0,' + G.ultFx * .35 + ')'; g.fillRect(0, 0, VW, VH); g.save(); g.globalAlpha = Math.min(1, G.ultFx * 2); g.fillStyle = G.c.col; g.font = '400 30px ' + FONT_K; g.textAlign = 'center'; g.shadowColor = G.c.col; g.shadowBlur = 20; g.fillText(G.c.ult.name + '!', VW / 2, 120); g.restore(); }
+  if (G.ultCut) ultCut(g, G.ultCut.t); else if (G.ultFx > 0) { g.fillStyle = 'rgba(0,0,0,' + G.ultFx * .3 + ')'; g.fillRect(0, 0, VW, VH); }
   g.fillStyle = rg(g, VW / 2, VH / 2, VH * .45, VW * .72, [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, VW, VH);
   hud(g); drawTalk(g);
   if (G.fade > 0) { g.fillStyle = 'rgba(4,3,12,' + G.fade + ')'; g.fillRect(0, 0, VW, VH); }
@@ -1271,10 +1290,16 @@ function draw() {
 function pFrame() {
   const P = G.P, A_ = P.act;
   if (G.mode === 'dying' || P.down > 0 || P.ghost) return P.z > 0 ? 'hurt' : 'hurt';
-  if (P.hurt > 0) return 'hurt'; if (P.dashing > 0) return 'dash';
-  if (A_) { const d = A_.def; return A_.t < d.at ? d.a : d.b; }
+  const S = SPR.p, has = n => S[n] ? n : null; // 사이 프레임이 없으면(코드 그림) 기본 자세로
+  if (P.hurt > 0) return P.hurt < .12 && has('hurt2') || 'hurt'; if (P.dashing > 0) return Math.floor(G.t * 16) % 2 && has('dash2') || 'dash';
+  if (A_) { const d = A_.def;
+    if (A_.isUlt && A_.t < d.at) return (A_.t < d.at * .45 && has(d.a + '_p')) || d.a;
+    if (d.a === 'spin' && d.b === 'spin') return ['spin_p', 'spin', 'spin_f'].map(has)[Math.floor(A_.t * 16) % 3] || 'spin';
+    if (A_.t < d.at) return (A_.t < d.at * .5 && has(d.a + '_p')) || d.a; // 준비: 앞 → 자세
+    const v = (A_.t - d.at) / Math.max(.05, d.t - d.at); return (v > .4 && has(d.b + '_f')) || d.b; } // 휘두름: 자세 → 뒤따름
   if (P.z > 0) return P.vz > 0 ? 'jump' : 'fall';
-  if (P.run > 0) return 'run' + (Math.floor(P.run * 10) % 4);
+  if (P.run > 0) { if (S.run7) return 'run' + [0, 4, 1, 5, 2, 6, 3, 7][Math.floor(P.run * 20) % 8]; return 'run' + (Math.floor(P.run * 10) % 4); }
+  if (S.idle3) return ['idle', 'idle1', 'idle2', 'idle3'][Math.floor(G.t * 3.2) % 4];
   return Math.floor(G.t * 1.6) % 2 ? 'idle2' : 'idle';
 }
 function drawP(g) {
@@ -1288,7 +1313,8 @@ function drawE(g, e) {
   if (e.crate) { const cs = ATL.props ? ATL.props.crate[0] : SPR.crate; put(g, cs, e.x + (e.fl > 0 ? rnd(-2, 2) : 0), e.y, 1, ATL.props ? .62 : .5, e.fl > 0 ? e.fl * 8 : 0); return; }
   if (e.t === 'drone') { drawDrone(g, e); return; }
   const S = SPR.e[e.t] || spx(e.t); if (!S) return; let sp = S.w0; if (e.st === 'blink') { g.save(); g.globalAlpha = clamp(e.tm / .35, 0, 1); }
-  if (e.st === 'walk') sp = S.w5 ? [S.w0, S.w1, S.w2, S.w3, S.w4, S.w5][Math.floor(e.ph * 1.5) % 6] : [S.w0, S.w1, S.w0, S.w2][Math.floor(e.ph) % 4]; else if (e.st === 'wind') sp = S.wind; else if (e.st === 'swing') sp = S.hit; else if (e.st === 'hurt' || e.st === 'air' || e.st === 'down') sp = S.hurt;
+  if (e.st === 'walk') sp = S.w7 ? [S.w0, S.w1, S.w2, S.w3, S.w4, S.w5, S.w6, S.w7][Math.floor(e.ph * 2) % 8] : S.w5 ? [S.w0, S.w1, S.w2, S.w3, S.w4, S.w5][Math.floor(e.ph * 1.5) % 6] : [S.w0, S.w1, S.w0, S.w2][Math.floor(e.ph) % 4];
+  else if (e.st === 'wind') sp = S.wind0 && e.tm > .3 ? S.wind0 : S.wind; else if (e.st === 'swing') sp = S.hit2 && e.tm < .2 ? S.hit2 : S.hit; else if (e.st === 'hurt' || e.st === 'air' || e.st === 'down') sp = S.hurt2 && (e.st === 'down' || e.tm < .12) ? S.hurt2 : S.hurt;
   let rot = 0; if (e.st === 'air') rot = -e.f * clamp(e.vz / -400 + .4, -.2, 1.3); if (e.st === 'down') rot = -e.f * 1.45;
   const shk = e.fl > 0 ? rnd(-2, 2) : 0, sc = ET[e.t].sc;
   if (e.st === 'wind') { const pu = .5 + .5 * Math.sin(G.t * 40); glw(g, e.x, e.y - e.z - e.h - 18, 14 + pu * 6, '#ff3d6a', .9); glw(g, e.x, e.y - e.z - e.h - 18, 5, '#ffffff', pu); glw(g, e.x + e.f * 30, e.y - e.z - e.h * .55, 26, hexA(ET[e.t].rim), .35 + pu * .3); }
@@ -1390,13 +1416,42 @@ function drawFx(g) {
     else if (f.k === 'bolt' || f.k === 'petz') { g.save(); g.globalAlpha = 1 - u; g.shadowColor = f.k === 'bolt' ? '#e3b8ff' : '#ffd6f5'; g.shadowBlur = 14; g.strokeStyle = '#fff'; g.lineWidth = f.k === 'bolt' ? 2.5 : 1.5; g.beginPath(); g.moveTo(f.x, f.y); for (let i = 1; i < 6; i++) g.lineTo(lerp(f.x, f.x2, i / 6) + rnd(-8, 8), lerp(f.y, f.y2, i / 6) + rnd(-8, 8)); g.lineTo(f.x2, f.y2); g.stroke(); g.restore(); }
     else if (f.k === 'ghost') { const e = f.e; g.save(); g.globalAlpha = (1 - u) * .8; g.globalCompositeOperation = 'lighter'; if (e.t === 'drone') dot(g, f.x, f.y - f.z, 20 * (1 + u), '#4fd8ff'); else if (SPR.e[e.t] || spx(e.t)) put(g, (SPR.e[e.t] || spx(e.t)).hurt, f.x + f.dir * u * 30, f.y - f.z - u * 20, f.f, ET[e.t].sc * (1 + u * .3), .5); g.restore(); }
     else if (f.k === 'area') drawArea(g, f, u);
+    else if (f.k === 'shock') { const c2 = hexA(f.col), e2 = 1 - Math.pow(1 - u, 3); g.save(); g.globalCompositeOperation = 'lighter'; for (let j = 0; j < 3; j++) { const v = clamp(e2 - j * .12, 0, 1), rx = f.r * v, ry = rx * .32; if (v <= 0) continue; g.globalAlpha = (1 - u) * (j ? .5 : .9); g.strokeStyle = j ? c2 : '#ffffff'; g.lineWidth = (j ? 10 : 4) * (1 - u) + 1; g.beginPath(); g.ellipse(f.x, f.y, rx, ry, 0, 0, TAU); g.stroke(); }
+      g.globalAlpha = (1 - u) * .8; g.strokeStyle = c2; g.lineWidth = 2; for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .3, L1 = 30 + e2 * f.r * .7; g.beginPath(); g.moveTo(f.x + Math.cos(a) * 20, f.y + Math.sin(a) * 7); g.lineTo(f.x + Math.cos(a) * L1 * .6 + Math.sin(i * 7) * 12, f.y + Math.sin(a) * L1 * .2); g.lineTo(f.x + Math.cos(a) * L1, f.y + Math.sin(a) * L1 * .32); g.stroke(); }
+      glw(g, f.x, f.y, f.r * .8 * (1 - u), c2, .6); g.restore(); }
+    else if (f.k === 'pillar') { const c2 = hexA(f.col), w = 70 * (1 - u * u) + 6; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 1 - u; g.fillStyle = lg(g, f.x - w, 0, f.x + w, 0, [[0, c2 + '00'], [.35, c2 + '99'], [.5, '#ffffff'], [.65, c2 + '99'], [1, c2 + '00']]); g.fillRect(f.x - w, f.y - 700, w * 2, 700); glw(g, f.x, f.y, 160 * (1 - u * .5), c2, .9); glw(g, f.x, f.y - 20, 60, '#ffffff', 1 - u); g.restore(); }
   }
+}
+// 필살기 연출(BK 11/14 '더 극적으로'): 발밑 마법진 + 화면 컷인(띠·캐릭터·기술 이름·집중선)
+function ultCircle(g, P) {
+  const A_ = P.act, c2 = hexA(G.c.col), k = clamp(A_.t / .25, 0, 1), R = 70 + k * 40; g.save(); g.translate(P.x, P.y); g.scale(1, .32); g.globalCompositeOperation = 'lighter';
+  g.globalAlpha = .9 * k; g.strokeStyle = c2; g.lineWidth = 5; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke(); g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R * .78, 0, TAU); g.stroke();
+  g.rotate(G.t * 2.4); g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); for (let i = 0; i <= 6; i++) { const a = i * TAU * 2 / 6; i ? g.lineTo(Math.cos(a) * R * .78, Math.sin(a) * R * .78) : g.moveTo(Math.cos(a) * R * .78, Math.sin(a) * R * .78); } g.stroke();
+  g.rotate(-G.t * 4.8); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; g.fillStyle = i % 2 ? c2 : '#ffffff'; g.fillRect(Math.cos(a) * R * .9 - 3, Math.sin(a) * R * .9 - 3, 6, 6); }
+  g.restore(); glw(g, P.x, P.y - 4, R * 1.3, c2, .45 * k); for (let i = 0; i < 4; i++) { const yy = (G.t * 260 + i * 60) % 220; glw(g, P.x + Math.sin(i * 2.3 + G.t) * R * .8, P.y - yy, 8, c2, 1 - yy / 220); }
+}
+function ultCut(g, t) {
+  const c = G.c, c2 = hexA(c.col), a = t < .1 ? t / .1 : t > .85 ? Math.max(0, (1.15 - t) / .3) : 1, yc = VH * .4, bh = 116;
+  const inS = t < .16 ? Math.pow(1 - t / .16, 3) : 0, outS = t > .8 ? Math.pow((t - .8) / .35, 2) : 0, sx = (outS - inS) * VW * 1.2;
+  g.save(); g.fillStyle = 'rgba(4,2,14,' + .5 * a + ')'; g.fillRect(0, 0, VW, VH);
+  g.globalCompositeOperation = 'lighter'; g.strokeStyle = c2; for (let i = 0; i < 36; i++) { const an = rnd(0, TAU), r0 = rnd(VW * .22, VW * .32), r1 = r0 + rnd(120, 360); g.globalAlpha = .28 * a; g.lineWidth = rnd(1, 4); g.beginPath(); g.moveTo(VW / 2 + Math.cos(an) * r0, yc + Math.sin(an) * r0 * .6); g.lineTo(VW / 2 + Math.cos(an) * r1, yc + Math.sin(an) * r1 * .6); g.stroke(); }
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.translate(sx, 0);
+  const band = () => { g.beginPath(); g.moveTo(-40, yc - bh / 2 + 26); g.lineTo(VW + 40, yc - bh / 2 - 26); g.lineTo(VW + 40, yc + bh / 2 - 26); g.lineTo(-40, yc + bh / 2 + 26); g.closePath(); };
+  band(); g.fillStyle = lg(g, 0, 0, VW, 0, [[0, 'rgba(8,4,24,.92)'], [.45, c2 + 'dd'], [1, 'rgba(8,4,24,.92)']]); g.fill();
+  g.save(); band(); g.clip(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .25; g.fillStyle = '#ffffff'; for (let i = 0; i < 14; i++) g.fillRect(((i * 97 + t * 900) % (VW + 200)) - 100, yc - 70 + (i * 37) % 140, 80 + (i * 13) % 60, 2); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  const sp = SPR.p.ult || SPR.p.idle; if (sp) put(g, sp, VW * .26 + t * 30, yc + 150, 1, 1.15, 0); g.restore();
+  g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.moveTo(-40, yc - bh / 2 + 26); g.lineTo(VW + 40, yc - bh / 2 - 26); g.moveTo(-40, yc + bh / 2 + 26); g.lineTo(VW + 40, yc + bh / 2 - 26); g.stroke();
+  const tx0 = VW * .62 - t * 20; glw(g, tx0, yc, 150, c2, .5); g.font = '400 13px ' + FONT_K; g.textAlign = 'center'; g.fillStyle = '#ffffff'; g.globalAlpha = .85; g.fillText('ULTIMATE', tx0, yc - 30);
+  g.globalAlpha = 1; const sc = 1 + Math.max(0, .25 - t) * 2; g.save(); g.translate(tx0, yc + 14); g.scale(sc, sc); g.font = '400 40px ' + FONT_K; g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(c.ult.name, 0, 0); g.fillStyle = '#ffffff'; g.fillText(c.ult.name, 0, 0); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .55; g.fillStyle = c2; g.fillText(c.ult.name, 0, 0); g.restore();
+  g.restore();
 }
 function drawArea(g, f, u) {
   const a = f.a, c = G.c.col; g.save(); g.translate(f.x, f.y);
-  if (a.k === 'sword') { const drop = Math.min(1, f.t * 6); g.save(); g.translate(0, -360 * (1 - drop)); g.shadowColor = c; g.shadowBlur = 30; g.globalAlpha = 1 - Math.max(0, u - .6) / .4; shape(g, [[-18, -40], [18, -40], [14, -300], [0, -340], [-14, -300]], lg(g, -18, 0, 18, 0, [[0, '#bfefff'], [.5, '#ffffff'], [1, '#7fd8ff']]), .1); g.fillStyle = '#d9b45a'; g.fillRect(-40, -46, 80, 12); g.restore(); }
+  if (a.k === 'sword') { const drop = Math.min(1, f.t * 6); if (drop < 1) for (let i = 1; i < 7; i++) glw(g, 0, -360 * (1 - drop) - 120 - i * 50, 40 - i * 4, hexA(c), .5); glw(g, 0, -150, 110 * (1 - u), hexA(c), .6); g.save(); g.translate(0, -360 * (1 - drop)); g.shadowColor = c; g.shadowBlur = 30; g.globalAlpha = 1 - Math.max(0, u - .6) / .4; shape(g, [[-18, -40], [18, -40], [14, -300], [0, -340], [-14, -300]], lg(g, -18, 0, 18, 0, [[0, '#bfefff'], [.5, '#ffffff'], [1, '#7fd8ff']]), .1); g.fillStyle = '#d9b45a'; g.fillRect(-40, -46, 80, 12); g.restore(); }
   if (a.k === 'meteor') { const drop = Math.min(1, f.t * 3); g.save(); g.translate(-200 * (1 - drop), -380 * (1 - drop)); g.globalAlpha = 1 - Math.max(0, u - .5) * 2; if (drop < 1) for (let i = 1; i <= 8; i++) glw(g, -i * 22, -20 - i * 42, 50 - i * 4, i < 3 ? '#ffb347' : '#ff5a1e', .5 - i * .04); glw(g, 0, -20, 110, '#ff6a1e', .8); glw(g, 0, -20, 55, '#ffd08a', 1); glw(g, 0, -20, 24, '#ffffff', 1); g.restore(); if (drop >= 1) { const v = Math.min(1, (f.t - 1 / 3) * 3); g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = (1 - v) * .9; g.strokeStyle = '#ffd08a'; g.lineWidth = 10 * (1 - v) + 2; g.beginPath(); g.ellipse(0, 0, 60 + v * 160, 18 + v * 46, 0, 0, TAU); g.stroke(); g.restore(); } }
-  if (a.k === 'giant') { g.globalAlpha = 1 - Math.max(0, u - .6) / .4; const s = Math.min(1, f.t * 4) * 2.2; g.scale(s, s); g.shadowColor = '#7dff9a'; g.shadowBlur = 20; shape(g, [[0, -60], [16, -50], [16, -30], [30, -24], [22, -14], [16, -18], [18, 0], [6, 0], [0, -14], [-6, 0], [-18, 0], [-16, -18], [-22, -14], [-30, -24], [-16, -30], [-16, -50]], '#c8a878'); dot(g, 6, -46, 3, '#7dff9a'); }
+  if (a.k === 'giant') { const al = 1 - Math.max(0, u - .6) / .4, s = Math.min(1, f.t * 4) * 2.2, sp = SPR.p.c3b; g.globalAlpha = al;
+    if (sp && ATL.sp[G.cls]) { glw(g, 0, -90 * s, 120 * s, '#7dff9a', .5 * al); g.save(); g.translate(0, -Math.max(0, .25 - f.t) * 600); put(g, sp, 0, 0, f.f || 1, .5 * s, .45); g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * .35; put(g, sp, 0, 0, f.f || 1, .52 * s, 1); g.restore(); for (let i = 0; i < 6; i++) glw(g, Math.sin(i * 2.1 + f.t * 6) * 60 * s, -i * 30 * s, 14, '#7dff9a', al); }
+    else { g.scale(s, s); g.shadowColor = '#7dff9a'; g.shadowBlur = 20; shape(g, [[0, -60], [16, -50], [16, -30], [30, -24], [22, -14], [16, -18], [18, 0], [6, 0], [0, -14], [-6, 0], [-18, 0], [-16, -18], [-22, -14], [-30, -24], [-16, -30], [-16, -50]], '#c8a878'); dot(g, 6, -46, 3, '#7dff9a'); } }
   if (a.k === 'ice') { const h = Math.min(1, f.t * 8) * 110; g.globalAlpha = 1 - Math.max(0, u - .7) / .3; g.shadowColor = '#bdf6ff'; g.shadowBlur = 16; for (let i = -1; i <= 1; i++) shape(g, [[i * 22 - 14, 0], [i * 22, -h * (i ? .7 : 1)], [i * 22 + 14, 0]], 'rgba(200,245,255,.85)', 0); }
   if (a.k === 'petal' || a.k === 'stars' || a.k === 'rain' || a.k === 'needles' || a.k === 'hex' || a.k === 'trap' || a.k === 'nova' || a.k === 'curse') {
     g.globalAlpha = 1 - u; const col = a.k === 'curse' || a.k === 'hex' || a.k === 'needles' ? '#7dff9a' : c;
@@ -1532,8 +1587,14 @@ function drawHaz2(g, h, cx) {
       if (h.art === 'sign' && h.t > h.warn - .45) { const fall = 1 - (h.warn - h.t) / .45; drawSign(g, h.x, h.y - 320 * (1 - fall) - 30, col, h.c); } }
     else { const u = (h.t - h.warn) / Math.max(.1, h.end - h.warn); g.save(); g.globalAlpha = Math.max(0, 1 - u);
       if (h.art === 'sign') { drawSign(g, h.x, h.y - 18, col, h.c, .5); }
-      else if (h.art === 'slash') { g.shadowColor = col; g.shadowBlur = 18; g.strokeStyle = '#fff'; g.lineWidth = 5 * (1 - u); for (const s of [-1, 1]) { g.beginPath(); g.moveTo(h.x - 60, h.y - 70 + s * 40 - 40); g.lineTo(h.x + 60, h.y - 70 - s * 40 - 40); g.stroke(); } }
-      else { g.strokeStyle = col; g.lineWidth = 4; g.shadowColor = col; g.shadowBlur = 14; g.beginPath(); g.ellipse(h.x, h.y, h.r * (.6 + u * .8), h.r / 1.8 * (.6 + u * .8), 0, 0, TAU); g.stroke(); }
+      else if (h.art === 'slash') { const c2 = hexA(col), k = Math.min(1, u * 5); g.globalCompositeOperation = 'lighter'; for (const s of [-1, 1]) { const x0 = h.x - 70, y0 = h.y - 110 + s * 44, x1 = h.x + 70, y1 = h.y - 110 - s * 44, xe = lerp(x0, x1, k), ye = lerp(y0, y1, k);
+          g.strokeStyle = c2; g.globalAlpha = (1 - u) * .45; g.lineWidth = 16 * (1 - u) + 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(xe, ye); g.stroke(); g.globalAlpha = 1 - u; g.strokeStyle = '#fff'; g.lineWidth = 4 * (1 - u) + 1; g.stroke(); glw(g, xe, ye, 30 * (1 - u), c2, 1); }
+        glw(g, h.x, h.y - 110, 70 * (1 - u), c2, .6); g.globalCompositeOperation = 'source-over'; }
+      else if (h.art === 'bite') { const c2 = hexA(col), k = Math.min(1, u * 6), o = (1 - k) * 46; g.globalCompositeOperation = 'lighter'; g.globalAlpha = 1 - u; g.strokeStyle = '#ffffff'; g.lineWidth = 4;
+        for (const s of [-1, 1]) { g.beginPath(); for (let i = 0; i <= 6; i++) { const xx = h.x - 54 + i * 18, yy = h.y - 40 + s * (o + (i % 2 ? 0 : 12)); i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); } g.stroke(); }
+        glw(g, h.x, h.y - 40, 80 * (1 - u), c2, .8); glw(g, h.x, h.y - 40, 26 * (1 - u), '#ffffff', 1); g.globalCompositeOperation = 'source-over'; }
+      else { const c2 = hexA(col), e2 = 1 - Math.pow(1 - u, 3); g.globalCompositeOperation = 'lighter'; for (let j = 0; j < 3; j++) { const v = clamp(e2 - j * .15, 0, 1); if (v <= 0) continue; g.globalAlpha = (1 - u) * (j ? .45 : .9); g.strokeStyle = j ? c2 : '#ffffff'; g.lineWidth = (j ? 12 : 4) * (1 - u) + 1; g.beginPath(); g.ellipse(h.x, h.y, h.r * (.5 + v * .9), h.r / 1.8 * (.5 + v * .9), 0, 0, TAU); g.stroke(); }
+        g.globalAlpha = 1; glw(g, h.x, h.y, h.r * 1.2 * (1 - u), c2, .55); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + h.x; glw(g, h.x + Math.cos(a) * h.r * (.4 + e2 * .7), h.y + Math.sin(a) * h.r * .3 - e2 * 40 * (1 - e2), 7, c2, 1 - u); } g.globalCompositeOperation = 'source-over'; }
       g.restore(); }
   }
   else if (h.k === 'wind') {
@@ -1558,11 +1619,16 @@ function drawHaz2(g, h, cx) {
   else if (h.k === 'beam') {
     g.save(); const xa = cx - 30, xb = h.x0;
     if (!on) { g.fillStyle = 'rgba(79,216,255,' + (.08 + .1 * bl) + ')'; g.fillRect(xa, h.y - 16, xb - xa, 32); g.strokeStyle = 'rgba(160,240,255,.7)'; g.setLineDash([8, 6]); g.strokeRect(xa, h.y - 16, xb - xa, 32); g.setLineDash([]); }
-    else if (act) { const yy = h.y - 46; g.shadowColor = '#4fd8ff'; g.shadowBlur = 22; g.fillStyle = lg(g, 0, yy - 14, 0, yy + 14, [[0, 'rgba(79,216,255,0)'], [.5, 'rgba(220,250,255,.95)'], [1, 'rgba(79,216,255,0)']]); g.fillRect(xa, yy - 14, xb - xa, 28); g.fillStyle = 'rgba(79,216,255,.25)'; g.fillRect(xa, h.y - 14, xb - xa, 28); }
+    else if (act) { const yy = h.y - 46, w = 14 + Math.sin(G.t * 50) * 3, st = Math.min(1, (h.t - h.warn) * 8); g.globalCompositeOperation = 'lighter';
+      g.fillStyle = lg(g, 0, yy - w * 2.2, 0, yy + w * 2.2, [[0, 'rgba(79,216,255,0)'], [.5, 'rgba(79,216,255,.5)'], [1, 'rgba(79,216,255,0)']]); g.fillRect(xa, yy - w * 2.2, (xb - xa), w * 4.4);
+      g.fillStyle = lg(g, 0, yy - w, 0, yy + w, [[0, 'rgba(79,216,255,0)'], [.5, 'rgba(240,253,255,1)'], [1, 'rgba(79,216,255,0)']]); g.fillRect(xb - (xb - xa) * st, yy - w, (xb - xa) * st, w * 2);
+      g.fillStyle = 'rgba(79,216,255,.22)'; g.fillRect(xa, h.y - 14, xb - xa, 28); glw(g, xb, yy, 60, '#4fd8ff', 1); glw(g, xb, yy, 24, '#ffffff', 1);
+      for (let i = 0; i < 6; i++) { const px = xb - ((G.t * 900 + i * 137) % (xb - xa)); glw(g, px, yy + Math.sin(i * 3 + G.t * 20) * w * .7, 10, '#bff4ff', .8); } g.globalCompositeOperation = 'source-over'; }
     g.restore();
   }
   else if (h.k === 'col') {
-    for (const x0 of h.xs) { g.save(); if (!on) { g.fillStyle = 'rgba(192,132,255,' + (.1 + .12 * bl) + ')'; g.fillRect(x0 - 26, 0, 52, VH); } else if (act) { g.shadowColor = '#c084ff'; g.shadowBlur = 24; g.fillStyle = 'rgba(192,132,255,.55)'; g.fillRect(x0 - 26, 0, 52, VH); g.fillStyle = '#f6eaff'; g.fillRect(x0 - 7, 0, 14, VH); } g.restore(); }
+    for (const x0 of h.xs) { g.save(); if (!on) { g.fillStyle = 'rgba(192,132,255,' + (.1 + .12 * bl) + ')'; g.fillRect(x0 - 26, 0, 52, VH); } else if (act) { const w = 26 + Math.sin(G.t * 40 + x0) * 4; g.globalCompositeOperation = 'lighter'; g.fillStyle = lg(g, x0 - w * 1.8, 0, x0 + w * 1.8, 0, [[0, 'rgba(192,132,255,0)'], [.3, 'rgba(192,132,255,.45)'], [.5, 'rgba(250,240,255,1)'], [.7, 'rgba(192,132,255,.45)'], [1, 'rgba(192,132,255,0)']]); g.fillRect(x0 - w * 1.8, 0, w * 3.6, VH);
+        glw(g, x0, FY1, 70, '#c084ff', .8); for (let i = 0; i < 4; i++) glw(g, x0 + Math.sin(G.t * 9 + i * 2) * w, (G.t * 600 + i * 150 + x0) % VH, 10, '#f6eaff', .9); g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, 0); for (let yy = 40; yy < VH; yy += 40) g.lineTo(x0 + rnd(-w * .6, w * .6), yy); g.stroke(); } g.restore(); }
   }
   else if (h.k === 'hole') {
     g.save(); const x0 = h.x - h.w / 2;
@@ -1583,17 +1649,20 @@ function drawSpider(g, b) {
   const body = fl ? '#b8a8e0' : null;
   const leg = (i, back) => { const s = i < 2 ? 1 : -1, j = i % 2, hipX = (j ? 18 : -10) * s, hipY = -74 + crouch, swing = air ? -10 : land ? 18 : Math.sin(ph + i * 1.7 + (back ? .8 : 0)) * 14,
       footX = (j ? 104 : 74) * s + swing * s * .5 + (back ? -8 * s : 0), footY = air ? -20 : (back ? -6 : 4), kneeX = (j ? 70 : 46) * s + (back ? -4 * s : 0), kneeY = -130 + crouch + (air ? 30 : 0) - (land ? -20 : 0) + Math.max(0, Math.sin(ph + i * 1.7)) * (air ? 0 : 10);
+    if (ATL.b2) { const sp = back ? ATL.b2.splegd : ATL.b2.spleg, w = fl ? .45 : 0; seg3(g, sp, hipX, hipY, kneeX, kneeY, back ? .85 : 1, w); seg3(g, sp, kneeX, kneeY, footX, footY, back ? .7 : .85, w); glw(g, kneeX, kneeY, back ? 6 : 9, '#ff5ad8', back ? .4 : .8); return; }
     g.strokeStyle = 'rgba(8,4,14,.95)'; g.lineWidth = back ? 12 : 14; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(hipX, hipY); g.lineTo(kneeX, kneeY); g.lineTo(footX, footY); g.stroke();
     g.strokeStyle = body || (back ? '#3a2e52' : '#5a4a78'); g.lineWidth = back ? 8 : 9; g.stroke(); g.strokeStyle = body || '#ff5ad8'; g.globalAlpha = back ? .3 : .6; g.lineWidth = 1.6; g.beginPath(); g.moveTo(kneeX, kneeY); g.lineTo(footX, footY); g.stroke(); g.globalAlpha = 1; dot(g, kneeX, kneeY, 3, back ? '#a04a90' : '#ff9ae8'); };
   g.save(); g.translate(b.x, y); g.scale(-f, 1);
   for (let i = 0; i < 4; i++) leg(i, 1);
+  if (ATL.b2) { put(g, ATL.b2.spbody, 0, crouch, 1, 1, fl ? .45 : 0); glw(g, -46, -84 + crouch, land ? 22 : 14, land ? '#ffd166' : '#ff5ad8', .8); glw(g, 46, -100 + crouch, 50, '#ff5ad8', .18); }
+  else {
   // 배(간판)
   g.save(); g.translate(46, -96 + crouch); shape(g, [[-62, 0], [-48, -42], [0, -56], [52, -40], [66, 0], [48, 40], [0, 50], [-50, 36]], body || lg(g, 0, -56, 0, 50, [[0, '#4a3a66'], [1, '#1a1228']]), .4);
   g.fillStyle = 'rgba(8,4,14,.9)'; g.beginPath(); g.roundRect(-38, -24, 76, 36, 6); g.fill(); g.restore();
   // 머리가슴
   shape(g, [[-60, -70 + crouch], [-40, -100 + crouch], [-6, -104 + crouch], [10, -84 + crouch], [4, -56 + crouch], [-30, -48 + crouch], [-58, -56 + crouch]], body || lg(g, 0, -104, 0, -48, [[0, '#5a4a7e'], [1, '#221a34']]), .4);
   for (let i = 0; i < 6; i++) dot(g, -50 + (i % 3) * 9, -84 + crouch + (i < 3 ? 0 : 9) - (i % 3 === 1 ? 3 : 0), i < 2 ? 3.4 : 2.4, land ? '#ffd166' : '#ff5ad8');
-  shape(g, [[-60, -60 + crouch], [-70, -44 + crouch], [-58, -50 + crouch]], '#efe6ff'); shape(g, [[-46, -54 + crouch], [-54, -38 + crouch], [-42, -46 + crouch]], '#efe6ff');
+  shape(g, [[-60, -60 + crouch], [-70, -44 + crouch], [-58, -50 + crouch]], '#efe6ff'); shape(g, [[-46, -54 + crouch], [-54, -38 + crouch], [-42, -46 + crouch]], '#efe6ff'); }
   for (let i = 0; i < 4; i++) leg(i, 0);
   g.restore();
   // 등 간판 글자(뒤집히지 않게)
@@ -1606,7 +1675,8 @@ function drawHydra(g, b) {
   // 몸통: 서버 더미
   const blk = (x0, y0, w, h) => { g.fillStyle = fl ? '#4a7aa0' : lg(g, x0, 0, x0 + w, 0, [[0, '#0a1626'], [.5, '#1a3450'], [1, '#08121e']]); g.beginPath(); g.roundRect(x0, y0, w, h, 6); g.fill(); g.strokeStyle = '#2a5070'; g.lineWidth = 1.5; g.stroke();
     for (let yy = y0 + 8; yy < y0 + h - 6; yy += 11) { g.fillStyle = '#06101c'; g.fillRect(x0 + 6, yy, w - 12, 7); for (let l = 0; l < 4; l++) { const on2 = Math.sin(G.t * (3 + l) + yy + x0) > 0; g.fillStyle = on2 ? ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l] : '#1a2a3a'; g.fillRect(x0 + 10 + l * 7, yy + 2, 3, 3); } } };
-  blk(-70, -120, 130, 120); blk(-50, -190, 96, 74); blk(-20, -232, 60, 46);
+  if (ATL.b2) { put(g, ATL.b2.hybody, 0, 0, 1, 1, fl ? .7 : 0); for (let l = 0; l < 4; l++) glw(g, -50 + l * 30, -60 - l * 40, 12, ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l], .4 + .4 * Math.sin(G.t * (3 + l))); }
+  else { blk(-70, -120, 130, 120); blk(-50, -190, 96, 74); blk(-20, -232, 60, 46); }
   if (b.core > 0) { const rr = 30 + Math.sin(G.t * 10) * 4; g.fillStyle = rg(g, -6, -150, 0, rr, [[0, 'rgba(255,255,255,1)'], [.35, 'rgba(255,214,102,.9)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(-6, -150, rr, 0, TAU); g.fill(); }
   // 목(케이블) + 머리 3개
   for (let i = 0; i < 3; i++) {
@@ -1615,6 +1685,7 @@ function drawHydra(g, b) {
     g.strokeStyle = fl ? '#6a9ac0' : ['#1e4a6a', '#2a3a6a', '#1a5a5a'][i]; g.lineWidth = 14; g.stroke();
     g.strokeStyle = 'rgba(79,216,255,.5)'; g.lineWidth = 2; g.setLineDash([3, 7]); g.stroke(); g.setLineDash([]);
     g.save(); g.translate(hx, hy); if (tired) g.rotate(-.5); const open = beam || (b.st === 'bite' && b.hd === i) ? 1 : 0;
+    if (ATL.b2) { put(g, open ? ATL.b2.hyh1 : ATL.b2.hyh0, 0, 0, 1, 1, fl ? .7 : 0); if (!tired) glw(g, -10, -8, 10, beam ? '#ffffff' : '#4fd8ff', .7); if (beam) dot(g, -52, 4, 6 + Math.sin(G.t * 30) * 2, '#bff4ff'); g.restore(); continue; }
     shape(g, [[16, -18], [-30, -14], [-56, -4 - open * 6], [-34, 0], [16, 4]], fl ? '#8ab8e0' : lg(g, 0, -18, 0, 4, [[0, '#3a6a90'], [1, '#14283a']]), .2);
     shape(g, [[16, 6], [-30, 4 + open * 10], [-50, 10 + open * 16], [-28, 16], [14, 16]], fl ? '#4a7aa0' : '#12243a', .2);
     g.fillStyle = 'rgba(8,16,28,.9)'; g.beginPath(); g.roundRect(-20, -12, 26, 10, 2); g.fill(); dot(g, -12, -8, 3, tired ? '#3a5a6a' : beam ? '#ffffff' : '#4fd8ff'); dot(g, -2, -8, 2, tired ? '#3a5a6a' : '#4fd8ff');
@@ -1629,23 +1700,28 @@ function drawEcho(g, b) {
   let al = 1; if (b.st === 'enter') al = clamp(1 - b.tm / 2.2, 0, 1); if (b.st === 'blink') al = clamp(b.tm / .45, 0, 1);
   g.save(); g.globalAlpha = al; g.translate(b.x + (b.st === 'blink' ? rnd(-3, 3) : 0), y + (tired ? 14 : 0)); g.scale(f, 1);
   const wv = Math.sin(G.t * 3) * 8, sl = b.st === 'slash' ? clamp(1 - b.tm / .6, 0, 1) : 0;
+  const E3 = ATL.b2, fw = fl ? .7 : 0;
+  if (E3) { g.save(); g.translate(0, -118); g.transform(1, 0, -wv * .012, 1, 0, 0); g.translate(0, 118); put(g, E3.eccape, 0, 0, 1, 1, fw); g.restore(); put(g, E3.ecbody, 0, 0, 1, 1, fw); }
+  else {
   // 망토
   shape(g, [[-10, -118], [-34, -96], [-52 - wv, -40], [-62 - wv * 1.4, 4], [-30, -8], [-14, 6], [8, -6], [14, -60], [10, -112]], fl ? '#6a4a90' : lg(g, 0, -118, 0, 6, [[0, '#3a1a5a'], [.6, '#24103a'], [1, '#12061e']]), .4);
   curve(g, [[-34, -96], [-52 - wv, -40], [-62 - wv * 1.4, 4]], 'rgba(192,132,255,.6)', 2);
   // 몸·로브
   shape(g, [[-14, -112], [14, -112], [18, -70], [22, -14], [6, -2], [-10, -4], [-20, -16], [-16, -70]], fl ? '#8a6ab0' : lg(g, -16, 0, 20, 0, [[0, '#2a1440'], [.5, '#4a2a6a'], [1, '#2a1440']]), .35);
   curve(g, [[0, -108], [2, -60], [-2, -8]], 'rgba(224,184,255,.5)', 1.5);
-  for (const s of [-1, 1]) shape(g, [[s * 8, -114], [s * 26, -120], [s * 30, -104], [s * 14, -100]], fl ? '#a08ac0' : '#6a4a8a', .2);
+  for (const s of [-1, 1]) shape(g, [[s * 8, -114], [s * 26, -120], [s * 30, -104], [s * 14, -100]], fl ? '#a08ac0' : '#6a4a8a', .2); }
   if (tired || b.core > 0) { const rr = 16 + Math.sin(G.t * 10) * 3; g.fillStyle = rg(g, 0, -84, 0, rr * 1.8, [[0, 'rgba(255,255,255,1)'], [.4, 'rgba(255,214,102,.8)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(0, -84, rr * 1.8, 0, TAU); g.fill(); }
-  else dot(g, 0, -84, 5, '#c084ff');
+  else if (E3) glw(g, 0, -84, 14, '#c084ff', .9); else dot(g, 0, -84, 5, '#c084ff');
   // 칼을 든 팔
   g.save(); g.translate(14, -104); g.rotate(tired ? 1.2 : -1.1 + sl * 2.6 + Math.sin(G.t * 2) * .05);
+  if (E3) { put(g, E3.ecsw, 0, 0, 1, 1, fw); for (let j = 0; j < 3; j++) glw(g, 0, 50 + j * 24, 16, '#c084ff', .35 + (sl ? .4 : 0)); } else {
   g.strokeStyle = fl ? '#6a4a90' : '#3a2050'; g.lineWidth = 8; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 30); g.stroke();
-  g.shadowColor = '#c084ff'; g.shadowBlur = 16; shape(g, [[-3, 30], [3, 30], [6, 96], [0, 112], [-6, 96]], lg(g, 0, 30, 0, 112, [[0, '#f6eaff'], [1, '#a06aff']]), .1); g.restore();
+  g.shadowColor = '#c084ff'; g.shadowBlur = 16; shape(g, [[-3, 30], [3, 30], [6, 96], [0, 112], [-6, 96]], lg(g, 0, 30, 0, 112, [[0, '#f6eaff'], [1, '#a06aff']]), .1); } g.restore();
   // 가면 얼굴
+  if (E3) { if (tired) glw(g, 8, -131, 6, '#6a5a7a', .6); else glw(g, 8, -131, 7, '#e0b8ff', .8); } else {
   g.save(); g.translate(2, -128); shape(g, [[-10, -14], [8, -16], [14, -2], [10, 14], [0, 20], [-10, 14], [-14, 0]], fl ? '#fff6d0' : lg(g, 0, -16, 0, 20, [[0, '#ffffff'], [1, '#cfc2e8']]), .4);
   g.fillStyle = '#1a0a2a'; g.fillRect(-1, -4, 10, 3); g.fillRect(-10, -4, 6, 3); dot(g, 5, -3, 1.6, tired ? '#6a5a7a' : '#e0b8ff');
-  g.save(); g.shadowColor = '#c084ff'; g.shadowBlur = 8; curve(g, [[2, -16], [-1, -6], [3, 4], [0, 18]], '#c084ff', 1.4); g.restore(); g.restore();
+  g.save(); g.shadowColor = '#c084ff'; g.shadowBlur = 8; curve(g, [[2, -16], [-1, -6], [3, 4], [0, 18]], '#c084ff', 1.4); g.restore(); g.restore(); }
   // 떠 있는 왕관 조각
   for (let i = 0; i < 5; i++) { const a = G.t * 1.4 + i * TAU / 5, cx0 = 2 + Math.cos(a) * 22, cy0 = -152 + Math.sin(a) * 6; g.save(); g.globalAlpha = al * (tired ? .35 : .9); g.translate(cx0, cy0); g.rotate(a); shape(g, [[0, -8], [3, 0], [0, 8], [-3, 0]], '#e3c8ff', 0); g.restore(); }
   g.restore();
@@ -1903,7 +1979,7 @@ function update(dt) {
   if (G.talk) { talkUpdate(dt); if (!NET.on) return; }
   if (G.stop > 0) { G.stop -= dt; return; }
   const real = dt; if (G.slow > 0) { G.slow -= real; dt *= .3; }
-  G.t += dt; G.ultFx = Math.max(0, (G.ultFx || 0) - real * 1.2); G.tipT -= dt; if (G.rank) G.rank.t -= real; if (G.hatch > 0) G.hatch -= real;
+  G.t += dt; G.ultFx = Math.max(0, (G.ultFx || 0) - real * 1.2); if (G.ultCut && (G.ultCut.t += real) > 1.15) G.ultCut = null; G.flashC = G.flash > 0 ? G.flashC : null; G.tipT -= dt; if (G.rank) G.rank.t -= real; if (G.hatch > 0) G.hatch -= real;
   G.comboT -= dt; if (G.comboT <= 0) G.combo = 0;
   if (G.mode === 'dying') { G.deadT -= real; fxUpdate(dt); for (const e of G.en) if (!e.dead && !isB(e)) physE(e, dt); if (G.deadT <= 0) finish(false); return; }
   playerUpdate(dt);
