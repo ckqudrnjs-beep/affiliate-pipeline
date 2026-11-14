@@ -156,19 +156,12 @@ addEventListener('keydown',e=>{if(!run||over){if(e.key==='Enter'&&document.activ
 addEventListener('keyup',e=>keys[e.key]=0);
 addEventListener('resize',()=>{if(run){size()}else{size();draw()}});
 document.addEventListener('visibilitychange',()=>{last=performance.now();acc=0});
-// ── 미니 상점: 이 게임 꾸미기만(모양·병 배경). 코인은 사이트 공통(window.Bonus)
-let tab='d';
-function shop(){const b=B(),el=$('sc-items');if(!b||!el){$('sc-shop').style.display='none';return}$('sc-coin').textContent=b.coins();
- const L=tab==='d'?[{id:'base',name:'네온 별사탕',icon:'🍬',p:0}].concat(DESIGNS.filter(x=>x.g==='starcandy')):[{id:'base',name:'밤하늘 병',icon:'🌃',p:0}].concat(THEMES.filter(x=>x.g==='starcandy'));
- const cur=tab==='d'?b.design('starcandy'):b.theme('starcandy'),st=b.state(),pre=tab==='d'?'d:starcandy:':'h:starcandy:';
- el.innerHTML=L.map(x=>{const ok=x.p<=0||st.own[pre+x.id];return `<button type="button" data-i="${x.id}" class="${x.id===cur?'sel':''}${x.leg?' leg':''}"><span class="di">${x.icon}</span><b>${x.leg?'<i>전설</i> ':''}${x.name}</b><small>${x.id===cur?'✅ 사용 중':ok?'가지고 있음 · 눌러서 적용':'🪙 '+x.p+' · 눌러서 사기'}</small></button>`}).join('');
- el.querySelectorAll('button').forEach(k=>k.onclick=()=>{const id=k.dataset.i;const ok=tab==='d'?b.setDesign('starcandy',id):b.setTheme('starcandy',id);if(ok){sprKey='';bgKey='';shop();if(!run){size();reset();draw()}}})}
-document.querySelectorAll('.sc-tabs button').forEach(k=>k.onclick=()=>{tab=k.dataset.t;document.querySelectorAll('.sc-tabs button').forEach(q=>q.classList.toggle('on',q===k));shop()});
-addEventListener('bonus-save',()=>{const c=$('sc-coin');if(c&&B())c.textContent=B().coins()});
+// 꾸미기(모양·병 배경)는 공용 '이 게임 상점'(#gshop)에서. 고르면 바로 다시 그림
+const gsx=$('gshop');if(gsx)gsx.addEventListener('click',()=>setTimeout(()=>{sprKey='';bgKey='';if(!run){size();reset();draw()}},30));
 // 처음 화면: 미리보기
 function idle(){size();reset();const r=seeded('sc-demo');for(let i=0;i<9;i++){const t=Math.floor(r()*6),x=RAD[t]+r()*(JW-2*RAD[t]);balls.push({id:uid++,t,x,y:JH-RAD[t]-r()*40,px:x,py:0,a:r()*6,age:0,pop:0})}
  for(const b of balls)b.py=b.y;for(let i=0;i<600;i++)step();for(const b of balls){b.px=b.x;b.py=b.y}score=0;fx=[];maxT=0;combo=0;draw()}
-function init(){idle();shop()}
+function init(){idle()}
 if(document.readyState==='loading')addEventListener('DOMContentLoaded',init);else setTimeout(init,0);
 if(DEBUG)window.__sc={start,drop,state:()=>({gal,line:LINE,score,balls:balls.length,maxT,over,merges,overT:+overT.toFixed(2),ys:balls.map(b=>[b.t,+b.x.toFixed(1),+b.y.toFixed(1),+b.age.toFixed(2)])}),aim:x=>{aim=x},
  bot(n){let k=0;const go=()=>{if(over||k++>=n)return;aim=8+R()*84;cool=0;drop();setTimeout(go,260)};go()},
