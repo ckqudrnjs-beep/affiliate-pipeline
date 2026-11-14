@@ -8,6 +8,8 @@ on:
   push:
     branches: [main]
     paths: ["data/episodes/*.json"]
+  schedule:
+    - cron: "10 21 * * 1,4"   # 화·금 06:10 KST: 오늘의 얼마게 (05:50 시세 수집 뒤, 사이트 퀴즈와 같은 문제)
   workflow_dispatch:
 
 permissions:
@@ -41,6 +43,8 @@ jobs:
         env:
           EP_KIND: short
         run: |
+          git pull -q origin main
+          PYTHONPATH=src python -m pipeline.episodes quiz
           PYTHONPATH=src python -m pipeline.episodes render
           git config user.name "episodes-bot"
           git config user.email "episodes-bot@users.noreply.github.com"
