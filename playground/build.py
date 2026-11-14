@@ -121,6 +121,7 @@ h2 small{font-family:-apple-system,"Noto Sans KR",sans-serif;font-size:14px;font
 .grid a b{display:block;font-family:var(--hd);font-weight:400;font-size:19px;line-height:1.25;margin:10px 12px 2px;color:#fff}
 .grid a small{display:block;color:var(--muted);font-size:13px;line-height:1.45;margin:0 12px;flex:1}
 .grid a .play{display:flex;justify-content:space-between;align-items:center;margin:12px 0 0;padding:8px 12px;background:var(--c);color:#0c0620;font-family:var(--px);font-size:10px}
+.genre{font-family:var(--hd);font-weight:400;font-size:20px;margin:22px 0 10px;color:var(--y)}
 .grid a .rk{position:absolute;top:14px;right:14px;font-family:var(--px);font-size:8px;background:var(--y);color:#1a0f00;padding:4px 5px 3px;border-radius:3px;box-shadow:0 0 8px #ffd23f99}
 /* balance cards */
 .q,.card{background:linear-gradient(180deg,var(--card2),var(--card));border:2px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 6px 0 #00000066}
@@ -194,10 +195,31 @@ def load_games() -> list[dict]:
         if re.search(r"https?://", g["js"]):
             raise ValueError(f"{d.name}: 외부 주소 금지")
         games.append(g)
-    return sorted(games, key=lambda g: (g.get("order", 99), g["slug"]))
+    # 새 게임이 맨 위(BK 11/14): meta.json "added"(KST, YYYY-MM-DDTHH:MM) 최신순. 같은 시각이면 order·이름순.
+    # "added"가 없는 새 게임은 지금 시각으로 보고 맨 위에 둔다(새 게임을 만들 때 "added"를 꼭 넣을 것).
+    now = datetime.now(KST).strftime("%Y-%m-%dT%H:%M")
+    games = sorted(games, key=lambda g: (g.get("order", 99), g["slug"]))
+    return sorted(games, key=lambda g: g.get("added") or now, reverse=True)
+
+
+# 게임이 GENRE_MIN개 이상이면 홈·게임 목록을 장르별로 나눈다(BK 11/14). meta.json "genre" 값.
+GENRE_MIN = 15
+GENRES = [("action", "⚔️ 액션·슈팅"), ("brain", "🧩 퍼즐·두뇌"), ("timing", "🎵 타이밍·리듬")]
 
 
 def game_grid(games: list[dict]) -> str:
+    if len(games) >= GENRE_MIN:
+        known = [k for k, _ in GENRES]
+        out = ""
+        for k, label in GENRES + [("etc", "🎮 기타")]:
+            part = [g for g in games if (g.get("genre") if g.get("genre") in known else "etc") == k]
+            if part:
+                out += f'<h3 class="genre" id="g-{k}">{label}</h3>' + _grid(part)
+        return out
+    return _grid(games)
+
+
+def _grid(games: list[dict]) -> str:
     colors = ["#ff3d7f", "#22d3ee", "#ffd23f", "#3ddc84", "#b06bff", "#ff8a3d"]
     cards = "".join(f'<a href="/games/{g["slug"]}" style="--c:{colors[i % len(colors)]}">{"<span class=rk>RANK</span>" if g.get("ranked") else ""}<span class="scr"><span class="ic">{g.get("icon", "🎮")}</span></span><b>{esc(g["name"])}</b><small>{esc(g["short"])}</small><span class="play"><span>PLAY</span><span>▶</span></span></a>' for i, g in enumerate(games))
     return f'<div class="grid">{cards}</div>'
@@ -1072,7 +1094,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY + MYREC_BODY, COMMON_JS + PROFILE_PAGE_JS + f"const GN={gnames};" + MYREC_JS, noindex=True)
     write("bonus", f"출석체크·코인 상점 | {cfg['siteName']}", "5락실 출석체크·오늘의 미션. 코인을 모아 아바타·칭호·스킨을 모으고 이어하기에 써요. 게임은 모두 무료.",
           BONUS_BODY, "window.FPG=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮")] for g in games}, ensure_ascii=False) + ";", noindex=True)
-    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), g.get("order", 99)] for g in games}, ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), i] for i, g in enumerate(games)}, ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
     write("board", f"게시판 | {cfg['siteName']}", "5락실 게시판. 게임 이야기, 건의, 오류 제보, 프로필 문의.", BOARD_BODY, BOARD_JS, noindex=True)
     write("board-rules", f"게시판 이용 지침 | {cfg['siteName']}", "5락실 게시판 이용 지침과 제재 기준.", BOARD_RULES, noindex=True)
 

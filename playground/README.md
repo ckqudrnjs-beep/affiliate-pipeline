@@ -4,6 +4,7 @@
 
 ## 구조
 - `build.py` → `dist/` 정적 페이지. 게임은 `games/<slug>/` (meta.json, body.html 규칙·설명 300자 이상, game.js). `ranked: true` 면 매일 같은 판 + 순위.
+- 게임 순서(BK 11/14): meta.json `"added": "YYYY-MM-DDTHH:MM"`(KST, 공개 시각) 최신순으로 새 게임이 맨 위. 새 게임엔 `added`와 `"genre"`(action·brain·timing) 를 꼭 넣는다. 보이는 게임이 15개(`GENRE_MIN`) 이상이면 홈·게임 목록이 장르별 칸으로 나뉜다.
 - 가로 화면(휴대폰): 게임 페이지는 가로로 돌리면 머리글·설명·규칙을 숨기고 게임만 꽉 채움(build.py `LAND_JS`), 가로 상태 첫 터치에 전체 화면 요청(안드로이드). 아이폰은 화면 채우기만. 자체 전체 화면이 있는 게임은 meta.json `"ownfs": true` 로 제외(range·starlight·survivor·tongtong·tower).
 - `build.py` 질문은 `data/questions.json`(date가 오늘(KST) 이하인 것만 공개).
 - `functions/api/vote.js` 투표·이모지 반응 집계, `functions/api/score.js` 오늘의 도전 순위(자동 별명만)(D1 바인딩 `DB`, 비밀값 `VOTE_SALT`).
