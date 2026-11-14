@@ -500,8 +500,8 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
  // 게임 화면 안 미니 상점(<details class="gshop" data-g>): 그 게임 아이템만 보여 주고 판다
  gshop(el){const g=el.dataset.g,tag=(ok,sel,p)=>sel?'사용 중':ok?'고르기':`<span class="pr">🪙 ${p}</span>${s.coins<p?' 모자라요':' 사기'}`;let h='';
   const grp=(t,items,cur,key)=>{h+=`<h4>${t}</h4><div class="gsi">`+items.map(([id,ic,nm,p,ok])=>`<button type="button" data-gs="${key}|${id}" class="${cur===id?'sel':''}${ok?'':' lock'}"><span>${ic}</span><b>${nm}</b><small>${tag(ok,cur===id,p)}</small></button>`).join('')+'</div>'};
-  if(DGAMES[g]){grp('캐릭터 스킨',[['base',DGAMES[g][2],DGAMES[g][1],0,1]].concat(DESIGNS.filter(d=>d.g===g).map(d=>[d.id,d.icon,(d.leg?'전설 ':'')+d.name,d.p,own('d:'+g+':'+d.id,d.p)])),B.design(g),'d');
-   grp('배경 테마',[['base','🌃','기본 배경',0,1]].concat(THEMES.filter(d=>d.g===g).map(d=>[d.id,d.icon,d.name,d.p,own('h:'+g+':'+d.id,d.p)])),B.theme(g),'h')}
+  if(DGAMES[g]){grp('캐릭터 스킨',[['base',DGAMES[g][2],DGAMES[g][1],0,1]].concat(DESIGNS.filter(d=>d.g===g).map(d=>[d.id,d.icon,(d.leg?'전설 ':'')+d.name,d.p,own('d:'+g+':'+d.id,d.p)])),B.design(g),'d');}
+  if(THEMES.some(d=>d.g===g))grp('배경 테마',[['base','🌃','기본 배경',0,1]].concat(THEMES.filter(d=>d.g===g).map(d=>[d.id,d.icon,d.name,d.p,own('h:'+g+':'+d.id,d.p)])),B.theme(g),'h');
   const ks=[...new Set(GITEMS.filter(d=>d.g===g).map(d=>d.k))];
   for(const k of ks){const L=GITEMS.filter(d=>d.g===g&&d.k===k);grp(L[0].kn,[['','⚪','기본',0,1]].concat(L.map(d=>[d.id,d.icon,d.name,d.p,own('g:'+g+':'+k+':'+d.id,d.p)])),B.gitem(g,k),'g:'+k)}
   if(GSHARED.includes(g)){grp('꼬리 효과 (별빛·통통 같이)',[['','💨','끄기',0,1]].concat(TRAILS.map(d=>[d.id,d.icon,d.name,d.p,own('r:'+d.id,d.p)])),B.trail(),'r');
@@ -932,7 +932,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                f'data-d="{esc(g["short"] + " · 가입 없이 무료, 같이 해 볼래?")}">📤 친구에게 이 게임 공유</button> <small class="muted">첫 공유 🪙+2</small></p>')
         m = re.search(r'<h1>.*?</h1>(\s*<p class="lead">.*?</p>)?', body, re.S)
         body = body[:m.end()] + pshare + body[m.end():] if m else pshare + body
-        if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED or g["slug"] in DESIGN_GAMES:  # 게임별 미니 상점(그 게임 아이템만). DESIGNS·THEMES 만 있는 새 게임도 자동
+        if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED or g["slug"] in DESIGN_GAMES or any(t["g"] == g["slug"] for t in THEMES):  # 게임별 미니 상점(그 게임 아이템만). DESIGNS·THEMES 만 있는 새 게임도 자동
             gs = f'<details id="gshop" class="gshop" data-g="{g["slug"]}"><summary>🛒 이 게임 상점 <small>· 보유 🪙 <b>0</b> · 눌러서 열기</small></summary><div class="gsb"></div></details>'
             body = body.replace("<!--RANK-->", gs + "<!--RANK-->") if "<!--RANK-->" in body else body + gs
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
