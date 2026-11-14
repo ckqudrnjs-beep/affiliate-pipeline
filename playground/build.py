@@ -1033,7 +1033,10 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     # meta.json "hidden": true = 테스터 전용 체험판(BK 11/14 네온 레이드). 목록·순위 탭·사이트맵에서 빼고 페이지만 noindex로 만든다.
     games = [g for g in allgames if not g.get("hidden")]
     grid = game_grid(games)
-    trial = trial_box([g for g in allgames if g.get("hidden")])
+    hid = [g for g in allgames if g.get("hidden")]
+    if any(g["slug"] == "raid" for g in hid):  # BK 11/14: 협동이 체험판 칸에 안 보인다 → 협동 탭으로 바로 가는 카드
+        hid.insert([g["slug"] for g in hid].index("raid") + 1, {"slug": "raid#coop", "name": "네온 레이드 협동", "short": "2~4명이 같은 방에서 함께 던전 정리", "icon": "🤝"})
+    trial = trial_box(hid)
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
           f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"

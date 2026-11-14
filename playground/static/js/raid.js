@@ -284,7 +284,10 @@ function glowTex(col) {
 }
 function glw(g, x, y, r, col, a) { if (r <= 0) return; const o = g.globalCompositeOperation, al = g.globalAlpha; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * (a == null ? 1 : a); g.drawImage(glowTex(col), x - r, y - r, r * 2, r * 2); g.globalCompositeOperation = o; g.globalAlpha = al; }
 function hexA(col) { return col.length === 4 ? '#' + col[1] + col[1] + col[2] + col[2] + col[3] + col[3] : col.slice(0, 7); }
-function atlasAll() { return Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad(), boss2Load()])); }
+function atlasAll() { // 다 받거나(실패 포함) 8초가 지나면 ATL.done — 그 전에는 예전 코드 그림을 보여 주지 않는다(BK 11/14)
+  if (!ATL.all) ATL.all = Promise.race([Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad(), boss2Load()])), new Promise(ok => setTimeout(ok, 8000))]).then(() => { ATL.done = 1; });
+  return ATL.all;
+}
 
 /* =================== 직업·기술 데이터 =================== */
 // 공격 판정 h: x0..x1 앞쪽 거리, dy 깊이 허용, z0..z1 높이, d 피해 배율, kb 밀기, lift 띄우기, st 경직, stop 히트스톱, sh 흔들림, n 다단 수, iv 간격
@@ -2017,7 +2020,7 @@ function pause(p, auto) {
 }
 /* =================== 로비: 출발·동료·장비·도감 =================== */
 let tab = 'go', pick = null, dexT = 'm';
-function portrait(k, w) { const c = document.createElement('canvas'), h = w * 1.1, d = Math.min(2, window.devicePixelRatio || 1); c.width = w * d; c.height = h * d; const g = c.getContext('2d'); g.scale(d, d); const pf = k === 'archer' ? 'cast' : 'c1b', sp = ATL.sp[k] ? ATL.sp[k][pf] : bake(ART[k], joints(pf), .7 * d / d * 1.4, CL[k].col, CL[k].col2); g.fillStyle = rg(g, w / 2, h * .8, 4, w * .7, [[0, CL[k].col + '33'], [1, 'rgba(0,0,0,0)']]); g.fillRect(0, 0, w, h); put(g, sp, w / 2 - 4, h * .96 - (k === 'fairy' ? 0 : 0), 1, w / 260, 0); return c; }
+function portrait(k, w) { const c = document.createElement('canvas'), h = w * 1.1, d = Math.min(2, window.devicePixelRatio || 1); c.width = w * d; c.height = h * d; const g = c.getContext('2d'); g.scale(d, d); const pf = k === 'archer' ? 'cast' : 'c1b'; if (!ATL.sp[k] && !ATL.done) { g.fillStyle = rg(g, w / 2, h * .6, 4, w * .5, [[0, CL[k].col + '44'], [1, 'rgba(0,0,0,0)']]); g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.6)'; g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillText('불러오는 중…', w / 2, h * .62); return c; } const sp = ATL.sp[k] ? ATL.sp[k][pf] : bake(ART[k], joints(pf), .7 * d / d * 1.4, CL[k].col, CL[k].col2); g.fillStyle = rg(g, w / 2, h * .8, 4, w * .7, [[0, CL[k].col + '33'], [1, 'rgba(0,0,0,0)']]); g.fillRect(0, 0, w, h); put(g, sp, w / 2 - 4, h * .96 - (k === 'fairy' ? 0 : 0), 1, w / 260, 0); return c; }
 function lobby() {
   ov.classList.remove('play'); panel.hidden = false; btnBar.hidden = true; pick = pick || SV.last || 'knight'; const gl = guildLv();
   let h = '<div class="nr-t">네온 레이드</div><p class="nr-sub">NEON RAID · 체험판</p><p class="nr-note">💰 ' + SV.mats.gold.toLocaleString() + 'G · 💎 강화석 ' + SV.mats.stone + ' · 🍬 젤리 ' + SV.mats.jelly + '</p><div class="nr-tabs">' + [['go', '출발'], ['coop', '협동' + (NET.state === 'room' ? ' ' + (NET.peers.size + 1) + '명' : '')], ['pet', '동료'], ['gear', '장비'], ['shop', '상점'], ['dex', '도감']].map(t => '<button type="button" data-t="' + t[0] + '"' + (tab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>').join('') + '<button type="button" data-t="exit">나가기</button></div>';
@@ -2088,7 +2091,8 @@ function storyTab() {
   }));
   return h + '</div>';
 }
-function start(cls, ch) { panel.hidden = true; btnBar.hidden = false; ov.classList.add('play'); paused = false; if (!DEBUG) fs(); layout(); audioInit(); newRun(cls, ch == null ? Math.min(SV.pch, chU() - 1) : ch); last = performance.now(); acc = 0; }
+function start(cls, ch) { if (!ATL.done) { const b = panel.querySelector('.nr-go'); if (b) { b.disabled = true; b.textContent = '캐릭터 그림 불러오는 중…'; } atlasAll().then(() => start(cls, ch)); return; }
+  panel.hidden = true; btnBar.hidden = false; ov.classList.add('play'); paused = false; if (!DEBUG) fs(); layout(); audioInit(); newRun(cls, ch == null ? Math.min(SV.pch, chU() - 1) : ch); last = performance.now(); acc = 0; }
 function showResult() {
   const r = G.result, mm = Math.floor(r.time / 60), ss = Math.floor(r.time % 60); let best = 0; try { best = +localStorage.getItem('raid_best_' + opts.day) || 0; if (r.score > best) { best = r.score; localStorage.setItem('raid_best_' + opts.day, best); } } catch (e) {}
   const drops = G.drops.gear.map(q => '<b style="color:' + GRADE[q.g][1] + '">' + gearName(q) + '</b>').join(', ');
@@ -2102,7 +2106,7 @@ function showResult() {
 function contBtn() { const B = opts.bonus; if (!B || G.cont || G.result.clear || NET.state === 'room') return ''; const n = B.coins(); return n > 0 ? '<button type="button" class="p4" data-k="c">🪙 코인 1개로 이어하기 (보유 ' + n + ')</button>' : '<p class="nr-note">🪙 코인이 있으면 쓰러진 자리에서 이어할 수 있어요. 코인은 매일 출석체크로 무료!</p>'; }
 function cont() { if (!G || G.cont || !opts.bonus || !opts.bonus.spend(1)) return; G.cont = 1; G.mode = 'play'; G.P.hp = Math.round(G.st.hp * .6); G.P.down = 0; G.P.hurt = 0; G.P.inv = 3; G.result = null; G.ep = []; panel.hidden = true; btnBar.hidden = false; for (const e of G.en) if (!isB(e) && !e.crate && Math.abs(e.x - G.P.x) < 200) { e.vx = Math.sign(e.x - G.P.x) * 500; e.vz = 300; e.st = 'air'; } tx(G.P.x, G.P.y - 120, 'CONTINUE!', '#ffd166', 18); last = performance.now(); }
 function fs() { const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) return; const r = ov.requestFullscreen || ov.webkitRequestFullscreen; if (!r) return; try { const p = r.call(ov, { navigationUI: 'hide' }); if (p && p.then) p.then(() => layout()).catch(() => {}); } catch (e) {} }
-function open() { ov.hidden = false; document.documentElement.style.overflow = 'hidden'; layout(); audioInit(); G = null; tab = 'go'; const m = location.hash.match(/coop=([A-Za-z0-9]{4,6})/); if (m) { tab = 'coop'; NET.connect(m[1].toUpperCase()); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} } lobby(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
+function open() { ov.hidden = false; document.documentElement.style.overflow = 'hidden'; layout(); audioInit(); G = null; tab = 'go'; const m = location.hash.match(/coop=([A-Za-z0-9]{4,6})/); if (m) { tab = 'coop'; NET.connect(m[1].toUpperCase()); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} } else if (/^#coop$/.test(location.hash)) tab = 'coop'; lobby(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
 function close(why) { NET.leave(); cancelAnimationFrame(raf); ov.hidden = true; document.documentElement.style.overflow = ''; panel.hidden = true; if (A.ctx) A.ctx.suspend(); const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} } const r = G && G.result; G = null; paused = false; opts.onExit(r || null, why); }
 window.RaidGame = {
   boot(o) {
