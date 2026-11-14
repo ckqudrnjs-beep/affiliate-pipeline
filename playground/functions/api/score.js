@@ -35,8 +35,12 @@ export async function onRequestGet({ request, env }) {
     await ensure(env.DB);
     const from = ago(kst(), 6);
     let r;
-    try { r = await env.DB.prepare("SELECT COALESCE(p.nick, s.nick) AS nick, MAX(s.score) AS score, CASE WHEN t.h IS NULL THEN 0 ELSE 1 END AS t FROM pscores s LEFT JOIN profiles p ON p.h = s.h LEFT JOIN testers t ON t.h = s.h WHERE s.game = ? AND s.day >= ? AND COALESCE(t.hide, 0) = 0 GROUP BY s.h ORDER BY score DESC LIMIT 10").bind(game, from).all(); }
-    catch { r = await env.DB.prepare("SELECT COALESCE(p.nick, s.nick) AS nick, MAX(s.score) AS score FROM pscores s LEFT JOIN profiles p ON p.h = s.h WHERE s.game = ? AND s.day >= ? GROUP BY s.h ORDER BY score DESC LIMIT 10").bind(game, from).all(); }
+    try { r = await env.DB.prepare("SELECT COALESCE(p.nick, s.nick) AS nick, MAX(s.score) AS score, CASE WHEN t.h IS NULL THEN 0 ELSE 1 END AS t, json_extract(p.data, '$.title') AS ti FROM pscores s LEFT JOIN profiles p ON p.h = s.h LEFT JOIN testers t ON t.h = s.h WHERE s.game = ? AND s.day >= ? AND COALESCE(t.hide, 0) = 0 GROUP BY s.h ORDER BY score DESC LIMIT 10").bind(game, from).all(); }
+    catch {
+      // testers 표가 아직 없으면(관리자 페이지를 안 열었으면) 테스터 표시 없이. 칭호(ti)는 프로필 data 에서
+      try { r = await env.DB.prepare("SELECT COALESCE(p.nick, s.nick) AS nick, MAX(s.score) AS score, json_extract(p.data, '$.title') AS ti FROM pscores s LEFT JOIN profiles p ON p.h = s.h WHERE s.game = ? AND s.day >= ? GROUP BY s.h ORDER BY score DESC LIMIT 10").bind(game, from).all(); }
+      catch { r = await env.DB.prepare("SELECT COALESCE(p.nick, s.nick) AS nick, MAX(s.score) AS score FROM pscores s LEFT JOIN profiles p ON p.h = s.h WHERE s.game = ? AND s.day >= ? GROUP BY s.h ORDER BY score DESC LIMIT 10").bind(game, from).all(); }
+    }
     return json(r.results || []);
   }
   // 관리자가 지정한 테스터는 순위에 "테스터" 표시(t=1). '순위 제외'를 켠 테스터만 빠진다(BK 2026-11-13)
