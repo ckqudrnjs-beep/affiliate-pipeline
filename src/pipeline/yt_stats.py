@@ -50,7 +50,8 @@ def fetch_stats(ids: list[str]) -> dict[str, dict]:
         if js is None and key:
             js = _get(API + "?" + urllib.parse.urlencode({**q, "key": key}))
         if js is None:
-            raise SystemExit("통계를 읽을 수 없음: 업로드 토큰 권한 부족 + YT_API_KEY 없음")
+            print("통계를 읽을 수 없음: 업로드 토큰 권한 부족 + 저장소 비밀 YT_API_KEY 없음 (docs/SHORTS_GROWTH.md)")
+            return out
         for it in js.get("items", []):
             st = it.get("statistics", {})
             out[it["id"]] = {"views": int(st.get("viewCount", 0)), "likes": int(st.get("likeCount", 0)),
@@ -62,6 +63,8 @@ def fetch() -> int:
     log = json.loads(LOG.read_text(encoding="utf-8")) if LOG.exists() else {}
     ids = {v["video_id"]: k for k, v in log.items() if v.get("video_id")}
     got = fetch_stats(list(ids))
+    if not got:
+        return 0
     data = json.loads(STATS.read_text(encoding="utf-8")) if STATS.exists() else {}
     today = dt.datetime.now(KST).date().isoformat()
     data[today] = {ids[vid]: {"id": vid, **v} for vid, v in got.items()}
