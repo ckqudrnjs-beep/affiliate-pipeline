@@ -8,10 +8,7 @@ function boot(){if(game)return game;game=RaidGame.boot({day:KST,bonus:window.Bon
   if(r){const t=Math.floor(r.time/60)+':'+String(Math.floor(r.time%60)).padStart(2,'0');$('nr-msg').textContent='방금 기록: '+(r.clear?'🎉 클리어 · ':'')+t+' · '+r.score.toLocaleString()+'점'}
   const b=r&&$('rankbox');if(b)b.scrollIntoView({behavior:'smooth',block:'center'})}});return game}
 const pre=()=>load().catch(()=>{});if('requestIdleCallback' in window)requestIdleCallback(pre,{timeout:3000});else setTimeout(pre,1500);
-// 테스터 전용 체험판(BK 11/14): 공통 /js/tester.js
-function tl(){if(window.nrTester)return Promise.resolve();return new Promise(ok=>{const s=document.createElement('script');s.src='/js/tester.js';s.onload=ok;s.onerror=ok;document.head.appendChild(s)})}
-async function isTester(){await tl();return window.nrTester?window.nrTester():false}
-async function go(){if(!(await isTester())){$('nr-msg').innerHTML=window.nrTesterMsg;return}
+async function go(){
  if(!game){$('nr-go').textContent='불러오는 중…';try{await load()}catch(e){$('nr-msg').textContent='게임을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.';$('nr-go').textContent='▶ 게임 시작';return}boot()}game.open()}
 $('nr-cab').onclick=go;
 })();
