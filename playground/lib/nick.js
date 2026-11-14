@@ -6,9 +6,11 @@ export const AV_SHOP = [
   ["🦄", "unicorn", 8], ["🦉", "owl", 8], ["🦋", "butterfly", 8], ["🐬", "dolphin", 8], ["🦖", "trex", 8], ["🦕", "dino", 8], ["👻", "ghost", 8], ["🎃", "pumpkin", 8], ["🤠", "cowboy", 8], ["🥷", "ninja", 8],
   ["👑", "crown", 20], ["🔥", "fire", 20], ["🌈", "rainbow", 20], ["🌙", "moon", 20], ["🧞", "genie", 20], ["🦸", "hero", 20], ["🐲", "dragon", 20], ["🪐", "planet", 20, "sl5"], ["⚡", "bolt", 20, "tt500"], ["💎", "gem", 20, "rg4"],
 ];
-export const AVATARS = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐰", "🐻", "🐯", "🐸", "🐙", "👾", "🤖", "🎮", "⭐", "🚀", "🐉", "🛸", "🧑‍🚀", ...AV_SHOP.map((a) => a[0])];
+// 이달의 한정 아바타(BK 2026-11-14 2단계): 그 달(KST)에만 살 수 있고, 산 건 계속 내 것. [이모지, id, 가격, "YYYY-MM"]
+export const AV_LIMITED = [["🍁", "maple", 12, "2026-11"], ["🎄", "xmas", 12, "2026-12"], ["🎍", "newyear", 12, "2027-01"], ["💝", "valentine", 12, "2027-02"], ["🌸", "blossom", 12, "2027-03"]];
+export const AVATARS = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐰", "🐻", "🐯", "🐸", "🐙", "👾", "🤖", "🎮", "⭐", "🚀", "🐉", "🛸", "🧑‍🚀", ...AV_SHOP.map((a) => a[0]), ...AV_LIMITED.map((a) => a[0])];
 // 산 사람만 고를 수 있는 아바타(화면에서만 잠금, 꾸미기라 서버는 검사 안 함). d: = 디자인 스킨, a: = 코인 상점 아바타
-export const AVATAR_LOCK = { "🐉": "d:starlight:dragon", "🛸": "d:starlight:ufo", "🧑‍🚀": "d:tongtong:astro", ...Object.fromEntries(AV_SHOP.map((a) => [a[0], "a:" + a[1]])) };
+export const AVATAR_LOCK = { "🐉": "d:starlight:dragon", "🛸": "d:starlight:ufo", "🧑‍🚀": "d:tongtong:astro", ...Object.fromEntries([...AV_SHOP, ...AV_LIMITED].map((a) => [a[0], "a:" + a[1]])) };
 export const BAD = ["시발", "씨발", "씨빨", "시빨", "싸발", "쌍년", "썅", "병신", "븅신", "빙신", "좆", "좃", "존나", "졸라", "개새", "개색", "개세", "새끼", "섀끼", "지랄", "염병", "미친", "미췬", "꺼져", "닥쳐", "엿먹", "느금", "니미", "니애미", "느개비", "애미", "애비", "에미", "섹스", "쎅스", "야동", "보지", "자지", "꼬추", "창녀", "걸레", "한남", "김치녀", "틀딱", "장애", "똥꼬", "운영자", "관리자", "5락실", "오락실운영", "fuck", "fuk", "shit", "bitch", "sex", "porn", "nigg", "dick", "pussy", "cunt", "admin", "slut", "whore"];
 export function nameOk(n) {
   n = String(n || "");

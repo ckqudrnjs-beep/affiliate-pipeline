@@ -23,6 +23,30 @@ function dot(col, r) {
 /* 출석 보너스 '내 네온 색'(스킨): 요격기 테두리 색만 바뀌는 꾸미기. 점수·능력과 무관 */
 function skinCol() { try { const k = opts && opts.skin && opts.skin(); return (k && k.c && k.c[1]) || C.cy; } catch (e) { return C.cy; } }
 function skinDes() { try { return (opts && opts.design && opts.design()) || 'base'; } catch (e) { return 'base'; } }
+// 코인 상점 2단계: 배경 테마·꼬리 효과·8비트 사운드 팩(겉모습·소리만, 판정 동일)
+const pick = (k, d) => { try { return (opts && opts[k] && opts[k]()) || d; } catch (e) { return d; } };
+const skinTheme = () => pick('theme', 'base'), skinTrail = () => pick('trail', ''), chip = () => pick('sound', '') === 'chip';
+const THEME_NEB = {
+  ice: ['#061a2e', [['#3fd8ffa0', '#c8f4ff66', '#1a6aa878', '#7fe3ff70'], ['#5ab8ff98', '#e8fbff60', '#2a7bd678', '#9fd8ff70'], ['#7fe3ff90', '#ffffff58', '#1b3f9a80', '#5ab8ff70']], ['#cfefff55', '#cfefff99', '#e8faffee']],
+  nova: ['#1a0406', [['#ff3d3da0', '#ff8a3d80', '#a81a1a78', '#ffd23f60'], ['#ff5a1a98', '#c8141480', '#ff9a3c70', '#5a0a0a80'], ['#ff3d6e98', '#ff8a3d78', '#8a0e1e80', '#ffcf8a60']], ['#ffd0b055', '#ffc09099', '#fff0d8ee']],
+  candy: ['#1e0d2a', [['#ff9ec4a0', '#9ff5d280', '#ffd9a078', '#c8a8ff80'], ['#ffb3e698', '#a8f0ff80', '#fff0a078', '#ff9ec470'], ['#b8ffd8a0', '#ffc6e880', '#c8b8ff78', '#ffe0a070']], ['#ffe0f455', '#ffd0ec99', '#fff4fbee']],
+};
+function mkNeb(bg, cols) {
+  const neb = document.createElement('canvas'); neb.width = W; neb.height = H; const n = neb.getContext('2d');
+  n.fillStyle = bg; n.fillRect(0, 0, W, H);
+  [[60, 120, 160], [300, 330, 190], [140, 520, 170], [330, 40, 120]].forEach(([bx, by, r], bi) => { for (const oy of [-H, 0, H]) { const g = n.createRadialGradient(bx, by + oy, 0, bx, by + oy, r); g.addColorStop(0, cols[bi]); g.addColorStop(1, '#00000000'); n.fillStyle = g; n.fillRect(0, 0, W, H); } });
+  n.strokeStyle = '#ffffff08'; n.lineWidth = 1; for (let gx = 0; gx <= W; gx += 40) { n.beginPath(); n.moveTo(gx, 0); n.lineTo(gx, H); n.stroke(); } for (let gy = 0; gy < H; gy += 40) { n.beginPath(); n.moveTo(0, gy); n.lineTo(W, gy); n.stroke(); }
+  return neb;
+}
+function setTheme(S, th) { S.theme = th; const t = THEME_NEB[th]; S.tnebs = t ? t[1].map(c => mkNeb(t[0], c)) : null; S.starC = t ? t[2] : null; }
+function trailFx(c, X, Y, a, k, r, kind) {
+  const t = performance.now() / 1000; c.save(); c.globalAlpha = a * .85; c.textAlign = 'center'; c.textBaseline = 'middle';
+  if (kind === 'spark') { const z = r * (.25 + a * .35) * (.7 + .3 * Math.sin(t * 12 + k * 2)); c.fillStyle = k % 2 ? '#fff' : '#ffe98a'; c.beginPath(); c.moveTo(X, Y - z * 1.6); c.lineTo(X + z * .4, Y); c.lineTo(X, Y + z * 1.6); c.lineTo(X - z * .4, Y); c.closePath(); c.moveTo(X - z * 1.6, Y); c.lineTo(X, Y - z * .4); c.lineTo(X + z * 1.6, Y); c.lineTo(X, Y + z * .4); c.closePath(); c.fill(); }
+  else if (kind === 'heart') { c.fillStyle = k % 2 ? '#ff5fa8' : '#ff9ec4'; c.font = `900 ${Math.round(r * (.6 + a * .7))}px sans-serif`; c.fillText('♥', X, Y); }
+  else if (kind === 'star') { c.fillStyle = k % 3 ? '#ffd23f' : '#fff6c8'; c.font = `900 ${Math.round(r * (.5 + a * .7))}px sans-serif`; c.fillText('★', X + Math.sin(k * 1.7) * r * .3, Y); }
+  else { c.fillStyle = `hsl(${(k * 36 + t * 120) % 360},95%,62%)`; c.beginPath(); c.arc(X, Y, r * (.3 + a * .5), 0, TAU); c.fill(); }
+  c.restore();
+}
 /* 전설 디자인 '오로라 세라프'(🪙50): 날개 3겹 색이 흐르고(색상별로 미리 그린 12장 돌려 보기) 지나간 자리에 무지개 가루. 판정 동일 */
 function auroraFrame(h) {
   return sprite(50, 46, x => {
@@ -317,6 +341,7 @@ function audioInit() {
 }
 function tone(type, f0, f1, dur, vol, at, out) {
   const c = A.ctx; if (!c) return; const t = at || c.currentTime, o = c.createOscillator(), g = c.createGain();
+  if (chip()) { type = type === 'sine' && f0 < 200 ? 'triangle' : 'square'; vol *= .5; }
   o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(out || A.sfx); o.start(t); o.stop(t + dur + .02);
@@ -850,8 +875,8 @@ function draw() {
   const sh = G.shake > 0 ? G.shake * 8 : 0, kx = sh ? (Math.random() - .5) * sh : 0, ky = sh ? (Math.random() - .5) * sh : 0;
   x.setTransform(s * dpr, 0, 0, s * dpr, (ox + kx * s) * dpr, (oy + ky * s) * dpr);
   x.save(); x.beginPath(); x.rect(0, 0, W, H); x.clip();
-  const neb = SP.nebs[Math.floor((Math.max(1, G.stage) - 1) / 5) % 3], ny = (G.t * 12) % H; x.drawImage(neb, 0, ny - H, W, H); x.drawImage(neb, 0, ny, W, H); bgDraw();
-  for (const st of stars) { x.fillStyle = ['#ffffff55', '#ffffff99', '#ffffffee'][st.l]; const z = st.l + 1; x.fillRect(st.x * W, st.y * H, z * .8, z * (G.clearT > 0 ? 6 : 1.4)); }
+  const neb = (SP.tnebs || SP.nebs)[Math.floor((Math.max(1, G.stage) - 1) / 5) % 3], ny = (G.t * 12) % H; x.drawImage(neb, 0, ny - H, W, H); x.drawImage(neb, 0, ny, W, H); bgDraw();
+  for (const st of stars) { x.fillStyle = (SP.starC || ['#ffffff55', '#ffffff99', '#ffffffee'])[st.l]; const z = st.l + 1; x.fillRect(st.x * W, st.y * H, z * .8, z * (G.clearT > 0 ? 6 : 1.4)); }
   for (const b of G.beams) { // 경고선 → 레이저 기둥
     if (b.t < b.warn) { x.globalAlpha = .35 + .35 * Math.sin(b.t * 30); x.fillStyle = C.rd; x.fillRect(b.x - 1, b.y0, 2, H); x.globalAlpha = 1; }
     else { const f = 1 - (b.t - b.warn) / b.dur; x.globalAlpha = .5 + .5 * f; x.fillStyle = C.cy; x.fillRect(b.x - b.w / 2, b.y0, b.w, H); x.fillStyle = '#fff'; x.fillRect(b.x - b.w / 5, b.y0, b.w / 2.5, H); x.globalAlpha = 1; }
@@ -890,6 +915,7 @@ function draw() {
   }
   if (G.dead <= 0 && G.mode === 'play' && !(G.inv > 0 && !G.nova && (G.t * 12 | 0) % 2)) {
     const fl = .8 + Math.random() * .5; spr(x, SP.flame, G.px - 4, G.py + 15, 0, fl * .8); spr(x, SP.flame, G.px + 4, G.py + 15, 0, fl * .8);
+    if (SP.trail) { const tr = G.trl || (G.trl = []); if (!tr.length || G.t - tr[0][2] > .045) tr.unshift([G.px, G.py + 18, G.t]); if (tr.length > 12) tr.length = 12; for (let k = tr.length - 1; k >= 0; k--) trailFx(x, tr[k][0], tr[k][1] + (G.t - tr[k][2]) * 140, 1 - k / 12, k, 10, SP.trail); }
     if (SP.auro) {
       const tr = G.atr || (G.atr = []); tr.unshift([G.px, G.py + 12]); if (tr.length > 22) tr.length = 22;
       x.globalCompositeOperation = 'lighter';
@@ -1014,7 +1040,7 @@ function fs() {
 }
 function open() {
   ov.hidden = false; document.documentElement.style.overflow = 'hidden';
-  if (SP) { const c = skinCol(), d = skinDes(); if (c !== SP.shipCol || d !== SP.shipDes) setShip(SP, c, d); }
+  if (SP) { const c = skinCol(), d = skinDes(); if (c !== SP.shipCol || d !== SP.shipDes) setShip(SP, c, d); const th = skinTheme(); if (th !== SP.theme) setTheme(SP, th); SP.trail = skinTrail(); }
   fs(); layout(); audioInit(); paused = false; panel.hidden = true; newGame();
   last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
 }

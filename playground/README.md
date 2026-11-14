@@ -76,7 +76,14 @@
   - 칭호(`TITLES`, own 키 `t:<id>`, 🪙5~30, '개근상'은 누적 출석 30일 무료): 프로필·최근 7일 순위에 「칭호」. 서버 `clean()` 이 산 칭호만 남기고, 주간 순위는 `json_extract(profiles.data,'$.title')`.
   - 출석 보호권 🪙3(최대 2개): 빠진 날 수 ≤ 보유 수면 자동 사용, 연속 유지.
   - 통통 이어 달리기 🪙3(한 판 1번): 실제 밟은 땅 중 죽은 곳 2칸 앞 + 검사기(solve) 통과 지점에서 3-2-1 후 재개, 거리 이어서.
-  - 2단계(예정): 게임 테마·꼬리 효과·사운드 팩·별명 색·월간 한정·질문 제안·수집왕.
+- 코인 쓰임 2단계(2026-11-14 BK 승인, 모두 꾸미기):
+  - 게임 배경 테마(`THEMES`, own `h:<게임>:<id>`, 🪙10~20): 별빛 얼음 성운·붉은 초신성·사탕 은하(starlight.js `THEME_NEB` 성운·별 색), 통통 노을·네온정글·눈 오는 밤(game.js draw 하늘·해/달·건물·눈). 장애물·적은 그대로.
+  - 꼬리 효과(`TRAILS`, own `r:<id>`, 🪙4~10): 반짝이·하트·별가루·무지개. 두 게임 `trailFx`.
+  - 사운드 팩(`SOUNDS`, own `s:chip`, 🪙6): tone() 음색을 네모파(낮은 sine 은 삼각파)로.
+  - 별명 색(`NCOLORS`, own `n:<id>`, 🪙15): 최근 7일 순위(`json_extract(data,'$.nc')`). 서버 clean() 이 산 색만 남김.
+  - 이달의 한정 아바타(`lib/nick.js` `AV_LIMITED`, 🪙12): 그 달(KST)에만 판매, 산 건 계속. 2026-11 🍁 ~ 2027-03 🌸 — 이후 달은 추가 필요.
+  - 수집왕: 상점 아바타 30종 모두 → 칭호 「수집왕」 무료 + 프로필 금테.
+  - 질문 제안 🪙10(`functions/api/qprop.js`, D1 `qprops`): 프로필 필요, 하루 1번, badText 검사. 관리자 /admin '질문 제안'에서 채택 → 칭호 「출제자」(own `t:author`) + 🪙10, 반려. 채택 질문은 질문 데이터에 따로 넣어야 함.
 - 스킨(겉모습만, 판정 동일): build.py `DESIGNS`(별빛: 냥냥 요격기 6·원반 UFO 8·드래곤 파이터 12 / 통통: 냥이 5·개구리 7·우주인 10) + `SKINS` 색(0~5). 그림은 starlight.js `shipSprite`, tongtong game.js 그리기 코드.
 - 코드: build.py `BONUS_JS`(window.Bonus: checkin/spend/ach/buy/skin/design), `BONUS_CSS`, `BONUS_BODY`. 게임 boot 옵션 `bonus`, `skin`, `design`.
 

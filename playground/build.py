@@ -226,11 +226,12 @@ RANK_HTML = """<div class="card" id="rankbox"><h2 style="margin-top:0">🏆 도�
 
 RANK_JS = """
 function ttl(id){const t=id&&TITLES.find(x=>x.id===id);return t?' <span class="ttl">「'+t.name+'」</span>':''}
+function nck(x){const c=x.nc&&NCOLORS.find(k=>k.id===x.nc);return c?'<span style="color:'+c.c+';font-weight:800;text-shadow:0 0 8px '+c.c+'88">'+x.nick+'</span>':x.nick}
 (function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
 $r('renick').onclick=()=>{location.href='/profile'};
 let W=0;document.querySelectorAll('#rankbox [data-w]').forEach(b=>b.onclick=()=>{W=+b.dataset.w;document.querySelectorAll('#rankbox [data-w]').forEach(x=>x.style.fontWeight=x===b?'800':'400');load()});
 async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST+(W?'&week=1':''))).json();const me=myNick();
-$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):(W?'<li class="muted">최근 7일 프로필 기록이 아직 없어요. 프로필을 만들고 도전해 보세요!</li>':'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>')}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
+$r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+nck(x)+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):(W?'<li class="muted">최근 7일 프로필 기록이 아직 없어요. 프로필을 만들고 도전해 보세요!</li>':'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>')}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
 window.submitScore=async function(score){score=Math.floor(score);if(window.Bonus)Bonus.played(G);let best=0;try{best=+localStorage.getItem('nr_best_'+G+'_'+KST)||0}catch(e){}
 if(score<=best){load();return}try{localStorage.setItem('nr_best_'+G+'_'+KST,score)}catch(e){}
 try{const r=await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick(),code:(window.Profile&&Profile.code())||undefined})});if(r.ok&&window.Bonus&&score>0)Bonus.mission('r')}catch(e){}load()};load()})();
@@ -238,10 +239,11 @@ try{const r=await fetch('/api/score',{method:'POST',headers:{'content-type':'app
 
 RANK_PAGE_JS = """
 function ttl(id){const t=id&&TITLES.find(x=>x.id===id);return t?' <span class="ttl">「'+t.name+'」</span>':''}
+function nck(x){const c=x.nc&&NCOLORS.find(k=>k.id===x.nc);return c?'<span style="color:'+c.c+';font-weight:800;text-shadow:0 0 8px '+c.c+'88">'+x.nick+'</span>':x.nick}
 let cur=document.querySelector('[data-g]').dataset.g,W=0;const me=myNick();
 document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{W=+b.dataset.w;document.querySelectorAll('[data-w]').forEach(x=>x.style.fontWeight=x===b?'800':'400');show(cur)});
 async function show(g){cur=g;document.querySelectorAll('[data-g]').forEach(b=>b.style.fontWeight=b.dataset.g===g?'800':'400');
-try{const r=await (await fetch('/api/score?game='+g+'&day='+KST+(W?'&week=1':''))).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+x.nick+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
+try{const r=await (await fetch('/api/score?game='+g+'&day='+KST+(W?'&week=1':''))).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+nck(x)+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
 document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>show(b.dataset.g));show(cur);
 """
 
@@ -377,12 +379,40 @@ TITLES = [  # 칭호: 프로필·최근 7일 순위에 이름 옆으로 보여�
     {"id": "ace", "name": "별빛 에이스", "p": 15},
     {"id": "regular", "name": "개근상", "p": 0, "days": 30},
     {"id": "legend", "name": "오락실 전설", "p": 30},
+    {"id": "collector", "name": "수집왕", "p": 0, "av": 1},  # 상점 아바타 30종을 모두 모으면 무료 + 프로필 금테
+    {"id": "author", "name": "출제자", "p": 0, "by": 1},  # 제안한 밸런스 질문이 채택되면 관리자가 줌
 ]
 SHIELD_PRICE, SHIELD_MAX = 3, 2
+# 코인 쓰임 2단계(BK 2026-11-14): 게임 테마·꼬리 효과·사운드 팩·별명 색·이달의 한정·질문 제안·수집왕. 모두 꾸미기, 점수 영향 없음.
+AV_LIMITED = json.loads(re.search(r"AV_LIMITED = (\[.*?\]);", (HERE / "lib" / "nick.js").read_text(encoding="utf-8")).group(1))
+THEMES = [  # 게임 배경 테마. own 키 h:<게임>:<id>
+    {"g": "starlight", "id": "ice", "name": "얼음 성운", "icon": "🧊", "p": 10},
+    {"g": "starlight", "id": "nova", "name": "붉은 초신성", "icon": "🔥", "p": 15},
+    {"g": "starlight", "id": "candy", "name": "사탕 은하", "icon": "🍬", "p": 20},
+    {"g": "tongtong", "id": "sunset", "name": "노을", "icon": "🌇", "p": 10},
+    {"g": "tongtong", "id": "jungle", "name": "네온정글", "icon": "🌴", "p": 15},
+    {"g": "tongtong", "id": "snow", "name": "눈 오는 밤", "icon": "⛄", "p": 20},
+]
+TRAILS = [  # 꼬리 효과(별빛·통통 공통). own 키 r:<id>
+    {"id": "spark", "name": "반짝이", "icon": "✨", "p": 4},
+    {"id": "heart", "name": "하트", "icon": "💗", "p": 6},
+    {"id": "star", "name": "별가루", "icon": "⭐", "p": 8},
+    {"id": "rainbow", "name": "무지개", "icon": "🌈", "p": 10},
+]
+SOUNDS = [{"id": "chip", "name": "8비트 칩튠", "icon": "👾", "p": 6}]  # 효과음·음악 음색을 네모파로. own 키 s:<id>
+NCOLORS = [  # 최근 7일 순위의 별명 색. own 키 n:<id>
+    {"id": "gold", "name": "황금", "c": "#ffd23f", "p": 15},
+    {"id": "pink", "name": "체리", "c": "#ff5fa8", "p": 15},
+    {"id": "mint", "name": "민트", "c": "#3ddc84", "p": 15},
+    {"id": "sky", "name": "하늘", "c": "#5ab8ff", "p": 15},
+    {"id": "violet", "name": "보라", "c": "#c08bff", "p": 15},
+]
+QPROP_PRICE = 10
 
 BONUS_JS = (
     f"const SKINS={json.dumps(SKINS, ensure_ascii=False)},BONUS_MAX={BONUS_MAX_COINS},DESIGNS={json.dumps(DESIGNS, ensure_ascii=False)},DGAMES={json.dumps(DESIGN_GAMES, ensure_ascii=False)},ACH={json.dumps(ACH, ensure_ascii=False)},"
-    f"MIS={json.dumps(MISSIONS, ensure_ascii=False)},AVSHOP={json.dumps(AV_SHOP, ensure_ascii=False)},AVTIER={json.dumps(AV_TIER, ensure_ascii=False)},TITLES={json.dumps(TITLES, ensure_ascii=False)},SHIELD=[{SHIELD_PRICE},{SHIELD_MAX}];"
+    f"MIS={json.dumps(MISSIONS, ensure_ascii=False)},AVSHOP={json.dumps(AV_SHOP, ensure_ascii=False)},AVTIER={json.dumps(AV_TIER, ensure_ascii=False)},TITLES={json.dumps(TITLES, ensure_ascii=False)},SHIELD=[{SHIELD_PRICE},{SHIELD_MAX}],"
+    f"AVLIM={json.dumps(AV_LIMITED, ensure_ascii=False)},THEMES={json.dumps(THEMES, ensure_ascii=False)},TRAILS={json.dumps(TRAILS, ensure_ascii=False)},SOUNDS={json.dumps(SOUNDS, ensure_ascii=False)},NCOLORS={json.dumps(NCOLORS, ensure_ascii=False)},QPROP={QPROP_PRICE};"
     r"""
 window.Bonus=(function(){const K='nr_bonus',day=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);let s={};
 function ld(){try{s=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){s={}}s.coins=Math.max(0,Math.min(BONUS_MAX,+s.coins||0));s.days=+s.days||0;s.streak=+s.streak||0;s.ach=s.ach||{};s.des=s.des||{};s.own=s.own||{};s.shield=Math.max(0,Math.min(SHIELD[1],+s.shield||0));return s}
@@ -417,9 +447,20 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   const ok=B.buy('a:'+id,a[2],'아바타 '+a[0]);if(ok)B.render();return ok},
  useAv(e){const P=window.Profile,n=P&&P.nick();if(n){P.setNick(e,n.slice(n.indexOf(' ')+1));B.toast('✅ 아바타를 '+e+' 로 바꿨어요');B.render()}else location.href='/profile'},
  title(){ld();const t=TITLES.find(x=>x.id===s.title);return t&&B.hasTitle(t)?t:null},
- hasTitle(t){return t.days?s.days>=t.days:own('t:'+t.id,t.p)},
+ hasTitle(t){return t.days?s.days>=t.days:t.av?B.allAv():own('t:'+t.id,t.p)},
+ allAv(){return AVSHOP.every(a=>s.own['a:'+a[1]])},
  setTitle(id){ld();if(id){const t=TITLES.find(x=>x.id===id);if(!t)return false;if(t.days&&s.days<t.days){B.toast('🔒 누적 출석 '+t.days+'일이 되면 받아요 (지금 '+s.days+'일)');return false}
-  if(!t.days&&!B.buy('t:'+id,t.p,'칭호 「'+t.name+'」'))return false}s.title=id||undefined;sv();B.render();return true},
+  if(t.av&&!B.allAv()){B.toast('🔒 상점 아바타 30종을 모두 모으면 받아요');return false}if(t.by&&!s.own['t:'+t.id]){B.toast('🔒 제안한 밸런스 질문이 채택되면 받아요');return false}
+  if(!t.days&&!t.av&&!B.buy('t:'+id,t.p,'칭호 「'+t.name+'」'))return false}s.title=id||undefined;sv();B.render();return true},
+ // 2단계: 테마·꼬리·사운드·별명 색·한정 아바타
+ theme(g){ld();const t=(s.th||{})[g],d=THEMES.find(x=>x.g===g&&x.id===t);return d&&own('h:'+g+':'+d.id,d.p)?d.id:'base'},
+ setTheme(g,id){ld();if(id!=='base'){const d=THEMES.find(x=>x.g===g&&x.id===id);if(!d||!B.buy('h:'+g+':'+id,d.p,'테마 '+d.name))return false}s.th=s.th||{};s.th[g]=id;sv();B.render();return true},
+ pick(L,pre,key,id){ld();if(id){const d=L.find(x=>x.id===id);if(!d||!B.buy(pre+id,d.p,d.name))return false}s[key]=id||undefined;sv();B.render();return true},
+ trail(){ld();const d=TRAILS.find(x=>x.id===s.trail);return d&&own('r:'+d.id,d.p)?d.id:''},
+ sound(){ld();const d=SOUNDS.find(x=>x.id===s.snd);return d&&own('s:'+d.id,d.p)?d.id:''},
+ ncolor(){ld();const d=NCOLORS.find(x=>x.id===s.nc);return d&&own('n:'+d.id,d.p)?d:null},
+ month:()=>day().slice(0,7),
+ buyLim(id){ld();const a=AVLIM.find(x=>x[1]===id);if(!a)return false;if(!s.own['a:'+id]&&a[3]!==B.month()){B.toast('이 한정 아바타는 '+a[3].slice(5).replace(/^0/,'')+'월에만 살 수 있어요');return false}const ok=B.buy('a:'+id,a[2],'한정 아바타 '+a[0]);if(ok)B.render();return ok},
  render(){ld();const done=s.last===day(),sk=B.skin();
   document.querySelectorAll('.att').forEach(a=>{a.classList.toggle('new',!done);a.querySelector('b').textContent=s.coins});
   document.querySelectorAll('.bonus-mini').forEach(el=>{const g=el.dataset.g,dd=g&&DESIGNS.find(x=>x.g===g&&x.id===B.design(g)),sw=el.dataset.skin?` · 스킨 ${dd?dd.icon+' '+dd.name:(DGAMES[g]?DGAMES[g][2]+' 기본':'')} <span class="sw" style="--c:${sk.c[1]}"></span> ${sk.name}`:'';
@@ -454,7 +495,21 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   const ct=B.title();pg.querySelector('.titles').innerHTML=`<button type="button" data-ti="" class="${ct?'':'sel'}"><b>칭호 없음</b><small>${ct?'고르기':'사용 중'}</small></button>`+TITLES.map(t=>{const ok=B.hasTitle(t),sel=ct&&ct.id===t.id;
    return `<button type="button" data-ti="${t.id}" class="${sel?'sel':''}${ok?'':' lock'}"><b>「${t.name}」</b><small>${sel?'사용 중':ok?'고르기':t.days?'누적 출석 '+t.days+'일 (지금 '+s.days+'일)':tag(false,false,t.p)}</small></button>`}).join('');
   pg.querySelectorAll('[data-ti]').forEach(b=>b.onclick=()=>{if(B.setTitle(b.dataset.ti))B.toast(b.dataset.ti?'🏷️ 칭호를 달았어요! 프로필·최근 7일 순위에 보여요':'칭호를 뗐어요')});
-  const sh=pg.querySelector('.shield');sh.innerHTML=`<span class="di">🛡️</span><b>출석 보호권 <small>보유 ${s.shield}/${SHIELD[1]}</small></b><small>${s.shield>=SHIELD[1]?'가득 찼어요':`<span class="pr">🪙 ${SHIELD[0]}</span> 사기`}</small>`;sh.onclick=()=>B.buyShield()}};
+  const sh=pg.querySelector('.shield');sh.innerHTML=`<span class="di">🛡️</span><b>출석 보호권 <small>보유 ${s.shield}/${SHIELD[1]}</small></b><small>${s.shield>=SHIELD[1]?'가득 찼어요':`<span class="pr">🪙 ${SHIELD[0]}</span> 사기`}</small>`;sh.onclick=()=>B.buyShield();
+  const lim=AVLIM.filter(a=>a[3]===B.month()||s.own['a:'+a[1]]);pg.querySelector('.avlim').innerHTML=lim.length?lim.map(a=>{const ok=!!s.own['a:'+a[1]];return `<button type="button" data-lim="${a[1]}" class="${ok?'own':'lock'} leg${a[0]===myAv?' sel':''}"><span>${a[0]}</span><small>${a[0]===myAv?'사용 중':ok?'쓰기':'🪙 '+a[2]}</small></button>`}).join(''):'<p class="muted">이번 달 한정 아바타는 준비 중이에요.</p>';
+  pg.querySelectorAll('[data-lim]').forEach(b=>b.onclick=()=>{const a=AVLIM.find(x=>x[1]===b.dataset.lim);if(s.own['a:'+a[1]])B.useAv(a[0]);else B.buyLim(a[1])});
+  const all=B.allAv();pg.querySelector('.coll').innerHTML=all?'👑 <b>아바타 30종 완성!</b> 칭호 「수집왕」과 프로필 금테를 받았어요.':`👑 상점 아바타 <b>${na}/30</b> 모으면 칭호 「수집왕」 + 프로필 금테 (남은 ${30-na}종)`;
+  const opt=(L,pre,cur,attr,ic)=>`<button type="button" data-${attr}="" class="${cur?'':'sel'}"><span class="di">${ic}</span><b>끄기</b><small>${cur?'고르기':'사용 중'}</small></button>`+L.map(d=>{const ok=own(pre+d.id,d.p),sel=cur===d.id;return `<button type="button" data-${attr}="${d.id}" class="${sel?'sel':''}${ok?'':' lock'}"><span class="di"${d.c?` style="color:${d.c}"`:''}>${d.c?'●':d.icon}</span><b${d.c?` style="color:${d.c}"`:''}>${d.name}</b><small>${tag(ok,sel,d.p)}</small></button>`}).join('');
+  pg.querySelector('.themes').innerHTML=Object.keys(DGAMES).map(g=>{const cur=B.theme(g);return `<h3>${DGAMES[g][0]}</h3><div class="skins"><button type="button" data-th="${g}:base" class="${cur==='base'?'sel':''}"><span class="di">🌃</span><b>기본 배경</b><small>${cur==='base'?'사용 중':'고르기'}</small></button>`+THEMES.filter(d=>d.g===g).map(d=>{const ok=own('h:'+g+':'+d.id,d.p);return `<button type="button" data-th="${g}:${d.id}" class="${cur===d.id?'sel':''}${ok?'':' lock'}"><span class="di">${d.icon}</span><b>${d.name}</b><small>${tag(ok,cur===d.id,d.p)}</small></button>`}).join('')+'</div>'}).join('');
+  pg.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{const [g,id]=b.dataset.th.split(':');if(B.setTheme(g,id))B.toast('배경 테마를 바꿨어요! 다음 판부터 적용돼요')});
+  pg.querySelector('.trails').innerHTML=opt(TRAILS,'r:',B.trail(),'tr','💨');pg.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{if(B.pick(TRAILS,'r:','trail',b.dataset.tr))B.toast(b.dataset.tr?'꼬리 효과를 달았어요! 별빛·통통에 보여요':'꼬리 효과를 껐어요')});
+  pg.querySelector('.sounds').innerHTML=opt(SOUNDS,'s:',B.sound(),'sd','🔊');pg.querySelectorAll('[data-sd]').forEach(b=>b.onclick=()=>{if(B.pick(SOUNDS,'s:','snd',b.dataset.sd))B.toast(b.dataset.sd?'사운드 팩을 켰어요! 별빛·통통 소리가 바뀌어요':'기본 소리로 돌렸어요')});
+  const nc=B.ncolor();pg.querySelector('.ncols').innerHTML=opt(NCOLORS,'n:',nc&&nc.id,'nc','⚪');pg.querySelectorAll('[data-nc]').forEach(b=>b.onclick=()=>{if(B.pick(NCOLORS,'n:','nc',b.dataset.nc))B.toast(b.dataset.nc?'별명 색을 바꿨어요! 최근 7일 순위에 보여요':'별명 색을 껐어요')});
+  const qp=pg.querySelector('.qprop');if(qp&&!qp.dataset.init){qp.dataset.init=1;qp.querySelector('button').onclick=async()=>{const a=qp.querySelector('[name=qa]').value.trim(),b2=qp.querySelector('[name=qb]').value.trim(),m=qp.querySelector('.qmsg');
+   const code=window.Profile&&Profile.code();if(!code){m.textContent='질문 제안은 프로필(복구 코드)이 있어야 해요.';return}if(a.length<2||b2.length<2){m.textContent='A·B 둘 다 2자 이상 써 주세요.';return}
+   if(!B.spend(QPROP)){m.textContent='🪙 코인이 '+QPROP+'개 있어야 해요.';return}m.textContent='보내는 중…';let j={};
+   try{const r=await fetch('/api/qprop',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code,a,b:b2})});j=await r.json();j._ok=r.ok}catch(e){}
+   if(j._ok){m.textContent='✅ 제안했어요! 채택되면 칭호 「출제자」와 🪙 '+QPROP+'개를 돌려받아요.';qp.querySelector('[name=qa]').value='';qp.querySelector('[name=qb]').value=''}else{ld();add(QPROP);sv();B.render();m.textContent=(j.msg||'지금은 보낼 수 없어요.')+' (코인은 돌려 드렸어요)'}}}}};
 document.addEventListener('DOMContentLoaded',B.render);if(document.readyState!=='loading')B.render();
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pre]');if(!b)return;e.preventDefault();const u=location.origin+(b.dataset.u||location.pathname);shareLink(b.dataset.t,u,b.dataset.t+'\n'+b.dataset.d+'\n'+u)});
 return B})();
@@ -485,6 +540,8 @@ nav a.att{position:relative;color:var(--y);border-color:#ffd23f66}nav a.att b{fo
 #bonuspage .avg button span{font-size:28px;line-height:1.2}#bonuspage .avg button small{font-size:11px;color:var(--muted);white-space:nowrap}#bonuspage .avg button.lock{border-style:dashed}#bonuspage .avg button.lock span{filter:grayscale(1);opacity:.45}#bonuspage .avg button.own small{color:#3ddc84}#bonuspage .avg button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f55}
 #bonuspage .titles button{grid-template-columns:1fr}#bonuspage .shield{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer;width:100%;max-width:340px}#bonuspage .shield small{color:var(--muted);font-size:12px}#bonuspage .shield .pr{color:var(--y);font-weight:800}
 .ttl{font-size:.78em;color:var(--y);font-weight:700}
+#bonuspage .coll{margin:10px 0;padding:10px 12px;border:2px dashed #ffd23f66;border-radius:12px;font-size:14px}#bonuspage .avlim{margin-top:6px}
+#bonuspage .qprop{display:flex;flex-wrap:wrap;gap:6px;align-items:center}#bonuspage .qprop input{flex:1 1 120px;min-width:0;font:inherit;padding:9px 10px;border-radius:10px;border:2px solid var(--line);background:var(--bg2);color:var(--ink)}#bonuspage .qprop .qmsg{flex-basis:100%;margin:4px 0 0}
 """
 
 BONUS_BODY = f"""<h1>📅 출석체크 · 코인 상점</h1><p class="lead">출석하고 오늘의 미션을 깨면 🪙 코인이 모여요(하루 최대 🪙 5개쯤). 코인으로 <b>아바타·칭호·스킨</b>을 모으고 이어하기·출석 보호권에 써요. <b>모든 게임은 코인 없이도 처음부터 끝까지 무료</b>예요.</p>
@@ -492,12 +549,19 @@ BONUS_BODY = f"""<h1>📅 출석체크 · 코인 상점</h1><p class="lead">출�
 <h2>🎯 오늘의 미션</h2><p class="muted">매일 0시(한국 시간)에 새로 시작해요. 하나 깰 때마다 🪙 1개, 셋 다 깨면 🪙 1개 더.</p><ul class="miss"></ul>
 <h2>🎮 첫 플레이 보너스</h2><p class="muted">아직 안 해 본 게임을 한 판 끝까지 하면 게임마다 🪙 1개(한 번씩).</p><div class="fps"></div>
 <h2>🧑 아바타 수집 <small class="avn"></small></h2><p class="muted">순위·게시판에서 별명 앞에 보이는 아바타예요. 사면 계속 내 것이고, 누르면 바로 바꿔 써요(프로필 별명이 있어야 해요). 🪐⚡💎 는 업적을 먼저 달성해야 살 수 있어요.</p><div class="avshop"></div>
+<h2>🗓️ 이달의 한정 아바타</h2><p class="muted">그 달에만 살 수 있어요. 한 번 사면 달이 바뀌어도 계속 내 것이에요.</p><div class="avg avlim"></div><p class="coll"></p>
 <h2>🏷️ 칭호</h2><p class="muted">프로필과 '최근 7일' 순위에서 별명 옆에 보여요. 하나만 달 수 있고 언제든 바꿀 수 있어요.</p><div class="skins titles"></div>
+<h2>🌌 게임 배경 테마</h2><p class="muted">게임 배경 분위기를 바꿔요. 장애물·적·총알은 그대로라 난이도는 같아요.</p><div class="themes"></div>
+<h2>💫 꼬리 효과</h2><p class="muted">별빛 요격대 우주선과 통통이 뒤에 따라오는 효과예요.</p><div class="skins trails"></div>
+<h2>🎵 사운드 팩</h2><p class="muted">별빛 요격대·통통 네온런의 효과음과 음악 음색이 옛날 오락기 소리로 바뀌어요.</p><div class="skins sounds"></div>
+<h2>🖍️ 별명 색</h2><p class="muted">'최근 7일' 순위에서 내 별명이 이 색으로 빛나요(프로필이 있어야 보여요).</p><div class="skins ncols"></div>
+<h2>💡 밸런스 질문 제안</h2><p class="muted">🪙 {QPROP_PRICE}개로 밸런스게임 질문을 제안해요. 관리자가 골라서 채택하면 사이트에 올라가고, 칭호 「출제자」와 🪙 {QPROP_PRICE}개를 돌려받아요. 프로필이 있어야 하고 하루 1번이에요. 욕설·개인정보·광고는 바로 걸러져요.</p>
+<div class="qprop"><input name="qa" maxlength="30" placeholder="A (예: 평생 여름)"> <b>vs</b> <input name="qb" maxlength="30" placeholder="B (예: 평생 겨울)"> <button type="button" class="share">🪙 {QPROP_PRICE} 제안하기</button><p class="qmsg muted"></p></div>
 <h2>🛡️ 편의 아이템</h2><p class="muted">출석을 하루 빼먹어도 보호권이 있으면 연속 출석이 이어져요(빠진 날 하루에 1개씩 자동 사용, 최대 {SHIELD_MAX}개 보관).</p><button type="button" class="shield"></button>
 <h2>🐉 디자인 스킨</h2><p class="muted">스킨은 게임 속 <b>내 캐릭터의 겉모습</b>만 바꾸는 꾸미기예요. 점수·능력·맞는 범위는 그대로예요. 화려할수록 코인이 더 들어요. 한 번 사면 계속 내 것이에요.</p><div class="designs"></div>
 <h2>🎨 내 네온 색</h2><p class="muted">고른 디자인에 입힐 색이에요.</p><div class="skins colors"></div>
 <h2>🏅 업적 보너스 코인</h2><p class="muted">한 번씩만 받아요.</p><ul class="list achs"></ul></div>
-<h2>코인은 어디에 쓰나요?</h2><ul class="list"><li><b>아바타 30종</b>: 일반 🪙 3 · 희귀 🪙 8 · 전설 🪙 20. 전설 셋(🪐⚡💎)은 업적 달성이 먼저예요.</li><li><b>칭호</b>: 🪙 5~30. '개근상'은 누적 출석 30일이면 무료.</li><li><b>스킨</b>: 디자인·색을 🪙 2~50개로 사요.</li><li><b>이어하기</b>: 별빛 요격대·네온 사격장은 🪙 1개, 통통 네온런은 🪙 3개로 죽은 곳 바로 앞에서 이어 달리기. 모두 한 판에 한 번만.</li><li><b>출석 보호권</b>: 🪙 {SHIELD_PRICE}개. 빼먹은 날 연속 출석을 지켜 줘요.</li><li>코인으로 사는 건 모두 <b>꾸미기와 편의</b>예요. 점수·능력·판정에는 아무 영향이 없어서 코인이 없어도 똑같이 1등 할 수 있어요.</li></ul>
+<h2>코인은 어디에 쓰나요?</h2><ul class="list"><li><b>아바타 30종</b>: 일반 🪙 3 · 희귀 🪙 8 · 전설 🪙 20. 전설 셋(🪐⚡💎)은 업적 달성이 먼저예요.</li><li><b>칭호</b>: 🪙 5~30. '개근상'은 누적 출석 30일, '수집왕'은 아바타 30종 완성, '출제자'는 질문 채택으로 무료.</li><li><b>이달의 한정 아바타</b> 🪙 12 · <b>게임 배경 테마</b> 🪙 10~20 · <b>꼬리 효과</b> 🪙 4~10 · <b>사운드 팩</b> 🪙 6 · <b>별명 색</b> 🪙 15 · <b>질문 제안</b> 🪙 {QPROP_PRICE}.</li><li><b>스킨</b>: 디자인·색을 🪙 2~50개로 사요.</li><li><b>이어하기</b>: 별빛 요격대·네온 사격장은 🪙 1개, 통통 네온런은 🪙 3개로 죽은 곳 바로 앞에서 이어 달리기. 모두 한 판에 한 번만.</li><li><b>출석 보호권</b>: 🪙 {SHIELD_PRICE}개. 빼먹은 날 연속 출석을 지켜 줘요.</li><li>코인으로 사는 건 모두 <b>꾸미기와 편의</b>예요. 점수·능력·판정에는 아무 영향이 없어서 코인이 없어도 똑같이 1등 할 수 있어요.</li></ul>
 <h2>출석 규칙</h2><ul class="list"><li>한국 시간 0시가 지나면 다시 출석할 수 있어요. 하루 1번, 🪙 1개. <b>7일 연속</b>이면 그날은 🪙 2개.</li><li>코인은 최대 {BONUS_MAX_COINS}개까지 모여요. 하루 빠지면(보호권이 없으면) 연속 일수만 1일부터 다시 세요.</li><li>코인은 <b>돈으로 살 수 없고, 팔거나 현금·상품으로 바꾸거나 다른 사람에게 줄 수 없으며, 광고를 보거나 누르는 것과도 아무 관계가 없어요.</b> 출석·미션·업적·공유로만 생겨요.</li><li>기록(코인·산 물건)은 이 기기의 브라우저에 저장돼요. <a href="/profile">프로필 복구 코드</a>를 만들면 다른 폰·PC에서도 이어 써요. 코드 없이 브라우저 기록(사이트 데이터)을 지우면 처음부터예요.</li></ul>
 <p><a class="btn" href="/games">🕹️ 게임하러 가기</a></p>"""
 
@@ -540,7 +604,7 @@ ADMIN_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak');try{
 ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}};
 const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)$('am').textContent=j.msg||('오류 '+r.status);return r.ok?j:null};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ITEMS=SKINS.filter(k=>k.p>0).map(k=>['c:'+k.id,'🎨 '+k.name]).concat(DESIGNS.map(d=>['d:'+d.g+':'+d.id,d.icon+' '+d.name+(d.leg?' (전설)':'')]),AVSHOP.map(a=>['a:'+a[1],a[0]+' 아바타']),TITLES.filter(t=>t.p).map(t=>['t:'+t.id,'🏷️ '+t.name]));
+const ITEMS=SKINS.filter(k=>k.p>0).map(k=>['c:'+k.id,'🎨 '+k.name]).concat(DESIGNS.map(d=>['d:'+d.g+':'+d.id,d.icon+' '+d.name+(d.leg?' (전설)':'')]),AVSHOP.concat(AVLIM).map(a=>['a:'+a[1],a[0]+' 아바타']),TITLES.filter(t=>t.p||t.by).map(t=>['t:'+t.id,'🏷️ '+t.name]),THEMES.map(d=>['h:'+d.g+':'+d.id,d.icon+' 테마 '+d.name]),TRAILS.map(d=>['r:'+d.id,d.icon+' 꼬리 '+d.name]),SOUNDS.map(d=>['s:'+d.id,d.icon+' '+d.name]),NCOLORS.map(d=>['n:'+d.id,'🖍️ 별명 색 '+d.name]));
 function card(it){const d=it.data||{},own=d.own||{},des=d.des||{};const el=document.createElement('div');el.className='ap';
  el.innerHTML=`<h3>${esc(it.nick)} ${it.tester?'<span class="tag">테스터</span>':''}${it.hide?' <span class="tag">순위 제외</span>':''}</h3><small class="muted">🪙 ${d.coins||0} · 출석 ${d.days||0}일 · 마지막 저장 ${esc(it.updated)}</small>
  <div class="row">코인 <input type="number" class="co" min="0" max="${BONUS_MAX}" value="${d.coins||0}" style="width:80px"> <button class="share" data-x="coins">코인 저장</button> <small class="muted">최대 ${BONUS_MAX}</small></div>
@@ -616,6 +680,12 @@ function form(){const f=$('bwf'),c=code(),n=window.Profile&&Profile.nick();
 $('bl').onclick=e=>{const a=e.target.closest('[data-p]');if(!a)return;e.preventDefault();history.replaceState(null,'','?p='+a.dataset.p);view(+a.dataset.p)};$('bmore').onclick=()=>list(true);
 form();list();const q=+new URLSearchParams(location.search).get('p');if(q)view(q)})();"""
 ADMIN_BOARD = """<div class="card"><h2>💬 게시판 관리</h2><p class="muted">자동 숨김(신고 3번) 글이 맨 위에 와요. 비밀글 내용도 여기서 보여요.</p><button class="share" type="button" id="bpl">불러오기</button><div id="bpa"></div><button class="share" type="button" id="bpm" hidden>더 보기</button></div>"""
+ADMIN_Q = """<div class="card"><h2>💡 질문 제안</h2><p class="muted">사용자가 🪙10으로 제안한 밸런스 질문이에요. 채택하면 그 사람에게 칭호 「출제자」와 🪙10을 돌려줘요. 사이트에 올리는 건 질문 목록에 따로 넣어야 해요(채택한 질문을 알려 주시면 넣어 드려요).</p><button class="share" type="button" id="aql">불러오기</button><div id="aqa"></div></div>"""
+ADMIN_Q_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak'),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)alert(j.msg||('오류 '+r.status));return r.ok?j:null};
+async function load(){const j=await api({a:'qprops'});if(!j)return;$('aqa').innerHTML=j.list.length?j.list.map(q=>`<div class="ap"><b>${esc(q.a)}</b> vs <b>${esc(q.b)}</b><br><small class="muted">${esc(q.nick)} · ${esc(q.created)} · ${q.st===1?'✅ 채택':q.st===2?'반려':'대기'}</small>${q.st?'':`<div class="row"><button class="share" data-qa="${q.id}">채택</button><button class="share" data-qr="${q.id}">반려</button></div>`}</div>`).join(''):'<p class="muted">아직 제안이 없어요.</p>';
+ $('aqa').querySelectorAll('[data-qa],[data-qr]').forEach(b=>b.onclick=async()=>{const ad=!!b.dataset.qa;if(!confirm(ad?'이 질문을 채택할까요?':'반려할까요?'))return;const r=await api({a:ad?'qadopt':'qreject',id:+(b.dataset.qa||b.dataset.qr)});if(r){if(r.msg)alert(r.msg);load()}})}
+$('aql').onclick=load})();"""
 ADMIN_BOARD_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak'),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)alert(j.msg||('오류 '+r.status));return r.ok?j:null};
 let pg=0;const st=p=>p.hidden===2?'<span class="tag">신고로 자동 숨김</span>':p.hidden?'<span class="tag">숨김</span>':'';
@@ -641,7 +711,7 @@ el.innerHTML=Object.keys(by).map(g=>{const a=by[g],best=Math.max(...a.map(x=>x.s
 PROFILE_PAGE_JS = r"""
 Profile.page=function(pg){if(pg._busy)return;const own=(window.Bonus&&Bonus.state().own)||{},n=Profile.nick(),code=Profile.code();
  const cur=n?n.split(' ')[0]:'🐱',name=n?n.slice(n.indexOf(' ')+1):'';
- pg.querySelector('.pv').innerHTML=`<span class="pav">${n?cur:'❔'}</span><b>${n?name:'아직 별명이 없어요'}${n&&window.Bonus&&Bonus.title()?' <span class="ttl">「'+Bonus.title().name+'」</span>':''}</b><small>${n?'순위에 이렇게 보여요':'지금은 자동 별명: '+myNick()}</small>`;
+ pg.querySelector('.pv').innerHTML=`<span class="pav${window.Bonus&&Bonus.allAv()?' gold':''}">${n?cur:'❔'}</span><b>${n?name:'아직 별명이 없어요'}${n&&window.Bonus&&Bonus.title()?' <span class="ttl">「'+Bonus.title().name+'」</span>':''}</b><small>${n?'순위에 이렇게 보여요':'지금은 자동 별명: '+myNick()}</small>`;
  const sel=pg.dataset.av||cur;pg.dataset.av=sel;
  pg.querySelector('.avs').innerHTML=AVATARS.map(a=>{const lk=AVATAR_LOCK[a]&&!own[AVATAR_LOCK[a]];return `<button type="button" data-a="${a}" class="${a===sel?'sel':''}"${lk?' disabled title="코인 상점(출석체크)에서 사면 열려요" style="filter:grayscale(1);opacity:.35"':''}>${a}</button>`}).join('');
  pg.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{pg.dataset.av=b.dataset.a;Profile.page(pg)});
@@ -679,7 +749,7 @@ nav a.me{display:flex;align-items:center;gap:4px;max-width:150px;border-color:#f
 @media (max-width:560px){nav a.me b{display:none}nav a.me.new b{display:inline}nav a.me.new b{font-size:0}nav a.me.new b::after{content:'프로필';font-size:12px}}@media (max-width:420px){nav .hs{display:none}nav{gap:4px}}nav a{white-space:nowrap}@media (max-width:380px){nav a{padding:5px 5px!important;font-size:11.5px!important}.logo{font-size:21px!important}.logo span{font-size:16px!important}header .wrap{gap:6px}nav{gap:3px}}
 .preshare{margin:4px 0 14px}.preshare small{margin-left:4px}
 .mkp{margin:6px 0 0}.mkp .btn{display:inline-block}
-#profpage .pv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}#profpage .pav{font-size:56px;line-height:1.1}#profpage .pv b{font-size:22px}#profpage .pv small{color:var(--muted)}
+#profpage .pv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}#profpage .pav{font-size:56px;line-height:1.1}#profpage .pav.gold{border:3px solid #ffd23f;border-radius:50%;padding:4px 10px;box-shadow:0 0 18px #ffd23f99,inset 0 0 12px #ffd23f55}#profpage .pv b{font-size:22px}#profpage .pv small{color:var(--muted)}
 #profpage .avs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}#profpage .avs button{font-size:26px;aspect-ratio:1;border-radius:12px;border:2px solid var(--line);background:var(--bg2);cursor:pointer;padding:0}
 #profpage .avs button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f66}#profpage .avs button:disabled{opacity:.45;cursor:default;font-size:18px}
 #profpage input{width:100%;font:inherit;font-size:18px;padding:12px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);margin-bottom:6px}
@@ -824,7 +894,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY + MYREC_BODY, COMMON_JS + PROFILE_PAGE_JS + f"const GN={gnames};" + MYREC_JS, noindex=True)
     write("bonus", f"출석체크·코인 상점 | {cfg['siteName']}", "5락실 출석체크·오늘의 미션. 코인을 모아 아바타·칭호·스킨을 모으고 이어하기에 써요. 게임은 모두 무료.",
           BONUS_BODY, "window.FPG=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮")] for g in games}, ensure_ascii=False) + ";", noindex=True)
-    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_BOARD, ADMIN_JS + ADMIN_BOARD_JS, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
     write("board", f"게시판 | {cfg['siteName']}", "5락실 게시판. 게임 이야기, 건의, 오류 제보, 프로필 문의.", BOARD_BODY, BOARD_JS, noindex=True)
     write("board-rules", f"게시판 이용 지침 | {cfg['siteName']}", "5락실 게시판 이용 지침과 제재 기준.", BOARD_RULES, noindex=True)
 
