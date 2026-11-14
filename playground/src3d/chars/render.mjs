@@ -36,7 +36,7 @@ for (const c of classes) {
   const png = Buffer.from(url.split(',')[1], 'base64');
   if (sheet) { const f = path.join(HERE, 'sheet-' + c + '.png'); fs.writeFileSync(f, png); console.log('sheet', f); continue; }
   // PNG → WebP (브라우저로 변환: 투명 유지, 품질 0.86)
-  const webp = await pg.evaluate(async (u) => { const im = new Image(); im.src = u; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); return c.toDataURL('image/webp', .86); }, url);
+  const webp = await pg.evaluate(async (u) => { const im = new Image(); im.src = u; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); return c.toDataURL('image/webp', .82); }, url);
   const f = c === 'mongle' ? path.resolve(ROOT, '../static/img/mongle/mongle3d.webp') : path.join(OUT, c + '.webp'); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, Buffer.from(webp.split(',')[1], 'base64'));
   console.log(c, (fs.statSync(f).size / 1024).toFixed(0) + 'KB');
 }

@@ -108,7 +108,7 @@ window.renderClass = async function (cls, label) {
   // 살짝 위에서 내려다보기(2.5D)
   holder.rotation.x = .16;
   cam.updateProjectionMatrix(); mixer.stopAllAction();
-  const COLS = C.cols || 5, ROWS = Math.ceil(FR.length / COLS), out = document.createElement('canvas');
+  const COLS = C.cols || 8, ROWS = Math.ceil(FR.length / COLS), out = document.createElement('canvas');
   out.width = COLS * CW; out.height = ROWS * CH * (label ? 1.12 : 1); const o = out.getContext('2d');
   o.imageSmoothingQuality = 'high';
   if (label) { o.fillStyle = '#1a1438'; o.fillRect(0, 0, out.width, out.height); }
