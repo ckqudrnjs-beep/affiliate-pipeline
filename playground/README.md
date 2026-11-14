@@ -140,3 +140,10 @@
   D1 오류·한도 초과는 503 `{error:"busy", msg}` 로 바꿔 화면이 "잠시 쉬는 중"을 보여 준다. 환경변수 `API_PAUSE=1` 이면 저장(POST)만 멈춤(/api/admin 제외).
 - 화면: 순위 저장이 실패하면 `nr_pend_<게임>` 에 두었다가 같은 날 다시 열면 재전송. 프로필은 바뀐 게 없으면 저장 요청을 안 보내고(`nr_psent`), 서버가 진짜 `nocode` 라고 할 때만 기기에서 코드를 지운다.
 - 새 API를 만들 때: 같은 사람에게 매 판 요청하지 말 것, 오래된 행 삭제는 확률로 가끔, WHERE 조건 열에 색인. 사용량 알림은 `.github/workflows/cf-usage.yml` (plan/SCALING.md 8장).
+
+## 별똥별 피하기 v2 (2026-11-14 디자인 개편)
+- 규칙·점수·같은 판은 1판 그대로(별똥별·별 생성 순서와 R() 호출 순서 동일). 고정 프레임 1/60, 경기장 폭 400(높이 560~820, 속도는 높이에 비례).
+- 페이지 `games/dodge/` (포스터 `static/img/dodge-poster.jpg`), 본체 `static/js/dodge.js`(번들 없음, 시작 누를 때·잠시 뒤 미리 불러옴), `ownfs`.
+- 상점 아이템(내 캐릭터 ufo/cat/astro, 별똥별 모양 ice/candy)은 `Bonus.gitem('dodge',…)` 그대로, 모두 코드로 그린 그림.
+- 테스트: `#dgdebug` → `window.__dg` (bot(true), fast(n), god(true), skin('cat','candy'), poster()).
+- 그래픽 품질 기준: docs/GAME_QUALITY.md (계획 폴더 plan/GAME_QUALITY.md 와 같음).
