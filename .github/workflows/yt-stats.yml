@@ -1,0 +1,41 @@
+name: yt-stats
+
+# 쇼츠 조회수 기록 (2026-11-15). 매일 22:41 KST 올린 영상 공개 통계를 data/youtube/stats.json 에 쌓고,
+# 월요일엔 주간 점검표 docs/SHORTS_WEEKLY.md 를 만든다. 읽기만 하고 영상은 바꾸지 않는다.
+on:
+  schedule:
+    - cron: "41 13 * * *"   # 22:41 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 통계
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+        run: |
+          PYTHONPATH=src python -m pipeline.yt_stats fetch
+          PYTHONPATH=src python -m pipeline.yt_stats weekly >> "$GITHUB_STEP_SUMMARY"
+      - name: 저장
+        run: |
+          git config user.name "yt-stats-bot"
+          git config user.email "yt-stats-bot@users.noreply.github.com"
+          git add data/youtube/stats.json docs/SHORTS_WEEKLY.md
+          git commit -m "쇼츠 조회수 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase -q origin main
+          git push origin HEAD:main

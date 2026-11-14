@@ -284,9 +284,10 @@ def quiz_spec(d: dt.date) -> dict | None:
     subj = re.sub(r"\s*\([^)]*\)", "", q["q"].split(", ")[0]).strip()
     badge = f"{subj} 얼마?" if len(subj) <= 6 else "얼마게?"
     qs = re.sub(r"\s*\([^)]*\)", "", q["q"])
-    title = f"{qs} | 오늘의 얼마게 #{no}"
-    if len(title) > 60:
-        title = f"오늘의 얼마게 #{no}: 3초 안에 맞혀 봐"
+    # 제목 = 검색 키워드(주제) + 질문 + 회차, 40자 이하·# 없음 (2026-11-15 조회수 규칙)
+    title = f"{subj}, 얼마일까? | 오늘의 얼마게 {no}회"
+    if len(title) > 40:
+        title = f"오늘의 얼마게 {no}회: 3초 안에 맞혀 봐"
     return {
         "date": d.isoformat(), "kind": "short", "format": "quiz", "format_name": "오늘의 얼마게", "series_no": no,
         "slug": f"ep-{d.isoformat()}-quiz", "quiz_id": q["id"], "title": title, "site_path": "quiz.html",
@@ -416,6 +417,15 @@ def check(spec: dict) -> list[str]:
             if b in say + json.dumps(s, ensure_ascii=False):
                 e.append(f"장면 {i}: 금지 표현 '{b}'")
     chars = (110, 330) if kind == "short" else (1400, 9000)
+    new = kind == "short" and spec.get("date", "") >= "2026-11-20"  # 2026-11-15 조회수 규칙 (docs/SHORTS_GROWTH.md)
+    if new and spec.get("format") != "quiz":
+        chars = (110, 240)  # 대략 18~33초: 끝까지 보고 다시 보게
+    if new and len(title) > 40:
+        e.append("쇼츠 제목 40자 이하 (검색 키워드 + 질문, 휴대폰에서 잘리지 않게)")
+    if new and "#" in title:
+        e.append("제목에 # 넣지 않기 (해시태그는 설명란에 자동)")
+    if new and scenes and scenes[0].get("type") == "skit" and not scenes[0].get("badge"):
+        e.append("첫 장면 skit 에 badge (썸네일·첫 1초 훅) 필수")
     if not chars[0] <= words <= chars[1]:
         e.append(f"내레이션 글자 수 {words} (권장 {chars[0]}~{chars[1]})")
     if has_ad and not any(s.get("type") == "end" for s in scenes):
