@@ -1,4 +1,4 @@
-// 몽글숲 아지트 — 5락실 육성 RPG 체험판 (테스터 전용, BK 11/14)
+// 몽글숲 아지트 — 5락실 육성 RPG (BK 11/14 정식 릴리즈)
 // 숲 정령 몽글이를 돌보고, 산책 보내고, 요리하고, 아지트를 꾸미는 느긋한 육성 게임. 전투 없음.
 // 그림은 모두 /js/mongle-art.js 에서 코드로 그림. 저장은 이 기기(localStorage 'mg_save_v1').
 (function () {
@@ -6,7 +6,7 @@
 const A = window.MongleArt, TAU = Math.PI * 2;
 const W = 390, H = 844;
 const DEBUG = /mgdebug/.test(location.hash);
-const TRIAL_DIV = 10; // 체험판: 산책 시간 1/10 (3분 · 12분 · 36분)
+const TRIAL_DIV = 1; // 정식(11/14): 실제 시간 30분 · 2시간 · 6시간
 const KDAY = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const KHOUR = () => new Date(Date.now() + 9 * 3600e3).getUTCHours();
 const EX_MAX = 5, EX_ACORN = 100, COOK_COST = 10, FEED_COST = 5, WALK_MAX = 3, PAT_MAX = 10;
@@ -160,6 +160,7 @@ function careMark(k) {
 function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
 function walkLeft() { return SV.walk ? Math.max(0, SV.walk.e - Date.now()) : 0; }
 function fmt(ms) { const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(ss).padStart(2, '0'); }
+function minT(m) { return m >= 60 ? (m / 60) + '시간' : m + '분'; }
 function walkDur(i) { return COURSE[i].min * 60000 / TRIAL_DIV; }
 function sendWalk(i) {
   const C = COURSE[i];
@@ -349,7 +350,7 @@ function sWalk() {
   const mk = cv.width + '|' + sc;
   if (mapCache.k !== mk) { const o = mapCache.cv || document.createElement('canvas'), s = sc * dpr; o.width = Math.ceil((W - 20) * s); o.height = Math.ceil(330 * s); const g = o.getContext('2d'), keep = c; c = g; c.setTransform(s, 0, 0, s, 0, 0); A.walkMap(c, W - 20, 330, 0); c = keep; mapCache = { k: mk, cv: o }; }
   c.save(); A.rr(c, 10, 104, W - 20, 330, 24); c.clip(); c.drawImage(mapCache.cv, 10, 104, W - 20, 330); c.translate(10, 104);
-  COURSE.forEach((C, i) => { const lk = SV.lv < C.lv; c.globalAlpha = lk ? 0.55 : 1; A.pin(c, C.pin[0], C.pin[1] + (SV.walk && SV.walk.c === i ? Math.sin(T * 4) * 3 : 0), 1, C.col, C.n, (C.min / TRIAL_DIV) + '분'); c.globalAlpha = 1; });
+  COURSE.forEach((C, i) => { const lk = SV.lv < C.lv; c.globalAlpha = lk ? 0.55 : 1; A.pin(c, C.pin[0], C.pin[1] + (SV.walk && SV.walk.c === i ? Math.sin(T * 4) * 3 : 0), 1, C.col, C.n, minT(C.min / TRIAL_DIV)); c.globalAlpha = 1; });
   // 길 위의 몽글이
   let mx = 150, my = 312, wk = SV.walk, lookv = -1;
   if (wk) { const C = COURSE[wk.c], p = Math.min(1, (Date.now() - wk.s) / (wk.e - wk.s)), q = p < 0.5 ? p * 2 : (1 - p) * 2; mx = 150 + (C.pin[0] - 150) * q; my = 312 + (C.pin[1] + 6 - 312) * q - Math.abs(Math.sin(T * 6)) * 4; lookv = p < 0.5 ? Math.sign(C.pin[0] - 150) : -Math.sign(C.pin[0] - 150); if (walkLeft() === 0) { mx = 150; my = 312; } }
@@ -366,13 +367,13 @@ function sWalk() {
     bar(32, 494, W - 64, p, C.col); txt(wk.bonus ? '요리 효과: 보상 +' + Math.round(wk.bonus * 100) + '%' + (wk.card ? ' · 엽서 꼭 받기' : '') : (wk.low ? '배고프거나 심심해서 보상이 조금 줄어요' : '화면을 꺼도 몽글이는 산책을 계속해요'), 32, 522, 12.5, '#9a7a6a');
   } else {
     txt(stage() === 0 ? '싹이 나면 산책을 갈 수 있어요' : '어디로 산책 보낼까요?', 20, 458, 20, '#4a3530');
-    txt('오늘 ' + left + '번 남음 · 체험판은 시간 1/10' + (SV.buff ? ' · ' + SV.buff.n + ' 효과 대기' : ''), 20, 482, 12.5, '#a58a7a');
+    txt('오늘 ' + left + '번 남음' + (SV.buff ? ' · ' + SV.buff.n + ' 효과 대기' : ''), 20, 482, 12.5, '#a58a7a');
   }
   const y0 = wk ? 550 : 500, gap = wk ? 70 : 76;
   COURSE.forEach((C, i) => {
     const y = y0 + i * gap, ch = gap - 10; card(16, y, W - 32, ch);
     c.save(); A.rr(c, 26, y + 8, ch - 16, ch - 16, 14); c.fillStyle = A.mix(C.col, '#ffffff', 0.75); c.fill(); c.restore(); C.ic(c, 26 + (ch - 16) / 2, y + ch / 2);
-    txt(C.n, 88, y + 21, 17, '#4a3530'); tag(88 + tw(C.n, 17) + 8, y + 11, (C.min / TRIAL_DIV) + '분', C.col);
+    txt(C.n, 88, y + 21, 17, '#4a3530'); tag(88 + tw(C.n, 17) + 8, y + 11, minT(C.min / TRIAL_DIV), C.col);
     txt('얻는 것: ' + C.get.map(g => ING[g[0]][0]).join(' · ') + ' · 도토리', 88, y + ch - 18, 12, '#9a7a6a');
     if (SV.lv < C.lv) { pill(W - 118, y + ch / 2 - 16, 96, 32, '#efe4da'); txt('Lv.' + C.lv + ' 열림', W - 70, y + ch / 2, 13, '#a58a7a', 'center'); }
     else btn(W - 108, y + ch / 2 - 18, 82, 36, '보내기', ['#7cc3a8', '#f29a6b', '#6aa8e8'][i], !wk && left > 0 && stage() > 0 ? () => sendWalk(i) : null);
@@ -481,7 +482,7 @@ function sGrow() {
     A.mongle(c, x + 28, 652, 0.36, { stage: 2, pal: SV.pal, t: 0, scarf: w[0] === 'scarf' ? '#ff8f6b' : null, hat: w[0] === 'hat' ? 'straw' : null });
     txt(w[1], x + 56, 626, 14, '#4a3530'); if (own) txt(on ? '입는 중' : '벗음', x + 56, 644, 12, on ? '#c75b3f' : '#a58a7a'); else { A.coinAcorn(c, x + 64, 646, 0.55); txt(String(w[2]), x + 74, 644, 12.5, '#6b4423'); }
     hit(x, 610, 162, 46, () => { if (own) { SV.wearOn[w[0]] = !on; sfx('tap'); save(); return; } if (SV.acorn >= w[2]) { SV.acorn -= w[2]; SV.wear[w[0]] = 1; SV.wearOn[w[0]] = true; careMark('deco'); sfx('ok'); burst(x + 28, 630, 'spark', 12); save(); } else { sfx('no'); } }); });
-  txt('체험판 기록은 이 기기에만 저장돼요', W / 2, 690, 12, '#b49a8a', 'center');
+  txt('기록은 이 기기에만 저장돼요', W / 2, 690, 12, '#b49a8a', 'center');
   txt('현금 결제·뽑기·거래는 없어요', W / 2, 708, 12, '#b49a8a', 'center');
 }
 
@@ -524,7 +525,6 @@ function sModal() {
     const y = mBox(470, '숲에서 씨앗을 주웠어요');
     A.glow(c, W / 2, y + 170, 100, '#fff4c8', 0.7); A.mongle(c, W / 2, y + 220, 1.6, { stage: 0, t: T, pal: SV.pal });
     wrap('따뜻한 아지트에 심고 쓰다듬어 주면 싹이 트고, 몽글이로 자라요. 매일 조금씩 돌보고 산책 보내 주세요.', W / 2, y + 268, W - 100, 14.5, '#7a5a50', 22, 'center');
-    txt('🧪 테스터 체험판 · 산책 시간 1/10', W / 2, y + 352, 12.5, '#a58a7a', 'center');
     btn(W / 2 - 90, y + 384, 180, 44, '아지트에 심기', '#7cc3a8', () => { modal = null; SV.born = Date.now(); save(); sfx('ok'); burst(212, 600, 'spark', 20); say('쓰다듬어 주면 싹이 나요!'); });
   } else if (m.k === 'deco') sDeco();
 }
