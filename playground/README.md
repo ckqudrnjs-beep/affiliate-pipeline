@@ -110,3 +110,10 @@
 - 테스트: `#twdebug` → `window.__tw` (start(), build(n, 오차), setLook(디자인, 테마), dbg.bot=true 자동 플레이, state()). 디버그 판은 순위 제출 안 함.
 
 - 미니 상점: DESIGN_GAMES·DESIGNS·THEMES 에 tower 를 넣어 두었으므로, 게임별 상점(gshop, 별도 PR)이 들어오면 이 게임 페이지에 자동으로 생김. 그 전에는 /bonus 전체 상점에서 살 수 있음.
+
+## 생존 로그라이트 (네온 생존자, 2026-11-14)
+- 오리지널 장르 게임(특정 기존 게임의 이름·캐릭터·그림·음악 사용 안 함). 페이지 `games/survivor/`, 본체 `static/js/survivor.js`(번들 없음, 페이지 열리고 미리 불러옴). 포스터 `static/img/survivor-poster.jpg`.
+- 매일 같은 판: 적 등장 `seeded('survivor'+KST+'#spawn')`, 드롭 `#drop`, 레벨업 카드 `#c<레벨>`. 고정 스텝(1/60초) 업데이트라 기기 속도와 무관. 점수 상한 `functions/api/score.js` MAX.survivor.
+- 3분(180초) 생존 = 클리어(+5,000, 업적 `sv3`), 이후 무한 모드 선택. 이어하기 🪙1·멈춤 1번은 다른 게임과 같은 규칙.
+- 꾸미기: build.py DESIGNS·THEMES g="survivor". 게임 안 미니 상점은 임시 `Bonus.mini`(.mini-shop) — 공용 게임 상점(#gshop) 머지되면 제거.
+- 테스트용: `#svdebug` → `window.__sv` (bot(true), fast(n), god(true), give('laser',3), step(n), time(t)). 디버그 판은 순위에 안 올라감.
