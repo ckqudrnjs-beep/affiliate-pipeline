@@ -219,6 +219,16 @@ def game_grid(games: list[dict]) -> str:
     return _grid(games)
 
 
+def trial_box(hidden: list[dict]) -> str:
+    """테스터 전용 체험판 칸(BK 11/14). 평소엔 숨김, 테스터 프로필·개발자(관리자 로그인한 기기)에게만 /js/tester.js 확인 후 보인다."""
+    if not hidden:
+        return ""
+    return ('<div id="trialbox" hidden style="margin-bottom:22px"><div class="sec"><h2>🧪 테스터 전용 체험판</h2><span class="tag">TEST</span></div>'
+            '<p class="muted">테스터·개발자에게만 보이는 칸이에요. 아직 다른 사람에겐 안 보여요.</p>' + _grid(hidden) + '</div>'
+            '<script>(function(){try{if(!localStorage.getItem(\'nr_pcode\')&&!localStorage.getItem(\'nr_dev\'))return}catch(e){return}'
+            'var s=document.createElement(\'script\');s.src=\'/js/tester.js\';s.onload=function(){nrTester().then(function(ok){if(ok)document.getElementById(\'trialbox\').hidden=false})};document.head.appendChild(s)})()</script>')
+
+
 def _grid(games: list[dict]) -> str:
     colors = ["#ff3d7f", "#22d3ee", "#ffd23f", "#3ddc84", "#b06bff", "#ff8a3d"]
     cards = "".join(f'<a href="/games/{g["slug"]}" style="--c:{colors[i % len(colors)]}">{"<span class=rk>RANK</span>" if g.get("ranked") else ""}<span class="scr"><span class="ic">{g.get("icon", "🎮")}</span></span><b>{esc(g["name"])}</b><small>{esc(g["short"])}</small><span class="play"><span>PLAY</span><span>▶</span></span></a>' for i, g in enumerate(games))
@@ -756,10 +766,10 @@ ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:inline-block
 ADMIN_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak');try{ak.value=sessionStorage.getItem('nr_admk')||''}catch(e){}
 const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)$('am').textContent=j.msg||('오류 '+r.status);return r.ok?j:null};
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function stats(){if(!ak.value)return;const j=await api({a:'stats'});if(!j)return;const w=(n,t)=>`<span${n?' class="warn"':''}>${t} <b>${n}</b></span>`;
+async function stats(){if(!ak.value)return;const j=await api({a:'stats'});if(!j)return;api({a:'devtoken'}).then(d=>{if(d&&d.t)try{localStorage.setItem('nr_dev',d.t);localStorage.removeItem('nr_tester')}catch(e){}});const w=(n,t)=>`<span${n?' class="warn"':''}>${t} <b>${n}</b></span>`;
  $('ast').innerHTML=`<span>프로필 <b>${j.profiles}</b>명</span><span>오늘 저장 <b>${j.today}</b>명</span><span>테스터 <b>${j.testers}</b></span>`+w(j.autohid,'🚨 신고로 숨겨진 글')+w(j.secret,'🔒 답변 안 한 비밀글')+w(j.qprops,'💡 대기 중 질문 제안')+`<span>글쓰기 제한 <b>${j.bans}</b>명</span>`}
 ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}stats()};
-$('aout').onclick=()=>{ak.value='';try{sessionStorage.removeItem('nr_admk')}catch(e){}$('al').innerHTML='';$('ast').innerHTML='';$('am').textContent='이 탭에서 비밀번호를 지웠어요.'};
+$('aout').onclick=()=>{ak.value='';try{sessionStorage.removeItem('nr_admk');localStorage.removeItem('nr_dev');localStorage.removeItem('nr_tester')}catch(e){}$('al').innerHTML='';$('ast').innerHTML='';$('am').textContent='이 탭에서 비밀번호를 지웠어요.'};
 // 상점 구조: 사이트 공통(출석·코인 상점) + 게임마다 그 게임 상점. eq = 장착 칸 [저장 필드, 키, 기본값 이름]
 const AGN=window.AGN||{},gname=g=>AGN[g]?AGN[g][1]+' '+AGN[g][0]:g;
 const SHOPS=[{id:'site',name:'🌐 사이트 공통 상점 (출석·코인 상점)',groups:[
@@ -1023,11 +1033,12 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     # meta.json "hidden": true = 테스터 전용 체험판(BK 11/14 네온 레이드). 목록·순위 탭·사이트맵에서 빼고 페이지만 noindex로 만든다.
     games = [g for g in allgames if not g.get("hidden")]
     grid = game_grid(games)
+    trial = trial_box([g for g in allgames if g.get("hidden")])
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
           f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"
           f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
-          f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{grid}"
+          f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{trial}{grid}"
           "<!--AD-->"
           f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
@@ -1051,7 +1062,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->")
 
     write("games", f"무료 미니게임 | {cfg['siteName']}", "5락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
-          f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{grid}")
+          f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{trial}{grid}")
 
     inject = {
         "WORDS": json.loads((HERE / "data" / "chosung_words.json").read_text(encoding="utf-8")),

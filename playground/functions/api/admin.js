@@ -11,9 +11,10 @@
 // POST /api/admin {a:"reissue", h}                  → 새 복구 코드 발급(옛 코드 즉시 무효, 새 코드는 응답에 한 번만. 원본은 저장 안 함)
 // 게시판: {a:"posts", page} 전체 글(숨김·비밀 포함) / {a:"phide", id, on} / {a:"pdel", id} / {a:"reply", id, text} / {a:"ban", id, days(0=해제, 7, 9999=영구)}
 // 질문 제안: {a:"qprops"} 대기 목록 / {a:"qadopt", id} 채택(칭호 「출제자」 + 🪙10 돌려줌, rev+1) / {a:"qreject", id} 반려
+// POST /api/admin {a:"devtoken"}                   → {t} 개발자 토큰(이 기기에서 테스터 전용 체험판을 열 수 있게)
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
-import { clean, normCode } from "./profile.js";
+import { clean, normCode, devToken } from "./profile.js";
 import { ensureBoard } from "./board.js";
 import { ensureQ } from "./qprop.js";
 
@@ -120,6 +121,7 @@ export async function onRequestPost({ request, env }) {
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM profiles").first();
     return json({ total: n ? n.n : 0, more: (results || []).length > 50, list: (results || []).slice(0, 50).map((r) => { let d = {}; try { d = JSON.parse(r.data); } catch {} return { h: r.h, nick: r.nick, updated: r.updated, coins: d.coins || 0, days: d.days || 0, tester: !!r.th, hide: !!r.hide }; }) });
   }
+  if (a === "devtoken") return json({ t: await devToken(String(env.ADMIN_KEY)) });
   if (a === "stats") {
     await ensureBoard(env.DB); await ensureQ(env.DB);
     const one = async (sql, ...v) => { try { const r = await env.DB.prepare(sql).bind(...v).first(); return r ? r.n : 0; } catch { return 0; } };
