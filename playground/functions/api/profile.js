@@ -3,7 +3,8 @@
 // POST /api/profile {a:"get", code}              → {nick, data, rev}  다른 기기에서 불러오기
 // POST /api/profile {a:"put", code, nick, data, rev} → {rev}     저장(코드 아는 사람만)
 // POST /api/profile {a:"del", code}              → {ok}       프로필 삭제
-// POST /api/profile {a:"tester", code}           → {tester}   테스터 전용 체험판(네온 레이드) 입장 확인
+// POST /api/profile {a:"tester", code}           → {tester}   테스터 전용 체험판(네온 레이드·몽글숲) 입장 확인
+// POST /api/profile {a:"dev", t}                 → {dev}      개발자(관리자) 확인. t = 관리자 페이지 로그인 때 받은 토큰(/api/admin a=devtoken)
 // 개인정보(이메일·전화·이름) 없음. 원본 IP 저장 안 함: (IP+날짜+비밀값) 해시로 하루 시도 횟수만 센다.
 import { profileNickOk } from "../../lib/nick.js";
 
@@ -15,6 +16,7 @@ async function sha(s) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
+export const devToken = (k) => sha(`${k}|nr-dev`);
 export function normCode(c) {
   const s = String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   return s.length === 12 && [...s].every((ch) => ABC.includes(ch)) ? s : null;
@@ -78,6 +80,10 @@ export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error: "nodb" }, 500);
   await ensure(env.DB);
   const a = b && b.a, ip = request.headers.get("cf-connecting-ip") || "0", salt = env.VOTE_SALT || "";
+  if (a === "dev") { // 비밀번호 원본이 아니라 그 해시 토큰만 기기에 둔다. ADMIN_KEY 를 바꾸면 모든 토큰 무효
+    const k = String(env.ADMIN_KEY || ""), t = String(b.t || "");
+    return json({ dev: k.length >= 10 && t.length === 64 && t === (await devToken(k)) });
+  }
   if (!["new", "get", "put", "del", "tester"].includes(a)) return json({ error: "bad" }, 400);
   if (!(await hit(env, ip, "bad", 0))) return json({ error: "limit", msg: "틀린 코드를 너무 많이 넣었어요. 내일 다시 해 주세요." }, 429);
   if (!(await hit(env, ip, a === "tester" ? "get" : a))) return json({ error: "limit", msg: "오늘 요청이 너무 많아요. 내일 다시 해 주세요." }, 429);
