@@ -22,7 +22,7 @@ class EpisodeCheckTest(unittest.TestCase):
 
     def test_weekday_formats(self):
         self.assertEqual(ep.SHORT_FORMATS[dt.date(2026, 11, 16).weekday()][0], "skit-quiz")  # 월
-        self.assertEqual(sorted(ep.LONG_FORMATS), [2, 5])  # 수·토
+        self.assertEqual(ep.LONG_FORMATS, {})  # 2026-11-14 BK: 롱폼 멈춤
 
 
 class EpisodeUploadTest(unittest.TestCase):
