@@ -1,0 +1,285 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#2a3040}</style>
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+// 끊어진 하늘: 3D 모델 → 쿼터뷰(위에서 30도) 8방향 스프라이트 아틀라스. render.mjs(플레이라이트)가 window.* 를 부른다.
+// 좌표 약속(static/js/sky.js 와 같아야 함): 바닥 1칸 = 마름모 64x32px(1배). 아틀라스는 2배 크기로 그린다.
+// 정사영 카메라, 고도 30도 → 바닥 1단위 = PPU px(2배), 서 있는 물체 높이 h → h*cos30*PPU px.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
+import { HEROES, HFRAMES, MOBS, MFRAMES, NPCS, PROPS } from './defs.js';
+
+const EL = Math.PI / 6, PPU = 64 / Math.SQRT2 * 2, SS = 2; // 2배 아틀라스 기준 1단위 = 90.5px
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05; r.setClearColor(0, 0);
+document.body.appendChild(r.domElement);
+const L = new GLTFLoader(), cache = {};
+const load = n => cache[n] || (cache[n] = new Promise((ok, no) => L.load(n.includes('/') ? n : ('../chars/models/' + n + '.glb'), ok, undefined, no)));
+const hex = n => load('models/' + n + '.gltf');
+
+// 낮 하늘 조명: 하늘빛 + 풀빛 반사 + 왼쪽 위 햇빛 + 뒤쪽 하늘색 테두리빛
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xdcecff, 0x6a8a4a, 1.35));
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.5); sun.position.set(-4, 7, 5); scene.add(sun);
+const rim = new THREE.DirectionalLight(0xbfe4ff, 1.2); rim.position.set(4, 3, -5); scene.add(rim);
+
+function softRim(old, o = {}) {
+  const m = new THREE.MeshStandardMaterial({ map: old && old.map, color: o.color != null ? o.color : 0xffffff, roughness: o.rough ?? .62, metalness: o.metal ?? .08, vertexColors: !!o.vc });
+  if (o.glow) { m.emissive = new THREE.Color(o.glow); m.emissiveIntensity = o.gi || .4; }
+  const tc = new THREE.Color(o.tint || '#ffffff'), ta = o.tint ? (o.ta ?? .78) : 0;
+  m.onBeforeCompile = sh => {
+    sh.uniforms.tintC = { value: tc }; sh.uniforms.tintA = { value: ta };
+    sh.fragmentShader = 'uniform vec3 tintC; uniform float tintA;\n' + sh.fragmentShader
+      .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, tintC * (dot(diffuseColor.rgb, vec3(.3,.59,.11)) * 1.35 + .16), tintA);')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nfloat fr=pow(1.0-abs(dot(normalize(vNormal),normalize(vViewPosition))),3.0);\ntotalEmissiveRadiance+=vec3(1.0,.96,.88)*fr*0.28;');
+  };
+  return m;
+}
+const OLC = 0x24180f;
+function outline(m, k) {
+  const om = new THREE.MeshBasicMaterial({ color: OLC, side: THREE.BackSide });
+  let s; if (m.isSkinnedMesh) { s = new THREE.SkinnedMesh(m.geometry, om); s.bind(m.skeleton, m.bindMatrix); } else s = new THREE.Mesh(m.geometry, om);
+  s.scale.setScalar(k || 1.04); s.userData.ol = 1; m.add(s);
+}
+function std(c, o = {}) { return softRim(null, Object.assign({ color: c }, o)); }
+function outlineAll(g, k) { const ms = []; g.traverse(m => { if (m.isMesh && !m.userData.ol) ms.push(m); }); ms.forEach(m => outline(m, k)); }
+
+// 화면에서 φ 방향(0=오른쪽, 90=아래)으로 보이게 하는 모델 y 회전값
+function yawFor(dir) { const ph = dir * Math.PI / 4, th = Math.atan2(Math.sin(ph) / Math.sin(EL), Math.cos(ph)); return Math.atan2(Math.cos(th), Math.sin(th)); }
+// 아틀라스 칸 카메라: 기준점(발, 월드 원점)이 칸의 (ax, ay) px 에 오게
+function camFor(cw, ch, ax, ay) {
+  const s = SS * 1; const w = cw / PPU, h = ch / PPU; const c = new THREE.OrthographicCamera(-ax / PPU, (cw - ax) / PPU, ay / PPU, -(ch - ay) / PPU, -50, 50);
+  c.position.set(0, Math.sin(EL) * 10, Math.cos(EL) * 10); c.lookAt(0, 0, 0); c.updateProjectionMatrix(); c.updateMatrixWorld(true); return c;
+}
+function shot(cam, cw, ch) { r.setSize(cw * SS, ch * SS); r.render(scene, cam); return r.domElement; }
+
+// ---------------- 주인공 ----------------
+const WEAP = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff',
+  'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', 'Knight_Helmet', 'Knight_Cape', 'Mage_Hat', 'Mage_Cape', 'Rogue_Cape', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug', 'Barbarian_Hat', 'Barbarian_Cape', 'Rogue_Hood'];
+function spear() {
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.035, .04, 2.1, 10), std(0x8a5a32, { rough: .8 })); shaft.position.y = .55; g.add(shaft);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(.085, .42, 4), std(0xdfe6ee, { metal: .7, rough: .25 })); tip.position.y = 1.81; tip.rotation.y = Math.PI / 4; g.add(tip);
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .1, 10), std(0xc8a24a, { metal: .6, rough: .3 })); col.position.y = 1.57; g.add(col);
+  const rib = new THREE.Mesh(new THREE.PlaneGeometry(.12, .42), new THREE.MeshStandardMaterial({ color: 0x3fa6c8, side: THREE.DoubleSide, roughness: .7 })); rib.position.set(.06, 1.36, 0); rib.rotation.z = -.25; g.add(rib);
+  return g;
+}
+function windRibbon(col) {
+  const g = new THREE.Group(); const m = new THREE.MeshStandardMaterial({ color: col, side: THREE.DoubleSide, roughness: .6, emissive: col, emissiveIntensity: .12 });
+  for (const s of [-1, 1]) { const geo = new THREE.PlaneGeometry(.12, .9, 1, 8); const p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setX(i, p.getX(i) + Math.sin((y + .45) * 4) * .08 * s); p.setZ(i, -(y + .45) * .25); } geo.computeVertexNormals();
+    const rb = new THREE.Mesh(geo, m); rb.position.set(s * .18, -.45, -.25); rb.rotation.x = .5; g.add(rb); }
+  return g;
+}
+async function buildHero(key) {
+  const H = HEROES[key] || NPCS[key], gl = await load(H.model), root = skClone(gl.scene);
+  root.traverse(n => { if (WEAP.includes(n.name)) n.visible = (H.show || []).includes(n.name); });
+  const slot = nm => { let s; root.traverse(n => { if (n.name === nm) s = n; }); return s; };
+  for (const [model, name, sl] of H.extra || []) { const src = (await load(model)).scene.getObjectByName(name).clone(); src.visible = true; slot(sl).add(src); }
+  const meshes = []; root.traverse(m => { if (m.isMesh && !m.userData.ol) meshes.push(m); });
+  for (const m of meshes) {
+    const nm = m.name || m.parent.name, key2 = Object.keys(H.tint || {}).find(k => nm.startsWith(k) || (m.parent && m.parent.name === k));
+    const gk = Object.keys(H.glow || {}).find(k => nm.startsWith(k) || (m.parent && m.parent.name === k));
+    m.material = softRim(m.material, { tint: key2 && H.tint[key2], glow: gk && H.glow[gk], gi: .5 }); outline(m, 1.035);
+  }
+  if (H.spear) { const s = spear(); outlineAll(s, 1.06); s.rotation.x = Math.PI; s.position.y = .35; slot('handslotr').add(s); }
+  if (H.ribbon) { let chest; root.traverse(n => { if (n.name === 'chest') chest = n; }); const rb = windRibbon(H.ribbon); chest.add(rb); }
+  return { root, clips: gl.animations, H };
+}
+async function renderAnimated(build, frames, FR, cell, dirs) {
+  const { root, clips, H } = await build;
+  const holder = new THREE.Group(); holder.add(root); scene.add(holder);
+  const mixer = new THREE.AnimationMixer(root);
+  const idle = clips.find(a => a.name === 'Idle'); mixer.clipAction(idle).play(); mixer.setTime(0); root.updateMatrixWorld(true);
+  const bb = new THREE.Box3(); root.traverse(n => { if (n.isSkinnedMesh && /_(Head|Body|Leg)/.test(n.name)) bb.expandByObject(n, true); });
+  root.scale.setScalar((H.height || 1) / (bb.max.y - bb.min.y));
+  const [CWp, CHp, AX, AY] = cell, cam = camFor(CWp, CHp, AX, AY), D = dirs || 8;
+  const out = document.createElement('canvas'); out.width = FR.length * CWp; out.height = D * CHp; const o = out.getContext('2d'); o.imageSmoothingQuality = 'high';
+  for (let d = 0; d < D; d++) {
+    root.rotation.y = yawFor(D === 8 ? d : [2, 1, 3][d] || 2);
+    FR.forEach((f, i) => {
+      const [an, t] = frames[f], clip = clips.find(a => a.name === an); if (!clip) throw new Error('no clip ' + an);
+      mixer.stopAllAction(); const ac = mixer.clipAction(clip); ac.reset().play(); mixer.setTime(clip.duration * t);
+      o.drawImage(shot(cam, CWp, CHp), i * CWp, d * CHp, CWp, CHp);
+    });
+  }
+  scene.remove(holder);
+  return out;
+}
+const HCELL = [112, 120, 56, 100]; // 칸 w,h, 발 x,y (2배 px)
+window.renderHero = async k => (await renderAnimated(buildHero(k), HEROES[k].frames, HFRAMES, HCELL)).toDataURL('image/png');
+window.renderNPCs = async () => {
+  const keys = Object.keys(NPCS), out = document.createElement('canvas'); out.width = 2 * HCELL[0]; out.height = keys.length * HCELL[1]; const o = out.getContext('2d');
+  for (let i = 0; i < keys.length; i++) { const c = await renderAnimated(buildHero(keys[i]), NPCS[keys[i]].frames, ['idle0', 'idle1'], HCELL, 1); o.drawImage(c, 0, i * HCELL[1]); }
+  return { url: out.toDataURL('image/png'), keys };
+};
+
+// ---------------- 밑것들(몹): 직접 만든 3D ----------------
+function fluffBall(col, R) {
+  const g = new THREE.Group(), m = std(col, { rough: .95 });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(R, 28, 20), m); g.add(core);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 34; i++) { const u = rnd() * 2 - 1, a = rnd() * Math.PI * 2, s = Math.sqrt(1 - u * u); const p = new THREE.Mesh(new THREE.SphereGeometry(R * (.28 + rnd() * .16), 14, 10), m);
+    p.position.set(s * Math.cos(a) * R * .92, u * R * .86, s * Math.sin(a) * R * .92); g.add(p); }
+  return g;
+}
+function eyes(g, R, y, z, sp, big) {
+  for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(R * (big || .17), 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a1420, roughness: .2 })); e.position.set(s * R * sp, y, z); e.scale.z = .6; g.add(e);
+    const h = new THREE.Mesh(new THREE.SphereGeometry(R * .055, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); h.position.set(s * R * sp + R * .05, y + R * .06, z + R * .1); g.add(h); }
+}
+const MODELS = {
+  fluff(o) { // 보풀이: 바람을 먹고 부푼 솜털 뭉치
+    const R = .34, body = new THREE.Group(), fur = fluffBall(o.col || 0xe9e3f2, R); body.add(fur); outlineAll(fur, 1.05);
+    eyes(body, R, R * .12, R * 1.16, .36, .2); const feet = [];
+    for (const s of [-1, 1]) { const f = new THREE.Mesh(new THREE.SphereGeometry(R * .22, 12, 8), std(o.feet || 0x9a8fb0)); f.scale.y = .6; f.position.set(s * R * .45, -R * .95, R * .2); outline(f, 1.1); body.add(f); feet.push(f); }
+    if (o.crown) { for (let i = 0; i < 5; i++) { const t = new THREE.Mesh(new THREE.ConeGeometry(.035, .22, 5), std(0x7a5a34)); const a = i / 5 * Math.PI * 2; t.position.set(Math.cos(a) * .12, R * 1.15, Math.sin(a) * .12); t.rotation.set(Math.sin(a) * .5, 0, -Math.cos(a) * .5); outline(t, 1.1); body.add(t); }
+      const lf = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), std(0x7cc24a)); lf.scale.set(1.6, .4, 1); lf.position.set(.08, R * 1.3, 0); body.add(lf); }
+    const g = new THREE.Group(); g.add(body); body.position.y = R + .02;
+    return { g, pose(st, t) { // st: idle/move/atk/hurt/die, t 0~1
+      let sy = 1, y = 0, lean = 0, f = 0;
+      if (st === 'idle') { sy = 1 + Math.sin(t * Math.PI * 2) * .05; }
+      if (st === 'move') { y = Math.abs(Math.sin(t * Math.PI)) * .16; sy = 1 + (y > .08 ? .08 : -.08); f = Math.sin(t * Math.PI * 2) * .5; }
+      if (st === 'atk') { lean = [-.25, .1, .45][Math.round(t * 2)]; sy = [1.15, .9, .8][Math.round(t * 2)]; y = [0, .05, .12][Math.round(t * 2)]; }
+      if (st === 'hurt') { sy = .82; lean = -.3; }
+      if (st === 'die') { sy = [.6, .25][Math.round(t)]; y = 0; }
+      const wx = Math.min(1.3, 1 / Math.sqrt(sy)); body.scale.set(wx, sy, wx); body.position.y = (R + .02) * sy + y; body.rotation.x = lean; body.position.z = lean > 0 ? lean * .3 : 0;
+      feet[0].position.z = R * .2 + f * .1; feet[1].position.z = R * .2 - f * .1;
+    } };
+  },
+  seed(o) { // 가시씨앗: 가시 돋친 씨앗 꼬투리, 두 다리로 종종
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+    const geo = new THREE.SphereGeometry(.27, 28, 20); geo.scale(1, 1.25, 1); const pod = new THREE.Mesh(geo, std(o.col || 0x8a7a3a, { rough: .7 })); body.add(pod);
+    for (let i = 0; i < 6; i++) { const st = new THREE.Mesh(new THREE.TorusGeometry(.272, .012, 6, 40, Math.PI), std(0x5a4a20)); st.rotation.y = i / 6 * Math.PI; st.scale.y = 1.25; body.add(st); }
+    let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 16; i++) { const u = rnd() * 1.6 - .8, a = rnd() * Math.PI * 2, s = Math.sqrt(1 - u * u); const th = new THREE.Mesh(new THREE.ConeGeometry(.035, .14, 5), std(0xd8c98a));
+      const n = new THREE.Vector3(s * Math.cos(a), u * 1.25, s * Math.sin(a)).normalize(); th.position.copy(n.clone().multiplyScalar(.29)).setY(n.y * .34); th.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n); body.add(th); }
+    const sprout = new THREE.Group(); const stem = new THREE.Mesh(new THREE.CylinderGeometry(.015, .02, .16, 6), std(0x5aa83a)); stem.position.y = .08; sprout.add(stem);
+    for (const s of [-1, 1]) { const lf = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), std(0x7cd24a)); lf.scale.set(1.7, .35, .9); lf.position.set(s * .08, .17, 0); lf.rotation.z = s * .4; sprout.add(lf); }
+    sprout.position.y = .34; body.add(sprout); outlineAll(body, 1.05); eyes(body, .27, .06, .25, .36, .16);
+    const legs = []; for (const s of [-1, 1]) { const lg = new THREE.Group(); const l = new THREE.Mesh(new THREE.CylinderGeometry(.025, .03, .2, 6), std(0x4a3a1a)); l.position.y = -.1; lg.add(l);
+      const ft = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 6), std(0x4a3a1a)); ft.scale.set(1, .5, 1.5); ft.position.set(0, -.2, .03); lg.add(ft); outlineAll(lg, 1.15); lg.position.set(s * .11, .2, 0); g.add(lg); legs.push(lg); }
+    body.position.y = .5;
+    return { g, pose(st, t) {
+      let y = .5, rx = 0, rz = 0, sw = 0, roll = 0;
+      if (st === 'idle') { y = .5 + Math.sin(t * Math.PI * 2) * .015; rz = Math.sin(t * Math.PI * 2) * .05; }
+      if (st === 'move') { sw = Math.sin(t * Math.PI * 2) * .7; y = .5 + Math.abs(Math.cos(t * Math.PI * 2)) * .03; rz = Math.sin(t * Math.PI * 2) * .1; }
+      if (st === 'atk') { const k = Math.round(t * 2); rx = [-.4, .5, .9][k]; y = [.5, .55, .45][k]; }
+      if (st === 'hurt') { rx = -.4; y = .52; }
+      if (st === 'die') { rz = [.9, 1.5][Math.round(t)]; y = [.42, .3][Math.round(t)]; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); legs[0].rotation.x = sw; legs[1].rotation.x = -sw; legs.forEach(l => { l.visible = !(st === 'die' && t > .5); });
+    } };
+  },
+  bird(o) { // 바람도둑: 남의 바람을 훔쳐 나는 회색 새
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+    const geo = new THREE.SphereGeometry(.2, 24, 16); geo.scale(.9, .85, 1.25); const b = new THREE.Mesh(geo, std(o.col || 0x6a7080, { rough: .8 })); body.add(b);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(.15, 16, 12), std(0xd8dce4)); belly.scale.set(.9, .8, 1); belly.position.set(0, -.06, .1); body.add(belly);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.14, 20, 14), std(o.col || 0x6a7080)); head.position.set(0, .13, .2); body.add(head);
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(.04, .14, 6), std(0xe8a83a)); beak.rotation.x = Math.PI / 2; beak.position.set(0, .12, .36); body.add(beak);
+    const scarf = new THREE.Mesh(new THREE.TorusGeometry(.12, .03, 8, 20), std(0x4ab0d8)); scarf.rotation.x = Math.PI / 2 + .3; scarf.position.set(0, .04, .16); body.add(scarf);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(.08, .24, 4), std(0x4a5060)); tail.rotation.x = -Math.PI / 2 - .3; tail.position.set(0, .03, -.3); tail.scale.x = 1.6; body.add(tail);
+    const wings = []; for (const s of [-1, 1]) { const w = new THREE.Group(); const wg = new THREE.SphereGeometry(.16, 14, 10); wg.scale(1.7, .25, 1); const wm = new THREE.Mesh(wg, std(0x575d6c)); wm.position.x = s * .24; w.add(wm); w.position.set(s * .1, .05, 0); body.add(w); wings.push(w); }
+    outlineAll(body, 1.06); eyes(body, .14, .17, .31, .5, .2); body.children.slice(-4).forEach(e => { e.position.y += 0; });
+    body.position.y = .9;
+    return { g, flying: 1, pose(st, t) {
+      let fl = Math.sin(t * Math.PI * 2) * .9, y = .9 + Math.sin(t * Math.PI * 2) * .05, rx = 0;
+      if (st === 'atk') { const k = Math.round(t * 2); rx = [-.5, .4, .8][k]; y = [1, .75, .55][k]; fl = [1, -.6, -.9][k]; }
+      if (st === 'hurt') { rx = -.6; fl = .3; }
+      if (st === 'die') { rx = 1.2; y = [.5, .2][Math.round(t)]; fl = -.2; }
+      body.position.y = y; body.rotation.x = rx; wings[0].rotation.z = fl; wings[1].rotation.z = -fl;
+    } };
+  },
+};
+window.renderMob = async function (k) {
+  const M = MOBS[k], mdl = MODELS[M.model](M), sc = M.scale || 1; mdl.g.scale.setScalar(sc);
+  const holder = new THREE.Group(); holder.add(mdl.g); scene.add(holder);
+  const [CWp, CHp, AX, AY] = M.cell, cam = camFor(CWp, CHp, AX, AY);
+  const out = document.createElement('canvas'); out.width = MFRAMES.length * CWp; out.height = 8 * CHp; const o = out.getContext('2d');
+  for (let d = 0; d < 8; d++) { mdl.g.rotation.y = yawFor(d);
+    MFRAMES.forEach((f, i) => { const [st, t] = f; mdl.pose(st, t); o.drawImage(shot(cam, CWp, CHp), i * CWp, d * CHp, CWp, CHp); }); }
+  scene.remove(holder);
+  return out.toDataURL('image/png');
+};
+
+// ---------------- 소품(건물·나무·바위): 쿼터뷰 45도 ----------------
+window.renderProps = async function () {
+  const items = [];
+  for (const P of PROPS) {
+    const src = (await hex(P.file)).scene.clone(true), w = new THREE.Group(), y = new THREE.Group(); y.add(src); w.add(y);
+    const ms = []; src.traverse(m => { if (m.isMesh) ms.push(m); }); for (const m of ms) { m.material = softRim(m.material, { tint: P.tint, ta: P.ta }); outline(m, 1.025); }
+    y.rotation.y = Math.PI / 4 + (P.rot || 0); w.scale.setScalar(P.s || 1.6); scene.add(w); w.updateMatrixWorld(true);
+    { const b0 = new THREE.Box3().setFromObject(w), c0 = b0.getCenter(new THREE.Vector3()); w.position.set(-c0.x, -b0.min.y, -c0.z); w.updateMatrixWorld(true); } // 바닥 가운데 = 원점
+    const bb = new THREE.Box3().setFromObject(w); // 화면 경계 = 8개 꼭짓점 투영
+    const cam0 = camFor(10, 10, 0, 0); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const cx of [bb.min.x, bb.max.x]) for (const cy of [bb.min.y, bb.max.y]) for (const cz of [bb.min.z, bb.max.z]) { const v = new THREE.Vector3(cx, cy, cz).project(cam0);
+      const px = (v.x + 1) / 2 * 10 * 1, py = (1 - v.y) / 2 * 10; x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); }
+    // camFor(10,10,0,0): 원점이 (0,0)px, 1단위 = PPU px 기준 → 투영 값에 그대로 곱하면 됨
+    const cw = Math.ceil(x1 - x0) + 6, ch = Math.ceil(y1 - y0) + 6, ax = Math.round(-x0) + 3, ay = Math.round(-y0) + 3;
+    const can = document.createElement('canvas'); can.width = cw; can.height = ch; can.getContext('2d').drawImage(shot(camFor(cw, ch, ax, ay), cw, ch), 0, 0, cw, ch);
+    items.push({ key: P.key, can, ax, ay, foot: P.foot || 1 }); scene.remove(w);
+  }
+  // 줄 채우기 배치
+  const W = 2048; let x = 0, yy = 0, rowH = 0; const meta = {};
+  for (const it of items.sort((a, b) => b.can.height - a.can.height)) { if (x + it.can.width > W) { x = 0; yy += rowH + 2; rowH = 0; } it.x = x; it.y = yy; x += it.can.width + 2; rowH = Math.max(rowH, it.can.height); }
+  const out = document.createElement('canvas'); out.width = W; out.height = yy + rowH; const o = out.getContext('2d');
+  for (const it of items) { o.drawImage(it.can, it.x, it.y); meta[it.key] = [it.x, it.y, it.can.width, it.can.height, it.ax, it.ay, it.foot]; }
+  return { url: out.toDataURL('image/png'), meta };
+};
+
+// ---------------- 아이템 그림(3D, 칸 96px) ----------------
+function lathe(pts, mat, seg) { mat.side = THREE.DoubleSide; return new THREE.Mesh(new THREE.LatheGeometry(pts.map(([a, b]) => new THREE.Vector2(a, b)), seg || 28), mat); }
+function flask(col, glow) { const g = new THREE.Group(); const glass = new THREE.MeshPhysicalMaterial({ color: 0xeaf6ff, roughness: .08, transmission: 0, transparent: true, opacity: .45, clearcoat: 1 });
+  g.add(lathe([[0, 0], [.32, .02], [.42, .2], [.4, .45], [.16, .62], [.13, .82], [.15, .86], [0, .86]], glass));
+  const liq = lathe([[0, .03], [.3, .04], [.38, .2], [.36, .42], [0, .42]], std(col, { glow: glow || col, gi: .35, rough: .3 })); g.add(liq);
+  const cork = new THREE.Mesh(new THREE.CylinderGeometry(.1, .09, .14, 14), std(0xa8784a)); cork.position.y = .9; g.add(cork); return g; }
+function ICON(k) {
+  const g = new THREE.Group(); let o;
+  const fromModel = async (m, n, tint) => { const src = (await load(m)).scene.getObjectByName(n).clone(); src.position.set(0, 0, 0); src.rotation.set(0, 0, 0); src.visible = true; src.traverse(q => { if (q.isMesh) q.material = softRim(q.material, { tint }); }); return src; };
+  switch (k) {
+    case 'spear': case 'spear2': { o = spear(); if (k === 'spear2') o.children[1].scale.set(1.4, 1.3, 1.4); o.rotation.z = -.8; g.add(o); break; }
+    case 'staff': return fromModel('Mage', '2H_Staff', '#c8a070').then(m => { m.rotation.z = -.75; g.add(m); return g; });
+    case 'staff2': return fromModel('Mage', '2H_Staff', '#8fd0f0').then(m => { m.rotation.z = -.75; g.add(m); return g; });
+    case 'shield': return fromModel('Knight', 'Round_Shield').then(m => { m.rotation.y = -Math.PI / 2 + .45; g.add(m); return g; });
+    case 'shield2': return fromModel('Knight', 'Badge_Shield').then(m => { m.rotation.y = -Math.PI / 2 + .45; g.add(m); return g; });
+    case 'helm': return fromModel('Knight', 'Knight_Helmet').then(m => { m.rotation.y = .5; g.add(m); return g; });
+    case 'hat': return fromModel('Mage', 'Mage_Hat', '#6fb8e0').then(m => { m.rotation.set(.3, .4, 0); g.add(m); return g; });
+    case 'hood': { const m = std(0x9a7048, { rough: .85 }); m.side = THREE.DoubleSide; const d = new THREE.Mesh(new THREE.SphereGeometry(.42, 24, 16, 0, Math.PI * 2, 0, Math.PI * .55), m); d.scale.set(1, 1.1, 1.05); g.add(d); const t = new THREE.Mesh(new THREE.ConeGeometry(.16, .4, 14), m); t.position.set(0, .32, -.32); t.rotation.x = -1.1; g.add(t); const f = new THREE.Mesh(new THREE.TorusGeometry(.4, .05, 8, 30), std(0x7a5432)); f.rotation.x = Math.PI / 2; f.position.y = .02; g.add(f); g.rotation.y = .6; break; }
+    case 'cloak': return fromModel('Knight', 'Knight_Cape', '#8a7a6a').then(m => { m.rotation.y = Math.PI + .4; g.add(m); return g; });
+    case 'cloak2': return fromModel('Mage', 'Mage_Cape', '#e8c84a').then(m => { m.rotation.y = Math.PI + .4; g.add(m); return g; });
+    case 'look': return fromModel('Mage', 'Spellbook_open', '#f0e6d0').then(m => { m.rotation.set(.6, .3, 0); g.add(m); return g; });
+    case 'armor0': case 'armor1': case 'armor2': case 'inner': {
+      const col = { armor0: 0xd8c8a0, armor1: 0x9a6a3a, armor2: 0x9aa4b0, inner: 0xf0ece0 }[k], m = std(col, { metal: k === 'armor2' ? .6 : .05, rough: k === 'armor2' ? .35 : .8 });
+      const body = lathe([[0, 0], [.42, 0], [.46, .3], [.5, .62], [.46, .82], [.22, .92], [0, .9]], m); body.scale.z = .62; g.add(body);
+      for (const s of [-1, 1]) { const sh = new THREE.Mesh(new THREE.SphereGeometry(.2, 16, 12), m); sh.position.set(s * .48, .76, 0); sh.scale.set(1, .7, .8); g.add(sh); if (k !== 'armor2') { const sl = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, .36, 12), m); sl.position.set(s * .58, .55, 0); sl.rotation.z = s * .35; g.add(sl); } }
+      if (k === 'armor2') for (let i = 0; i < 4; i++) { const sc = new THREE.Mesh(new THREE.TorusGeometry(.44 - i * .02, .025, 6, 30, Math.PI), std(0x6a7480, { metal: .6 })); sc.rotation.y = Math.PI / 2 * 0; sc.position.y = .2 + i * .16; sc.scale.z = .62; sc.rotation.x = Math.PI / 2; g.add(sc); }
+      if (k === 'armor1') { const b = new THREE.Mesh(new THREE.TorusGeometry(.46, .04, 8, 30), std(0x4a3a2a)); b.rotation.x = Math.PI / 2; b.position.y = .25; b.scale.y = .62; g.add(b); }
+      g.rotation.y = .35; break; }
+    case 'gloves': { const m = std(0x8a5a32, { rough: .8 }); for (const s of [-1, 1]) { const h = new THREE.Group(); const p = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 12), m); p.scale.set(1, 1.25, .6); h.add(p); const c = new THREE.Mesh(new THREE.CylinderGeometry(.2, .22, .22, 14), std(0x6a4224)); c.position.y = -.3; h.add(c); for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .16, 4, 8), m); f.position.set(-.13 + i * .087, .32, 0); h.add(f); } const t = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .12, 4, 8), m); t.position.set(.24 * s, .05, 0); t.rotation.z = -s * .9; h.add(t); h.position.x = s * .3; h.rotation.z = -s * .25; g.add(h); } break; }
+    case 'belt': { const b = new THREE.Mesh(new THREE.TorusGeometry(.45, .07, 10, 40), std(0x7a4a2a)); b.scale.set(1, .55, 1); b.rotation.x = .45; g.add(b); const bk = new THREE.Mesh(new THREE.TorusGeometry(.11, .03, 8, 4), std(0xd8b04a, { metal: .7 })); bk.rotation.set(.45, 0, Math.PI / 4); bk.position.set(0, -.22, .12); g.add(bk); break; }
+    case 'boots0': case 'boots': { const m = std(k === 'boots0' ? 0xd8c080 : 0x6a4428, { rough: .85 }); for (const s of [-1, 1]) { const b = new THREE.Group(); const sh = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, k === 'boots0' ? .14 : .45, 14), m); sh.position.y = k === 'boots0' ? .08 : .25; b.add(sh); const ft = new THREE.Mesh(new THREE.SphereGeometry(.17, 16, 10), m); ft.scale.set(1, .5, 1.7); ft.position.set(0, .05, .15); b.add(ft); b.position.x = s * .2; b.rotation.y = .5; g.add(b); } break; }
+    case 'amulet': case 'amulet2': { const c = new THREE.Mesh(new THREE.TorusGeometry(.4, .018, 6, 40), std(0xc8a86a, { metal: .6 })); c.scale.y = 1.1; g.add(c); const gem = k === 'amulet' ? new THREE.Mesh(new THREE.SphereGeometry(.13, 14, 10), std(0xffd23a, { glow: 0xffc020, gi: .3 })) : new THREE.Mesh(new THREE.SphereGeometry(.15, 14, 10), std(0x9a9a9a, { rough: .9 })); gem.position.y = -.44; gem.scale.z = .6; g.add(gem); if (k === 'amulet') for (let i = 0; i < 8; i++) { const pt = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), std(0xffe066)); const a = i / 8 * Math.PI * 2; pt.position.set(Math.cos(a) * .15, -.44 + Math.sin(a) * .15, 0); pt.scale.set(1.4, .6, .6); pt.rotation.z = a; g.add(pt); } break; }
+    case 'ear': { for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(.12, .025, 8, 24), std(0xd8a85a, { metal: .7 })); r.position.set(s * .22, .2, 0); g.add(r); const f = new THREE.Mesh(new THREE.ConeGeometry(.07, .45, 8), std(s > 0 ? 0x9fe4ff : 0xf0f0f0)); f.position.set(s * .22, -.18, 0); f.rotation.z = Math.PI; f.scale.z = .3; g.add(f); } break; }
+    case 'ring': case 'ring2': { const r = new THREE.Mesh(new THREE.TorusGeometry(.32, .07, 12, 40), std(k === 'ring' ? 0x7ab85a : 0xc8784a, { metal: k === 'ring2' ? .7 : .1 })); r.rotation.x = .5; g.add(r); if (k === 'ring') { const l = new THREE.Mesh(new THREE.SphereGeometry(.12, 12, 8), std(0x9ad86a)); l.scale.set(1.6, .4, 1); l.position.set(0, .12, .3); g.add(l); } else { const gm = new THREE.Mesh(new THREE.OctahedronGeometry(.13), std(0xe84a4a, { glow: 0xa82020, gi: .3, rough: .2 })); gm.position.set(0, .1, .32); g.add(gm); } break; }
+    case 'sail': case 'sail2': case 'sail3': { const mast = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.3, 8), std(0x8a5a32)); mast.position.y = .1; g.add(mast); const yard = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .9, 8), std(0x8a5a32)); yard.rotation.z = Math.PI / 2; yard.position.y = .65; g.add(yard);
+      const geo = new THREE.PlaneGeometry(.86, 1, 8, 8), p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const xx = p.getX(i), yy = p.getY(i); p.setZ(i, (1 - (xx / .43) ** 2) * .22 * (yy + .6)); } geo.computeVertexNormals();
+      const cl = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: { sail: 0xe8dcc0, sail2: 0x8ad06a, sail3: 0xf4f4f8 }[k], side: THREE.DoubleSide, roughness: .8 })); cl.position.set(0, .15, .04); g.add(cl); if (k === 'sail3') { const st = new THREE.Mesh(new THREE.PlaneGeometry(.86, .1), new THREE.MeshStandardMaterial({ color: 0x4a9ad0, side: THREE.DoubleSide })); st.position.set(0, -.15, .12); g.add(st); } g.rotation.y = .5; break; }
+    case 'pot': g.add(flask(0xffc83a)); break; case 'wpot': { const c = new THREE.Mesh(new THREE.SphereGeometry(.3, 20, 14), std(0x7fd0f0, { glow: 0x7fd0f0, gi: .25, rough: .25 })); g.add(c); for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.ConeGeometry(.16, .3, 12), std(0xf0f4f8)); w.rotation.z = s * Math.PI / 2; w.position.x = s * .4; g.add(w); } const sp = new THREE.Mesh(new THREE.TorusGeometry(.2, .03, 6, 20, 4), std(0xffffff)); sp.position.z = .26; g.add(sp); break; }
+    case 'pure': g.add(flask(0x7fc8ff)); break;
+    case 'hone': case 'bhone': { const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .22, .36, 4, 2, 2), std(k === 'bhone' ? 0xe8e0c8 : 0x8a8f9a, { rough: .9, glow: k === 'bhone' ? 0xffe8a0 : null, gi: .35 })); m.rotation.set(.3, .5, .15); g.add(m); const w = new THREE.Mesh(new THREE.TorusGeometry(.25, .025, 6, 20, 3), std(0x9fe4ff, { glow: 0x9fe4ff, gi: .6 })); w.position.set(0, .3, .1); g.add(w); break; }
+    case 'glue': case 'bglue': { const j = lathe([[0, 0], [.3, 0], [.34, .1], [.33, .45], [.26, .52], [0, .52]], std(k === 'bglue' ? 0xf4ecd8 : 0xb88a5a, { rough: .6, glow: k === 'bglue' ? 0xffe8a0 : null, gi: .3 })); g.add(j); const l = new THREE.Mesh(new THREE.CylinderGeometry(.28, .28, .1, 20), std(0x6a4a2a)); l.position.y = .56; g.add(l); const d = new THREE.Mesh(new THREE.SphereGeometry(.12, 12, 8), std(0xe8c070, { rough: .2 })); d.position.set(.2, .35, .26); d.scale.set(1, 1.4, .6); g.add(d); break; }
+    case 'bell': { const b = lathe([[0, 0], [.36, 0], [.34, .02], [.22, .2], [.18, .45], [.12, .55], [0, .55]], std(0xd8b04a, { metal: .7, rough: .3 })); g.add(b); const r = new THREE.Mesh(new THREE.TorusGeometry(.07, .02, 6, 14), std(0x9a7a3a)); r.position.y = .62; g.add(r); const rb = new THREE.Mesh(new THREE.PlaneGeometry(.1, .5), new THREE.MeshStandardMaterial({ color: 0x8fd8ff, side: THREE.DoubleSide })); rb.position.set(.18, .4, .05); rb.rotation.z = -.5; g.add(rb); break; }
+    case 'feather': { for (let i = 0; i < 3; i++) { const geo = new THREE.SphereGeometry(.18, 14, 10); geo.scale(.5, 2.4, .08); const f = new THREE.Mesh(geo, std([0xf4f4f8, 0x9fe4ff, 0xd8c8f0][i])); f.rotation.z = (i - 1) * .4; f.position.x = (i - 1) * .12; g.add(f); } const t = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .12, 10), std(0x8a5a32)); t.position.y = -.35; g.add(t); break; }
+    case 'plank': { for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(1, .1, .24), std([0xa87b4f, 0x9c7046][i], { rough: .9 })); b.position.set(i * .1, i * .12, i * .05); b.rotation.y = .4 + i * .3; g.add(b); } break; }
+  }
+  return Promise.resolve(g);
+}
+window.renderIcons = async function (keys) {
+  const S = 96, cols = 8, out = document.createElement('canvas'); out.width = cols * S; out.height = Math.ceil(keys.length / cols) * S; const o = out.getContext('2d'), meta = {};
+  for (let i = 0; i < keys.length; i++) {
+    const g = await ICON(keys[i]); const w = new THREE.Group(); w.add(g); w.rotation.x = .35; scene.add(w); outlineAll(g, 1.05); w.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(w), c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3()), R = Math.max(sz.x, sz.y) * .58;
+    const cam = new THREE.OrthographicCamera(-R, R, R, -R, -50, 50); cam.position.set(c.x, c.y, c.z + 10); cam.lookAt(c.x, c.y, c.z); cam.updateMatrixWorld(true);
+    r.setSize(S * SS, S * SS); r.render(scene, cam); o.drawImage(r.domElement, (i % cols) * S, Math.floor(i / cols) * S, S, S); meta[keys[i]] = [(i % cols) * S, Math.floor(i / cols) * S, S, S]; scene.remove(w);
+  }
+  return { url: out.toDataURL('image/png'), meta };
+};
+window.READY = 1;
+</script></body></html>
