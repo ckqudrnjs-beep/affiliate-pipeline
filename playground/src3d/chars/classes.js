@@ -57,9 +57,9 @@ export const CLASSES = {
   },
 };
 
-// 적: 6프레임(3x2). 균열 빛에 깨어난 기계 골격 — KayKit Skeletons(CC0) 뼈를 금속색으로 칠하고 눈을 빛나게.
-export const EFRAMES = ['w0', 'w1', 'w2', 'wind', 'hit', 'hurt'];
-const EF = (atk, wa, wb) => ({ w0: ['Walking_D_Skeletons', 0], w1: ['Walking_D_Skeletons', .33], w2: ['Walking_D_Skeletons', .66], wind: [atk, wa], hit: [atk, wb], hurt: ['Hit_A', .3] });
+// 적: 9프레임(3x3, 걷기 6 + 준비·휘두르기·맞음). 균열 빛에 깨어난 기계 골격 — KayKit Skeletons(CC0) 뼈를 금속색으로 칠하고 눈을 빛나게.
+export const EFRAMES = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'wind', 'hit', 'hurt'];
+const EF = (atk, wa, wb) => ({ w0: ['Walking_D_Skeletons', 0], w1: ['Walking_D_Skeletons', 1 / 6], w2: ['Walking_D_Skeletons', 2 / 6], w3: ['Walking_D_Skeletons', .5], w4: ['Walking_D_Skeletons', 4 / 6], w5: ['Walking_D_Skeletons', 5 / 6], wind: [atk, wa], hit: [atk, wb], hurt: ['Hit_A', .3] });
 const BONE = (pre, col, extra) => Object.assign({ [pre + '_Body']: col, [pre + '_Head']: col, [pre + '_Jaw']: col, [pre + '_ArmLeft']: col, [pre + '_ArmRight']: col, [pre + '_LegLeft']: col, [pre + '_LegRight']: col }, extra || {});
 export const ENEMIES = {
   grunt: {

@@ -232,7 +232,7 @@ function put(g, sp, x, y, dir, sc, flash, rotA) {
 /* ---------- 3D 렌더 캐릭터 아틀라스 (원본 src3d/chars, 모델 KayKit CC0) ---------- */
 // 5x4 칸, 칸 360x320px, 발 (155,295), 1 게임 단위 = 1.2px. 칸 순서 = ATL.F. 못 불러오면 예전 코드 그림을 쓴다.
 const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 1, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'], p: {}, sp: {} };
-const ATL_E = ['w0', 'w1', 'w2', 'wind', 'hit', 'hurt'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 3x2 칸
+const ATL_E = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'wind', 'hit', 'hurt'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 3x3 칸(걷기 6프레임)
 function atlasLoad(key) {
   const en = ATL_EN.includes(key);
   if (!ATL.p[key]) ATL.p[key] = new Promise(ok => { const im = new Image(); im.decoding = 'async'; im.onload = () => { try { ATL.sp[key] = atlasCut(im, en ? ATL_E : ATL.F, en ? 3 : 5, en); } catch (e) {} ok(!!ATL.sp[key]); }; im.onerror = () => ok(false); im.src = '/img/raid/' + key + '.webp?v=' + ATL.V; });
@@ -1028,7 +1028,7 @@ function drawE(g, e) {
   if (e.crate) { const cs = ATL.props ? ATL.props.crate[0] : SPR.crate; put(g, cs, e.x + (e.fl > 0 ? rnd(-2, 2) : 0), e.y, 1, ATL.props ? .62 : .5, e.fl > 0 ? e.fl * 8 : 0); return; }
   if (e.t === 'drone') { drawDrone(g, e); return; }
   const S = SPR.e[e.t]; if (!S) return; let sp = S.w0;
-  if (e.st === 'walk') sp = [S.w0, S.w1, S.w0, S.w2][Math.floor(e.ph) % 4]; else if (e.st === 'wind') sp = S.wind; else if (e.st === 'swing') sp = S.hit; else if (e.st === 'hurt' || e.st === 'air' || e.st === 'down') sp = S.hurt;
+  if (e.st === 'walk') sp = S.w5 ? [S.w0, S.w1, S.w2, S.w3, S.w4, S.w5][Math.floor(e.ph * 1.5) % 6] : [S.w0, S.w1, S.w0, S.w2][Math.floor(e.ph) % 4]; else if (e.st === 'wind') sp = S.wind; else if (e.st === 'swing') sp = S.hit; else if (e.st === 'hurt' || e.st === 'air' || e.st === 'down') sp = S.hurt;
   let rot = 0; if (e.st === 'air') rot = -e.f * clamp(e.vz / -400 + .4, -.2, 1.3); if (e.st === 'down') rot = -e.f * 1.45;
   const shk = e.fl > 0 ? rnd(-2, 2) : 0, sc = ET[e.t].sc;
   if (e.st === 'wind') { const pu = .5 + .5 * Math.sin(G.t * 40); glw(g, e.x, e.y - e.z - e.h - 18, 14 + pu * 6, '#ff3d6a', .9); glw(g, e.x, e.y - e.z - e.h - 18, 5, '#ffffff', pu); glw(g, e.x + e.f * 30, e.y - e.z - e.h * .55, 26, hexA(ET[e.t].rim), .35 + pu * .3); }
