@@ -230,11 +230,18 @@ function nck(x){const c=x.nc&&NCOLORS.find(k=>k.id===x.nc);return c?'<span style
 (function(){const G=location.pathname.split('/').pop();const $r=id=>document.getElementById(id);$r('mynick').textContent=myNick();
 $r('renick').onclick=()=>{location.href='/profile'};
 let W=0;document.querySelectorAll('#rankbox [data-w]').forEach(b=>b.onclick=()=>{W=+b.dataset.w;document.querySelectorAll('#rankbox [data-w]').forEach(x=>x.style.fontWeight=x===b?'800':'400');load()});
-async function load(){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST+(W?'&week=1':''))).json();const me=myNick();
+async function load(f){try{const r=await (await fetch('/api/score?game='+G+'&day='+KST+(W?'&week=1':'')+(f?'&f='+Date.now():''))).json();const me=myNick();
+if(!Array.isArray(r)){$r('rk').innerHTML='<li class="muted">'+(r&&r.msg||'순위를 잠시 불러올 수 없어요.')+' 게임은 그대로 할 수 있어요.</li>';return}
 $r('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+nck(x)+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):(W?'<li class="muted">최근 7일 프로필 기록이 아직 없어요. 프로필을 만들고 도전해 보세요!</li>':'<li class="muted">아직 기록이 없어요. 첫 기록의 주인공이 되어 보세요!</li>')}catch(e){$r('rk').innerHTML='<li class="muted">순위를 불러오지 못했어요.</li>'}}
 window.submitScore=async function(score){score=Math.floor(score);if(window.Bonus)Bonus.played(G);let best=0;try{best=+localStorage.getItem('nr_best_'+G+'_'+KST)||0}catch(e){}
 if(score<=best){load();return}try{localStorage.setItem('nr_best_'+G+'_'+KST,score)}catch(e){}
-try{const r=await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick(),code:(window.Profile&&Profile.code())||undefined})});if(r.ok&&window.Bonus&&score>0)Bonus.mission('r')}catch(e){}load()};load()})();
+const k=await post(score);if(k===1){if(window.Bonus&&score>0)Bonus.mission('r');load(1)}else if(k===2)load();else{pend(score);$r('rk').innerHTML='<li class="muted">지금은 순위 서버가 바빠요. 기록 '+score.toLocaleString()+'점은 이 기기에 저장해 두고 다음에 다시 올릴게요.</li>'}};
+// 트래픽 폭주 대비(2026-11-14): 서버가 바쁘면(503·429·연결 실패) 기록을 이 기기에 두었다가, 같은 날 다음에 이 게임을 열면 한 번 더 올린다.
+async function post(score){try{const r=await fetch('/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:G,day:KST,score,nick:myNick(),code:(window.Profile&&Profile.code())||undefined})});
+const j=await r.json().catch(()=>({}));return r.ok&&j.ok?1:r.status===400?2:0}catch(e){return 0}}
+function pend(score){try{localStorage.setItem('nr_pend_'+G,JSON.stringify({d:KST,s:score}))}catch(e){}}
+(async function(){let p=null;try{p=JSON.parse(localStorage.getItem('nr_pend_'+G)||'null');localStorage.removeItem('nr_pend_'+G)}catch(e){}
+if(p&&p.d===KST&&p.s>0){const k=await post(p.s);if(k===1)return load(1);if(!k)pend(p.s)}load()})()})();
 """
 
 RANK_PAGE_JS = """
@@ -243,7 +250,7 @@ function nck(x){const c=x.nc&&NCOLORS.find(k=>k.id===x.nc);return c?'<span style
 let cur=document.querySelector('[data-g]').dataset.g,W=0;const me=myNick();
 document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{W=+b.dataset.w;document.querySelectorAll('[data-w]').forEach(x=>x.style.fontWeight=x===b?'800':'400');show(cur)});
 async function show(g){cur=g;document.querySelectorAll('[data-g]').forEach(b=>b.style.fontWeight=b.dataset.g===g?'800':'400');
-try{const r=await (await fetch('/api/score?game='+g+'&day='+KST+(W?'&week=1':''))).json();document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+nck(x)+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
+try{const r=await (await fetch('/api/score?game='+g+'&day='+KST+(W?'&week=1':''))).json();if(!Array.isArray(r)){document.getElementById('rk').innerHTML='<li class="muted">'+(r&&r.msg||'순위를 잠시 불러올 수 없어요.')+'</li>';return}document.getElementById('rk').innerHTML=r.length?r.map(x=>'<li'+(x.nick===me?' style="font-weight:800"':'')+'>'+nck(x)+ttl(x.ti)+(x.t?' <small class="tag">테스터</small>':'')+' · '+x.score.toLocaleString()+'점</li>').join(''):'<li class="muted">아직 기록이 없어요.</li>'}catch(e){}}
 document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>show(b.dataset.g));show(cur);
 """
 
@@ -665,15 +672,15 @@ const data=()=>{try{return JSON.parse(localStorage.getItem('nr_bonus')||'{}')}ca
 let t=0,busy=false;
 const P={code:()=>LS('nr_pcode'),nick:()=>{const n=LS('nr_nick');return profileNickOk(n)?n:null},
  setNick(av,name){const n=av+' '+name;if(!profileNickOk(n))return false;LS('nr_nick',n);P.sync(0);return true},
- adopt(j){if(j.data){LS('nr_bonus',JSON.stringify(j.data))}if(j.nick)LS('nr_nick',j.nick);if(j.rev)LS('nr_prev',String(j.rev));if(window.Bonus)Bonus.render();P.render()},
+ adopt(j){if(j.data){LS('nr_bonus',JSON.stringify(j.data))}if(j.nick)LS('nr_nick',j.nick);if(j.rev)LS('nr_prev',String(j.rev));if(j.data&&j.nick)LS('nr_psent',j.nick+'|'+(LS('nr_bonus')||''));if(window.Bonus)Bonus.render();P.render()},
  async create(){const n=P.nick();if(!n)return {error:'nick'};const j=await api({a:'new',nick:n,data:data()});if(j.code){LS('nr_pcode',j.code);LS('nr_prev',String(j.rev))}P.render();return j},
  async load(code){const j=await api({a:'get',code});if(j.data){LS('nr_pcode',code.toUpperCase().trim());P.adopt(j)}return j},
- async del(){const c=P.code();if(!c)return {};const j=await api({a:'del',code:c});if(j.ok||j._s===404){LS('nr_pcode',null);LS('nr_prev',null)}P.render();return j},
- forget(){LS('nr_pcode',null);LS('nr_prev',null);P.render()},
- sync(ms){const c=P.code(),n=P.nick();if(!c||!n)return;clearTimeout(t);t=setTimeout(async()=>{if(busy)return;busy=true;try{const j=await api({a:'put',code:c,nick:n,data:data(),rev:+LS('nr_prev')||0});
-  if(j.rev&&!j.data)LS('nr_prev',String(j.rev));else if(j._s===409)P.adopt(j);else if(j._s===404)P.forget()}catch(e){}busy=false},ms===undefined?1500:ms)},
+ async del(){const c=P.code();if(!c)return {};const j=await api({a:'del',code:c});if(j.ok||j.error==='nocode'){LS('nr_pcode',null);LS('nr_prev',null);LS('nr_psent',null)}P.render();return j},
+ forget(){LS('nr_pcode',null);LS('nr_prev',null);LS('nr_psent',null);P.render()},
+ sync(ms){const c=P.code(),n=P.nick();if(!c||!n)return;clearTimeout(t);t=setTimeout(async()=>{if(busy)return;const sig=n+'|'+(LS('nr_bonus')||'');if(sig===LS('nr_psent'))return;busy=true;try{const j=await api({a:'put',code:c,nick:n,data:data(),rev:+LS('nr_prev')||0});
+  if(j.rev&&!j.data){LS('nr_prev',String(j.rev));LS('nr_psent',sig)}else if(j._s===409)P.adopt(j);else if(j.error==='nocode')P.forget()}catch(e){}busy=false},ms===undefined?1500:ms)},
  async pull(){const c=P.code();if(!c)return;let last=0;try{last=+sessionStorage.getItem('nr_pget')||0}catch(e){}if(Date.now()-last<6e5)return;try{sessionStorage.setItem('nr_pget',String(Date.now()))}catch(e){}
-  try{const j=await api({a:'get',code:c});if(j.rev&&j.rev>(+LS('nr_prev')||0))P.adopt(j);else if(j._s===404)P.forget()}catch(e){}},
+  try{const j=await api({a:'get',code:c});if(j.rev&&j.rev>(+LS('nr_prev')||0))P.adopt(j);else if(j.error==='nocode')P.forget();else if(j.rev)P.sync(3000)}catch(e){}},
  render(){const n=P.nick();document.querySelectorAll('a.me').forEach(a=>{a.classList.toggle('new',!n);a.querySelector('i').textContent=n?n.split(' ')[0]:'👤';a.querySelector('b').textContent=n?n.slice(n.indexOf(' ')+1):'프로필 만들기'});
   document.querySelectorAll('.mkp').forEach(e=>e.hidden=!!n);const pg=document.getElementById('profpage');if(pg&&P.page)P.page(pg)}};
 P.render();
