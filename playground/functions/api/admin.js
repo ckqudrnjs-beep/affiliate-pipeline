@@ -1,7 +1,10 @@
 // 관리자 전용 (2026-11-13 BK: 아들 테스터 프로필에 코인·스킨·테스터 지정)
 // 모든 요청 헤더 x-admin-key = Cloudflare Pages 비밀 변수 ADMIN_KEY. 없으면 기능 꺼짐.
 // POST /api/admin {a:"find", q}                      → 별명 일부 또는 복구 코드로 프로필 찾기
-// POST /api/admin {a:"set", h, coins?, own?, des?, skin?} → 코인 설정·스킨 열기·적용 (rev+1 → 그 기기가 다음 접속 때 받아 감)
+// POST /api/admin {a:"set", h, coins?, own?, unown?, des?, th?, gi?, skin?, trail?, snd?, nc?, title?} → 코인·아이템 지급/회수·장착 (rev+1 → 그 기기가 다음 접속 때 받아 감)
+//   own/unown 은 한 번에 500개까지(2026-11-14: 예전 40개 제한 때문에 '전부 체크'가 다 안 들어가던 문제 수정). 장착 값 ""/"base" = 기본으로
+// POST /api/admin {a:"testers"}                     → 테스터 프로필 모두(카드로 바로 관리)
+// POST /api/admin {a:"stats"}                       → 첫 화면 요약(프로필 수·오늘 활동·테스터·처리할 글/제안)
 // POST /api/admin {a:"tester", h, on}               → 테스터 지정/해제(순위에 "테스터" 표시)
 // POST /api/admin {a:"hide", h, on}                 → 순위 제외 켜기/끄기(BK 요청 때만. 켜면 테스터로도 지정)
 // POST /api/admin {a:"list", page}                 → 별명 목록(최근 사용 순, 50개씩)
@@ -107,11 +110,25 @@ export async function onRequestPost({ request, env }) {
     else rows = (await env.DB.prepare("SELECT * FROM profiles WHERE nick LIKE ? ESCAPE '\\' ORDER BY updated DESC LIMIT 20").bind("%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%").all()).results;
     return json({ list: await Promise.all((rows || []).map(view)) });
   }
+  if (a === "testers") { // 테스터 프로필 바로 열기(별명 검색 없이)
+    const { results } = await env.DB.prepare("SELECT p.* FROM profiles p JOIN testers t ON t.h = p.h ORDER BY p.updated DESC LIMIT 20").all();
+    return json({ list: await Promise.all((results || []).map(view)) });
+  }
   if (a === "list") {
     const pg = Math.max(0, Math.min(1000, Math.floor(+b.page || 0)));
     const { results } = await env.DB.prepare("SELECT p.h, p.nick, p.data, p.updated, t.h AS th, t.hide FROM profiles p LEFT JOIN testers t ON t.h = p.h ORDER BY p.updated DESC, p.nick LIMIT 51 OFFSET ?").bind(pg * 50).all();
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM profiles").first();
     return json({ total: n ? n.n : 0, more: (results || []).length > 50, list: (results || []).slice(0, 50).map((r) => { let d = {}; try { d = JSON.parse(r.data); } catch {} return { h: r.h, nick: r.nick, updated: r.updated, coins: d.coins || 0, days: d.days || 0, tester: !!r.th, hide: !!r.hide }; }) });
+  }
+  if (a === "stats") {
+    await ensureBoard(env.DB); await ensureQ(env.DB);
+    const one = async (sql, ...v) => { try { const r = await env.DB.prepare(sql).bind(...v).first(); return r ? r.n : 0; } catch { return 0; } };
+    return json({
+      profiles: await one("SELECT COUNT(*) AS n FROM profiles"), today: await one("SELECT COUNT(*) AS n FROM profiles WHERE updated = ?", day),
+      testers: await one("SELECT COUNT(*) AS n FROM testers"), autohid: await one("SELECT COUNT(*) AS n FROM posts WHERE hidden = 2"),
+      secret: await one("SELECT COUNT(*) AS n FROM posts WHERE secret = 1 AND reply IS NULL"), qprops: await one("SELECT COUNT(*) AS n FROM qprops WHERE st = 0"),
+      bans: await one("SELECT COUNT(*) AS n FROM bans WHERE until >= ?", day),
+    });
   }
   if (a === "log") {
     const { results } = await env.DB.prepare("SELECT t, act, nick, detail FROM admin_log ORDER BY id DESC LIMIT 30").all();
@@ -154,12 +171,15 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "retry" }, 500);
   }
   if (a === "set") {
-    const d = JSON.parse(row.data), ch = {};
+    const d = JSON.parse(row.data), ch = {}, KEY = /^[cdathrsng]:[a-z0-9:]{1,30}$/, ID = /^[a-z0-9]{1,12}$/;
+    const keys = (v) => (Array.isArray(v) ? v.slice(0, 500).map(String).filter((k) => KEY.test(k)) : []);
     if (b.coins !== undefined) { d.coins = Math.floor(+b.coins || 0); ch.coins = b.coins; }
-    if (Array.isArray(b.own)) { d.own = d.own || {}; for (const k of b.own.slice(0, 40)) d.own[String(k)] = 1; ch.own = b.own; }
-    if (Array.isArray(b.unown)) { d.own = d.own || {}; for (const k of b.unown.slice(0, 40)) delete d.own[String(k)]; ch.unown = b.unown; }
-    if (b.des && typeof b.des === "object") { d.des = Object.assign(d.des || {}, b.des); ch.des = b.des; }
-    if (b.skin !== undefined) { d.skin = b.skin; ch.skin = b.skin; }
+    if (Array.isArray(b.own)) { d.own = d.own || {}; const k = keys(b.own); for (const x of k) d.own[x] = 1; ch.own = k.length; }
+    if (Array.isArray(b.unown)) { d.own = d.own || {}; const k = keys(b.unown); for (const x of k) delete d.own[x]; ch.unown = k.length; }
+    // 게임별 장착: des/th = {게임: id|"base"}, gi = {"게임:종류": id|""}
+    const put = (name, o, re) => { if (!o || typeof o !== "object") return; d[name] = Object.assign({}, d[name]); for (const [k, v] of Object.entries(o).slice(0, 60)) { if (!re.test(k)) continue; if (v === "" || v == null) delete d[name][k]; else if (ID.test(String(v))) d[name][k] = String(v); } ch[name] = o; };
+    put("des", b.des, /^[a-z]{1,12}$/); put("th", b.th, /^[a-z]{1,12}$/); put("gi", b.gi, /^[a-z0-9]{1,12}:[a-z]{1,6}$/);
+    for (const f of ["skin", "trail", "snd", "nc", "title"]) if (b[f] !== undefined) { d[f] = b[f] && ID.test(String(b[f])) ? String(b[f]) : undefined; ch[f] = b[f]; }
     const data = clean(d); if (!data) return json({ error: "bad" }, 400);
     const rev = row.rev + 1;
     await env.DB.prepare("UPDATE profiles SET data = ?, rev = ?, updated = ? WHERE h = ?").bind(JSON.stringify(data), rev, day, h).run();

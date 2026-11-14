@@ -35,3 +35,9 @@
 - 같은 실행에서 밸런스 쇼츠 다음에: 사이트를 빌드해 로컬로 띄우고 `scripts/range_rec.js` 가 `#rgdebug-rghq` 테스트 훅으로 봇 플레이를 30fps 녹화(순위 미반영) → `pipeline.raksil_range` 가 세로 쇼츠로 편집 → **20:00 KST 공개 예약**.
 - 단계는 날짜에 따라 5~10. 다른 요일에 시험하려면 Run workflow 의 `range` 를 true.
 - 녹화 약 10~15분 걸림(헤드리스 소프트웨어 렌더링).
+
+## 새 게임 자동 포함 (2026-11-14, BK "새 게임은 쇼츠 소재에")
+- 20:00 KST 슬롯을 `pipeline.raksil_games plan` 이 정한다: 새 게임 소개(NEW GAME) > 월 네온 사격장 > 목 다른 게임 로테이션(가장 오래 안 나온 순).
+- 새 게임 = `playground/games/<slug>/meta.json` 이 있고 `OLD_GAMES`(11/14 기준 9개)에 없으며 아직 소개 쇼츠 기록(`<날짜>-game-<slug>-new`)이 없는 게임. 하루 1편.
+- 녹화 `scripts/game_rec.js`: `/games/<slug>.html#demo` 를 세로 540x960 으로 열고 시작 버튼(-go/-start) 클릭, 16초 녹화.
+- 게임 쪽 약속(선택): `#demo` 이면 `window.__demo = { bot, score, state }` 를 만들고 봇 자동 플레이, 순위 미반영. 있으면 더 그럴듯한 플레이가 찍힌다.

@@ -94,8 +94,9 @@
  },
  {
   "q": "삼촌의 일기: 조카가 물어본 '보조배터리 몇 번 충전돼요?'",
-  "done": false,
-  "format": "일기"
+  "done": true,
+  "format": "일기",
+  "slug": "powerbank-how-many-charges-diary"
  },
  {
   "q": "전기히터 vs 온풍기 vs 라디에이터 전기요금",

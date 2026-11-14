@@ -1,6 +1,23 @@
 <h1>오늘의 초성 퀴즈</h1><p class="lead" id="day"></p>
-<div class="card"><div class="muted" id="prog"></div><div class="muted" id="hint"></div><div class="cho" id="cho"></div>
-<input class="ans" id="ans" placeholder="정답 입력 후 Enter" autocomplete="off"><div style="display:flex;gap:8px;margin-top:10px"><button class="big" id="ok" type="button">확인</button><button class="share" id="skip" type="button">모르겠어요</button></div>
-<p id="msg"></p></div><div class="card" id="end" hidden><h2 style="margin-top:0">오늘의 결과</h2><p id="res" style="font-size:28px"></p><button class="big" id="sh" type="button">결과 공유</button><p class="muted">내일 0시(한국 시간)에 새 문제가 나와요.</p></div>
+<style>
+.qz{position:relative;overflow:hidden;border-radius:18px;padding:16px 14px 18px;background:radial-gradient(120% 80% at 50% 0%,#3a0c5f 0%,#140734 55%,#0a0420 100%);border:2px solid #b06bff;box-shadow:0 0 26px #b06bff55,inset 0 0 40px #22d3ee14}
+.qz:before{content:"";position:absolute;inset:auto -20% -40% -20%;height:60%;background:repeating-linear-gradient(90deg,#b06bff22 0 1px,transparent 1px 40px),repeating-linear-gradient(0deg,#b06bff22 0 1px,transparent 1px 24px);transform:perspective(300px) rotateX(60deg);pointer-events:none}
+.qz-top{display:flex;justify-content:space-between;align-items:center;gap:8px;position:relative}.qz-dots{display:flex;gap:6px}.qz-dots i{width:14px;height:14px;border-radius:50%;background:#ffffff1a;border:2px solid #ffffff33}.qz-dots i.on{border-color:#ffd23f;box-shadow:0 0 10px #ffd23f}.qz-dots i.ok{background:#3ddc84;border-color:#3ddc84;box-shadow:0 0 10px #3ddc84}.qz-dots i.no{background:#ff4d4d;border-color:#ff4d4d}
+.qz-n{font-family:var(--px);font-size:11px;color:#cfc8ff}.qz-topic{display:inline-block;margin:14px 0 4px;padding:5px 12px;border-radius:999px;background:#22d3ee22;border:1px solid #22d3ee;color:#bff6ff;font-weight:800;font-size:14px;position:relative}
+.qz-tiles{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:16px 0 18px;position:relative;min-height:72px;perspective:400px}
+.qz-t{width:58px;height:68px;display:flex;align-items:center;justify-content:center;font-family:var(--hd);font-size:38px;color:#fff;border-radius:12px;background:linear-gradient(180deg,#ffd23f,#ff8a3d);color:#2a0b00;box-shadow:0 5px 0 #a3480b,0 0 18px #ffd23f66;animation:qzin .45s cubic-bezier(.3,1.6,.5,1) both;transition:transform .35s,background .2s}
+.qz-t.flip{transform:rotateY(360deg)}.qz-t.ok{background:linear-gradient(180deg,#9dffc7,#3ddc84);box-shadow:0 5px 0 #1a7a45,0 0 22px #3ddc84}.qz-t.no{background:linear-gradient(180deg,#ffb3b3,#ff4d4d);box-shadow:0 5px 0 #8a1a1a}
+@keyframes qzin{from{transform:translateY(-30px) scale(.4) rotate(-12deg);opacity:0}}@media (max-width:380px){.qz-t{width:48px;height:58px;font-size:32px}}
+.qz .ans{width:100%;font-size:20px;text-align:center;border:2px solid #22d3ee;background:#07031acc;color:#fff;border-radius:12px;padding:12px;box-shadow:0 0 14px #22d3ee44;position:relative}
+.qz-row{display:flex;gap:8px;margin-top:10px;position:relative}.qz-row .big{flex:2}.qz-row .share{flex:1}
+.qz-msg{min-height:26px;margin:12px 0 0;text-align:center;font-weight:800;position:relative}.qz-msg.ok{color:#3ddc84;text-shadow:0 0 10px #3ddc84}.qz-msg.no{color:#ff8a8a}
+.qz.shake{animation:qzsh .4s}@keyframes qzsh{25%{transform:translateX(-8px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+.qz-cf{position:absolute;width:8px;height:12px;top:40%;left:50%;pointer-events:none;animation:qzcf 1s ease-out forwards}@keyframes qzcf{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+.qz-end{text-align:center}.qz-end h2{font-family:var(--hd);color:#ffd23f;text-shadow:0 0 14px #ffd23f;margin:4px 0 6px}.qz-sc{font-family:var(--px);font-size:30px;color:#22d3ee;text-shadow:0 0 14px #22d3ee;margin:8px 0}.qz-em{display:flex;justify-content:center;gap:8px;margin:10px 0}.qz-em span{font-size:34px;animation:qzin .5s cubic-bezier(.3,1.6,.5,1) both}.qz-tier{font-weight:800;color:#e9e4ff;margin:6px 0 12px}
+</style><div class="qz" id="qz"><div class="qz-top"><div class="qz-dots" id="dots"><i></i><i></i><i></i><i></i><i></i></div><span class="qz-n" id="prog"></span></div>
+<span class="qz-topic" id="hint"></span><div class="qz-tiles" id="cho"></div>
+<input class="ans" id="ans" placeholder="정답 입력 후 Enter" autocomplete="off"><div class="qz-row"><button class="big" id="ok" type="button">확인</button><button class="share" id="skip" type="button">모르겠어요</button></div>
+<p class="qz-msg" id="msg"></p></div>
+<div class="qz qz-end" id="end" hidden><h2>오늘의 결과</h2><div class="qz-em" id="em"></div><div class="qz-sc" id="sc"></div><p class="qz-tier" id="tier"></p><p id="res" hidden></p><button class="big" id="sh" type="button">결과 공유</button><p class="muted">내일 0시(한국 시간)에 새 문제가 나와요.</p></div>
 <h2>규칙</h2><ul class="list"><li>하루 5문제가 나오고, 모든 사람에게 같은 문제가 나옵니다.</li><li>주제 힌트와 초성(첫 자음)을 보고 단어를 맞힙니다. 띄어쓰기는 무시합니다.</li><li>문제마다 기회는 한 번입니다. 모르면 넘어가도 돼요.</li><li>결과는 🟩(정답) 🟥(오답) 이모지로 공유됩니다. 정답은 공유되지 않아요.</li></ul>
 <h2>초성 퀴즈 잘 푸는 법</h2><p>먼저 주제 힌트에서 떠오르는 단어를 글자 수에 맞춰 떠올려 보세요. 초성이 'ㄱㅊ'처럼 짧으면 받침 없는 두 글자 단어부터, 'ㄴㅇㄱㅇ'처럼 길면 장소·복합어를 먼저 생각하면 빨라집니다. 쌍자음(ㄲ, ㄸ)이 보이면 후보가 크게 줄어듭니다.</p>

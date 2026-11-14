@@ -1,0 +1,45 @@
+name: cf-usage
+
+# 5락실 트래픽 폭주 대비 알림 (2026-11-14 BK). 3시간마다 Cloudflare 무료 한도 사용량을 확인해
+# 70%·90%를 넘거나 5락실 API가 멈추면 텔레그램 봇이 BK 개인 대화로 알린다. 아무 일 없으면 조용히 끝난다.
+# 설정: plan/SCALING.md 8장. 수동 실행에서 setup=true 를 고르면 BK 대화 번호를 텔레그램으로 보내 준다.
+on:
+  schedule:
+    - cron: "50 2,5,8,11,14,17,20,23 * * *"   # KST 11:50, 14:50 … 08:50 (한도 초기화 09:00 직전 포함)
+  workflow_dispatch:
+    inputs:
+      setup:
+        description: "텔레그램 개인 대화 번호 확인(봇에게 /start 보낸 뒤)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - name: 오늘 이미 보낸 알림 단계 불러오기
+        uses: actions/cache/restore@v4
+        with:
+          path: .cfusage
+          key: cfusage-${{ github.run_id }}
+          restore-keys: cfusage-
+      - name: 사용량 확인
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: python3 scripts/cf_usage_alert.py ${{ inputs.setup && '--setup' || '' }}
+      - name: 보낸 알림 단계 저장
+        if: always() && hashFiles('.cfusage/sent.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .cfusage
+          key: cfusage-${{ github.run_id }}

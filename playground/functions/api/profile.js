@@ -26,19 +26,22 @@ function newCode() {
 export function clean(d) {
   d = d && typeof d === "object" ? d : {};
   const day = /^\d{4}-\d{2}-\d{2}$/.test(d.last || "") ? d.last : undefined;
-  const flags = (o, re) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, 150).map(([k]) => [k, 1]));
+  // 2026-11-14: 아이템이 120개를 넘어 '전부 지급'이 잘리던 문제 → 보유 목록 500개·전체 16KB까지
+  const flags = (o, re, n = 150) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, n).map(([k]) => [k, 1]));
   const out = {
     coins: Math.max(0, Math.min(199, Math.floor(+d.coins || 0))), days: Math.max(0, Math.min(100000, Math.floor(+d.days || 0))),
     streak: Math.max(0, Math.min(100000, Math.floor(+d.streak || 0))), last: day,
     skin: /^[a-z]{1,8}$/.test(d.skin || "") ? d.skin : undefined,
     des: Object.fromEntries(Object.entries(d.des && typeof d.des === "object" ? d.des : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
-    own: flags(d.own, /^[cdathrsn]:[a-z0-9:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
+    own: flags(d.own, /^[cdathrsng]:[a-z0-9:]{1,30}$/, 500), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
     // 코인 쓰임 1단계(2026-11-14): 칭호·출석 보호권·오늘의 미션
     title: /^[a-z0-9]{1,12}$/.test(d.title || "") ? d.title : undefined,
     // 2단계: 게임 테마(th)·꼬리 효과(trail)·사운드 팩(snd)·별명 색(nc)
     th: Object.fromEntries(Object.entries(d.th && typeof d.th === "object" ? d.th : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
     trail: /^[a-z]{1,12}$/.test(d.trail || "") ? d.trail : undefined, snd: /^[a-z]{1,12}$/.test(d.snd || "") ? d.snd : undefined,
     nc: /^[a-z]{1,12}$/.test(d.nc || "") ? d.nc : undefined,
+    // 게임별 미니 상점에서 고른 아이템 {"range:xh":"gold"}
+    gi: Object.fromEntries(Object.entries(d.gi && typeof d.gi === "object" ? d.gi : {}).filter(([k, v]) => /^[a-z0-9]{1,12}:[a-z]{1,6}$/.test(k) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 40)),
     shield: Math.max(0, Math.min(2, Math.floor(+d.shield || 0))) || undefined,
     mis: d.mis && typeof d.mis === "object" && /^\d{4}-\d{2}-\d{2}$/.test(d.mis.d || "") ? {
       d: d.mis.d, p: flags(d.mis.p, /^[a-z0-9]{1,12}$/), v: d.mis.v ? 1 : 0, r: d.mis.r ? 1 : 0, got: flags(d.mis.got, /^(p|v|r|all)$/),
@@ -48,7 +51,7 @@ export function clean(d) {
   const avs = Object.keys(out.own).filter((k) => k.startsWith("a:")).length;
   if (out.title && !out.own["t:" + out.title] && !(out.title === "regular" && out.days >= 30) && !(out.title === "collector" && avs >= 30)) out.title = undefined;
   if (out.nc && !out.own["n:" + out.nc]) out.nc = undefined; // 별명 색은 산 것만(순위에 보이니까)
-  return JSON.stringify(out).length <= 4096 ? out : null;
+  return JSON.stringify(out).length <= 16000 ? out : null;
 }
 let ready = false;
 async function ensure(db) {
@@ -95,7 +98,7 @@ export async function onRequestPost({ request, env }) {
   }
   const code = normCode(b.code);
   const h = code && (await sha(`${code}|${salt}`));
-  const row = h && (await env.DB.prepare("SELECT nick, data, rev FROM profiles WHERE h = ?").bind(h).first());
+  const row = h && (await env.DB.prepare("SELECT nick, data, rev, updated FROM profiles WHERE h = ?").bind(h).first());
   if (!row) { await hit(env, ip, "bad"); return json({ error: "nocode", msg: "그런 복구 코드가 없어요. 다시 확인해 주세요." }, 404); }
   if (a === "get") return json({ nick: row.nick, data: JSON.parse(row.data), rev: row.rev });
   if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); try { await env.DB.prepare("DELETE FROM pscores WHERE h = ?").bind(h).run(); } catch { /* 표 없음 */ } return json({ ok: true }); }
@@ -103,7 +106,10 @@ export async function onRequestPost({ request, env }) {
   if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
   const data = clean(b.data); if (!data) return json({ error: "bad" }, 400);
   if ((+b.rev || 0) < row.rev) return json({ error: "old", nick: row.nick, data: JSON.parse(row.data), rev: row.rev }, 409); // 다른 기기가 먼저 저장함 → 최신 걸 돌려줌
+  // 바뀐 게 없으면 쓰지 않는다(D1 쓰기 절약, 2026-11-14)
+  if (b.nick === row.nick && JSON.stringify(data) === row.data && row.updated === today) return json({ rev: row.rev });
   const rev = row.rev + 1;
+  if (Math.random() < 0.01) await env.DB.prepare("DELETE FROM ptries WHERE day < ?").bind(today).run();
   await env.DB.prepare("UPDATE profiles SET nick = ?, data = ?, rev = ?, updated = ? WHERE h = ?").bind(b.nick, JSON.stringify(data), rev, today, h).run();
   if (b.nick !== row.nick) { try { await env.DB.prepare("UPDATE testers SET nick = ? WHERE h = ?").bind(b.nick, h).run(); } catch { /* testers 표 없음 = 테스터 없음 */ } }
   return json({ rev });
