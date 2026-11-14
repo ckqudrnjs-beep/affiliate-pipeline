@@ -41,6 +41,17 @@ class T(unittest.TestCase):
         log["2026-11-13-game-dodge"] = {}
         self.assertEqual(rg.plan(THU, G, log), ("game", "spot", "play"))
 
+    def test_hold(self):
+        games = G + [{"slug": "tower", "name": "하늘 탑 쌓기", "short": "", "order": 9}]
+        self.assertEqual(rg.plan(SAT, games, {}, hold=True), ("none", None, None))
+        self.assertEqual(rg.plan(THU, games, {}, hold=True), ("none", None, None))
+        self.assertEqual(rg.plan(MON, games, {}, hold=True), ("none", None, None))
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / "h.json"
+            self.assertFalse(rg.hold_new(p))
+            p.write_text('{"hold_new": true}', encoding="utf-8")
+            self.assertTrue(rg.hold_new(p))
+
     def test_history_includes_range(self):
         h = rg.history({"2026-11-16-range": {}, "2026-11-13": {}, "2026-11-20-game-tower-new": {}})
         self.assertEqual(h, {"range": "2026-11-16", "tower": "2026-11-20"})
