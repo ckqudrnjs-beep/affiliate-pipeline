@@ -284,8 +284,9 @@ function glowTex(col) {
 }
 function glw(g, x, y, r, col, a) { if (r <= 0) return; const o = g.globalCompositeOperation, al = g.globalAlpha; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * (a == null ? 1 : a); g.drawImage(glowTex(col), x - r, y - r, r * 2, r * 2); g.globalCompositeOperation = o; g.globalAlpha = al; }
 function hexA(col) { return col.length === 4 ? '#' + col[1] + col[1] + col[2] + col[2] + col[3] + col[3] : col.slice(0, 7); }
-function atlasAll() { // 다 받거나(실패 포함) 8초가 지나면 ATL.done — 그 전에는 예전 코드 그림을 보여 주지 않는다(BK 11/14)
-  if (!ATL.all) ATL.all = Promise.race([Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad(), boss2Load()])), new Promise(ok => setTimeout(ok, 8000))]).then(() => { ATL.done = 1; });
+function atlasAll() { // 다 받을 때까지(실패 포함) 기다린다. 느린 폰에서도 예전 코드 그림을 보여 주지 않게(BK 11/14) — 시간 제한 없음, 실패한 그림만 예전 그림으로
+  if (!ATL.all) { const L = CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad(), boss2Load()]); ATL.n = 0; ATL.N = L.length;
+    ATL.all = Promise.all(L.map(p => p.then(v => { ATL.n++; const b = panel && panel.querySelector('.nr-go[disabled]'); if (b) b.textContent = '캐릭터 그림 불러오는 중… ' + ATL.n + '/' + ATL.N; return v; }))).then(() => { ATL.done = 1; }); }
   return ATL.all;
 }
 
