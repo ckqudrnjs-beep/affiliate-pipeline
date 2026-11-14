@@ -69,7 +69,8 @@ def episode_rows(ep_dir: pathlib.Path = pathlib.Path("data/episodes")) -> list[d
                     "price_date": price_date,
                     "synthetic": "1" if any(x.get("type") == "uncle" for x in spec.get("scenes", [])) else "",
                     "ad": "1" if (spec.get("product") or spec.get("products")) else "0",
-                    "date": spec["date"], "kind": spec.get("kind", "short"), "episode": str(ep)})
+                    "date": spec["date"], "kind": spec.get("kind", "short"), "episode": str(ep),
+                    "takeaway": spec.get("takeaway", ""), "site": spec.get("site_path", "")})
     return out
 
 
@@ -126,9 +127,9 @@ def episode_links(row: dict) -> list[str]:
 
 def build_description(row: dict) -> str:
     if not is_ad(row):
-        return "\n".join([
+        return "\n".join(([row["takeaway"].strip()] if row.get("takeaway", "").strip() else []) + [
             row["intro"].strip(),
-            "우리 집 숫자로 계산해 보기: https://don3chon.com",
+            f"자세한 계산·정리: https://don3chon.com/{row.get('site', '').strip()}".rstrip("/"),
             "",
             ai_line(row),
             "#돈줍는삼촌 #생활비" + ("" if is_long(row) else " #Shorts"),

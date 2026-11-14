@@ -146,7 +146,7 @@ def info_short(today: dt.date) -> dict:
     concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith("skit") else None
     return {"concept": concept, "concept_rule": "concept 의 상황·반전·루프를 이 형식에 맞게 쓰고 대본에 \"concept\": id 를 넣는다. "
             "썸네일 문구 공식은 docs/SHORTS_BANK.md." if concept else None,"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
-            "rules": rules, "file": f"data/episodes/{d.isoformat()}-{key}.json",
+            "rules": INFO_RULE + rules, "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
             "recent_products": [u for u in used if u][-10:],
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg())}
 
@@ -159,6 +159,18 @@ def info_long(today: dt.date) -> dict:
     return {"date": d.isoformat(), "kind": "long", "format": key, "format_name": name, "product_allowed": product,
             "rules": rules, "file": f"data/episodes/{d.isoformat()}-{key}.json",
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg())}
+
+
+def site_pages() -> dict:
+    """쇼츠가 안내할 수 있는 사이트 페이지: 경로 → 제목."""
+    from . import articles as A, recipes as RC, questions as Q
+    from .calcs import CALCS
+    out = {"quiz.html": "오늘의 얼마게 (하루 한 문제)"}
+    out.update({f"calc/{c['slug']}.html": c["h1"] for c in CALCS})
+    out.update({f"q/{q['slug']}.html": q["h1"] for q in Q.load()})
+    out.update({f"guide/{a['slug']}.html": a["title"] for a in A.load()})
+    out.update({f"recipe/{r['slug']}.html": f"{r['name']} 1인분 원가" for r in RC.load(pantry=RC.load_pantry())})
+    return out
 
 
 def clips_cfg() -> dict:
@@ -267,7 +279,8 @@ def quiz_spec(d: dt.date) -> dict | None:
         title = f"오늘의 얼마게 #{no}: 3초 안에 맞혀 봐"
     return {
         "date": d.isoformat(), "kind": "short", "format": "quiz", "format_name": "오늘의 얼마게", "series_no": no,
-        "slug": f"ep-{d.isoformat()}-quiz", "quiz_id": q["id"], "title": title,
+        "slug": f"ep-{d.isoformat()}-quiz", "quiz_id": q["id"], "title": title, "site_path": "quiz.html",
+        "takeaway": chunks(re.sub(r"\s*\([^)]*\)", "", q["why"].split(". ")[0]).rstrip(".") + ".", 40)[0],
         "description": f"오늘 돈삼촌 퀴즈와 같은 문제예요. 내일 문제는 https://don3chon.com/quiz 에서 매일 하나씩.\n{q['why']}",
         "scenes": [
             {"type": "skit", "bg": "room", "badge": badge, "lines": [
@@ -403,6 +416,11 @@ def check(spec: dict) -> list[str]:
         e.append("상품 편 중단 (2026-11-14 BK: 홈페이지 유입에 주력) — product/products 빼기")
     if not spec.get("description"):
         e.append("description (설명란 소개 1~3줄) 없음")
+    if kind == "short" and spec.get("date", "") >= "2026-11-20":  # 정보의 장 (2026-11-14 BK)
+        if not (spec.get("takeaway") and len(spec["takeaway"]) <= 40):
+            e.append("takeaway (정보 가치 한 줄, 40자 이하) 없음")
+        if spec.get("site_path") not in site_pages():
+            e.append("site_path 는 site_pages 중 하나 (자세한 내용이 있는 사이트 페이지)")
     return e
 
 
