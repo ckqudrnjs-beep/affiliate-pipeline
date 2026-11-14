@@ -110,6 +110,13 @@
 - 테스트: `#twdebug` → `window.__tw` (start(), build(n, 오차), setLook(디자인, 테마), dbg.bot=true 자동 플레이, state()). 디버그 판은 순위 제출 안 함.
 
 - 미니 상점: DESIGN_GAMES·DESIGNS·THEMES 에 tower 를 넣어 두었으므로, 게임별 상점(gshop, 별도 PR)이 들어오면 이 게임 페이지에 자동으로 생김. 그 전에는 /bonus 전체 상점에서 살 수 있음.
+
+## 생존 로그라이트 (네온 생존자, 2026-11-14)
+- 오리지널 장르 게임(특정 기존 게임의 이름·캐릭터·그림·음악 사용 안 함). 페이지 `games/survivor/`, 본체 `static/js/survivor.js`(번들 없음, 페이지 열리고 미리 불러옴). 포스터 `static/img/survivor-poster.jpg`.
+- 매일 같은 판: 적 등장 `seeded('survivor'+KST+'#spawn')`, 드롭 `#drop`, 레벨업 카드 `#c<레벨>`. 고정 스텝(1/60초) 업데이트라 기기 속도와 무관. 점수 상한 `functions/api/score.js` MAX.survivor.
+- 3분(180초) 생존 = 클리어(+5,000, 업적 `sv3`), 이후 무한 모드 선택. 이어하기 🪙1·멈춤 1번은 다른 게임과 같은 규칙.
+- 꾸미기: build.py DESIGNS·THEMES g="survivor". 게임 안 미니 상점은 임시 `Bonus.mini`(.mini-shop) — 공용 게임 상점(#gshop) 머지되면 제거.
+- 테스트용: `#svdebug` → `window.__sv` (bot(true), fast(n), god(true), give('laser',3), step(n), time(t)). 디버그 판은 순위에 안 올라감.
 ## 별사탕 합치기 (2026-11-14 BK)
 - 오리지널 물리 합치기 퍼즐 `games/starcandy/` (번들 없음, game.js 하나). 같은 단계 별사탕 둘이 닿으면 한 단계 위로 합쳐짐, 11단계(별가루 … 무지개별 · 달사탕 · 은하수 사탕). 그림·효과음 모두 코드로 생성. 특정 기존 게임의 과일·캐릭터·상자 그림을 따라 하지 않는다(별사탕·유리병·네온).
 - 물리: 베를레 적분 + 위치 보정(1/240초 간격, 4회 반복), 위로 튀는 속도 상한(병 밖으로 튀어 나가지 않게). 넘침선 위에 1.2초 넘게 산 별사탕이 2초 넘게 걸치면 끝.
