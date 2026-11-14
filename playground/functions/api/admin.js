@@ -122,6 +122,8 @@ export async function onRequestPost({ request, env }) {
         env.DB.prepare("UPDATE testers SET h = ? WHERE h = ?").bind(nh, h),
         env.DB.prepare("UPDATE posts SET h = ? WHERE h = ?").bind(nh, h),
         env.DB.prepare("UPDATE bans SET h = ? WHERE h = ?").bind(nh, h),
+        env.DB.prepare("CREATE TABLE IF NOT EXISTS pscores (h TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, nick TEXT NOT NULL, score INTEGER NOT NULL, PRIMARY KEY (h, game, day))"),
+        env.DB.prepare("UPDATE pscores SET h = ? WHERE h = ?").bind(nh, h),
       ]);
       await log(env, "reissue", row.nick);
       const row2 = await env.DB.prepare("SELECT * FROM profiles WHERE h = ?").bind(nh).first();

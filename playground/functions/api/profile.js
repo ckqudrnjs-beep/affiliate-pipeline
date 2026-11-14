@@ -84,7 +84,7 @@ export async function onRequestPost({ request, env }) {
   const row = h && (await env.DB.prepare("SELECT nick, data, rev FROM profiles WHERE h = ?").bind(h).first());
   if (!row) { await hit(env, ip, "bad"); return json({ error: "nocode", msg: "그런 복구 코드가 없어요. 다시 확인해 주세요." }, 404); }
   if (a === "get") return json({ nick: row.nick, data: JSON.parse(row.data), rev: row.rev });
-  if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); return json({ ok: true }); }
+  if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); try { await env.DB.prepare("DELETE FROM pscores WHERE h = ?").bind(h).run(); } catch { /* 표 없음 */ } return json({ ok: true }); }
   // put
   if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
   const data = clean(b.data); if (!data) return json({ error: "bad" }, 400);
