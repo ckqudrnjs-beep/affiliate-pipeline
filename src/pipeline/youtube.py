@@ -128,7 +128,7 @@ def build_description(row: dict) -> str:
     if not is_ad(row):
         return "\n".join([
             row["intro"].strip(),
-            "계산기는 don3chon.com 에서 직접 해 볼 수 있어요.",
+            "우리 집 숫자로 계산해 보기: https://don3chon.com",
             "",
             ai_line(row),
             "#돈줍는삼촌 #생활비" + ("" if is_long(row) else " #Shorts"),
