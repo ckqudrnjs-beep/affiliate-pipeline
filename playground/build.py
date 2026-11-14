@@ -932,7 +932,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                f'data-d="{esc(g["short"] + " · 가입 없이 무료, 같이 해 볼래?")}">📤 친구에게 이 게임 공유</button> <small class="muted">첫 공유 🪙+2</small></p>')
         m = re.search(r'<h1>.*?</h1>(\s*<p class="lead">.*?</p>)?', body, re.S)
         body = body[:m.end()] + pshare + body[m.end():] if m else pshare + body
-        if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED:  # 게임별 미니 상점(그 게임 아이템만)
+        if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED or g["slug"] in DESIGN_GAMES:  # 게임별 미니 상점(그 게임 아이템만). DESIGNS·THEMES 만 있는 새 게임도 자동
             gs = f'<details class="gshop" data-g="{g["slug"]}"><summary>🛒 이 게임 상점 <small>· 보유 🪙 <b>0</b> · 눌러서 열기</small></summary><div class="gsb"></div></details>'
             body = body.replace("<!--RANK-->", gs + "<!--RANK-->") if "<!--RANK-->" in body else body + gs
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
