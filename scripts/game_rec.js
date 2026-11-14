@@ -3,6 +3,7 @@
 //   주소에 #demo 를 붙이면 게임이 window.__demo = { bot: true/false, score, state } 를 만들고, 순위에 올리지 않는다.
 // 약속이 없는 게임도 시작 버튼(id 가 -go / -start 로 끝나는 버튼)을 눌러 처음 몇 초를 녹화한다.
 // 가상 시계(rAF·performance.now)로 프레임을 하나씩 진행 → 느린 서버에서도 30fps.
+// 게임별 녹화 방법(테스트 모드 해시·봇 켜기): config/raksil_rec.json
 // 사용: node scripts/game_rec.js <사이트> <slug> <출력 폴더> [초=14]
 // 출력: f00000.jpg … (게임 화면 영역만), info.json {slug, demo, frames, score}
 const { chromium } = require('playwright');
@@ -22,10 +23,15 @@ const VIRTUAL_TIME = `(() => {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
-  const page = await browser.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFactor: 2 });
+  let R = {};
+  try { R = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'raksil_rec.json'), 'utf8'))[SLUG] || {}; } catch (e) { /* 없음 */ }
+  const [VW, VH] = R.view || [540, 960];
+  const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 2 });
   page.on('pageerror', (e) => console.error('pageerror', e.message));
+  // 녹화 중 점수·투표 등 쓰기 요청은 서버로 보내지 않음 (순위 오염 방지)
+  await page.route('**/api/**', (r) => (r.request().method() === 'GET' ? r.continue() : r.abort()));
   await page.addInitScript(VIRTUAL_TIME);
-  await page.goto(`${BASE}/games/${SLUG}.html#demo`, { waitUntil: 'load' });
+  await page.goto(`${BASE}/games/${SLUG}.html#${R.hash || 'demo'}`, { waitUntil: 'load' });
   const step = (n = 1) => page.evaluate(([d, k]) => { for (let i = 0; i < k; i++) window.__step(d); }, [DT, n]);
   await step(5);
   const go = await page.$('main button[id$="-go"], main button[id$="-start"], button[id$="-go"], button[id$="-start"]');
@@ -36,6 +42,7 @@ const VIRTUAL_TIME = `(() => {
     const c = await page.$('main canvas, canvas');
     if (c) await c.click().catch(() => {});
   }
+  if (R.once) await page.evaluate(R.once).catch((e) => console.error('once', e.message));
   await step(15);
   // 게임 화면 영역 = 보이는 것 중 가장 큰 canvas (없으면 main 첫 화면)
   let box = await page.evaluate(() => {
@@ -50,10 +57,13 @@ const VIRTUAL_TIME = `(() => {
   if (!box) {
     const m = await page.$('main');
     if (m) await m.scrollIntoViewIfNeeded();
-    box = { x: 0, y: 0, width: 540, height: 960 };
+    box = { x: 0, y: 0, width: VW, height: VH };
   }
+  if (R.square) { const s = Math.min(box.width, box.height); box = { x: box.x + (box.width - s) / 2, y: box.y + (box.height - s) / 2, width: s, height: s }; }
   const n = Math.round(Number(SECS) * FPS);
+  const tick = R.tick ? new Function('i', R.tick) : null;
   for (let i = 0; i < n; i++) {
+    if (tick) await page.evaluate(([src, k]) => { try { new Function('i', src)(k); } catch (e) { /* 무시 */ } }, [R.tick, i]);
     await step(1);
     await page.screenshot({ path: path.join(OUT, `f${String(i).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 88, clip: box });
     if (i % 90 === 0) console.log('frame', i);

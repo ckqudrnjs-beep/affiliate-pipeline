@@ -1,0 +1,32 @@
+{
+ "_": "5락실 쇼츠 녹화 방법 (게임별, 없으면 시작 버튼만 누름). hash=게임 테스트 모드(순위 미반영), once=시작 뒤 한 번, tick=매 프레임(i=프레임 번호). 녹화 중 /api 쓰기 요청은 모두 막음. view=[가로,세로] 화면 크기, square=true 면 가운데 정사각형만.",
+ "raid": {
+  "hash": "nrdebug",
+  "once": "__nr.ch(1,'knight');__nr.bot(true)",
+  "view": [
+   960,
+   540
+  ],
+  "square": true
+ },
+ "survivor": {
+  "hash": "svdebug",
+  "once": "__sv.bot(true);__sv.time(90)"
+ },
+ "dodge": {
+  "hash": "dgdebug",
+  "once": "__dg.bot(true)"
+ },
+ "tongtong": {
+  "hash": "ttdebug",
+  "once": "__tt.bot=true"
+ },
+ "tower": {
+  "hash": "twdebug",
+  "tick": "if(i%20==10)__tw.build(1,6)"
+ },
+ "starcandy": {
+  "hash": "scdebug",
+  "tick": "if(i%26==0)__sc.aim(12+Math.random()*76);if(i%26==8)__sc.drop()"
+ }
+}
