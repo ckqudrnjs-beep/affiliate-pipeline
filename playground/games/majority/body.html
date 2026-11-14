@@ -1,6 +1,19 @@
 <h1>다수결 맞히기</h1><p class="lead">지난 밸런스게임에서 사람들이 더 많이 고른 쪽을 맞혀 보세요.</p>
-<div class="card" id="box"><div class="muted" id="prog"></div><div class="vs" style="margin-top:10px"><button class="a" type="button" id="ba"></button><span class="x">VS</span><button class="b" type="button" id="bb"></button></div><p id="msg"></p></div>
-<div class="card" id="end" hidden><h2 style="margin-top:0">결과</h2><p id="res" style="font-size:26px"></p><button class="big" id="sh" type="button">결과 공유</button></div>
+<style>
+.mj{position:relative;overflow:hidden;border-radius:18px;padding:16px 14px 18px;background:radial-gradient(120% 80% at 50% 0%,#3a0c5f 0%,#140734 55%,#0a0420 100%);border:2px solid #ff3d9a;box-shadow:0 0 26px #ff3d9a44}
+.mj-top{display:flex;justify-content:space-between;align-items:center}.mj-n{font-family:var(--px);font-size:11px;color:#cfc8ff}.mj-sc{font-family:var(--px);font-size:11px;color:#ffd23f}
+.mj-q{text-align:center;color:#e9e4ff;font-weight:800;margin:12px 0 10px}
+.mj-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch}
+.mj-c{position:relative;overflow:hidden;min-height:150px;border:0;border-radius:16px;padding:14px 10px 34px;font:inherit;font-weight:800;font-size:17px;line-height:1.35;color:#fff;cursor:pointer;text-shadow:0 2px 4px #0006;transition:transform .15s}
+.mj-c:active{transform:scale(.97)}.mj-c.a{background:linear-gradient(160deg,#ff6fb5,#c2187a);box-shadow:0 6px 0 #7a0c4c,0 0 20px #ff3d9a66}.mj-c.b{background:linear-gradient(160deg,#4fe3ff,#1068b8);box-shadow:0 6px 0 #0a3a6a,0 0 20px #22d3ee66}
+.mj-c .fill{position:absolute;left:0;right:0;bottom:0;height:0;background:#ffffff2e;transition:height .8s cubic-bezier(.2,.8,.2,1)}.mj-c .pc{position:absolute;left:0;right:0;bottom:8px;font-family:var(--px);font-size:16px;opacity:0;transition:opacity .3s}
+.mj-c .cr{position:absolute;top:4px;right:8px;font-size:24px;opacity:0;transform:scale(.3);transition:all .35s cubic-bezier(.3,1.6,.5,1)}.mj-c.win .cr{opacity:1;transform:scale(1)}.mj-c.pick{outline:3px solid #ffd23f;outline-offset:2px}.mj-c.dim{filter:saturate(.4) brightness(.7)}
+.mj-x{align-self:center;font-family:var(--px);font-size:14px;color:#ffd23f;text-shadow:0 0 12px #ffd23f;animation:mjp 1.2s ease-in-out infinite}@keyframes mjp{50%{transform:scale(1.25)}}
+.mj-msg{min-height:28px;text-align:center;font-weight:800;margin:14px 0 0}.mj-msg.ok{color:#3ddc84;text-shadow:0 0 10px #3ddc84}.mj-msg.no{color:#ff8a8a}
+.mj-end{text-align:center}.mj-end h2{font-family:var(--hd);color:#ffd23f;text-shadow:0 0 14px #ffd23f;margin:4px 0}.mj-big{font-family:var(--px);font-size:28px;color:#22d3ee;text-shadow:0 0 14px #22d3ee;margin:12px 0}
+</style><div class="mj" id="box"><div class="mj-top"><span class="mj-n" id="prog"></span><span class="mj-sc" id="scr"></span></div><p class="mj-q">사람들이 더 많이 고른 쪽은?</p>
+<div class="mj-vs"><button class="mj-c a" type="button" id="ba"></button><span class="mj-x">VS</span><button class="mj-c b" type="button" id="bb"></button></div><p class="mj-msg" id="msg"></p></div>
+<div class="mj mj-end" id="end" hidden><h2>결과</h2><div class="mj-big" id="big"></div><p id="res" hidden></p><p id="tier" style="font-weight:800;color:#e9e4ff"></p><button class="big" id="sh" type="button">결과 공유</button></div>
 <h2>규칙</h2><ul class="list"><li>투표가 20표 이상 모인 지난 질문 중에서 최대 10문제가 나옵니다.</li><li>내 취향이 아니라 '사람들이 더 많이 고른 쪽'을 고르세요.</li><li>채점은 실제 투표 비율로 합니다. 비율이 50:50이면 둘 다 정답이에요.</li></ul>
 <h2>잘 맞히는 법</h2><p>밸런스게임 결과는 '무난한 쪽'이 이기는 경우가 많습니다. 극단적인 선택지보다는 일상에서 덜 불편한 쪽, 그리고 질문을 보는 사람들의 나이대를 떠올려 보세요.</p>
 <p>다수결 맞히기는 '나라면 뭘 고를까'가 아니라 '사람들은 뭘 골랐을까'를 생각하는 게임이라, 밸런스게임과는 전혀 다른 머리를 씁니다. 문제는 5락실에 실제로 올라온 지난 밸런스게임에서만 나오고, 정답은 방문자들이 실제로 누른 투표 수로 정해져요. 투표가 쌓일수록 문제도 늘어납니다.</p>
