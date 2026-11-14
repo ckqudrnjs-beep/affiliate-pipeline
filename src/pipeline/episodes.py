@@ -40,21 +40,27 @@ SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 
              "상품은 마지막 1~2줄에만 prop product 로, 그 뒤 end. 조카는 시청자 대신 묻는 역할, 삼촌은 계산으로 답한다. "
              "마지막 줄은 웃기거나 첫 줄로 이어지게(다시 보게). "
              "skit 에 badge(첫 장면 노란 배지 = 썸네일, 6자 안팎 질문: \"세금 얼마?\")와 bg(room/office/store/door 중 주제에 맞게)를 꼭 넣고, "
-             "포즈를 줄마다 바꾼다(삼촌 talk/wow/point/think/thumb/facepalm, 조카 talk/shock/cold/happy/think). ")
+             "포즈를 줄마다 바꾼다(삼촌 talk/wow/point/think/thumb/facepalm, 조카 talk/shock/cold/happy/think). "
+             "홈페이지 유입(2026-11-14 BK): 정답 숫자는 '가정' 기준임을 sub 로 밝히고, 끝은 시청자 자기 숫자가 궁금해지게 "
+             "(\"근데 너네 집은 얼마일까?\" → \"우리 집 숫자는 돈삼촌에서\"). badge 는 숫자+물음표(\"1년 18만 원?\") 또는 상식 뒤집기(\"끄면 손해?\"). "
+             "근거 없는 통계·과장 금지. ")
+# 2026-11-14 오후 BK "상품편도 하지마, 우선 홈페이지 유입에 주력해": 쇼츠·롱폼 모두 상품 없음, 끝은 don3chon.com 으로.
 # 요일(월=0) → 쇼츠 형식. 2026-11-14 BK "덜 광고처럼": 상품 나오는 쇼츠는 월·목 상황극 주 2개만,
 # 화·금 = "오늘의 얼마게"(사이트 퀴즈와 같은 날 같은 문제, 코드가 그날 아침 자동으로 씀, 상품 없음), 수·토·일 상품 없음.
 QUIZ_DAYS = {1, 4}
 SHORT_FORMATS = {
-    0: ("skit-quiz", "삼촌 vs 조카 얼마게?", True,
-        SKIT_RULE + "주제: A vs B 중 돈이 더 드는 쪽 맞히기 (예: 온풍기 vs 담요). 조카가 틀리고 삼촌이 숫자로 뒤집는다. "
-        "공감 상황 먼저(자취 첫 겨울 난방비, 월급날 다음 날 통장, 배달 vs 집밥). end 는 상품이 아니라 계산 결과·꿀팁 한 줄(text)."),
+    0: ("skit-quiz", "삼촌 vs 조카 얼마게?", False,
+        SKIT_RULE + "상품 없음(prop product 금지, 특정 상품·브랜드 이름 금지). 주제: A vs B 중 돈이 더 드는 쪽 맞히기 "
+        "(예: 온풍기 vs 담요, 배달 vs 집밥). 조카가 틀리고 삼촌이 숫자로 뒤집는다. 공감 상황 먼저. "
+        "끝 대사·end 는 don3chon.com 의 해당 계산기나 오늘의 얼마게로 이어지게(\"우리 집 숫자는 돈삼촌에서\")."),
     1: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
     2: ("teaser", "롱폼 예고", False,
         "상품 없음. 이번 주 수요일 롱폼(살까 말까 저울)의 핵심 계산 하나만 쇼츠로. hook → versus 또는 bars → calc → "
         "end(\"전체 비교는 채널 롱폼에서\"). 상품 이름·사진 없이 '전기요 vs 온풍기'처럼 종류로만."),
-    3: ("skit-dont", "조카야 그거 사지 마", True,
-        SKIT_RULE + "주제: 조카가 충동구매하려는 물건을 삼촌이 '이런 사람은 사지 마' 계산으로 말리고, 이런 사람만 사라고 정리. "
-        "정직함이 핵심(단점·조건을 note·check 에서). end 는 상품이 아니라 계산 결과·꿀팁 한 줄(text)."),
+    3: ("skit-dont", "조카야 그거 하지 마", False,
+        SKIT_RULE + "상품 없음(prop product 금지, 특정 상품·브랜드 이름 금지). 주제: 조카의 돈 새는 습관(충동구매, 배달, "
+        "구독 방치, 보일러 끄고 외출 등)을 삼촌이 계산으로 말리고 더 싼 방법을 알려 준다. "
+        "끝 대사·end 는 don3chon.com 계산기로 이어지게."),
     4: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
     5: ("skit-life", "삼촌 vs 조카 생활비", False,
         SKIT_RULE + "상품 없음(prop product 금지). 주제: 공감 생활 상황극 (자취 첫 겨울 난방비, 월급날 다음 날 통장, "
@@ -64,11 +70,11 @@ SHORT_FORMATS = {
         "uncle(react-surprised) → end. 숫자는 보수적으로."),
 }
 LONG_FORMATS = {
-    2: ("scale", "살까 말까 저울", True, 20,
+    2: ("scale", "살까 말까 저울", False, 20,
         "7~8분. 같은 목적의 3가지 방법 총비용 비교(예: 전기요 vs 온수매트 vs 온풍기). chapter 5~6개: 질문 → 방법별 계산 → "
-        "bars(총비용 비교) → 상황별 추천 → 주의점 → 마무리. 상품은 최대 3개, 설명란 링크."),
+        "bars(총비용 비교) → 상황별 추천 → 주의점 → 마무리. 상품 없음(종류로만 비교), 마무리는 don3chon.com 계산기."),
     5: ("checkup", "삼촌의 생활비 점검", False, 20,
-        "6~8분. 이번 주 생활비 새는 구멍 5개 모음(상품 없거나 1~2개). chapter 마다 calc·counter·list. 마무리에 사이트 계산기."),
+        "6~8분. 이번 주 생활비 새는 구멍 5개 모음(상품 없음). chapter 마다 calc·counter·list. 마무리에 사이트 계산기."),
 }
 
 LONG_HOUR = 20  # 롱폼 공개 시각 (쇼츠 19:00 과 겹치지 않게)
@@ -394,9 +400,8 @@ def check(spec: dict) -> list[str]:
         e.append("상품 편은 end 장면(가격·사이트)")
     if has_ad and kind == "short" and spec.get("date", "") >= "2026-11-16" and not any(s.get("type") == "end" and s.get("text") for s in scenes):
         e.append("쇼츠 end 는 상품 대신 계산 결과·꿀팁 한 줄(text)")
-    allowed = {k: a for k, _, a, _ in SHORT_FORMATS.values()}
-    if kind == "short" and spec.get("product") and allowed.get(spec.get("format")) is False:
-        e.append(f"{spec.get('format')} 형식은 상품 없이 (상품 쇼츠는 월·목 상황극만)")
+    if has_ad and spec.get("date", "") >= "2026-11-16":
+        e.append("상품 편 중단 (2026-11-14 BK: 홈페이지 유입에 주력) — product/products 빼기")
     if not spec.get("description"):
         e.append("description (설명란 소개 1~3줄) 없음")
     return e
