@@ -362,14 +362,18 @@ DESIGNS = [
     {"g": "tongtong", "id": "frog", "name": "개구리 통통", "icon": "🐸", "p": 7},
     {"g": "tongtong", "id": "astro", "name": "우주인 통통", "icon": "🧑‍🚀", "p": 10},
     {"g": "tongtong", "id": "whale", "name": "별고래", "icon": "🐋", "p": 50, "leg": 1},
+    {"g": "survivor", "id": "cat", "name": "냥이 루미", "icon": "🐱", "p": 5},
+    {"g": "survivor", "id": "robot", "name": "로봇 루미", "icon": "🤖", "p": 8},
+    {"g": "survivor", "id": "ghost", "name": "유령 루미", "icon": "👻", "p": 12},
+    {"g": "survivor", "id": "phoenix", "name": "불사조 루미", "icon": "🔥", "p": 50, "leg": 1},
     {"g": "tower", "id": "cake", "name": "케이크 탑", "icon": "🍰", "p": 5},
     {"g": "tower", "id": "brick", "name": "벽돌 성", "icon": "🧱", "p": 7},
     {"g": "tower", "id": "ice", "name": "얼음 궁전", "icon": "🧊", "p": 10},
     {"g": "tower", "id": "crystal", "name": "무지개 크리스털 탑", "icon": "💎", "p": 50, "leg": 1},
 ]
-DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"], "tower": ["하늘 탑 쌓기", "네온 빌딩 기본", "🏢"]}
+DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"], "tower": ["하늘 탑 쌓기", "네온 빌딩 기본", "🏢"], "survivor": ["네온 생존자", "루미 기본", "🧿"]}
 # 업적·공유 보너스 코인(각 1번만): sl5 별빛 5단계, tt500 통통 500m, rg4 사격장 4단계, share 결과 공유
-ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "tw30": ["하늘 탑 쌓기 30층 도달", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
+ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "tw30": ["하늘 탑 쌓기 30층 도달", 3], "sv3": ["네온 생존자 3분 생존", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
 ACH["np5"] = ["오늘의 숫자 퍼즐 5판 모두 힌트 없이 풀기", 3]  # 2026-11-14 숫자 퍼즐
 # 코인 쓰임 1단계(BK 2026-11-14 "코인을 모아야 하는 이유"): 오늘의 미션·첫 플레이 보너스·아바타 30종·칭호·출석 보호권·통통 이어하기
 # 하루에 버는 양 ≈ 출석 1 + 미션 3 + 다 깨면 1 = 🪙5. 쓰는 곳은 모두 꾸미기·편의(점수·능력 영향 없음).
@@ -397,6 +401,9 @@ THEMES = [  # 게임 배경 테마. own 키 h:<게임>:<id>
     {"g": "tongtong", "id": "sunset", "name": "노을", "icon": "🌇", "p": 10},
     {"g": "tongtong", "id": "jungle", "name": "네온정글", "icon": "🌴", "p": 15},
     {"g": "tongtong", "id": "snow", "name": "눈 오는 밤", "icon": "⛄", "p": 20},
+    {"g": "survivor", "id": "desert", "name": "신기루 사막", "icon": "🏜️", "p": 10},
+    {"g": "survivor", "id": "deep", "name": "심해 네온", "icon": "🌊", "p": 15},
+    {"g": "survivor", "id": "sakura", "name": "벚꽃 밤", "icon": "🌸", "p": 20},
     {"g": "tower", "id": "sunset", "name": "노을 하늘", "icon": "🌇", "p": 10},
     {"g": "tower", "id": "blossom", "name": "벚꽃 하늘", "icon": "🌸", "p": 15},
     {"g": "tower", "id": "aurora", "name": "오로라 밤", "icon": "🌌", "p": 20},
@@ -482,7 +489,18 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
    el.innerHTML=done?`✅ 오늘 출석 완료 · 🪙 <b>${s.coins}</b>개${sw} <a href="/bonus">미션·코인 상점 →</a>`
    :`📅 오늘 출석하면 🪙 코인 +1 <small>(${el.dataset.use||'이어하기·스킨 사기에 써요'})</small> <button type="button" class="ck">출석하기</button>`;
    const b=el.querySelector('.ck');if(b)b.onclick=()=>{const g=B.checkin();B.toast(g>0?`🪙 +${g} 출석 완료! (연속 ${s.streak}일)`:'코인이 가득 찼어요(최대 '+BONUS_MAX+'개). 출석 일수는 올라가요!')}});
+  document.querySelectorAll('.mini-shop').forEach(B.mini);
   const pg=document.getElementById('bonuspage');if(pg)B.page(pg)},
+ // 게임별 미니 상점(BK 11/14): 그 게임의 디자인 스킨·배경 테마만 보여 주고, 코인은 사이트 공통 1종을 그대로 쓴다
+ mini(el){const g=el.dataset.g;if(!g||!DGAMES[g])return;const [gn,bn,bi]=DGAMES[g],cd=B.design(g),ct=B.theme(g),c=s.coins;
+  const tag=(ok,sel,p)=>sel?'사용 중':ok?'고르기':`<span class="pr">🪙 ${p}</span>${c<p?' 모자라요':' 사기'}`;
+  const it=(attr,id,ok,sel,ic,nm,p,leg)=>`<button type="button" data-${attr}="${id}" class="${sel?'sel':''}${ok?'':' lock'}${leg?' leg':''}"><span class="di">${ic}</span><b>${leg?'<i>전설</i> ':''}${nm}</b><small>${tag(ok,sel,p)}</small></button>`;
+  el.innerHTML=`<h2 style="margin-top:0">🛍️ ${gn} 미니 상점</h2><p class="muted">보유 <b style="color:var(--y)">🪙 ${c}</b> · 코인은 5락실 전체 공통(출석·미션으로 모아요). 겉모습만 바뀌고 점수·난이도는 같아요.</p>`
+   +`<h3>캐릭터 스킨</h3><div class="skins">`+it('md','base',1,cd==='base',bi,bn,0)+DESIGNS.filter(d=>d.g===g).map(d=>it('md',d.id,own('d:'+g+':'+d.id,d.p),cd===d.id,d.icon,d.name,d.p,d.leg)).join('')+'</div>'
+   +(THEMES.some(d=>d.g===g)?`<h3>배경 테마</h3><div class="skins">`+it('mt','base',1,ct==='base','🌃','기본 배경',0)+THEMES.filter(d=>d.g===g).map(d=>it('mt',d.id,own('h:'+g+':'+d.id,d.p),ct===d.id,d.icon,d.name,d.p)).join('')+'</div>':'')
+   +`<p class="muted" style="margin-bottom:0">색·꼬리 효과·사운드 팩·아바타·칭호는 <a href="/bonus">전체 코인 상점 →</a></p>`;
+  el.querySelectorAll('[data-md]').forEach(b=>b.onclick=()=>{if(B.setDesign(g,b.dataset.md))B.toast('스킨을 바꿨어요! 다음 판부터 적용돼요')});
+  el.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{if(B.setTheme(g,b.dataset.mt))B.toast('배경 테마를 바꿨어요! 다음 판부터 적용돼요')})},
  toast(t){const d=document.createElement('div');d.className='btoast';d.textContent=t;const n=Math.min(2,document.querySelectorAll('.btoast').length);if(document.fullscreenElement||document.documentElement.style.overflow==='hidden'){d.style.bottom='auto';d.style.top=(64+n*58)+'px'}else d.style.bottom=(24+n*62)+'px';(document.fullscreenElement||document.body).appendChild(d);setTimeout(()=>d.remove(),2600)},
  page(pg){const done=s.last===day(),st=done?s.streak:(s.last===yday()?s.streak:0),pos=done?((st-1)%7)+1:(st%7);
   let stamps='';for(let i=1;i<=7;i++)stamps+=`<li class="${i<=pos?'on':''}${i===7?' big':''}"><small>${i}일</small>${i<=pos?'✔':(i===7?'🪙2':'🪙')}</li>`;
@@ -543,6 +561,9 @@ nav a.att{position:relative;color:var(--y);border-color:#ffd23f66;display:flex;a
 #bonuspage .stamps li small{font-size:11px;color:var(--muted)}#bonuspage .stamps li.on{border-color:var(--y);background:#ffd23f22;color:var(--y);box-shadow:0 0 10px #ffd23f55}#bonuspage .stamps li.big{border-color:#ff3d7f88}
 #bonuspage .bigck{display:block;width:100%;font:inherit;font-size:19px;font-weight:800;padding:14px;border-radius:14px;border:0;background:var(--y);color:#1a0f00;box-shadow:0 5px 0 #b8860b,0 0 24px #ffd23f66;cursor:pointer}
 #bonuspage .bigck:disabled{background:var(--soft);color:var(--muted);box-shadow:none;cursor:default}
+.mini-shop:empty{display:none}.mini-shop h3{margin:14px 0 8px;font-size:15px;color:var(--y)}.mini-shop .skins,#bonuspage .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.mini-shop .skins button{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer}.mini-shop .skins button small{color:var(--muted);font-size:12px}.mini-shop .di{grid-row:span 2;font-size:26px;line-height:1;width:30px;text-align:center}
+.mini-shop .skins button.lock{border-style:dashed}.mini-shop .skins button .pr{color:var(--y);font-weight:800}.mini-shop .skins button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f55}
 #bonuspage .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 #bonuspage .skins button{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer}
 #bonuspage .skins button .sw{grid-row:span 2;width:26px;height:26px}#bonuspage .skins button small{color:var(--muted);font-size:12px}
@@ -567,8 +588,8 @@ BONUS_BODY = f"""<h1>📅 출석체크 · 코인 상점</h1><p class="lead">출�
 <h2>🗓️ 이달의 한정 아바타</h2><p class="muted">그 달에만 살 수 있어요. 한 번 사면 달이 바뀌어도 계속 내 것이에요.</p><div class="avg avlim"></div><p class="coll"></p>
 <h2>🏷️ 칭호</h2><p class="muted">프로필과 '최근 7일' 순위에서 별명 옆에 보여요. 하나만 달 수 있고 언제든 바꿀 수 있어요.</p><div class="skins titles"></div>
 <h2>🌌 게임 배경 테마</h2><p class="muted">게임 배경 분위기를 바꿔요. 장애물·적·총알은 그대로라 난이도는 같아요.</p><div class="themes"></div>
-<h2>💫 꼬리 효과</h2><p class="muted">별빛 요격대 우주선과 통통이 뒤에 따라오는 효과예요.</p><div class="skins trails"></div>
-<h2>🎵 사운드 팩</h2><p class="muted">별빛 요격대·통통 네온런의 효과음과 음악 음색이 옛날 오락기 소리로 바뀌어요.</p><div class="skins sounds"></div>
+<h2>💫 꼬리 효과</h2><p class="muted">별빛 요격대 우주선, 통통이, 네온 생존자 루미 뒤에 따라오는 효과예요.</p><div class="skins trails"></div>
+<h2>🎵 사운드 팩</h2><p class="muted">별빛 요격대·통통 네온런·네온 생존자의 효과음과 음악 음색이 옛날 오락기 소리로 바뀌어요.</p><div class="skins sounds"></div>
 <h2>🖍️ 별명 색</h2><p class="muted">'최근 7일' 순위에서 내 별명이 이 색으로 빛나요(프로필이 있어야 보여요).</p><div class="skins ncols"></div>
 <h2>💡 밸런스 질문 제안</h2><p class="muted">🪙 {QPROP_PRICE}개로 밸런스게임 질문을 제안해요. 관리자가 골라서 채택하면 사이트에 올라가고, 칭호 「출제자」와 🪙 {QPROP_PRICE}개를 돌려받아요. 프로필이 있어야 하고 하루 1번이에요. 욕설·개인정보·광고는 바로 걸러져요.</p>
 <div class="qprop"><input name="qa" maxlength="30" placeholder="A (예: 평생 여름)"> <b>vs</b> <input name="qb" maxlength="30" placeholder="B (예: 평생 겨울)"> <button type="button" class="share">🪙 {QPROP_PRICE} 제안하기</button><p class="qmsg muted"></p></div>
