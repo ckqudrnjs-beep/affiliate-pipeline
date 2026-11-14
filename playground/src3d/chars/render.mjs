@@ -11,7 +11,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url)), ROOT = path.resolve(H
 const OUT = path.resolve(ROOT, '../static/img/raid');
 const args = process.argv.slice(2), sheet = args.includes('--sheet');
 const list = args.filter(a => !a.startsWith('--'));
-const classes = list.length ? list : ['knight', 'fairy', 'mage', 'archer', 'voodoo', 'grunt', 'shield', 'elite', 'props', 'boss'];
+const classes = list.length ? list : ['knight', 'fairy', 'mage', 'archer', 'voodoo', 'grunt', 'shield', 'elite', 'props', 'boss', 'boss2'];
 const TYPES = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary' };
 const srv = http.createServer((q, s) => {
   const p = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
@@ -29,6 +29,7 @@ fs.mkdirSync(OUT, { recursive: true });
 for (const c of classes) {
   let url;
   if (c === 'mongle') url = await pg.evaluate(() => window.renderMongle());
+  else if (c === 'boss2') url = await pg.evaluate(() => window.renderBoss2());
   else if (c === 'boss') url = await pg.evaluate(() => window.renderBoss());
   else if (c === 'props') { const r = await pg.evaluate(() => window.renderProps()); url = r.url; console.log('props meta', JSON.stringify(r.meta)); }
   else url = await pg.evaluate(([c, l]) => window.renderClass(c, l), [c, sheet]);

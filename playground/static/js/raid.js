@@ -231,7 +231,7 @@ function put(g, sp, x, y, dir, sc, flash, rotA) {
 
 /* ---------- 3D 렌더 캐릭터 아틀라스 (원본 src3d/chars, 모델 KayKit CC0) ---------- */
 // 5x4 칸, 칸 360x320px, 발 (155,295), 1 게임 단위 = 1.2px. 칸 순서 = ATL.F. 못 불러오면 예전 코드 그림을 쓴다.
-const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 1, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'], p: {}, sp: {} };
+const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 2, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'], p: {}, sp: {} };
 const ATL_E = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'wind', 'hit', 'hurt'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 3x3 칸(걷기 6프레임)
 function atlasLoad(key) {
   const en = ATL_EN.includes(key);
@@ -260,6 +260,20 @@ function bossLoad() {
   if (!ATL.p.boss) ATL.p.boss = new Promise(ok => { const im = new Image(); im.onload = () => { try { const o = {}; BOSSA.forEach(([k, pp, ax, ay], i) => { const c = mkc(400, 300); c.getContext('2d').drawImage(im, i * 400, 0, 400, 300, 0, 0, 400, 300); const wh = mkc(400, 300), w2 = wh.getContext('2d'); w2.drawImage(c, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, 400, 300); o[k] = { c, wh, ox: ax / pp, oy: ay / pp, w: 400 / pp, h: 300 / pp }; }); ATL.boss = o; } catch (e) {} ok(!!ATL.boss); }; im.onerror = () => ok(false); im.src = '/img/raid/boss.webp?v=' + ATL.V; });
   return ATL.p.boss;
 }
+// 4장 적·보스 부품(boss2.webp): 칸 400x300, 4열 [키, 1단위당 px, 기준점 x, y] — src3d/chars/render.html B2 와 같게
+const BOSS2 = [['ad_w0', 2, 200, 280], ['ad_w1', 2, 200, 280], ['ad_w2', 2, 200, 280], ['ad_wind', 2, 200, 280], ['ad_hit', 2, 200, 280], ['ad_hurt', 2, 200, 280],
+  ['spbody', 1.6, 120, 260], ['spleg', 2.6, 40, 150], ['hybody', 1.2, 130, 292], ['hyh0', 3, 240, 150], ['hyh1', 3, 240, 150],
+  ['ecbody', 1.8, 200, 280], ['eccape', 1.8, 200, 280], ['ecsw', 2.4, 200, 20]];
+function boss2Load() {
+  if (!ATL.p.b2) ATL.p.b2 = new Promise(ok => { const im = new Image(); im.onload = () => { try { const o = {}; BOSS2.forEach(([k, pp, ax, ay], i) => { const c = mkc(400, 300); c.getContext('2d').drawImage(im, (i % 4) * 400, Math.floor(i / 4) * 300, 400, 300, 0, 0, 400, 300); const wh = mkc(400, 300), w2 = wh.getContext('2d'); w2.drawImage(c, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, 400, 300); o[k] = { c, wh, ox: ax / pp, oy: ay / pp, w: 400 / pp, h: 300 / pp }; });
+    const d = mkc(400, 300), dg = d.getContext('2d'); dg.drawImage(o.spleg.c, 0, 0); dg.globalCompositeOperation = 'source-atop'; dg.fillStyle = 'rgba(14,6,26,.5)'; dg.fillRect(0, 0, 400, 300); o.splegd = Object.assign({}, o.spleg, { c: d }); // 뒤쪽 다리는 어둡게
+    ATL.b2 = o; } catch (e) {} ok(!!ATL.b2); }; im.onerror = () => ok(false); im.src = '/img/raid/boss2.webp?v=' + ATL.V; });
+  return ATL.p.b2;
+}
+function seg3(g, sp, x0, y0, x1, y1, th, fl) { // 3D 부품(가로 100단위)을 두 점 사이에 늘여 그림
+  g.save(); g.translate(x0, y0); g.rotate(Math.atan2(y1 - y0, x1 - x0)); g.scale(Math.hypot(x1 - x0, y1 - y0) / 100, th || 1); g.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h);
+  if (fl) { g.globalAlpha = fl; g.drawImage(sp.wh, -sp.ox, -sp.oy, sp.w, sp.h); } g.restore();
+}
 // 빛 번짐 스프라이트(shadowBlur 대신: 폰에서 훨씬 가볍고 더 부드러움). 색마다 한 번만 굽는다.
 const GLOW = {};
 function glowTex(col) {
@@ -269,7 +283,7 @@ function glowTex(col) {
 }
 function glw(g, x, y, r, col, a) { if (r <= 0) return; const o = g.globalCompositeOperation, al = g.globalAlpha; g.globalCompositeOperation = 'lighter'; g.globalAlpha = al * (a == null ? 1 : a); g.drawImage(glowTex(col), x - r, y - r, r * 2, r * 2); g.globalCompositeOperation = o; g.globalAlpha = al; }
 function hexA(col) { return col.length === 4 ? '#' + col[1] + col[1] + col[2] + col[2] + col[3] + col[3] : col.slice(0, 7); }
-function atlasAll() { return Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad()])); }
+function atlasAll() { return Promise.all(CLS.concat(ATL_EN).map(atlasLoad).concat([propsLoad(), bossLoad(), boss2Load()])); }
 
 /* =================== 직업·기술 데이터 =================== */
 // 공격 판정 h: x0..x1 앞쪽 거리, dy 깊이 허용, z0..z1 높이, d 피해 배율, kb 밀기, lift 띄우기, st 경직, stop 히트스톱, sh 흔들림, n 다단 수, iv 간격
@@ -1024,6 +1038,7 @@ let SPX = {};
 function spCopy(sp) { const c = mkc(sp.c.width, sp.c.height); c.getContext('2d').drawImage(sp.c, 0, 0); return Object.assign({}, sp, { c }); } // 3D 아틀라스 그림을 복제체용으로 복사
 function spx(t) {
   if (t !== 'ad' && t !== 'clone') return null;
+  if (t === 'ad' && ATL.b2) { const B = ATL.b2; return { w0: B.ad_w0, w1: B.ad_w1, w2: B.ad_w2, wind: B.ad_wind, hit: B.ad_hit, hurt: B.ad_hurt }; } // 3D 광고 드론
   const k = lay.s * lay.dpr, key = t === 'clone' ? (G ? G.cls : 'knight') + (ATL.sp[G ? G.cls : 'knight'] ? '3d' : '') : ''; const o = SPX[t]; if (o && o.k === k && o.key === key) return o.s;
   let s = {};
   if (t === 'ad') { const ek = k * ET.ad.sc, A2 = [{ ph: 0 }, { ph: 1 }, { ph: 2 }, { ph: 0, wind: 1 }, { ph: 1, lunge: 1 }, { ph: 2, hurt: 1 }]; ['w0', 'w1', 'w2', 'wind', 'hit', 'hurt'].forEach((n, i) => { s[n] = bake(adArt, A2[i], ek, '#ff5ad8', '#7df9ff', [140, 140, 20]); }); }
@@ -1583,17 +1598,20 @@ function drawSpider(g, b) {
   const body = fl ? '#b8a8e0' : null;
   const leg = (i, back) => { const s = i < 2 ? 1 : -1, j = i % 2, hipX = (j ? 18 : -10) * s, hipY = -74 + crouch, swing = air ? -10 : land ? 18 : Math.sin(ph + i * 1.7 + (back ? .8 : 0)) * 14,
       footX = (j ? 104 : 74) * s + swing * s * .5 + (back ? -8 * s : 0), footY = air ? -20 : (back ? -6 : 4), kneeX = (j ? 70 : 46) * s + (back ? -4 * s : 0), kneeY = -130 + crouch + (air ? 30 : 0) - (land ? -20 : 0) + Math.max(0, Math.sin(ph + i * 1.7)) * (air ? 0 : 10);
+    if (ATL.b2) { const sp = back ? ATL.b2.splegd : ATL.b2.spleg, w = fl ? .45 : 0; seg3(g, sp, hipX, hipY, kneeX, kneeY, back ? .85 : 1, w); seg3(g, sp, kneeX, kneeY, footX, footY, back ? .7 : .85, w); glw(g, kneeX, kneeY, back ? 6 : 9, '#ff5ad8', back ? .4 : .8); return; }
     g.strokeStyle = 'rgba(8,4,14,.95)'; g.lineWidth = back ? 12 : 14; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(hipX, hipY); g.lineTo(kneeX, kneeY); g.lineTo(footX, footY); g.stroke();
     g.strokeStyle = body || (back ? '#3a2e52' : '#5a4a78'); g.lineWidth = back ? 8 : 9; g.stroke(); g.strokeStyle = body || '#ff5ad8'; g.globalAlpha = back ? .3 : .6; g.lineWidth = 1.6; g.beginPath(); g.moveTo(kneeX, kneeY); g.lineTo(footX, footY); g.stroke(); g.globalAlpha = 1; dot(g, kneeX, kneeY, 3, back ? '#a04a90' : '#ff9ae8'); };
   g.save(); g.translate(b.x, y); g.scale(-f, 1);
   for (let i = 0; i < 4; i++) leg(i, 1);
+  if (ATL.b2) { put(g, ATL.b2.spbody, 0, crouch, 1, 1, fl ? .45 : 0); glw(g, -46, -84 + crouch, land ? 22 : 14, land ? '#ffd166' : '#ff5ad8', .8); glw(g, 46, -100 + crouch, 50, '#ff5ad8', .18); }
+  else {
   // 배(간판)
   g.save(); g.translate(46, -96 + crouch); shape(g, [[-62, 0], [-48, -42], [0, -56], [52, -40], [66, 0], [48, 40], [0, 50], [-50, 36]], body || lg(g, 0, -56, 0, 50, [[0, '#4a3a66'], [1, '#1a1228']]), .4);
   g.fillStyle = 'rgba(8,4,14,.9)'; g.beginPath(); g.roundRect(-38, -24, 76, 36, 6); g.fill(); g.restore();
   // 머리가슴
   shape(g, [[-60, -70 + crouch], [-40, -100 + crouch], [-6, -104 + crouch], [10, -84 + crouch], [4, -56 + crouch], [-30, -48 + crouch], [-58, -56 + crouch]], body || lg(g, 0, -104, 0, -48, [[0, '#5a4a7e'], [1, '#221a34']]), .4);
   for (let i = 0; i < 6; i++) dot(g, -50 + (i % 3) * 9, -84 + crouch + (i < 3 ? 0 : 9) - (i % 3 === 1 ? 3 : 0), i < 2 ? 3.4 : 2.4, land ? '#ffd166' : '#ff5ad8');
-  shape(g, [[-60, -60 + crouch], [-70, -44 + crouch], [-58, -50 + crouch]], '#efe6ff'); shape(g, [[-46, -54 + crouch], [-54, -38 + crouch], [-42, -46 + crouch]], '#efe6ff');
+  shape(g, [[-60, -60 + crouch], [-70, -44 + crouch], [-58, -50 + crouch]], '#efe6ff'); shape(g, [[-46, -54 + crouch], [-54, -38 + crouch], [-42, -46 + crouch]], '#efe6ff'); }
   for (let i = 0; i < 4; i++) leg(i, 0);
   g.restore();
   // 등 간판 글자(뒤집히지 않게)
@@ -1606,7 +1624,8 @@ function drawHydra(g, b) {
   // 몸통: 서버 더미
   const blk = (x0, y0, w, h) => { g.fillStyle = fl ? '#4a7aa0' : lg(g, x0, 0, x0 + w, 0, [[0, '#0a1626'], [.5, '#1a3450'], [1, '#08121e']]); g.beginPath(); g.roundRect(x0, y0, w, h, 6); g.fill(); g.strokeStyle = '#2a5070'; g.lineWidth = 1.5; g.stroke();
     for (let yy = y0 + 8; yy < y0 + h - 6; yy += 11) { g.fillStyle = '#06101c'; g.fillRect(x0 + 6, yy, w - 12, 7); for (let l = 0; l < 4; l++) { const on2 = Math.sin(G.t * (3 + l) + yy + x0) > 0; g.fillStyle = on2 ? ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l] : '#1a2a3a'; g.fillRect(x0 + 10 + l * 7, yy + 2, 3, 3); } } };
-  blk(-70, -120, 130, 120); blk(-50, -190, 96, 74); blk(-20, -232, 60, 46);
+  if (ATL.b2) { put(g, ATL.b2.hybody, 0, 0, 1, 1, fl ? .7 : 0); for (let l = 0; l < 4; l++) glw(g, -50 + l * 30, -60 - l * 40, 12, ['#4fd8ff', '#6bff9a', '#ffd166', '#ff5a7a'][l], .4 + .4 * Math.sin(G.t * (3 + l))); }
+  else { blk(-70, -120, 130, 120); blk(-50, -190, 96, 74); blk(-20, -232, 60, 46); }
   if (b.core > 0) { const rr = 30 + Math.sin(G.t * 10) * 4; g.fillStyle = rg(g, -6, -150, 0, rr, [[0, 'rgba(255,255,255,1)'], [.35, 'rgba(255,214,102,.9)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(-6, -150, rr, 0, TAU); g.fill(); }
   // 목(케이블) + 머리 3개
   for (let i = 0; i < 3; i++) {
@@ -1615,6 +1634,7 @@ function drawHydra(g, b) {
     g.strokeStyle = fl ? '#6a9ac0' : ['#1e4a6a', '#2a3a6a', '#1a5a5a'][i]; g.lineWidth = 14; g.stroke();
     g.strokeStyle = 'rgba(79,216,255,.5)'; g.lineWidth = 2; g.setLineDash([3, 7]); g.stroke(); g.setLineDash([]);
     g.save(); g.translate(hx, hy); if (tired) g.rotate(-.5); const open = beam || (b.st === 'bite' && b.hd === i) ? 1 : 0;
+    if (ATL.b2) { put(g, open ? ATL.b2.hyh1 : ATL.b2.hyh0, 0, 0, 1, 1, fl ? .7 : 0); if (!tired) glw(g, -10, -8, 10, beam ? '#ffffff' : '#4fd8ff', .7); if (beam) dot(g, -52, 4, 6 + Math.sin(G.t * 30) * 2, '#bff4ff'); g.restore(); continue; }
     shape(g, [[16, -18], [-30, -14], [-56, -4 - open * 6], [-34, 0], [16, 4]], fl ? '#8ab8e0' : lg(g, 0, -18, 0, 4, [[0, '#3a6a90'], [1, '#14283a']]), .2);
     shape(g, [[16, 6], [-30, 4 + open * 10], [-50, 10 + open * 16], [-28, 16], [14, 16]], fl ? '#4a7aa0' : '#12243a', .2);
     g.fillStyle = 'rgba(8,16,28,.9)'; g.beginPath(); g.roundRect(-20, -12, 26, 10, 2); g.fill(); dot(g, -12, -8, 3, tired ? '#3a5a6a' : beam ? '#ffffff' : '#4fd8ff'); dot(g, -2, -8, 2, tired ? '#3a5a6a' : '#4fd8ff');
@@ -1629,23 +1649,28 @@ function drawEcho(g, b) {
   let al = 1; if (b.st === 'enter') al = clamp(1 - b.tm / 2.2, 0, 1); if (b.st === 'blink') al = clamp(b.tm / .45, 0, 1);
   g.save(); g.globalAlpha = al; g.translate(b.x + (b.st === 'blink' ? rnd(-3, 3) : 0), y + (tired ? 14 : 0)); g.scale(f, 1);
   const wv = Math.sin(G.t * 3) * 8, sl = b.st === 'slash' ? clamp(1 - b.tm / .6, 0, 1) : 0;
+  const E3 = ATL.b2, fw = fl ? .7 : 0;
+  if (E3) { g.save(); g.translate(0, -118); g.transform(1, 0, -wv * .012, 1, 0, 0); g.translate(0, 118); put(g, E3.eccape, 0, 0, 1, 1, fw); g.restore(); put(g, E3.ecbody, 0, 0, 1, 1, fw); }
+  else {
   // 망토
   shape(g, [[-10, -118], [-34, -96], [-52 - wv, -40], [-62 - wv * 1.4, 4], [-30, -8], [-14, 6], [8, -6], [14, -60], [10, -112]], fl ? '#6a4a90' : lg(g, 0, -118, 0, 6, [[0, '#3a1a5a'], [.6, '#24103a'], [1, '#12061e']]), .4);
   curve(g, [[-34, -96], [-52 - wv, -40], [-62 - wv * 1.4, 4]], 'rgba(192,132,255,.6)', 2);
   // 몸·로브
   shape(g, [[-14, -112], [14, -112], [18, -70], [22, -14], [6, -2], [-10, -4], [-20, -16], [-16, -70]], fl ? '#8a6ab0' : lg(g, -16, 0, 20, 0, [[0, '#2a1440'], [.5, '#4a2a6a'], [1, '#2a1440']]), .35);
   curve(g, [[0, -108], [2, -60], [-2, -8]], 'rgba(224,184,255,.5)', 1.5);
-  for (const s of [-1, 1]) shape(g, [[s * 8, -114], [s * 26, -120], [s * 30, -104], [s * 14, -100]], fl ? '#a08ac0' : '#6a4a8a', .2);
+  for (const s of [-1, 1]) shape(g, [[s * 8, -114], [s * 26, -120], [s * 30, -104], [s * 14, -100]], fl ? '#a08ac0' : '#6a4a8a', .2); }
   if (tired || b.core > 0) { const rr = 16 + Math.sin(G.t * 10) * 3; g.fillStyle = rg(g, 0, -84, 0, rr * 1.8, [[0, 'rgba(255,255,255,1)'], [.4, 'rgba(255,214,102,.8)'], [1, 'rgba(255,120,0,0)']]); g.beginPath(); g.arc(0, -84, rr * 1.8, 0, TAU); g.fill(); }
-  else dot(g, 0, -84, 5, '#c084ff');
+  else if (E3) glw(g, 0, -84, 14, '#c084ff', .9); else dot(g, 0, -84, 5, '#c084ff');
   // 칼을 든 팔
   g.save(); g.translate(14, -104); g.rotate(tired ? 1.2 : -1.1 + sl * 2.6 + Math.sin(G.t * 2) * .05);
+  if (E3) { put(g, E3.ecsw, 0, 0, 1, 1, fw); for (let j = 0; j < 3; j++) glw(g, 0, 50 + j * 24, 16, '#c084ff', .35 + (sl ? .4 : 0)); } else {
   g.strokeStyle = fl ? '#6a4a90' : '#3a2050'; g.lineWidth = 8; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 30); g.stroke();
-  g.shadowColor = '#c084ff'; g.shadowBlur = 16; shape(g, [[-3, 30], [3, 30], [6, 96], [0, 112], [-6, 96]], lg(g, 0, 30, 0, 112, [[0, '#f6eaff'], [1, '#a06aff']]), .1); g.restore();
+  g.shadowColor = '#c084ff'; g.shadowBlur = 16; shape(g, [[-3, 30], [3, 30], [6, 96], [0, 112], [-6, 96]], lg(g, 0, 30, 0, 112, [[0, '#f6eaff'], [1, '#a06aff']]), .1); } g.restore();
   // 가면 얼굴
+  if (E3) { if (tired) glw(g, 8, -131, 6, '#6a5a7a', .6); else glw(g, 8, -131, 7, '#e0b8ff', .8); } else {
   g.save(); g.translate(2, -128); shape(g, [[-10, -14], [8, -16], [14, -2], [10, 14], [0, 20], [-10, 14], [-14, 0]], fl ? '#fff6d0' : lg(g, 0, -16, 0, 20, [[0, '#ffffff'], [1, '#cfc2e8']]), .4);
   g.fillStyle = '#1a0a2a'; g.fillRect(-1, -4, 10, 3); g.fillRect(-10, -4, 6, 3); dot(g, 5, -3, 1.6, tired ? '#6a5a7a' : '#e0b8ff');
-  g.save(); g.shadowColor = '#c084ff'; g.shadowBlur = 8; curve(g, [[2, -16], [-1, -6], [3, 4], [0, 18]], '#c084ff', 1.4); g.restore(); g.restore();
+  g.save(); g.shadowColor = '#c084ff'; g.shadowBlur = 8; curve(g, [[2, -16], [-1, -6], [3, 4], [0, 18]], '#c084ff', 1.4); g.restore(); g.restore(); }
   // 떠 있는 왕관 조각
   for (let i = 0; i < 5; i++) { const a = G.t * 1.4 + i * TAU / 5, cx0 = 2 + Math.cos(a) * 22, cy0 = -152 + Math.sin(a) * 6; g.save(); g.globalAlpha = al * (tired ? .35 : .9); g.translate(cx0, cy0); g.rotate(a); shape(g, [[0, -8], [3, 0], [0, 8], [-3, 0]], '#e3c8ff', 0); g.restore(); }
   g.restore();
