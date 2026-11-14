@@ -690,43 +690,89 @@ return P})();
 """
 
 # 관리자 페이지(/admin, 링크 없음·noindex). 비밀번호는 Cloudflare 비밀 변수 ADMIN_KEY, 이 브라우저 탭에만 잠깐 보관.
-ADMIN_BODY = """<h1>🔧 관리자</h1><p class="lead">테스터 프로필에 코인·스킨을 주고, 테스터로 지정하면 순위에 '테스터' 표시가 붙고, '순위 제외'를 켜면 공개 순위에서 빠져요. 바꾼 내용은 그 기기에서 사이트를 새로 열면 적용돼요.</p>
-<div class="card adm"><label>관리자 비밀번호 <input type="password" id="ak" autocomplete="off"></label>
-<form id="af"><input id="aq" placeholder="별명 일부 또는 복구 코드" maxlength="20"> <button class="share" type="submit">찾기</button></form><p id="am" class="muted"></p><div id="al"></div></div>
+# 2026-11-14 BK: 아이템을 '사이트 공통 상점'과 '게임별 상점'으로 나눠 지급·장착, 묶음마다 전부 체크. 첫 화면 요약 추가.
+ADMIN_BODY = """<h1>🔧 관리자</h1><p class="lead">프로필을 찾아 코인·아이템을 주고(상점별로 묶여 있어요), 테스터 지정·순위 제외·복구 코드 재발급을 해요. 바꾼 내용은 그 기기에서 사이트를 <b>새 탭으로 열거나 10분 뒤</b> 적용돼요.</p>
+<div class="card adm"><label>관리자 비밀번호 <input type="password" id="ak" autocomplete="off"></label> <button class="share" type="button" id="aout">🔒 이 탭에서 비밀번호 지우기</button>
+<div id="ast" class="ast"></div>
+<form id="af"><input id="aq" placeholder="별명 일부 또는 복구 코드" maxlength="20"> <button class="share" type="submit">찾기</button> <button class="share" type="button" id="atst">🧪 테스터 모두 보기</button></form><p id="am" class="muted"></p><div id="al"></div></div>
 <div class="card"><h2>👥 별명 목록</h2><p class="muted">최근 사용 순. 별명을 누르면 위에서 바로 관리할 수 있어요. 복구 코드 원본은 보안상 저장하지 않아요. 잃어버린 사람에게는 '새 복구 코드 발급'을 눌러 새 코드를 주세요.</p><button class="share" type="button" id="alst">불러오기</button> <span id="atot" class="muted"></span><ol id="aplist" class="list"></ol><button class="share" type="button" id="amore" hidden>더 보기</button></div>
 <div class="card"><h2>최근 관리자 작업</h2><button class="share" type="button" id="alog">불러오기</button><ol id="alist" class="list"></ol></div>"""
-ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:block;margin-bottom:10px}.adm input{font:inherit;padding:8px 10px;border-radius:9px;border:2px solid #ffffff33;background:#0b0620;color:#fff;max-width:100%}
+ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:inline-block;margin-bottom:10px}.adm input{font:inherit;padding:8px 10px;border-radius:9px;border:2px solid #ffffff33;background:#0b0620;color:#fff;max-width:100%}
 .ap{border:2px solid #ffffff22;border-radius:12px;padding:12px;margin:10px 0}.ap h3{margin:0 0 6px}.ap .row{margin:8px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.ap .own{display:flex;flex-wrap:wrap;gap:6px}.ap .own label{display:inline-flex;gap:4px;margin:0;padding:4px 8px;border:1px solid #ffffff33;border-radius:8px;font-size:13px}.ap select{font:inherit;padding:6px;border-radius:8px;background:#0b0620;color:#fff}"""
+.ap .own{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.ap .own label{display:inline-flex;gap:4px;margin:0;padding:4px 8px;border:1px solid #ffffff33;border-radius:8px;font-size:13px;cursor:pointer}.ap .own label.on{border-color:#3ddc84;background:#3ddc8414}
+.ap select{font:inherit;padding:6px;border-radius:8px;background:#0b0620;color:#fff;max-width:100%}
+.ap details.sh{border:1px solid #ffffff26;border-radius:10px;margin:8px 0;padding:6px 10px;background:#ffffff05}.ap details.sh>summary{cursor:pointer;font-weight:800;padding:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ap .grp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:14px}.ap .grp b{color:#ffd23f}.ap .eq{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;margin:2px 0 6px}
+.ap .abar{padding:8px 0;border-bottom:1px solid #ffffff22}.ap .cnt{font-size:12px;color:var(--muted);font-weight:400}
+.ast{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}.ast span{border:1px solid #ffffff33;border-radius:10px;padding:6px 10px;font-size:13px}.ast span.warn{border-color:#ff8fb1;color:#ff8fb1}"""
 ADMIN_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak');try{ak.value=sessionStorage.getItem('nr_admk')||''}catch(e){}
-ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}};
 const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)$('am').textContent=j.msg||('오류 '+r.status);return r.ok?j:null};
-const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ITEMS=SKINS.filter(k=>k.p>0).map(k=>['c:'+k.id,'🎨 '+k.name]).concat(DESIGNS.map(d=>['d:'+d.g+':'+d.id,d.icon+' '+d.name+(d.leg?' (전설)':'')]),AVSHOP.concat(AVLIM).map(a=>['a:'+a[1],a[0]+' 아바타']),TITLES.filter(t=>t.p||t.by).map(t=>['t:'+t.id,'🏷️ '+t.name]),THEMES.map(d=>['h:'+d.g+':'+d.id,d.icon+' 테마 '+d.name]),TRAILS.map(d=>['r:'+d.id,d.icon+' 꼬리 '+d.name]),SOUNDS.map(d=>['s:'+d.id,d.icon+' '+d.name]),NCOLORS.map(d=>['n:'+d.id,'🖍️ 별명 색 '+d.name]));
-function card(it){const d=it.data||{},own=d.own||{},des=d.des||{};const el=document.createElement('div');el.className='ap';
- el.innerHTML=`<h3>${esc(it.nick)} ${it.tester?'<span class="tag">테스터</span>':''}${it.hide?' <span class="tag">순위 제외</span>':''}</h3><small class="muted">🪙 ${d.coins||0} · 출석 ${d.days||0}일 · 마지막 저장 ${esc(it.updated)}</small>
- <div class="row">코인 <input type="number" class="co" min="0" max="${BONUS_MAX}" value="${d.coins||0}" style="width:80px"> <button class="share" data-x="coins">코인 저장</button> <small class="muted">최대 ${BONUS_MAX}</small></div>
- <div class="row"><b>스킨 열기</b></div><div class="own">${ITEMS.map(([k,n])=>`<label><input type="checkbox" value="${k}"${own[k]?' checked':''}>${esc(n)}</label>`).join('')}</div>
- <div class="row"><button class="share" data-x="all">전부 체크</button><button class="share" data-x="own">스킨 저장</button></div>
- <div class="row">적용 ${Object.keys(DGAMES).map(g=>`${DGAMES[g][0]} <select data-g="${g}"><option value="base">${DGAMES[g][1]}</option>${DESIGNS.filter(x=>x.g===g).map(x=>`<option value="${x.id}"${des[g]===x.id?' selected':''}>${x.icon} ${x.name}</option>`).join('')}</select>`).join(' ')}
- 색 <select class="sk">${SKINS.map(k=>`<option value="${k.id}"${(d.skin||'cy')===k.id?' selected':''}>${k.name}</option>`).join('')}</select> <button class="share" data-x="apply">적용 저장</button></div>
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function stats(){if(!ak.value)return;const j=await api({a:'stats'});if(!j)return;const w=(n,t)=>`<span${n?' class="warn"':''}>${t} <b>${n}</b></span>`;
+ $('ast').innerHTML=`<span>프로필 <b>${j.profiles}</b>명</span><span>오늘 저장 <b>${j.today}</b>명</span><span>테스터 <b>${j.testers}</b></span>`+w(j.autohid,'🚨 신고로 숨겨진 글')+w(j.secret,'🔒 답변 안 한 비밀글')+w(j.qprops,'💡 대기 중 질문 제안')+`<span>글쓰기 제한 <b>${j.bans}</b>명</span>`}
+ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}stats()};
+$('aout').onclick=()=>{ak.value='';try{sessionStorage.removeItem('nr_admk')}catch(e){}$('al').innerHTML='';$('ast').innerHTML='';$('am').textContent='이 탭에서 비밀번호를 지웠어요.'};
+// 상점 구조: 사이트 공통(출석·코인 상점) + 게임마다 그 게임 상점. eq = 장착 칸 [저장 필드, 키, 기본값 이름]
+const AGN=window.AGN||{},gname=g=>AGN[g]?AGN[g][1]+' '+AGN[g][0]:g;
+const SHOPS=[{id:'site',name:'🌐 사이트 공통 상점 (출석·코인 상점)',groups:[
+ {name:'🎨 내 네온 색 (모든 게임)',items:SKINS.filter(k=>k.p>0).map(k=>['c:'+k.id,k.name]),eq:['skin','',SKINS[0].name,SKINS.map(k=>[k.id,k.name]),'cy']},
+ {name:'🙂 아바타 (프로필 화면에서 직접 골라요)',items:AVSHOP.concat(AVLIM).map(a=>['a:'+a[1],a[0]+' '+a[1]+(a[3]&&/^\d{4}-\d\d$/.test(a[3])?' ('+a[3]+' 한정)':'')])},
+ {name:'🏷️ 칭호',items:TITLES.map(t=>['t:'+t.id,t.name+(t.days?' (출석 '+t.days+'일 무료)':t.av?' (아바타 30종 무료)':t.by?' (질문 채택)':'')]),eq:['title','','없음',TITLES.map(t=>[t.id,t.name])]},
+ {name:'💫 꼬리 효과 (별빛·통통)',items:TRAILS.map(d=>['r:'+d.id,d.icon+' '+d.name]),eq:['trail','','없음',TRAILS.map(d=>[d.id,d.icon+' '+d.name])]},
+ {name:'🔊 사운드 팩',items:SOUNDS.map(d=>['s:'+d.id,d.icon+' '+d.name]),eq:['snd','','기본',SOUNDS.map(d=>[d.id,d.icon+' '+d.name])]},
+ {name:'🖍️ 별명 색 (최근 7일 순위)',items:NCOLORS.map(d=>['n:'+d.id,d.name]),eq:['nc','','기본',NCOLORS.map(d=>[d.id,d.name])]}]}];
+const gs=[...new Set(DESIGNS.map(d=>d.g).concat(THEMES.map(d=>d.g),GITEMS.map(d=>d.g)))].sort((a,b)=>((AGN[a]||[])[2]||99)-((AGN[b]||[])[2]||99));
+gs.forEach(g=>{const groups=[],ds=DESIGNS.filter(d=>d.g===g),ts=THEMES.filter(d=>d.g===g);
+ if(ds.length)groups.push({name:'🧍 캐릭터 디자인',items:ds.map(d=>['d:'+g+':'+d.id,d.icon+' '+d.name+(d.leg?' (전설)':'')]),eq:['des',g,(DGAMES[g]||['','기본'])[1],ds.map(d=>[d.id,d.icon+' '+d.name]),'base']});
+ if(ts.length)groups.push({name:'🖼️ 배경 테마',items:ts.map(d=>['h:'+g+':'+d.id,d.icon+' '+d.name]),eq:['th',g,'기본',ts.map(d=>[d.id,d.icon+' '+d.name]),'base']});
+ [...new Set(GITEMS.filter(d=>d.g===g).map(d=>d.k))].forEach(k=>{const it=GITEMS.filter(d=>d.g===g&&d.k===k);groups.push({name:'✨ '+it[0].kn,items:it.map(d=>['g:'+g+':'+k+':'+d.id,d.icon+' '+d.name]),eq:['gi',g+':'+k,'기본',it.map(d=>[d.id,d.icon+' '+d.name]),'']})});
+ SHOPS.push({id:g,name:'🎮 '+gname(g)+' 상점',groups})});
+const ALLK=SHOPS.flatMap(s=>s.groups.flatMap(gr=>gr.items.map(i=>i[0])));
+const OPEN=new Set(['site']);// 저장 뒤에도 펼쳐 둔 상점 유지
+const cur=(d,eq)=>{const v=eq[1]?(d[eq[0]]||{})[eq[1]]:d[eq[0]];return v==null||v===''?(eq[4]==null?'':eq[4]):v};
+function card(it){const d=it.data||{},own=d.own||{};const el=document.createElement('div');el.className='ap';
+ const have=ks=>ks.filter(k=>own[k]).length;
+ const grpHtml=(s,gi,gr)=>{const ks=gr.items.map(i=>i[0]),sel=gr.eq?`<div class="eq">장착 중: <select data-eq="${gr.eq[0]}" data-k="${gr.eq[1]}"><option value="${gr.eq[4]==null?'':gr.eq[4]}">${esc(gr.eq[2])}</option>${gr.eq[3].filter(o=>!(gr.eq[0]==='skin'&&o[0]==='cy')).map(o=>`<option value="${o[0]}"${cur(d,gr.eq)===o[0]?' selected':''}>${esc(o[1])}</option>`).join('')}</select></div>`:'';
+  return `<div class="grp"><label><input type="checkbox" class="ga" data-s="${s.id}-${gi}"> <b>${esc(gr.name)}</b> 전부</label> <span class="cnt">${have(ks)}/${ks.length} 보유</span></div><div class="own" data-s="${s.id}-${gi}">${gr.items.map(([k,n])=>`<label${own[k]?' class="on"':''}><input type="checkbox" value="${k}"${own[k]?' checked':''}>${esc(n)}</label>`).join('')}</div>${sel}`};
+ el.innerHTML=`<h3>${esc(it.nick)} ${it.tester?'<span class="tag">테스터</span>':''}${it.hide?' <span class="tag">순위 제외</span>':''}</h3><small class="muted">🪙 ${d.coins||0} · 출석 ${d.days||0}일 · 아이템 ${have(ALLK)}/${ALLK.length} · 마지막 저장 ${esc(it.updated)}</small>
+ <div class="row">코인 <input type="number" class="co" min="0" max="${BONUS_MAX}" value="${d.coins||0}" style="width:80px"> <button class="share" data-x="c10">+10</button><button class="share" data-x="cmax">최대(${BONUS_MAX})</button> <button class="share" data-x="coins">코인 저장</button></div>
+ <div class="abar row"><button class="share" data-x="all">✅ 모든 상점 전부 체크</button><button class="share" data-x="none">⬜ 전부 해제</button><button class="share" data-x="save" style="font-weight:800">💾 아이템·장착 저장</button></div>
+ <p class="muted" style="font-size:13px;margin:4px 0">상점마다 펼쳐서 줄 아이템을 체크하고, '장착 중'에서 바로 쓸 것을 고른 뒤 <b>💾 저장</b>을 누르세요. 장착한 아이템은 체크 안 해도 자동으로 줘요. 체크를 끄면 회수돼요.</p>
+ ${SHOPS.map(s=>{const ks=s.groups.flatMap(gr=>gr.items.map(i=>i[0]));return `<details class="sh" data-d="${s.id}"${OPEN.has(s.id)?' open':''}><summary>${esc(s.name)} <span class="cnt">${have(ks)}/${ks.length} 보유</span> <label onclick="event.stopPropagation()"><input type="checkbox" class="sa" data-s="${s.id}"> 이 상점 전부</label></summary><div data-shop="${s.id}">${s.groups.map((gr,gi)=>grpHtml(s,gi,gr)).join('')}</div></details>`}).join('')}
  <div class="row"><button class="share" data-x="reissue">🔑 새 복구 코드 발급</button></div><div class="nc"></div>
  <div class="row"><button class="share" data-x="tester">${it.tester?'테스터 해제':'테스터로 지정'}</button> <button class="share" data-x="hide">${it.hide?'순위 제외 끄기 (지금: 순위에서 빠짐)':'순위 제외 켜기 (지금: 순위에 보임)'}</button></div>`;
- const done=j=>{if(j&&j.item){el.replaceWith(card(j.item));$('am').textContent='저장했어요. 그 기기에서 사이트를 새로 열면 적용돼요.'}};
- el.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{const x=b.dataset.x;
-  if(x==='all'){el.querySelectorAll('.own input').forEach(c=>c.checked=true);return}
-  if(x==='coins')return done(await api({a:'set',h:it.h,coins:+el.querySelector('.co').value}));
-  if(x==='own'){const cs=[...el.querySelectorAll('.own input')];return done(await api({a:'set',h:it.h,own:cs.filter(c=>c.checked).map(c=>c.value),unown:cs.filter(c=>!c.checked).map(c=>c.value)}))}
-  if(x==='apply'){const des={},need=[];el.querySelectorAll('select[data-g]').forEach(s=>{des[s.dataset.g]=s.value;if(s.value!=='base')need.push('d:'+s.dataset.g+':'+s.value)});const sk=el.querySelector('.sk').value;if(sk!=='cy')need.push('c:'+sk);return done(await api({a:'set',h:it.h,des,skin:sk,own:need}))}
+ const boxes=()=>[...el.querySelectorAll('.own input')];
+ const sync=()=>{el.querySelectorAll('.own label').forEach(l=>l.classList.toggle('on',l.firstChild.checked));
+  el.querySelectorAll('.ga').forEach(g=>{const cs=[...el.querySelectorAll('.own[data-s="'+g.dataset.s+'"] input')],n=cs.filter(c=>c.checked).length;g.checked=n===cs.length;g.indeterminate=n>0&&n<cs.length});
+  el.querySelectorAll('.sa').forEach(g=>{const cs=[...el.querySelectorAll('[data-shop="'+g.dataset.s+'"] .own input')],n=cs.filter(c=>c.checked).length;g.checked=n===cs.length;g.indeterminate=n>0&&n<cs.length})};
+ el.addEventListener('change',e=>{const t=e.target;
+  if(t.classList.contains('ga'))el.querySelectorAll('.own[data-s="'+t.dataset.s+'"] input').forEach(c=>c.checked=t.checked);
+  if(t.classList.contains('sa'))el.querySelectorAll('[data-shop="'+t.dataset.s+'"] .own input').forEach(c=>c.checked=t.checked);
+  sync()});
+ sync();el.querySelectorAll('details.sh').forEach(dd=>dd.ontoggle=()=>{if(dd.open)OPEN.add(dd.dataset.d);else OPEN.delete(dd.dataset.d)});
+ const done=j=>{if(j&&j.item){el.replaceWith(card(j.item));$('am').textContent='저장했어요. 그 기기에서 사이트를 새 탭으로 열면(또는 10분 뒤) 적용돼요.';stats()}};
+ el.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{const x=b.dataset.x,co=el.querySelector('.co');
+  if(x==='all'||x==='none'){boxes().forEach(c=>c.checked=x==='all');el.querySelectorAll('details.sh').forEach(dd=>dd.open=true);sync();$('am').textContent=x==='all'?'모두 체크했어요. 💾 저장을 눌러야 지급돼요.':'모두 해제했어요. 💾 저장하면 회수돼요.';return}
+  if(x==='c10'){co.value=Math.min(BONUS_MAX,(+co.value||0)+10);return}
+  if(x==='cmax'){co.value=BONUS_MAX;return}
+  if(x==='coins')return done(await api({a:'set',h:it.h,coins:+co.value}));
+  if(x==='save'){const cs=boxes(),body={a:'set',h:it.h,own:cs.filter(c=>c.checked).map(c=>c.value),unown:cs.filter(c=>!c.checked).map(c=>c.value),des:{},th:{},gi:{}};
+   const pre={skin:'c:',title:'t:',trail:'r:',snd:'s:',nc:'n:'};
+   el.querySelectorAll('select[data-eq]').forEach(s=>{const f=s.dataset.eq,k=s.dataset.k,v=s.value;if(k)body[f][k]=v;else body[f]=v;
+    let need=null;if(v&&v!=='base'&&!(f==='skin'&&v==='cy'))need=f==='des'?'d:'+k+':'+v:f==='th'?'h:'+k+':'+v:f==='gi'?'g:'+k+':'+v:pre[f]+v;
+    if(need&&body.own.indexOf(need)<0){body.own.push(need);body.unown=body.unown.filter(u=>u!==need)}});
+   return done(await api(body))}
   if(x==='reissue'){if(!confirm(it.nick+' 프로필의 옛 복구 코드는 바로 쓸 수 없게 돼요. 새 코드를 발급할까요?'))return;const j=await api({a:'reissue',h:it.h});if(j&&j.item){const n=card(j.item);el.replaceWith(n);n.querySelector('.nc').innerHTML='<p style="font:700 20px monospace;color:#ffd23f;border:2px solid #ffd23f;border-radius:10px;padding:8px 12px">새 복구 코드<br><b style="font-size:24px">'+esc(j.code)+'</b></p><p class="muted">이 화면을 닫으면 다시 볼 수 없어요. 비밀글 답변으로 전해 주세요.</p>';$('am').textContent='새 코드를 발급했어요.'}return}
   if(x==='tester')return done(await api({a:'tester',h:it.h,on:!it.tester}));
   if(x==='hide')return done(await api({a:'hide',h:it.h,on:!it.hide}))});
  return el}
 $('af').onsubmit=async e=>{e.preventDefault();$('am').textContent='찾는 중…';$('al').innerHTML='';const j=await api({a:'find',q:$('aq').value});if(!j)return;$('am').textContent=j.list.length?j.list.length+'개 찾았어요':'찾은 프로필이 없어요';j.list.forEach(it=>$('al').appendChild(card(it)))};
-let pg=0;const lst=async more=>{if(!more){pg=0;$('aplist').innerHTML=''}const j=await api({a:'list',page:pg});if(!j)return;$('atot').textContent='전체 '+j.total+'명';j.list.forEach(r=>{const li=document.createElement('li');li.innerHTML='<a href="#">'+esc(r.nick)+'</a> <small class="muted">🪙'+r.coins+' · 출석 '+r.days+'일 · 마지막 '+esc(r.updated)+(r.tester?' · 테스터':'')+(r.hide?' · 순위 제외':'')+'</small>';li.querySelector('a').onclick=e=>{e.preventDefault();$('al').innerHTML='';$('al').appendChild(card(Object.assign({},r,{data:null})));findOne(r.h)};$('aplist').appendChild(li)});$('amore').hidden=!j.more;pg++};
+$('atst').onclick=async()=>{$('am').textContent='찾는 중…';$('al').innerHTML='';const j=await api({a:'testers'});if(!j)return;$('am').textContent=j.list.length?'테스터 '+j.list.length+'명':'테스터가 없어요';j.list.forEach(it=>$('al').appendChild(card(it)))};
+let pg=0;const lst=async more=>{if(!more){pg=0;$('aplist').innerHTML=''}const j=await api({a:'list',page:pg});if(!j)return;$('atot').textContent='전체 '+j.total+'명';j.list.forEach(r=>{const li=document.createElement('li');li.innerHTML='<a href="#">'+esc(r.nick)+'</a> <small class="muted">🪙'+r.coins+' · 출석 '+r.days+'일 · 마지막 '+esc(r.updated)+(r.tester?' · 테스터':'')+(r.hide?' · 순위 제외':'')+'</small>';li.querySelector('a').onclick=e=>{e.preventDefault();findOne(r.h)};$('aplist').appendChild(li)});$('amore').hidden=!j.more;pg++};
 const findOne=async h=>{const j=await api({a:'get',h});if(j&&j.item){$('al').innerHTML='';$('al').appendChild(card(j.item));scrollTo(0,0)}};
 $('alst').onclick=()=>lst(false);$('amore').onclick=()=>lst(true);
-$('alog').onclick=async()=>{const j=await api({a:'log'});if(j)$('alist').innerHTML=j.list.map(r=>`<li>${esc(r.t)} · ${esc(r.act)} · ${esc(r.nick)} <small class="muted">${esc(r.detail)}</small></li>`).join('')||'<li>아직 없어요</li>'}})();"""
+$('alog').onclick=async()=>{const j=await api({a:'log'});if(j)$('alist').innerHTML=j.list.map(r=>`<li>${esc(r.t)} · ${esc(r.act)} · ${esc(r.nick)} <small class="muted">${esc(r.detail)}</small></li>`).join('')||'<li>아직 없어요</li>'};
+stats()})();"""
 
 # 게시판(/board) + 이용 지침(/board-rules). 서버 functions/api/board.js, 관리 /admin
 BOARD_RULES = """<h1>📜 게시판 이용 지침</h1><p class="lead">5락실 게시판은 게임 이야기, 건의, 오류 제보, 프로필 문의를 위한 곳이에요. 모두가 편하게 쓰도록 아래 지침을 꼭 지켜 주세요.</p>
@@ -995,7 +1041,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY + MYREC_BODY, COMMON_JS + PROFILE_PAGE_JS + f"const GN={gnames};" + MYREC_JS, noindex=True)
     write("bonus", f"출석체크·코인 상점 | {cfg['siteName']}", "5락실 출석체크·오늘의 미션. 코인을 모아 아바타·칭호·스킨을 모으고 이어하기에 써요. 게임은 모두 무료.",
           BONUS_BODY, "window.FPG=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮")] for g in games}, ensure_ascii=False) + ";", noindex=True)
-    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), g.get("order", 99)] for g in games}, ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
     write("board", f"게시판 | {cfg['siteName']}", "5락실 게시판. 게임 이야기, 건의, 오류 제보, 프로필 문의.", BOARD_BODY, BOARD_JS, noindex=True)
     write("board-rules", f"게시판 이용 지침 | {cfg['siteName']}", "5락실 게시판 이용 지침과 제재 기준.", BOARD_RULES, noindex=True)
 

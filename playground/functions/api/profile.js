@@ -26,13 +26,14 @@ function newCode() {
 export function clean(d) {
   d = d && typeof d === "object" ? d : {};
   const day = /^\d{4}-\d{2}-\d{2}$/.test(d.last || "") ? d.last : undefined;
-  const flags = (o, re) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, 150).map(([k]) => [k, 1]));
+  // 2026-11-14: 아이템이 120개를 넘어 '전부 지급'이 잘리던 문제 → 보유 목록 500개·전체 16KB까지
+  const flags = (o, re, n = 150) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, n).map(([k]) => [k, 1]));
   const out = {
     coins: Math.max(0, Math.min(199, Math.floor(+d.coins || 0))), days: Math.max(0, Math.min(100000, Math.floor(+d.days || 0))),
     streak: Math.max(0, Math.min(100000, Math.floor(+d.streak || 0))), last: day,
     skin: /^[a-z]{1,8}$/.test(d.skin || "") ? d.skin : undefined,
     des: Object.fromEntries(Object.entries(d.des && typeof d.des === "object" ? d.des : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
-    own: flags(d.own, /^[cdathrsng]:[a-z0-9:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
+    own: flags(d.own, /^[cdathrsng]:[a-z0-9:]{1,30}$/, 500), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
     // 코인 쓰임 1단계(2026-11-14): 칭호·출석 보호권·오늘의 미션
     title: /^[a-z0-9]{1,12}$/.test(d.title || "") ? d.title : undefined,
     // 2단계: 게임 테마(th)·꼬리 효과(trail)·사운드 팩(snd)·별명 색(nc)
@@ -50,7 +51,7 @@ export function clean(d) {
   const avs = Object.keys(out.own).filter((k) => k.startsWith("a:")).length;
   if (out.title && !out.own["t:" + out.title] && !(out.title === "regular" && out.days >= 30) && !(out.title === "collector" && avs >= 30)) out.title = undefined;
   if (out.nc && !out.own["n:" + out.nc]) out.nc = undefined; // 별명 색은 산 것만(순위에 보이니까)
-  return JSON.stringify(out).length <= 4096 ? out : null;
+  return JSON.stringify(out).length <= 16000 ? out : null;
 }
 let ready = false;
 async function ensure(db) {
