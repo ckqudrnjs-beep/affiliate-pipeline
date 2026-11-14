@@ -1011,7 +1011,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}{BOARD_CSS if path in ('board', 'admin') else ''}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스<span class="hs">게임</span></a><a href="/rank">순위</a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크·코인 상점, 보유 코인"><em>출석·상점</em>🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
-<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
+<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script>{kakao}</body></html>"""
 
 
@@ -1154,13 +1154,37 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         write("report", f"밸런스게임 결과 리포트 | {cfg['siteName']}", f"밸런스게임 실제 투표 결과 정리: 가장 팽팽했던 질문, 한쪽으로 쏠린 질문, 가장 많이 투표한 질문. {asof.month}월 {asof.day}일 기준 자동 갱신.", "".join(parts))
 
     email = cfg["contactEmail"]
-    write("about", f"소개 | {cfg['siteName']}", f"{cfg['siteName']} 소개",
-          f"<h1>소개</h1><p>{esc(cfg['siteName'])}(밸런스 놀이터)은 매일 새로운 밸런스게임 질문을 올리고, 누구나 익명으로 투표해 서로의 선택을 비교해 보는 놀이터입니다.</p>"
-          "<p>질문은 갈등을 부추기지 않는 가벼운 일상 주제로만 고릅니다. 정치·성별·지역·종교 갈등이나 실존 인물을 깎아내리는 질문은 올리지 않습니다.</p>"
-          "<p>투표 비율은 실제로 눌린 숫자 그대로 보여 줍니다. 같은 사람이 같은 질문에 여러 번 투표하지 못하도록 하루 단위로 막고 있습니다.</p>"
-          "<p>미니게임(초성 퀴즈, 다수결 맞히기, 반응속도)은 모두 이 사이트에서 직접 만든 게임입니다.</p>")
-    write("contact", f"문의 | {cfg['siteName']}", f"{cfg['siteName']} 문의",
-          f"<h1>문의</h1><p>질문 제안, 오류 제보, 광고 문의는 메일로 보내 주세요.</p><p><a href=\"mailto:{esc(email)}\">{esc(email)}</a></p>")
+    gl = "".join(f'<li><a href="/games/{g["slug"]}">{esc(g["name"])}</a>: {esc(g["short"])}</li>' for g in games)
+    write("about", f"소개 | {cfg['siteName']}", f"{cfg['siteName']} 소개: 직접 만든 무료 미니게임 {len(games)}종과 매일 새 밸런스게임. 운영 원칙과 운영자 안내.",
+          f"<h1>소개</h1><p class=\"lead\">{esc(cfg['siteName'])}은 가입 없이 바로 즐기는 무료 웹 오락실입니다. 매일 0시(한국 시간)에 새 판이 열리고, 모두 같은 판으로 도전 순위를 겨룹니다.</p>"
+          f"<h2>무엇을 할 수 있나요</h2><ul class=\"list\"><li><a href=\"/archive\">밸런스게임</a>: 매일 질문 {cfg['questionsPerDay']}개, 익명 투표 후 실제 선택 비율 확인</li>{gl}</ul>"
+          "<h2>운영 원칙</h2><ul class=\"list\"><li>모든 게임은 이 사이트에서 직접 만든 오리지널 게임입니다. 다른 회사 게임의 이름·그림·음악을 가져오지 않습니다.</li>"
+          "<li>밸런스게임 질문은 일상·음식·여행·상상 같은 가벼운 주제만 다룹니다. 정치·성별·지역·종교 갈등, 실존 인물 비하, 성적인 내용, 사고·참사는 올리지 않습니다.</li>"
+          "<li>투표 비율과 순위는 실제 기록 그대로 보여 줍니다. 숫자를 사람이 고치거나 가짜 투표를 넣지 않습니다.</li>"
+          "<li>회원 가입이 없고 이름·연락처를 받지 않습니다. 순위에는 자동으로 붙는 별명만 나옵니다.</li>"
+          "<li>광고가 들어가더라도 게임 조작 화면과 떨어진 곳에만 두고 ‘광고’라고 표시합니다.</li></ul>"
+          f"<h2>운영자</h2><p>{esc(cfg['siteName'])}은 생활 정보 사이트 <a href=\"https://don3chon.com\">돈 줍는 삼촌</a>을 운영하는 사업자가 함께 운영합니다. "
+          "오류 제보와 건의는 <a href=\"/contact\">문의</a> 또는 <a href=\"/board\">게시판</a>으로 받습니다. 이용 규칙은 <a href=\"/terms\">이용약관</a>에 있습니다.</p>")
+    write("contact", f"문의 | {cfg['siteName']}", f"{cfg['siteName']} 문의: 오류 제보, 밸런스게임 질문 제안, 게시물 신고, 광고·제휴 문의 방법.",
+          f"<h1>문의</h1><p class=\"lead\">메일 또는 게시판으로 보내 주세요. 보통 2~3일 안에 답장합니다.</p>"
+          f"<div class=\"card\"><p style=\"margin:0\">📮 <a href=\"mailto:{esc(email)}\">{esc(email)}</a></p></div>"
+          "<h2>이런 내용을 받아요</h2><ul class=\"list\"><li><b>오류 제보</b>: 게임 이름, 사용 기기(휴대폰/PC), 브라우저, 어떤 상황에서 멈췄는지 적어 주시면 빨리 고칠 수 있어요.</li>"
+          "<li><b>밸런스게임 질문 제안</b>: 두 선택지와 한 줄 설명. 운영 원칙에 맞는 질문만 올립니다.</li>"
+          "<li><b>게시물·별명 신고</b>: 해당 페이지 주소와 이유. 확인 즉시 숨기거나 지웁니다.</li>"
+          "<li><b>광고·제휴 문의</b>: 회사명과 내용.</li></ul>"
+          "<p class=\"muted\">개인정보 관련 요청(기록 삭제 등)도 같은 메일로 받습니다. 자세한 내용은 <a href=\"/privacy\">개인정보처리방침</a>을 봐 주세요.</p>")
+    write("terms", f"이용약관 | {cfg['siteName']}", f"{cfg['siteName']} 이용약관: 게임·투표·순위·게시판 이용 규칙과 금지 행위.",
+          f"<h1>이용약관</h1><p>시행일: {cfg['privacyDate']}</p>"
+          f"<h2>1. 목적</h2><p>이 약관은 {esc(cfg['siteName'])}({esc(cfg['baseUrl'])})이 제공하는 무료 미니게임, 밸런스게임 투표, 도전 순위, 게시판 서비스의 이용 규칙을 정합니다.</p>"
+          "<h2>2. 서비스</h2><p>모든 서비스는 무료이며 가입 없이 이용합니다. 게임과 질문은 예고 없이 추가·변경·종료될 수 있습니다. 매일 0시(한국 시간)에 오늘의 판과 순위가 새로 시작됩니다.</p>"
+          "<h2>3. 금지 행위</h2><ul class=\"list\"><li>자동 프로그램·매크로로 투표하거나 점수를 올리는 행위</li><li>점수 기록을 조작하거나 서버에 비정상적인 요청을 보내는 행위</li>"
+          "<li>게시판에 욕설·비방·음란물·광고·개인정보를 올리는 행위</li><li>사이트 운영을 방해하는 행위</li></ul>"
+          "<p>위 행위가 확인되면 해당 기록·게시물을 알리지 않고 지우거나 이용을 제한할 수 있습니다.</p>"
+          "<h2>4. 게시물</h2><p>게시판 글의 책임은 작성자에게 있습니다. 운영 원칙이나 법에 어긋나는 글, 신고가 쌓인 글은 숨기거나 삭제할 수 있습니다.</p>"
+          "<h2>5. 광고</h2><p>사이트에는 제3자 광고가 표시될 수 있으며 ‘광고’라고 구분해 표시합니다. 광고 속 상품·서비스에 대한 책임은 해당 광고주에게 있습니다.</p>"
+          "<h2>6. 저작권</h2><p>사이트의 게임, 그림, 글은 운영자가 직접 만든 것으로 무단 복제·배포를 금지합니다. 결과 화면 공유와 링크 공유는 자유롭게 하셔도 됩니다.</p>"
+          "<h2>7. 책임의 한계</h2><p>무료 서비스 특성상 기록 유실이나 일시 중단이 생길 수 있으며, 고의나 중대한 과실이 없는 한 이에 대한 책임을 지지 않습니다.</p>"
+          f"<h2>8. 문의</h2><p><a href=\"mailto:{esc(email)}\">{esc(email)}</a> · <a href=\"/contact\">문의 페이지</a></p>")
     write("privacy", f"개인정보처리방침 | {cfg['siteName']}", f"{cfg['siteName']} 개인정보처리방침",
           f"<h1>개인정보처리방침</h1><p>시행일: {cfg['privacyDate']}</p><h2>1. 수집하는 정보</h2><p>회원 가입이 없고 이름·연락처를 받지 않습니다. 투표와 반응 버튼을 누르면 '어떤 질문에 어느 쪽을 골랐는지'만 숫자로 집계합니다.</p>"
           "<h2>2. 중복 투표 방지</h2><p>같은 사람의 중복 투표를 막기 위해 접속 IP 주소를 비밀값과 함께 되돌릴 수 없는 해시값으로 바꿔 최대 2일 동안 보관한 뒤 자동 삭제합니다. 원래 IP 주소는 저장하지 않습니다. 이용자의 브라우저에는 이미 투표한 질문 목록이 저장됩니다(브라우저에서 언제든 삭제 가능).</p>"
