@@ -148,3 +148,10 @@
 - 상점 아이템(내 캐릭터 ufo/cat/astro, 별똥별 모양 ice/candy)은 `Bonus.gitem('dodge',…)` 그대로, 모두 코드로 그린 그림.
 - 테스트: `#dgdebug` → `window.__dg` (bot(true), fast(n), god(true), skin('cat','candy'), poster()).
 - 그래픽 품질 기준: docs/GAME_QUALITY.md (계획 폴더 plan/GAME_QUALITY.md 와 같음).
+
+## RPG 캐릭터 3D 스프라이트 (네온 레이드, 2026-11-14)
+- BK 결정(11/14): 코드로 그린 캐릭터 대신 무료(CC0) 3D 모델을 미리 렌더링한 2.5D 스프라이트를 쓴다. 게임은 2D 캔버스 그대로(three.js 실시간 아님).
+- 모델: KayKit Adventurers 1.0 (Kay Lousberg, CC0, 표기 의무 없지만 body.html에 출처 표기). 라이선스 `src3d/chars/LICENSE-KayKit.txt`. 모델 파일은 저장소에 넣지 않고 `node chars/fetch.mjs` 로 받는다.
+- 직업별 설정(모델·무기·색·애니메이션 프레임) `src3d/chars/classes.js`. 프레임 이름 = raid.js POSE 키 20개.
+- 다시 만들기: `cd src3d && npm install && node chars/fetch.mjs && node chars/render.mjs [직업…]` → `static/img/raid/<직업>.webp`(5x4, 칸 360x320, 발 155,295, 1단위=1.2px). 확인용 `--sheet` 는 chars/sheet-*.png (커밋 안 함).
+- raid.js `ATL`: 시작할 때 5장 미리 불러오고, 못 불러오면 예전 코드 그림으로 대체. 아틀라스를 바꾸면 `ATL.V` 를 올려 캐시를 깬다.

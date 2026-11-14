@@ -229,6 +229,25 @@ function put(g, sp, x, y, dir, sc, flash, rotA) {
   if (flash > 0) { g.globalAlpha = Math.min(1, flash); g.drawImage(sp.wh, -sp.ox, -sp.oy, sp.w, sp.h); } g.restore();
 }
 
+/* ---------- 3D 렌더 캐릭터 아틀라스 (원본 src3d/chars, 모델 KayKit CC0) ---------- */
+// 5x4 칸, 칸 360x320px, 발 (155,295), 1 게임 단위 = 1.2px. 칸 순서 = ATL.F. 못 불러오면 예전 코드 그림을 쓴다.
+const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 1, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'], p: {}, sp: {} };
+function atlasLoad(cls) {
+  if (!ATL.p[cls]) ATL.p[cls] = new Promise(ok => { const im = new Image(); im.decoding = 'async'; im.onload = () => { try { ATL.sp[cls] = atlasCut(im); } catch (e) {} ok(!!ATL.sp[cls]); }; im.onerror = () => ok(false); im.src = '/img/raid/' + cls + '.webp?v=' + ATL.V; });
+  return ATL.p[cls];
+}
+function atlasCut(im) {
+  const { CW, CH, FX, FY, PXU } = ATL, o = {};
+  ATL.F.forEach((f, i) => {
+    const c = mkc(CW, CH), g = c.getContext('2d'); g.drawImage(im, (i % 5) * CW, Math.floor(i / 5) * CH, CW, CH, 0, 0, CW, CH);
+    const wh = mkc(CW, CH), w2 = wh.getContext('2d'); w2.drawImage(c, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, CW, CH);
+    o[f] = { c, wh, ox: FX / PXU, oy: FY / PXU, w: CW / PXU, h: CH / PXU };
+  });
+  for (const f of FRAMES) if (!o[f]) o[f] = o.idle; // 새 자세가 생기면 대기 자세로
+  return o;
+}
+function atlasAll() { return Promise.all(CLS.map(atlasLoad)); }
+
 /* =================== 직업·기술 데이터 =================== */
 // 공격 판정 h: x0..x1 앞쪽 거리, dy 깊이 허용, z0..z1 높이, d 피해 배율, kb 밀기, lift 띄우기, st 경직, stop 히트스톱, sh 흔들림, n 다단 수, iv 간격
 const H = (o) => Object.assign({ x0: 0, x1: 70, dy: 24, z0: 0, z1: 100, d: 1, kb: 70, lift: 0, st: .32, stop: .055, sh: 2, s: 'slash' }, o);
@@ -435,7 +454,7 @@ function sprK() { return clamp(.5 * lay.s * lay.dpr, .5, 1.5); }
 function buildSprites(cls) {
   const k = sprK(); if (SPR.cls === cls && SPK === k) return; SPK = k; const c = CL[cls];
   SPR = { cls, p: {}, e: {} };
-  for (const f of FRAMES) SPR.p[f] = bake(ART[cls], joints(f), k, c.col, c.col2, [360, 300, 30]);
+  if (ATL.sp[cls]) SPR.p = ATL.sp[cls]; else for (const f of FRAMES) SPR.p[f] = bake(ART[cls], joints(f), k, c.col, c.col2, [360, 300, 30]);
   for (const t of ['grunt', 'shield', 'elite']) {
     const fn = EART[t], sh = t === 'shield', ek = lay.s * lay.dpr * ET[t].sc;
     SPR.e[t] = {
@@ -446,7 +465,7 @@ function buildSprites(cls) {
   }
   SPR.car = bake(carArt, 0, lay.s * lay.dpr * .66, '#ff5a7a', '#7df9ff', [190, 150, 20]); SPR.head = bake(headArt, 0, lay.s * lay.dpr * .8, '#ff5a7a', '#7df9ff', [320, 200, 20]);
   SPR.crate = bake(crateArt, 0, k, '#ffb070', '#7df9ff', [90, 90, 10]);
-  for (const k2 of CLS) if (!SPR['por_' + k2]) SPR['por_' + k2] = bake(ART[k2], joints('idle'), k * .8, CL[k2].col, CL[k2].col2);
+  for (const k2 of CLS) if (!SPR['por_' + k2]) SPR['por_' + k2] = ATL.sp[k2] ? ATL.sp[k2].idle : bake(ART[k2], joints('idle'), k * .8, CL[k2].col, CL[k2].col2);
 }
 function carArt(g) {
   shape(g, [[-70, -110], [64, -114], [78, -96], [76, -34], [62, -22], [-66, -22], [-78, -36], [-80, -96]], lg(g, 0, -114, 0, -22, [[0, '#4d5578'], [.5, '#2a304a'], [1, '#141828']]));
@@ -1226,7 +1245,7 @@ const NET = {
 function tgt(e) { let best = G.P, bd = 1e9; for (const o of NET.tgtList()) { const d = Math.abs(o.x - e.x) + Math.abs(o.y - e.y) * 2; if (d < bd) { bd = d; best = o; } } return best; }
 // 동료 직업 그림(필요한 직업만 한 번 굽기)
 const PSPR = {};
-function buildPeer(cls) { const k = sprK(); if (!CL[cls]) return; if (PSPR[cls] && PSPR[cls].k === k) return; const c = CL[cls], o = { k, p: {} }; for (const f of FRAMES) o.p[f] = bake(ART[cls], joints(f), k, c.col, c.col2, [360, 300, 30]); PSPR[cls] = o; }
+function buildPeer(cls) { const k = sprK(); if (!CL[cls]) return; if (PSPR[cls] && PSPR[cls].k === k) return; const c = CL[cls], o = { k, p: {} }; if (ATL.sp[cls]) { o.p = ATL.sp[cls]; PSPR[cls] = o; return; } for (const f of FRAMES) o.p[f] = bake(ART[cls], joints(f), k, c.col, c.col2, [360, 300, 30]); PSPR[cls] = o; }
 function drawPeer(g, pr) {
   const s = pr.s, S = PSPR[pr.cls]; if (!S) return; const sp = S.p[pr.fr] || S.p.idle; if (!sp) return;
   g.save(); if (pr.gh) g.globalAlpha = .35; else if (pr.inv && Math.floor(G.t * 20) % 2) g.globalAlpha = .6;
@@ -1375,7 +1394,7 @@ function pause(p, auto) {
 }
 /* =================== 로비: 출발·동료·장비·도감 =================== */
 let tab = 'go', pick = null;
-function portrait(k, w) { const c = document.createElement('canvas'), h = w * 1.1, d = Math.min(2, window.devicePixelRatio || 1); c.width = w * d; c.height = h * d; const g = c.getContext('2d'); g.scale(d, d); const sp = bake(ART[k], joints(k === 'archer' ? 'cast' : 'c1b'), .7 * d / d * 1.4, CL[k].col, CL[k].col2); g.fillStyle = rg(g, w / 2, h * .8, 4, w * .7, [[0, CL[k].col + '33'], [1, 'rgba(0,0,0,0)']]); g.fillRect(0, 0, w, h); put(g, sp, w / 2 - 4, h * .96 - (k === 'fairy' ? 0 : 0), 1, w / 260, 0); return c; }
+function portrait(k, w) { const c = document.createElement('canvas'), h = w * 1.1, d = Math.min(2, window.devicePixelRatio || 1); c.width = w * d; c.height = h * d; const g = c.getContext('2d'); g.scale(d, d); const pf = k === 'archer' ? 'cast' : 'c1b', sp = ATL.sp[k] ? ATL.sp[k][pf] : bake(ART[k], joints(pf), .7 * d / d * 1.4, CL[k].col, CL[k].col2); g.fillStyle = rg(g, w / 2, h * .8, 4, w * .7, [[0, CL[k].col + '33'], [1, 'rgba(0,0,0,0)']]); g.fillRect(0, 0, w, h); put(g, sp, w / 2 - 4, h * .96 - (k === 'fairy' ? 0 : 0), 1, w / 260, 0); return c; }
 function lobby() {
   ov.classList.remove('play'); panel.hidden = false; btnBar.hidden = true; pick = pick || SV.last || 'knight'; const gl = guildLv();
   let h = '<div class="nr-t">네온 레이드</div><p class="nr-sub">NEON RAID · 체험판</p><p class="nr-note">💰 ' + SV.mats.gold.toLocaleString() + 'G · 💎 강화석 ' + SV.mats.stone + ' · 🍬 젤리 ' + SV.mats.jelly + '</p><div class="nr-tabs">' + [['go', '출발'], ['coop', '협동' + (NET.state === 'room' ? ' ' + (NET.peers.size + 1) + '명' : '')], ['pet', '동료'], ['gear', '장비'], ['shop', '상점'], ['dex', '도감']].map(t => '<button type="button" data-t="' + t[0] + '"' + (tab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>').join('') + '<button type="button" data-t="exit">나가기</button></div>';
@@ -1445,6 +1464,7 @@ function close(why) { NET.leave(); cancelAnimationFrame(raf); ov.hidden = true; 
 window.RaidGame = {
   boot(o) {
     opts = o; if (!ov) mkDom();
+    atlasAll().then(() => { SPK = 0; for (const k2 of CLS) delete SPR['por_' + k2]; for (const k2 in PSPR) delete PSPR[k2]; if (G) buildSprites(G.cls); if (panel) panel.querySelectorAll('.pc').forEach(el => { const old = el.querySelector('canvas'); if (old) old.replaceWith(portrait(el.dataset.p, 150)); }); });
     if (DEBUG) window.__nr = { open, close, start, G: () => G, SV, bot(b) { G.bot = b; }, fast(n) { G.fast = n; }, god(b) { G.god = b; }, room(i) { G.room = i - 1; nextRoom(); }, ult() { G.P.ult = 100; }, step(n) { for (let i = 0; i < n && G && G.mode !== 'over'; i++) { readMove(); update(STEP); } }, draw: () => draw(), lobby, layout, finish, PSPR, SPR: () => SPR, NET };
     return { open };
   },

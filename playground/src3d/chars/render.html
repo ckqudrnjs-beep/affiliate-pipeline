@@ -1,0 +1,126 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#222}</style>
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+// 3D 캐릭터 → 2D 스프라이트 아틀라스. render.mjs(플레이라이트)가 window.renderClass(cls) 를 부른다.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
+import { CLASSES, FRAMES } from './classes.js';
+
+// 아틀라스 칸: CW x CH 픽셀, 발 위치 (FX, FY). 게임 단위로 1단위 = PXU 픽셀.
+export const CW = 360, CH = 320, FX = 155, FY = 295, PXU = 1.2, HEIGHT_U = 176, SS = 2;
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(CW * SS, CH * SS); r.outputColorSpace = THREE.SRGBColorSpace;
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.1; r.setClearColor(0, 0);
+document.body.appendChild(r.domElement);
+const L = new GLTFLoader(), cache = {};
+const load = n => cache[n] || (cache[n] = new Promise((ok, no) => L.load('models/' + n + '.glb', ok, undefined, no)));
+const WEAP = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff',
+  'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', 'Knight_Helmet', 'Knight_Cape', 'Mage_Hat', 'Mage_Cape', 'Rogue_Cape', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug', 'Barbarian_Hat', 'Barbarian_Cape'];
+
+function rimMat(old, tint, rim, rim2, glow) {
+  const m = new THREE.MeshStandardMaterial({ map: old.map, roughness: .5, metalness: .25 });
+  const tc = new THREE.Color(tint || '#ffffff'), ta = tint ? .85 : 0;
+  if (glow) { m.emissive = new THREE.Color(glow); m.emissiveIntensity = .35; }
+  const c1 = new THREE.Color(rim), c2 = new THREE.Color(rim2);
+  m.onBeforeCompile = sh => {
+    sh.uniforms.rimA = { value: c1 }; sh.uniforms.rimB = { value: c2 }; sh.uniforms.tintC = { value: tc }; sh.uniforms.tintA = { value: ta };
+    sh.fragmentShader = 'uniform vec3 rimA; uniform vec3 rimB; uniform vec3 tintC; uniform float tintA;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, tintC * (dot(diffuseColor.rgb, vec3(.3,.59,.11)) * 1.5 + .12), tintA);').replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\nfloat fr=pow(1.0-abs(dot(normalize(vNormal),normalize(vViewPosition))),3.0);\n' +
+      'totalEmissiveRadiance+=mix(rimB,rimA,smoothstep(-0.3,0.3,-vNormal.x))*fr*0.75;');
+  };
+  return m;
+}
+function outline(m) {
+  const om = new THREE.MeshBasicMaterial({ color: 0x0a0616, side: THREE.BackSide });
+  let s; if (m.isSkinnedMesh) { s = new THREE.SkinnedMesh(m.geometry, om); s.bind(m.skeleton, m.bindMatrix); } else s = new THREE.Mesh(m.geometry, om);
+  s.scale.setScalar(1.045); s.userData.ol = 1; m.add(s);
+}
+function wingTex(col) {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 256; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 256, 128, 0); gr.addColorStop(0, col + 'ff'); gr.addColorStop(1, '#ffffff22');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(4, 250); g.bezierCurveTo(10, 120, 60, 10, 124, 6); g.bezierCurveTo(110, 90, 80, 190, 4, 250); g.fill();
+  g.strokeStyle = '#ffffffaa'; g.lineWidth = 3; g.beginPath(); g.moveTo(6, 246); g.quadraticCurveTo(50, 120, 118, 12); g.stroke();
+  g.beginPath(); g.moveTo(6, 246); g.quadraticCurveTo(60, 170, 100, 80); g.stroke();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function addWings(root, col) {
+  let chest; root.traverse(n => { if (n.name === 'chest') chest = n; });
+  const mat = new THREE.MeshBasicMaterial({ map: wingTex(col), transparent: true, opacity: .85, side: THREE.DoubleSide, depthWrite: false });
+  for (const s of [-1, 1]) {
+    for (const [w, h, y, rz] of [[.8, 1.5, .5, .3], [.6, .95, .1, 1.15]]) {
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); p.geometry.translate(w / 2, h / 2, 0);
+      const holder = new THREE.Object3D(); holder.position.set(0, y * .5, -.32); holder.rotation.set(0, s > 0 ? -.5 : Math.PI + .5, rz * s * (s > 0 ? 1 : -1));
+      holder.add(p); chest.add(holder);
+    }
+  }
+}
+function addDoll(root) { // 부두 인형: 왼손에 든 작은 천 인형
+  let hand; root.traverse(n => { if (n.name === 'handslotl') hand = n; });
+  const g = new THREE.Group(), cloth = new THREE.MeshStandardMaterial({ color: 0xd9c9a3, roughness: .9 }), st = new THREE.MeshBasicMaterial({ color: 0x7dff9a });
+  const b = new THREE.Mesh(new THREE.CapsuleGeometry(.09, .14, 4, 10), cloth); g.add(b);
+  const h = new THREE.Mesh(new THREE.SphereGeometry(.11, 14, 12), cloth); h.position.y = .2; g.add(h);
+  for (const s of [-1, 1]) { const a = new THREE.Mesh(new THREE.CapsuleGeometry(.035, .1, 3, 8), cloth); a.position.set(s * .12, .06, 0); a.rotation.z = s * 1.1; g.add(a);
+    const e = new THREE.Mesh(new THREE.BoxGeometry(.035, .008, .01), st); e.position.set(s * .04, .22, .105); e.rotation.z = s * .7; g.add(e); }
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .22), new THREE.MeshStandardMaterial({ color: 0xb48bff, emissive: 0xb48bff, emissiveIntensity: 1 })); pin.rotation.z = 1.1; pin.position.set(.05, .05, .08); g.add(pin);
+  g.scale.setScalar(2.2); g.position.set(0, .1, .05); const dm = []; g.traverse(m => { if (m.isMesh) dm.push(m); }); dm.forEach(outline); hand.add(g);
+}
+
+async function build(cls) {
+  const C = CLASSES[cls], gl = await load(C.model);
+  const root = skClone(gl.scene);
+  root.traverse(n => { if (WEAP.includes(n.name)) n.visible = C.show.includes(n.name); });
+  for (const [model, name, slot] of C.extra || []) {
+    const src = (await load(model)).scene.getObjectByName(name).clone(); let hs; root.traverse(n => { if (n.name === slot) hs = n; });
+    src.visible = true; hs.add(src);
+  }
+  const meshes = []; root.traverse(m => { if (m.isMesh && !m.userData.ol) meshes.push(m); });
+  for (const m of meshes) {
+    const nm = m.name || m.parent.name; let key = Object.keys(C.tint).find(k => nm.startsWith(k) || (m.parent && m.parent.name === k));
+    const gk = Object.keys(C.glow).find(k => nm.startsWith(k) || (m.parent && m.parent.name === k));
+    m.material = rimMat(m.material, key && C.tint[key], C.rim[0], C.rim[1], gk && C.glow[gk]); outline(m);
+  }
+  if (C.wings) addWings(root, C.rim[0]);
+  if (C.doll) addDoll(root);
+  return { root, clips: gl.animations };
+}
+
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xb8c4ff, 0x2a1840, 1.3));
+const key = new THREE.DirectionalLight(0xfff1e0, 2.4); key.position.set(3, 6, 6); scene.add(key);
+const back = new THREE.DirectionalLight(0x7df9ff, 1.4); back.position.set(-5, 3, -4); scene.add(back);
+const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 50);
+
+window.renderClass = async function (cls, label) {
+  const { root, clips } = await build(cls), C = CLASSES[cls];
+  const holder = new THREE.Group(); holder.add(root); scene.add(holder);
+  root.rotation.y = Math.PI / 2 * .72; // 오른쪽을 보는 3/4 각도
+  const mixer = new THREE.AnimationMixer(root);
+  // 기준 키: Idle 자세 높이를 HEIGHT_U 게임 단위로
+  const idle = clips.find(a => a.name === 'Idle'); mixer.clipAction(idle).play(); mixer.setTime(0); root.updateMatrixWorld(true);
+  const bb = new THREE.Box3(); root.traverse(n => { if (n.isSkinnedMesh && /_(Head|Body|Leg)/.test(n.name)) bb.expandByObject(n, true); }); const hgt = bb.max.y - bb.min.y;
+  const ppw = HEIGHT_U * PXU * SS / hgt; // 화면 픽셀 / 월드 단위
+  const hw = CW * SS / 2 / ppw, hh = CH * SS / 2 / ppw, cx = 0, cy = (FY * SS - CH * SS / 2) / ppw; // 발(y=0)이 FY에 오도록
+  Object.assign(cam, { left: -hw, right: hw, top: hh + cy, bottom: -hh + cy }); cam.position.set(cx + (FX - CW / 2) * -SS / ppw, 1.2 + 0, 10);
+  cam.position.set(-(FX - CW / 2) * SS / ppw, 0, 10); cam.lookAt(cam.position.x, 0, 0);
+  // 살짝 위에서 내려다보기(2.5D)
+  holder.rotation.x = .16;
+  cam.updateProjectionMatrix(); mixer.stopAllAction();
+  const COLS = 5, ROWS = Math.ceil(FRAMES.length / COLS), out = document.createElement('canvas');
+  out.width = COLS * CW; out.height = ROWS * CH * (label ? 1.12 : 1); const o = out.getContext('2d');
+  o.imageSmoothingQuality = 'high';
+  if (label) { o.fillStyle = '#1a1438'; o.fillRect(0, 0, out.width, out.height); }
+  FRAMES.forEach((f, i) => {
+    const [an, t] = C.frames[f], clip = clips.find(a => a.name === an); if (!clip) throw new Error(cls + ': no clip ' + an);
+    mixer.stopAllAction(); const ac = mixer.clipAction(clip); ac.reset().play(); mixer.setTime(clip.duration * t);
+    r.render(scene, cam);
+    const x = (i % COLS) * CW, y = Math.floor(i / COLS) * CH * (label ? 1.12 : 1);
+    o.drawImage(r.domElement, x, y, CW, CH);
+    if (label) { o.fillStyle = '#fff'; o.font = '14px sans-serif'; o.fillText(f + ' ' + an + ' ' + t, x + 4, y + CH + 16); o.strokeStyle = '#444'; o.strokeRect(x, y, CW, CH); }
+  });
+  scene.remove(holder);
+  return out.toDataURL('image/png');
+};
+window.dbg = async c => { const { root } = await build(c); const L = []; root.traverse(n => { if (n.isMesh) L.push(n.name + '|' + (n.parent && n.parent.name) + '|' + n.material.type + '|' + n.visible); }); return L; };
+window.READY = 1;
+</script></body></html>
