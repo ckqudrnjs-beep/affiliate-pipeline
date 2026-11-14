@@ -362,14 +362,20 @@ DESIGNS = [
     {"g": "tongtong", "id": "frog", "name": "개구리 통통", "icon": "🐸", "p": 7},
     {"g": "tongtong", "id": "astro", "name": "우주인 통통", "icon": "🧑‍🚀", "p": 10},
     {"g": "tongtong", "id": "whale", "name": "별고래", "icon": "🐋", "p": 50, "leg": 1},
+    {"g": "tower", "id": "cake", "name": "케이크 탑", "icon": "🍰", "p": 5},
+    {"g": "tower", "id": "brick", "name": "벽돌 성", "icon": "🧱", "p": 7},
+    {"g": "tower", "id": "ice", "name": "얼음 궁전", "icon": "🧊", "p": 10},
+    {"g": "tower", "id": "crystal", "name": "무지개 크리스털 탑", "icon": "💎", "p": 50, "leg": 1},
     {"g": "starcandy", "id": "marble", "name": "구슬 사탕", "icon": "🔮", "p": 5},
     {"g": "starcandy", "id": "planet", "name": "젤리 행성", "icon": "🪐", "p": 8},
     {"g": "starcandy", "id": "gem", "name": "보석 별", "icon": "💎", "p": 12},
     {"g": "starcandy", "id": "galaxy", "name": "은하수 별사탕", "icon": "🌌", "p": 50, "leg": 1},
 ]
-DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"], "starcandy": ["별사탕 합치기", "네온 별사탕", "🍬"]}
+DESIGN_GAMES = {"starlight": ["별빛 요격대", "NX-7 기본", "✈️"], "tongtong": ["통통 네온런", "통통이 기본", "🔵"], "tower": ["하늘 탑 쌓기", "네온 빌딩 기본", "🏢"], "starcandy": ["별사탕 합치기", "네온 별사탕", "🍬"]}
 # 업적·공유 보너스 코인(각 1번만): sl5 별빛 5단계, tt500 통통 500m, rg4 사격장 4단계, share 결과 공유
-ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "sc8": ["별사탕 합치기 무지개별 만들기", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
+ACH = {"sl5": ["별빛 요격대 STAGE 5 도달", 3], "tt500": ["통통 네온런 500m 도달", 3], "rg4": ["네온 사격장 STAGE 4 도달", 3], "tw30": ["하늘 탑 쌓기 30층 도달", 3], "share": ["게임 결과 친구에게 공유하기", 2]}
+ACH["np5"] = ["오늘의 숫자 퍼즐 5판 모두 힌트 없이 풀기", 3]  # 2026-11-14 숫자 퍼즐
+ACH["sc8"] = ["별사탕 합치기 무지개별 만들기", 3]  # 2026-11-14 별사탕 합치기
 # 코인 쓰임 1단계(BK 2026-11-14 "코인을 모아야 하는 이유"): 오늘의 미션·첫 플레이 보너스·아바타 30종·칭호·출석 보호권·통통 이어하기
 # 하루에 버는 양 ≈ 출석 1 + 미션 3 + 다 깨면 1 = 🪙5. 쓰는 곳은 모두 꾸미기·편의(점수·능력 영향 없음).
 MISSIONS = {"p": "게임 2가지 해 보기", "v": "밸런스 질문 1개 투표하기", "r": "순위 게임에서 오늘 기록 남기기"}
@@ -399,6 +405,16 @@ THEMES = [  # 게임 배경 테마. own 키 h:<게임>:<id>
     {"g": "starcandy", "id": "berry", "name": "딸기 우유 병", "icon": "🍓", "p": 10},
     {"g": "starcandy", "id": "sea", "name": "바닷속 병", "icon": "🫧", "p": 15},
     {"g": "starcandy", "id": "snow", "name": "눈꽃 병", "icon": "❄️", "p": 20},
+    {"g": "tower", "id": "sunset", "name": "노을 하늘", "icon": "🌇", "p": 10},
+    {"g": "tower", "id": "blossom", "name": "벚꽃 하늘", "icon": "🌸", "p": 15},
+    {"g": "tower", "id": "aurora", "name": "오로라 밤", "icon": "🌌", "p": 20},
+]
+# 오늘의 숫자 퍼즐 미니 상점(게임 안 탭, BK 11/14): 타일 테마. 코인은 사이트 공통. own 키 h:numpuzzle:<id>
+THEMES += [
+    {"g": "numpuzzle", "id": "candy", "name": "사탕 타일", "icon": "🍬", "p": 6},
+    {"g": "numpuzzle", "id": "wood", "name": "나무 블록", "icon": "🪵", "p": 8},
+    {"g": "numpuzzle", "id": "chalk", "name": "분필 칠판", "icon": "📝", "p": 10},
+    {"g": "numpuzzle", "id": "gold", "name": "황금 타일", "icon": "👑", "p": 15},
 ]
 TRAILS = [  # 꼬리 효과(별빛·통통 공통). own 키 r:<id>
     {"id": "spark", "name": "반짝이", "icon": "✨", "p": 4},

@@ -147,7 +147,9 @@ def targets() -> list[tuple[str, str, str]]:
     out += [(f"q-{q['slug']}.png", q["h1"], "삼촌의 계산") for q in Q.load()]
     out += [(f"guide-{a['slug']}.png", a["title"], "삼촌의 글") for a in A.load()]
     from . import recipes as RC
-    out += [(f"recipe-{r['slug']}.png", f"{r['name']} 1인분 {RC.won(r['total'])}, 배달보다 {RC.won(r['save'] // 100 * 100)} 절약", "1인분 원가 레시피") for r in RC.load()]
+    out += [(f"recipe-{r['slug']}.png", f"{r['name']} 4인분 {RC.won(r['batch'])}, 배달보다 {RC.won(r['saveBatch'] // 100 * 100)} 절약", "연말 홈파티 레시피")
+            if RC.is_party(r) else
+            (f"recipe-{r['slug']}.png", f"{r['name']} 1인분 {RC.won(r['total'])}, 배달보다 {RC.won(r['save'] // 100 * 100)} 절약", "1인분 원가 레시피") for r in RC.load()]
     return out
 
 
