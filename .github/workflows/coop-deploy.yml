@@ -1,0 +1,21 @@
+# 네온 레이드 협동 방 서버(coop/) 배포. main 에 coop/ 변경이 들어오거나 손으로 실행할 때.
+# 필요: 저장소 비밀 CF_WORKERS_TOKEN(Cloudflare 'Edit Cloudflare Workers' 토큰), 변수 CF_ACCOUNT_ID.
+name: coop-deploy
+on:
+  push:
+    branches: [main]
+    paths: ["coop/**"]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 토큰 확인
+        env: { T: "${{ secrets.CF_WORKERS_TOKEN }}" }
+        run: '[ -n "$T" ] || { echo "CF_WORKERS_TOKEN 비밀이 없어요. docs/RIFT_RPG.md 협동 설정 순서를 보세요."; exit 1; }'
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_WORKERS_TOKEN }}
+          accountId: ${{ vars.CF_ACCOUNT_ID }}
+          workingDirectory: coop
