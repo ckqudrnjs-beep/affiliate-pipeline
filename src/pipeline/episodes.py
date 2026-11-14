@@ -48,27 +48,37 @@ SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 
 # 요일(월=0) → 쇼츠 형식. 2026-11-14 BK "덜 광고처럼": 상품 나오는 쇼츠는 월·목 상황극 주 2개만,
 # 화·금 = "오늘의 얼마게"(사이트 퀴즈와 같은 날 같은 문제, 코드가 그날 아침 자동으로 씀, 상품 없음), 수·토·일 상품 없음.
 QUIZ_DAYS = {1, 4}
+# 2026-11-14 밤 BK: "돈 줍는 삼촌을 완벽하게 정보의 장으로". 모든 쇼츠 공통 규칙 (구매 유도 없음).
+INFO_RULE = ("[정보의 장 규칙] 시청자가 이 영상에서 얻는 것(얼마 아끼는지·왜 중요한지)을 먼저 세운다: "
+             "takeaway = 한 줄 정보 가치(40자 이하, 예: \"멀티탭 스위치 하나로 1년 1만 7천 원\") → 설명란 첫 줄. "
+             "영상 안에 오늘 바로 할 수 있는 행동 1개와 숫자의 가정(근거)을 넣는다. "
+             "site_path = 더 자세한 계산·표가 있는 사이트 페이지 하나(next 의 site_pages 중, 형식별 종류 고정) → 설명란 링크, "
+             "end text 는 사이트에 가면 무엇을 더 얻는지. 상품·구매·할인·링크 유도 금지. "
+             "페이지 숫자 출처: calc/ = src/pipeline/calcs.py, q/ = data/calc_questions.json, recipe/ = data/recipes/, "
+             "guide/ = data/articles/<slug>.json, 시세 = data/daily/. 그 안의 숫자·가정만 쓴다. ")
+# 2026-11-14 밤 BK: 사이트 정보 페이지(시세·계산기·얼마게·질문·레시피·글)로 사람을 보내는 요일표. 요일마다 보낼 페이지 종류가 정해져 있다.
 SHORT_FORMATS = {
-    0: ("skit-quiz", "삼촌 vs 조카 얼마게?", False,
-        SKIT_RULE + "상품 없음(prop product 금지, 특정 상품·브랜드 이름 금지). 주제: A vs B 중 돈이 더 드는 쪽 맞히기 "
-        "(예: 온풍기 vs 담요, 배달 vs 집밥). 조카가 틀리고 삼촌이 숫자로 뒤집는다. 공감 상황 먼저. "
-        "끝 대사·end 는 don3chon.com 의 해당 계산기나 오늘의 얼마게로 이어지게(\"우리 집 숫자는 돈삼촌에서\")."),
+    0: ("prices", "이번 주 생활 시세", False,
+        "상품 없음, 카드형. data/daily/ 최근 7일 기름값(휘발유 전국 평균)·환율 숫자만 쓴다(없는 숫자 지어내기 금지). "
+        "hook(이번 주 기름값·환율 한 줄 질문) → versus 또는 bars(지난주 vs 이번 주) → calc(가득 주유 50L·100달러 직구로 환산한 차이) → "
+        "list(오늘 할 일: 주유는 언제·직구는 언제) → end(text=\"매일 아침 시세는 don3chon.com\"). site_path = index.html 또는 report.html."),
     1: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
-    2: ("ox", "착각 vs 현실 O/X", False,
-        "상품 없음. 흔한 믿음 1개(예: 전기장판이 히터보다 무조건 싸다?) → ox(정답 공개) → calc 로 반전 계산 → "
-        "end(text=그 계산을 해 볼 don3chon.com 계산기 안내). 첫 장면부터 질문, 2~3초마다 화면 전환."),
-    3: ("skit-dont", "조카야 그거 하지 마", False,
-        SKIT_RULE + "상품 없음(prop product 금지, 특정 상품·브랜드 이름 금지). 주제: 조카의 돈 새는 습관(충동구매, 배달, "
-        "구독 방치, 보일러 끄고 외출 등)을 삼촌이 계산으로 말리고 더 싼 방법을 알려 준다. "
-        "끝 대사·end 는 don3chon.com 계산기로 이어지게."),
+    2: ("skit-calc", "삼촌 vs 조카 계산기", False,
+        SKIT_RULE + "상품 없음. 주제: 사이트 계산기 하나(site_path = calc/…)로 풀 수 있는 생활 고민 (전기요금·난방비·대기전력·가습기·할부·연봉 실수령·퇴직금). "
+        "조카가 틀리고 삼촌이 그 계산기 결과 숫자로 뒤집는다(숫자는 사이트 계산기와 같은 가정). 끝 = \"우리 집 숫자는 돈삼촌 계산기에\"."),
+    3: ("skit-q", "조카의 생활 질문", False,
+        SKIT_RULE + "상품 없음. 주제: 사이트 '계산해 본 질문'(site_path = q/…) 하나를 조카가 묻고 삼촌이 답한다 "
+        "(예: 셋톱박스 대기전력, 에어프라이어 전기요금). 그 페이지의 숫자·가정만 쓴다. 끝 = \"더 자세한 표는 돈삼촌에\"."),
     4: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
-    5: ("skit-life", "삼촌 vs 조카 생활비", False,
-        SKIT_RULE + "상품 없음(prop product 금지). 주제: 공감 생활 상황극 (자취 첫 겨울 난방비, 월급날 다음 날 통장, "
-        "배달 vs 집밥). 끝 대사나 end 는 사이트 계산기·오늘의 얼마게 안내."),
-    6: ("bank", "1년 뒤 통장", False,
-        "상품 없음. '매일 ○○ 대신 △△ 하면 1년 뒤?' → counter(0에서 1년 금액까지 올라감) → calc(근거) → "
-        "uncle(react-surprised) → end. 숫자는 보수적으로."),
+    5: ("skit-recipe", "배달 vs 집밥 1인분", False,
+        SKIT_RULE + "상품·브랜드 없음. 주제: 사이트 1인분 원가 레시피(site_path = recipe/…) 하나. 조카가 배달 앱을 켜는 순간 → "
+        "삼촌이 재료비·배달비 차이를 숫자로 → 한 달(주 2번) 차이. 숫자는 그 레시피 페이지와 같게. 끝 = \"재료·순서는 돈삼촌 레시피에\"."),
+    6: ("guide", "삼촌의 생활 정리", False,
+        "상품 없음, 카드형. 사이트 글 하나(site_path = guide/…)의 핵심 3가지를 30초로: hook(그 글의 질문) → list(핵심 3가지) → "
+        "calc(가장 큰 숫자 하나) → end(text=\"전체 정리는 돈삼촌 글에\"). 글에 있는 사실만."),
 }
+SITE_PREFIX = {"prices": ("index.html", "report.html"), "quiz": ("quiz.html",), "skit-calc": ("calc/",), "skit-q": ("q/",),
+               "skit-recipe": ("recipe/",), "guide": ("guide/",)}
 # 2026-11-14 BK: 롱폼 멈춤 (TTS 내레이션·슬라이드로는 재미가 없음) → 매일 쇼츠 1편 질에 집중. 다시 하면 여기 형식을 넣는다.
 LONG_FORMATS: dict = {}
 
@@ -165,7 +175,7 @@ def site_pages() -> dict:
     """쇼츠가 안내할 수 있는 사이트 페이지: 경로 → 제목."""
     from . import articles as A, recipes as RC, questions as Q
     from .calcs import CALCS
-    out = {"quiz.html": "오늘의 얼마게 (하루 한 문제)"}
+    out = {"quiz.html": "오늘의 얼마게 (하루 한 문제)", "index.html": "오늘의 생활 시세 (홈)", "report.html": "주간 생활물가 리포트"}
     out.update({f"calc/{c['slug']}.html": c["h1"] for c in CALCS})
     out.update({f"q/{q['slug']}.html": q["h1"] for q in Q.load()})
     out.update({f"guide/{a['slug']}.html": a["title"] for a in A.load()})
@@ -421,6 +431,9 @@ def check(spec: dict) -> list[str]:
             e.append("takeaway (정보 가치 한 줄, 40자 이하) 없음")
         if spec.get("site_path") not in site_pages():
             e.append("site_path 는 site_pages 중 하나 (자세한 내용이 있는 사이트 페이지)")
+        pre = SITE_PREFIX.get(spec.get("format"))
+        if pre and not str(spec.get("site_path", "")).startswith(pre):
+            e.append(f"{spec.get('format')} 형식의 site_path 는 {pre} 로 시작")
     return e
 
 

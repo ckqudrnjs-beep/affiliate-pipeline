@@ -21,7 +21,7 @@ class EpisodeCheckTest(unittest.TestCase):
         self.assertIn("금지 표현", errs)
 
     def test_weekday_formats(self):
-        self.assertEqual(ep.SHORT_FORMATS[dt.date(2026, 11, 16).weekday()][0], "skit-quiz")  # 월
+        self.assertEqual(ep.SHORT_FORMATS[dt.date(2026, 11, 16).weekday()][0], "prices")  # 월 (2026-11-14 밤 요일표)
         self.assertEqual(ep.LONG_FORMATS, {})  # 2026-11-14 BK: 롱폼 멈춤
 
 
