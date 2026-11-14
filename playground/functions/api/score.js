@@ -16,7 +16,11 @@ const ago = (day, n) => new Date(Date.parse(day + "T00:00:00Z") - n * 864e5).toI
 let ready = false;
 async function ensure(db) {
   if (ready) return;
-  await db.prepare("CREATE TABLE IF NOT EXISTS pscores (h TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, nick TEXT NOT NULL, score INTEGER NOT NULL, PRIMARY KEY (h, game, day))").run();
+  await db.batch([
+    db.prepare("CREATE TABLE IF NOT EXISTS pscores (h TEXT NOT NULL, game TEXT NOT NULL, day TEXT NOT NULL, nick TEXT NOT NULL, score INTEGER NOT NULL, PRIMARY KEY (h, game, day))"),
+    // 최근 7일 순위·오래된 기록 삭제가 표 전체를 읽지 않게(2026-11-14 트래픽 대비)
+    db.prepare("CREATE INDEX IF NOT EXISTS pscores_gd ON pscores(game, day)"),
+  ]);
   ready = true;
 }
 async function sha(s) {
@@ -67,20 +71,19 @@ export async function onRequestPost({ request, env }) {
   if (!(game in MAX) || day !== kst() || !nickOk(nick) || !(score > 0 && score <= MAX[game])) return json({ error: "bad" }, 400);
   const ip = request.headers.get("cf-connecting-ip") || "0";
   const h = (await sha(`${ip}|${game}|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
-  await env.DB.batch([
-    env.DB.prepare("INSERT INTO scores (day, game, h, nick, score) VALUES (?, ?, ?, ?, ?) ON CONFLICT(day, game, h) DO UPDATE SET score = MAX(score, excluded.score), nick = excluded.nick").bind(day, game, h, nick, score),
-    env.DB.prepare("DELETE FROM scores WHERE day < date(?, '-7 day')").bind(day),
-  ]);
+  await env.DB.prepare("INSERT INTO scores (day, game, h, nick, score) VALUES (?, ?, ?, ?, ?) ON CONFLICT(day, game, h) DO UPDATE SET score = MAX(score, excluded.score), nick = excluded.nick").bind(day, game, h, nick, score).run();
+  // 오래된 기록 삭제는 매번 대신 가끔만(기록 50번에 한 번쯤)
+  if (Math.random() < 0.02) await env.DB.prepare("DELETE FROM scores WHERE day < date(?, '-7 day')").bind(day).run();
   // 프로필 기록(7일 보관): 복구 코드가 맞고 별명이 그 프로필 별명일 때만
   const c = normCode(b.code);
   if (c && profileNickOk(nick)) {
     await ensure(env.DB);
     const ph = await sha(`${c}|${env.VOTE_SALT || ""}`);
     const pr = await env.DB.prepare("SELECT nick FROM profiles WHERE h = ?").bind(ph).first();
-    if (pr && pr.nick === nick) await env.DB.batch([
-      env.DB.prepare("INSERT INTO pscores (h, game, day, nick, score) VALUES (?, ?, ?, ?, ?) ON CONFLICT(h, game, day) DO UPDATE SET score = MAX(score, excluded.score), nick = excluded.nick").bind(ph, game, day, nick, score),
-      env.DB.prepare("DELETE FROM pscores WHERE day < ?").bind(ago(day, 6)),
-    ]);
+    if (pr && pr.nick === nick) {
+      await env.DB.prepare("INSERT INTO pscores (h, game, day, nick, score) VALUES (?, ?, ?, ?, ?) ON CONFLICT(h, game, day) DO UPDATE SET score = MAX(score, excluded.score), nick = excluded.nick").bind(ph, game, day, nick, score).run();
+      if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM pscores WHERE game = ? AND day < ?").bind(game, ago(day, 6)).run();
+    }
   }
   return json({ ok: true });
 }

@@ -32,6 +32,9 @@ const CSS = `
 .rg3 .xh i{position:absolute;background:#fff;box-shadow:0 0 4px #000,0 0 6px #22e5ff}
 .rg3 .xh i:nth-child(1),.rg3 .xh i:nth-child(2){width:2px;height:10px;left:-1px}.rg3 .xh i:nth-child(3),.rg3 .xh i:nth-child(4){height:2px;width:10px;top:-1px}
 .rg3 .xh b{position:absolute;width:3px;height:3px;left:-1.5px;top:-1.5px;background:#ff2e88;border-radius:50%}
+.rg3.xh-gold .xh i{background:#ffd23f;box-shadow:0 0 4px #000,0 0 8px #ffd23f}.rg3.xh-gold .xh b{background:#fff}
+.rg3.xh-ring .xh i{opacity:.0}.rg3.xh-ring .xh b{width:22px;height:22px;left:-11px;top:-11px;background:none;border:2px solid #3ddc84;box-shadow:0 0 6px #3ddc84,inset 0 0 4px #3ddc84}.rg3.xh-ring .xh b::after{content:'';position:absolute;left:8px;top:8px;width:2px;height:2px;border-radius:50%;background:#3ddc84}
+.rg3.xh-heart .xh i{background:#ff7ad9;box-shadow:0 0 4px #000,0 0 8px #ff7ad9}.rg3.xh-heart .xh b{width:auto;height:auto;left:-6px;top:-8px;background:none;color:#ff3d9a;font-size:12px;line-height:1}.rg3.xh-heart .xh b::after{content:'♥'}
 .rg3 .hm{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;opacity:0;transform:rotate(45deg)}
 .rg3 .hm:before,.rg3 .hm:after{content:"";position:absolute;background:#fff;box-shadow:0 0 6px #fff}.rg3 .hm:before{left:12px;top:0;width:2px;height:26px}.rg3 .hm:after{top:12px;left:0;height:2px;width:26px}
 .rg3 .hm.bull:before,.rg3 .hm.bull:after{background:#ff2e88;box-shadow:0 0 8px #ff2e88}
@@ -678,7 +681,16 @@ export function boot(opts = {}) {
     root.style.display = 'none'; document.documentElement.style.overflow = '';
     if (opts.onExit) opts.onExit(result);
   }
+  // 미니 상점 꾸미기(겉모습만): 조준점 모양, 총알 궤적·총구 불꽃 색
+  const FXC = { plasma: [new THREE.Color(1, 2.2, 3.2), 0x66ccff], laser: [new THREE.Color(3.2, 0.9, 2.2), 0xff6ad5], gold: [new THREE.Color(3.2, 2.6, 0.8), 0xffe066] };
+  function applyLook() {
+    const L = (opts.look && opts.look()) || {};
+    root.classList.remove('xh-gold', 'xh-ring', 'xh-heart'); if (L.xh) root.classList.add('xh-' + L.xh);
+    const f = FXC[L.fx]; for (const m of tracers) m.material.color.copy(f ? f[0] : new THREE.Color(3, 2.2, 1.2));
+    for (const g of guns) g.flash.traverse((o) => { if (o.material) o.material.color.set(f ? f[1] : 0xffffff); });
+  }
   function open() {
+    applyLook();
     if (touch) goFull();
     root.style.display = ''; document.documentElement.style.overflow = 'hidden';
     sel = cur; toMenu(); if (!running) { running = true; last = performance.now(); requestAnimationFrame(loop); }

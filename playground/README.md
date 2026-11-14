@@ -84,6 +84,9 @@
   - 이달의 한정 아바타(`lib/nick.js` `AV_LIMITED`, 🪙12): 그 달(KST)에만 판매, 산 건 계속. 2026-11 🍁 ~ 2027-03 🌸 — 이후 달은 추가 필요.
   - 수집왕: 상점 아바타 30종 모두 → 칭호 「수집왕」 무료 + 프로필 금테.
   - 질문 제안 🪙10(`functions/api/qprop.js`, D1 `qprops`): 프로필 필요, 하루 1번, badText 검사. 관리자 /admin '질문 제안'에서 채택 → 칭호 「출제자」(own `t:author`) + 🪙10, 반려. 채택 질문은 질문 데이터에 따로 넣어야 함.
+- 게임별 미니 상점(2026-11-14 BK): 코인은 하나, 게임 화면마다 `<details class="gshop" data-g>`(build.py 가 아이템 있는 게임에 자동으로 넣음, `Bonus.gshop`). /bonus 에도 '게임별 꾸미기'.
+  - `GAME_ITEMS`(own `g:<게임>:<종류>:<id>`, 고른 것 `nr_bonus.gi`): 사격장 조준점·총알/총구 불꽃(src3d/range/main.js `applyLook`, `npm run build` 후 static/js/range.js 커밋), 별똥별 캐릭터·별똥별 모양, 딱 멈춰 막대·성공 효과, 반응속도 신호 색, 퀴즈형(틀린그림·초성·다수결·반응속도) 끝났을 때 축하(`Bonus.cheer`, played 에서 호출).
+  - 별빛·통통 미니 상점은 기존 디자인·배경 테마·꼬리·사운드·네온 색을 그 게임 것만 보여 줌. 새 게임은 `GAME_ITEMS` 에 그 게임 항목을 넣으면 상점이 자동으로 생김.
 - 스킨(겉모습만, 판정 동일): build.py `DESIGNS`(별빛: 냥냥 요격기 6·원반 UFO 8·드래곤 파이터 12 / 통통: 냥이 5·개구리 7·우주인 10) + `SKINS` 색(0~5). 그림은 starlight.js `shipSprite`, tongtong game.js 그리기 코드.
 - 코드: build.py `BONUS_JS`(window.Bonus: checkin/spend/ach/buy/skin/design), `BONUS_CSS`, `BONUS_BODY`. 게임 boot 옵션 `bonus`, `skin`, `design`.
 
@@ -130,3 +133,8 @@
 - 물체마다 바꿀 수 있는 방식(색·없어짐·크기·좌우 뒤집기·위치·모양)이 정해져 있고, 서로 떨어진 5곳을 골라 차이를 만든다. 같은 방식은 하루 2번까지. 매일 같은 판 = `seeded('spot'+KST)`. 점수 규칙(3000-10/초)은 그대로.
 - 테스트: 주소 끝 `#spdebug` → `window.__sp` (O 원본, B 바뀐 그림, diffs, cen()).
 - 외부 무료 소스를 쓸 때는 CC0/퍼블릭 도메인 등 상업 이용·수정 허용이 확인된 것만, 출처를 `CREDITS` 파일에 남긴다. 다른 게임 그림, 출처 불명 이미지는 금지.
+## 트래픽 폭주 대비 (2026-11-14)
+- `functions/api/_middleware.js`: 모든 /api/* 를 감싼다. 순위(GET /api/score: 오늘 15초·7일 2분)·게시판 목록(20초) 엣지 캐시, 주소에 `f=` 가 있으면 새로 읽음(내 기록 올린 직후).
+  D1 오류·한도 초과는 503 `{error:"busy", msg}` 로 바꿔 화면이 "잠시 쉬는 중"을 보여 준다. 환경변수 `API_PAUSE=1` 이면 저장(POST)만 멈춤(/api/admin 제외).
+- 화면: 순위 저장이 실패하면 `nr_pend_<게임>` 에 두었다가 같은 날 다시 열면 재전송. 프로필은 바뀐 게 없으면 저장 요청을 안 보내고(`nr_psent`), 서버가 진짜 `nocode` 라고 할 때만 기기에서 코드를 지운다.
+- 새 API를 만들 때: 같은 사람에게 매 판 요청하지 말 것, 오래된 행 삭제는 확률로 가끔, WHERE 조건 열에 색인. 사용량 알림은 `.github/workflows/cf-usage.yml` (plan/SCALING.md 8장).
