@@ -148,3 +148,13 @@
 - 상점 아이템(내 캐릭터 ufo/cat/astro, 별똥별 모양 ice/candy)은 `Bonus.gitem('dodge',…)` 그대로, 모두 코드로 그린 그림.
 - 테스트: `#dgdebug` → `window.__dg` (bot(true), fast(n), god(true), skin('cat','candy'), poster()).
 - 그래픽 품질 기준: docs/GAME_QUALITY.md (계획 폴더 plan/GAME_QUALITY.md 와 같음).
+
+## RPG 캐릭터 3D 스프라이트 (네온 레이드, 2026-11-14)
+- BK 결정(11/14): 코드로 그린 캐릭터 대신 무료(CC0) 3D 모델을 미리 렌더링한 2.5D 스프라이트를 쓴다. 게임은 2D 캔버스 그대로(three.js 실시간 아님).
+- 모델: KayKit Adventurers 1.0 (Kay Lousberg, CC0, 표기 의무 없지만 body.html에 출처 표기). 라이선스 `src3d/chars/LICENSE-KayKit.txt`. 모델 파일은 저장소에 넣지 않고 `node chars/fetch.mjs` 로 받는다.
+- 직업별 설정(모델·무기·색·애니메이션 프레임) `src3d/chars/classes.js`. 프레임 이름 = raid.js POSE 키 20개.
+- 다시 만들기: `cd src3d && npm install && node chars/fetch.mjs && node chars/render.mjs [직업…]` → `static/img/raid/<직업>.webp`(5x4, 칸 360x320, 발 155,295, 1단위=1.2px). 확인용 `--sheet` 는 chars/sheet-*.png (커밋 안 함).
+- 적 3종: KayKit Skeletons(CC0) 뼈를 금속색으로 칠한 '기계 골격'(3x2 칸, 걷기3·준비·휘두르기·맞음). 아이템 `props.webp`(코인·강화석 8방향 회전, 상자·회복 구슬·젤리·나무 상자; 코인·상자는 KayKit Dungeon Remastered CC0, 나머지는 직접 만든 3D 도형). 보스 열차 칸·머리·드론 `boss.webp` 는 직접 만든 3D 도형.
+- 이펙트(BK 11/14): shadowBlur 대신 색별로 한 번 구운 빛 번짐 스프라이트(`glowTex`, `glw`)를 'lighter' 합성으로 겹친다(폰에서 더 가벼움). 베기 초승달 2겹·끝 빛, 타격 섬광, 적 휘두르기 궤적·준비 경고, 폭탄 위험 원, 보스 레이저·돌진 경고, 불덩이 꼬리, 유성 낙하 꼬리·충격파.
+- raid.js `ATL`: 시작할 때 5장 미리 불러오고, 못 불러오면 예전 코드 그림으로 대체. 아틀라스를 바꾸면 `ATL.V` 를 올려 캐시를 깬다.
+- 몽글숲 아지트(같은 날): 몽글이 몸(발·몸·팔·새싹/도토리/꽃)을 직접 만든 3D 모델로 렌더(`node chars/render.mjs mongle` → `static/img/mongle/mongle3d.webp`, 팔레트 4 x 모습 5, 칸 400x420, 1단위=3px). 얼굴·표정·옷은 mongle-art.js 2D로 얹는다. 씨앗 단계는 2D 그대로. 늦게 불러오면 `A.on3d` 로 캐시를 다시 그린다.
