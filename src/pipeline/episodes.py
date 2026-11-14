@@ -54,9 +54,9 @@ SHORT_FORMATS = {
         "(예: 온풍기 vs 담요, 배달 vs 집밥). 조카가 틀리고 삼촌이 숫자로 뒤집는다. 공감 상황 먼저. "
         "끝 대사·end 는 don3chon.com 의 해당 계산기나 오늘의 얼마게로 이어지게(\"우리 집 숫자는 돈삼촌에서\")."),
     1: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
-    2: ("teaser", "롱폼 예고", False,
-        "상품 없음. 이번 주 수요일 롱폼(살까 말까 저울)의 핵심 계산 하나만 쇼츠로. hook → versus 또는 bars → calc → "
-        "end(\"전체 비교는 채널 롱폼에서\"). 상품 이름·사진 없이 '전기요 vs 온풍기'처럼 종류로만."),
+    2: ("ox", "착각 vs 현실 O/X", False,
+        "상품 없음. 흔한 믿음 1개(예: 전기장판이 히터보다 무조건 싸다?) → ox(정답 공개) → calc 로 반전 계산 → "
+        "end(text=그 계산을 해 볼 don3chon.com 계산기 안내). 첫 장면부터 질문, 2~3초마다 화면 전환."),
     3: ("skit-dont", "조카야 그거 하지 마", False,
         SKIT_RULE + "상품 없음(prop product 금지, 특정 상품·브랜드 이름 금지). 주제: 조카의 돈 새는 습관(충동구매, 배달, "
         "구독 방치, 보일러 끄고 외출 등)을 삼촌이 계산으로 말리고 더 싼 방법을 알려 준다. "
@@ -69,13 +69,8 @@ SHORT_FORMATS = {
         "상품 없음. '매일 ○○ 대신 △△ 하면 1년 뒤?' → counter(0에서 1년 금액까지 올라감) → calc(근거) → "
         "uncle(react-surprised) → end. 숫자는 보수적으로."),
 }
-LONG_FORMATS = {
-    2: ("scale", "살까 말까 저울", False, 20,
-        "7~8분. 같은 목적의 3가지 방법 총비용 비교(예: 전기요 vs 온수매트 vs 온풍기). chapter 5~6개: 질문 → 방법별 계산 → "
-        "bars(총비용 비교) → 상황별 추천 → 주의점 → 마무리. 상품 없음(종류로만 비교), 마무리는 don3chon.com 계산기."),
-    5: ("checkup", "삼촌의 생활비 점검", False, 20,
-        "6~8분. 이번 주 생활비 새는 구멍 5개 모음(상품 없음). chapter 마다 calc·counter·list. 마무리에 사이트 계산기."),
-}
+# 2026-11-14 BK: 롱폼 멈춤 (TTS 내레이션·슬라이드로는 재미가 없음) → 매일 쇼츠 1편 질에 집중. 다시 하면 여기 형식을 넣는다.
+LONG_FORMATS: dict = {}
 
 LONG_HOUR = 20  # 롱폼 공개 시각 (쇼츠 19:00 과 겹치지 않게)
 
@@ -114,7 +109,9 @@ def next_short_date(today: dt.date) -> dt.date:
     return d
 
 
-def next_long_date(today: dt.date) -> dt.date:
+def next_long_date(today: dt.date) -> dt.date | None:
+    if not LONG_FORMATS:
+        return None
     have = {json.loads(p.read_text(encoding="utf-8"))["date"] for p in ep_files()
             if json.loads(p.read_text(encoding="utf-8")).get("kind") == "long"}
     d = today + dt.timedelta(days=2)
@@ -156,6 +153,8 @@ def info_short(today: dt.date) -> dict:
 
 def info_long(today: dt.date) -> dict:
     d = next_long_date(today)
+    if d is None:
+        return {"paused": "롱폼 멈춤 (2026-11-14 BK). 아무것도 쓰지 않는다."}
     key, name, product, _, rules = LONG_FORMATS[d.weekday()]
     return {"date": d.isoformat(), "kind": "long", "format": key, "format_name": name, "product_allowed": product,
             "rules": rules, "file": f"data/episodes/{d.isoformat()}-{key}.json",
