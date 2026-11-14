@@ -232,21 +232,23 @@ function put(g, sp, x, y, dir, sc, flash, rotA) {
 /* ---------- 3D 렌더 캐릭터 아틀라스 (원본 src3d/chars, 모델 KayKit CC0) ---------- */
 // 5x4 칸, 칸 360x320px, 발 (155,295), 1 게임 단위 = 1.2px. 칸 순서 = ATL.F. 못 불러오면 예전 코드 그림을 쓴다.
 const ATL = { CW: 360, CH: 320, FX: 155, FY: 295, PXU: 1.2, V: 1, F: ['idle', 'idle2', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'hurt', 'dash', 'c1a', 'c1b', 'c2a', 'c2b', 'c3a', 'c3b', 'cast', 'up', 'spin', 'ult'], p: {}, sp: {} };
-function atlasLoad(cls) {
-  if (!ATL.p[cls]) ATL.p[cls] = new Promise(ok => { const im = new Image(); im.decoding = 'async'; im.onload = () => { try { ATL.sp[cls] = atlasCut(im); } catch (e) {} ok(!!ATL.sp[cls]); }; im.onerror = () => ok(false); im.src = '/img/raid/' + cls + '.webp?v=' + ATL.V; });
-  return ATL.p[cls];
+const ATL_E = ['w0', 'w1', 'w2', 'wind', 'hit', 'hurt'], ATL_EN = ['grunt', 'shield', 'elite']; // 적: 3x2 칸
+function atlasLoad(key) {
+  const en = ATL_EN.includes(key);
+  if (!ATL.p[key]) ATL.p[key] = new Promise(ok => { const im = new Image(); im.decoding = 'async'; im.onload = () => { try { ATL.sp[key] = atlasCut(im, en ? ATL_E : ATL.F, en ? 3 : 5, en); } catch (e) {} ok(!!ATL.sp[key]); }; im.onerror = () => ok(false); im.src = '/img/raid/' + key + '.webp?v=' + ATL.V; });
+  return ATL.p[key];
 }
-function atlasCut(im) {
+function atlasCut(im, list, cols, flip) { // flip: 적 그림은 왼쪽을 보는 게 기본
   const { CW, CH, FX, FY, PXU } = ATL, o = {};
-  ATL.F.forEach((f, i) => {
-    const c = mkc(CW, CH), g = c.getContext('2d'); g.drawImage(im, (i % 5) * CW, Math.floor(i / 5) * CH, CW, CH, 0, 0, CW, CH);
+  list.forEach((f, i) => {
+    const c = mkc(CW, CH), g = c.getContext('2d'); if (flip) { g.translate(CW, 0); g.scale(-1, 1); } g.drawImage(im, (i % cols) * CW, Math.floor(i / cols) * CH, CW, CH, 0, 0, CW, CH);
     const wh = mkc(CW, CH), w2 = wh.getContext('2d'); w2.drawImage(c, 0, 0); w2.globalCompositeOperation = 'source-in'; w2.fillStyle = '#fff'; w2.fillRect(0, 0, CW, CH);
-    o[f] = { c, wh, ox: FX / PXU, oy: FY / PXU, w: CW / PXU, h: CH / PXU };
+    o[f] = { c, wh, ox: (flip ? CW - FX : FX) / PXU, oy: FY / PXU, w: CW / PXU, h: CH / PXU };
   });
-  for (const f of FRAMES) if (!o[f]) o[f] = o.idle; // 새 자세가 생기면 대기 자세로
+  if (list === ATL.F) for (const f of FRAMES) if (!o[f]) o[f] = o.idle; // 새 자세가 생기면 대기 자세로
   return o;
 }
-function atlasAll() { return Promise.all(CLS.map(atlasLoad)); }
+function atlasAll() { return Promise.all(CLS.concat(ATL_EN).map(atlasLoad)); }
 
 /* =================== 직업·기술 데이터 =================== */
 // 공격 판정 h: x0..x1 앞쪽 거리, dy 깊이 허용, z0..z1 높이, d 피해 배율, kb 밀기, lift 띄우기, st 경직, stop 히트스톱, sh 흔들림, n 다단 수, iv 간격
@@ -456,6 +458,7 @@ function buildSprites(cls) {
   SPR = { cls, p: {}, e: {} };
   if (ATL.sp[cls]) SPR.p = ATL.sp[cls]; else for (const f of FRAMES) SPR.p[f] = bake(ART[cls], joints(f), k, c.col, c.col2, [360, 300, 30]);
   for (const t of ['grunt', 'shield', 'elite']) {
+    if (ATL.sp[t]) { SPR.e[t] = ATL.sp[t]; continue; }
     const fn = EART[t], sh = t === 'shield', ek = lay.s * lay.dpr * ET[t].sc;
     SPR.e[t] = {
       w0: bake(fn, { ph: 0, shield: sh }, ek, ET[t].rim, '#7df9ff'), w1: bake(fn, { ph: 1.6, shield: sh }, ek, ET[t].rim, '#7df9ff'), w2: bake(fn, { ph: -1.6, shield: sh }, ek, ET[t].rim, '#7df9ff'),

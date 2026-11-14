@@ -56,3 +56,25 @@ export const CLASSES = {
     frames: { ...COMMON, ...M1 },
   },
 };
+
+// 적: 6프레임(3x2). 균열 빛에 깨어난 기계 골격 — KayKit Skeletons(CC0) 뼈를 금속색으로 칠하고 눈을 빛나게.
+export const EFRAMES = ['w0', 'w1', 'w2', 'wind', 'hit', 'hurt'];
+const EF = (atk, wa, wb) => ({ w0: ['Walking_D_Skeletons', 0], w1: ['Walking_D_Skeletons', .33], w2: ['Walking_D_Skeletons', .66], wind: [atk, wa], hit: [atk, wb], hurt: ['Hit_A', .3] });
+const BONE = (pre, col, extra) => Object.assign({ [pre + '_Body']: col, [pre + '_Head']: col, [pre + '_Jaw']: col, [pre + '_ArmLeft']: col, [pre + '_ArmRight']: col, [pre + '_LegLeft']: col, [pre + '_LegRight']: col }, extra || {});
+export const ENEMIES = {
+  grunt: {
+    model: 'Skeleton_Minion', show: [], extra: [['Barbarian', '1H_Axe', 'handslotr']], cols: 3, glowI: 2.5,
+    tint: BONE('Skeleton_Minion', '#8a93a8', { Skeleton_Minion_Cloak: '#8a4a22', '1H_Axe': '#c07040' }), glow: { Skeleton_Minion_Eyes: '#ff8a2a' }, rim: ['#ff9a5a', '#7df9ff'],
+    frames: EF('1H_Melee_Attack_Chop', .2, .5),
+  },
+  shield: {
+    model: 'Skeleton_Warrior', show: [], extra: [['Barbarian', 'Barbarian_Round_Shield', 'handslotl'], ['Barbarian', '1H_Axe', 'handslotr']], cols: 3, glowI: 2.5,
+    tint: BONE('Skeleton_Warrior', '#9aa4bc', { Skeleton_Warrior_Cloak: '#3a5a90', Skeleton_Warrior_Helmet: '#7c86a8', Barbarian_Round_Shield: '#d08a40', '1H_Axe': '#a0a8b8' }), glow: { Skeleton_Warrior_Eyes: '#ffb070' }, rim: ['#ffb070', '#7df9ff'],
+    frames: EF('1H_Melee_Attack_Slice_Diagonal', .2, .5),
+  },
+  elite: {
+    model: 'Skeleton_Warrior', show: [], extra: [['Barbarian', '2H_Axe', 'handslotr']], cols: 3, glowI: 2.5,
+    tint: BONE('Skeleton_Warrior', '#6a7080', { Skeleton_Warrior_Cloak: '#a01a40', Skeleton_Warrior_Helmet: '#c02a50', '2H_Axe': '#8a909c' }), glow: { Skeleton_Warrior_Eyes: '#ff2a6a' }, scale: 1, rim: ['#ff2a6a', '#ff9ac0'],
+    frames: EF('2H_Melee_Attack_Chop', .15, .5),
+  },
+};

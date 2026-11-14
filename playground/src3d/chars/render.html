@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
-import { CLASSES, FRAMES } from './classes.js';
+import { CLASSES, FRAMES, ENEMIES, EFRAMES } from './classes.js';
 
 // 아틀라스 칸: CW x CH 픽셀, 발 위치 (FX, FY). 게임 단위로 1단위 = PXU 픽셀.
 export const CW = 360, CH = 320, FX = 155, FY = 295, PXU = 1.2, HEIGHT_U = 176, SS = 2;
@@ -18,10 +18,10 @@ const load = n => cache[n] || (cache[n] = new Promise((ok, no) => L.load('models
 const WEAP = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff',
   'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', 'Knight_Helmet', 'Knight_Cape', 'Mage_Hat', 'Mage_Cape', 'Rogue_Cape', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug', 'Barbarian_Hat', 'Barbarian_Cape'];
 
-function rimMat(old, tint, rim, rim2, glow) {
+function rimMat(old, tint, rim, rim2, glow, gi) {
   const m = new THREE.MeshStandardMaterial({ map: old.map, roughness: .5, metalness: .25 });
   const tc = new THREE.Color(tint || '#ffffff'), ta = tint ? .85 : 0;
-  if (glow) { m.emissive = new THREE.Color(glow); m.emissiveIntensity = .35; }
+  if (glow) { m.emissive = new THREE.Color(glow); m.emissiveIntensity = gi || .35; }
   const c1 = new THREE.Color(rim), c2 = new THREE.Color(rim2);
   m.onBeforeCompile = sh => {
     sh.uniforms.rimA = { value: c1 }; sh.uniforms.rimB = { value: c2 }; sh.uniforms.tintC = { value: tc }; sh.uniforms.tintA = { value: ta };
@@ -67,7 +67,7 @@ function addDoll(root) { // 부두 인형: 왼손에 든 작은 천 인형
 }
 
 async function build(cls) {
-  const C = CLASSES[cls], gl = await load(C.model);
+  const C = CLASSES[cls] || ENEMIES[cls], gl = await load(C.model);
   const root = skClone(gl.scene);
   root.traverse(n => { if (WEAP.includes(n.name)) n.visible = C.show.includes(n.name); });
   for (const [model, name, slot] of C.extra || []) {
@@ -78,7 +78,7 @@ async function build(cls) {
   for (const m of meshes) {
     const nm = m.name || m.parent.name; let key = Object.keys(C.tint).find(k => nm.startsWith(k) || (m.parent && m.parent.name === k));
     const gk = Object.keys(C.glow).find(k => nm.startsWith(k) || (m.parent && m.parent.name === k));
-    m.material = rimMat(m.material, key && C.tint[key], C.rim[0], C.rim[1], gk && C.glow[gk]); outline(m);
+    m.material = rimMat(m.material, key && C.tint[key], C.rim[0], C.rim[1], gk && C.glow[gk], C.glowI); outline(m);
   }
   if (C.wings) addWings(root, C.rim[0]);
   if (C.doll) addDoll(root);
@@ -92,12 +92,13 @@ const back = new THREE.DirectionalLight(0x7df9ff, 1.4); back.position.set(-5, 3,
 const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 50);
 
 window.renderClass = async function (cls, label) {
-  const { root, clips } = await build(cls), C = CLASSES[cls];
+  const { root, clips } = await build(cls), C = CLASSES[cls] || ENEMIES[cls], FR = CLASSES[cls] ? FRAMES : EFRAMES;
   const holder = new THREE.Group(); holder.add(root); scene.add(holder);
   root.rotation.y = Math.PI / 2 * .72; // 오른쪽을 보는 3/4 각도
   const mixer = new THREE.AnimationMixer(root);
   // 기준 키: Idle 자세 높이를 HEIGHT_U 게임 단위로
-  const idle = clips.find(a => a.name === 'Idle'); mixer.clipAction(idle).play(); mixer.setTime(0); root.updateMatrixWorld(true);
+  const idle = clips.find(a => a.name === 'Idle');
+  if (C.scale) root.scale.setScalar(C.scale); mixer.clipAction(idle).play(); mixer.setTime(0); root.updateMatrixWorld(true);
   const bb = new THREE.Box3(); root.traverse(n => { if (n.isSkinnedMesh && /_(Head|Body|Leg)/.test(n.name)) bb.expandByObject(n, true); }); const hgt = bb.max.y - bb.min.y;
   const ppw = HEIGHT_U * PXU * SS / hgt; // 화면 픽셀 / 월드 단위
   const hw = CW * SS / 2 / ppw, hh = CH * SS / 2 / ppw, cx = 0, cy = (FY * SS - CH * SS / 2) / ppw; // 발(y=0)이 FY에 오도록
@@ -106,11 +107,11 @@ window.renderClass = async function (cls, label) {
   // 살짝 위에서 내려다보기(2.5D)
   holder.rotation.x = .16;
   cam.updateProjectionMatrix(); mixer.stopAllAction();
-  const COLS = 5, ROWS = Math.ceil(FRAMES.length / COLS), out = document.createElement('canvas');
+  const COLS = C.cols || 5, ROWS = Math.ceil(FR.length / COLS), out = document.createElement('canvas');
   out.width = COLS * CW; out.height = ROWS * CH * (label ? 1.12 : 1); const o = out.getContext('2d');
   o.imageSmoothingQuality = 'high';
   if (label) { o.fillStyle = '#1a1438'; o.fillRect(0, 0, out.width, out.height); }
-  FRAMES.forEach((f, i) => {
+  FR.forEach((f, i) => {
     const [an, t] = C.frames[f], clip = clips.find(a => a.name === an); if (!clip) throw new Error(cls + ': no clip ' + an);
     mixer.stopAllAction(); const ac = mixer.clipAction(clip); ac.reset().play(); mixer.setTime(clip.duration * t);
     r.render(scene, cam);
