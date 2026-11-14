@@ -72,9 +72,10 @@ export const CLASSES = {
 
 // 적: 9프레임(3x3, 걷기 6 + 준비·휘두르기·맞음). 균열 빛에 깨어난 기계 골격 — KayKit Skeletons(CC0) 뼈를 금속색으로 칠하고 눈을 빛나게.
 export const EFRAMES = ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'wind0', 'wind', 'hit', 'hit2', 'hurt', 'hurt2']; // 4x4 칸: 걷기 8 + 준비 2 + 휘두르기 2 + 맞음 2
-const WK = 'Walking_D_Skeletons';
-const EF = (atk, wa, wb) => ({ w0: [WK, 0], w1: [WK, 1 / 8], w2: [WK, 2 / 8], w3: [WK, 3 / 8], w4: [WK, 4 / 8], w5: [WK, 5 / 8], w6: [WK, 6 / 8], w7: [WK, 7 / 8],
-  wind0: [atk, Math.max(0, wa - .12)], wind: [atk, wa], hit: [atk, wb], hit2: [atk, Math.min(.95, wb + .17)], hurt: ['Hit_A', .3], hurt2: ['Hit_A', .6] });
+// BK 11/14 '적이 뒤로 등장': 해골 팩은 몸 방향이 모험가 팩과 달라 등이 보였다 → 걷기 Walking_A + 방향 보정(WY), 공격·맞음도 조금(AY) 돌림
+const WK = 'Walking_A', WY = -.85, AY = -.6;
+const EF = (atk, wa, wb) => ({ w0: [WK, 0, WY], w1: [WK, 1 / 8, WY], w2: [WK, 2 / 8, WY], w3: [WK, 3 / 8, WY], w4: [WK, 4 / 8, WY], w5: [WK, 5 / 8, WY], w6: [WK, 6 / 8, WY], w7: [WK, 7 / 8, WY],
+  wind0: [atk, Math.max(0, wa - .12), AY], wind: [atk, wa, AY], hit: [atk, wb, AY], hit2: [atk, Math.min(.95, wb + .17), AY], hurt: ['Hit_A', .3, AY], hurt2: ['Hit_A', .6, AY] });
 const BONE = (pre, col, extra) => Object.assign({ [pre + '_Body']: col, [pre + '_Head']: col, [pre + '_Jaw']: col, [pre + '_ArmLeft']: col, [pre + '_ArmRight']: col, [pre + '_LegLeft']: col, [pre + '_LegRight']: col }, extra || {});
 export const ENEMIES = {
   grunt: {
