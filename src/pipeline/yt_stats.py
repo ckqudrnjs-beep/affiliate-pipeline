@@ -3,7 +3,7 @@
 매일 youtube 워크플로 뒤(또는 수동) 올린 영상의 공개 통계(조회수·좋아요·댓글)를 data/youtube/stats.json 에 날짜별로 쌓고,
 주간 점검표 docs/SHORTS_WEEKLY.md 를 만든다(형식별 평균, 상위·하위 편). 개선은 이 표를 보고 규칙·아이디어 은행을 바꾼다.
 
-통계 읽기: 업로드 토큰(youtube.upload)으로 되면 그걸, 안 되면 저장소 비밀 YT_API_KEY(YouTube Data API 키, 읽기 전용)를 쓴다.
+통계 읽기: 업로드 토큰(youtube.upload)으로 되면 그걸, 안 되면 저장소 비밀 YOUTUBE_API_KEY(YouTube Data API 키, 읽기 전용)를 쓴다.
     python -m pipeline.yt_stats fetch     # 통계 쌓기
     python -m pipeline.yt_stats weekly    # 주간 점검표
 """
@@ -50,7 +50,7 @@ def fetch_stats(ids: list[str]) -> dict[str, dict]:
         if js is None and key:
             js = _get(API + "?" + urllib.parse.urlencode({**q, "key": key}))
         if js is None:
-            print("통계를 읽을 수 없음: 업로드 토큰 권한 부족 + 저장소 비밀 YT_API_KEY 없음 (docs/SHORTS_GROWTH.md)")
+            print("통계를 읽을 수 없음: 업로드 토큰 권한 부족 + 저장소 비밀 YOUTUBE_API_KEY 없음 (docs/SHORTS_GROWTH.md)")
             return out
         for it in js.get("items", []):
             st = it.get("statistics", {})
