@@ -84,6 +84,9 @@
   - 이달의 한정 아바타(`lib/nick.js` `AV_LIMITED`, 🪙12): 그 달(KST)에만 판매, 산 건 계속. 2026-11 🍁 ~ 2027-03 🌸 — 이후 달은 추가 필요.
   - 수집왕: 상점 아바타 30종 모두 → 칭호 「수집왕」 무료 + 프로필 금테.
   - 질문 제안 🪙10(`functions/api/qprop.js`, D1 `qprops`): 프로필 필요, 하루 1번, badText 검사. 관리자 /admin '질문 제안'에서 채택 → 칭호 「출제자」(own `t:author`) + 🪙10, 반려. 채택 질문은 질문 데이터에 따로 넣어야 함.
+- 게임별 미니 상점(2026-11-14 BK): 코인은 하나, 게임 화면마다 `<details class="gshop" data-g>`(build.py 가 아이템 있는 게임에 자동으로 넣음, `Bonus.gshop`). /bonus 에도 '게임별 꾸미기'.
+  - `GAME_ITEMS`(own `g:<게임>:<종류>:<id>`, 고른 것 `nr_bonus.gi`): 사격장 조준점·총알/총구 불꽃(src3d/range/main.js `applyLook`, `npm run build` 후 static/js/range.js 커밋), 별똥별 캐릭터·별똥별 모양, 딱 멈춰 막대·성공 효과, 반응속도 신호 색, 퀴즈형(틀린그림·초성·다수결·반응속도) 끝났을 때 축하(`Bonus.cheer`, played 에서 호출).
+  - 별빛·통통 미니 상점은 기존 디자인·배경 테마·꼬리·사운드·네온 색을 그 게임 것만 보여 줌. 새 게임은 `GAME_ITEMS` 에 그 게임 항목을 넣으면 상점이 자동으로 생김.
 - 스킨(겉모습만, 판정 동일): build.py `DESIGNS`(별빛: 냥냥 요격기 6·원반 UFO 8·드래곤 파이터 12 / 통통: 냥이 5·개구리 7·우주인 10) + `SKINS` 색(0~5). 그림은 starlight.js `shipSprite`, tongtong game.js 그리기 코드.
 - 코드: build.py `BONUS_JS`(window.Bonus: checkin/spend/ach/buy/skin/design), `BONUS_CSS`, `BONUS_BODY`. 게임 boot 옵션 `bonus`, `skin`, `design`.
 

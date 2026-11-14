@@ -32,13 +32,15 @@ export function clean(d) {
     streak: Math.max(0, Math.min(100000, Math.floor(+d.streak || 0))), last: day,
     skin: /^[a-z]{1,8}$/.test(d.skin || "") ? d.skin : undefined,
     des: Object.fromEntries(Object.entries(d.des && typeof d.des === "object" ? d.des : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
-    own: flags(d.own, /^[cdathrsn]:[a-z0-9:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
+    own: flags(d.own, /^[cdathrsng]:[a-z0-9:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
     // 코인 쓰임 1단계(2026-11-14): 칭호·출석 보호권·오늘의 미션
     title: /^[a-z0-9]{1,12}$/.test(d.title || "") ? d.title : undefined,
     // 2단계: 게임 테마(th)·꼬리 효과(trail)·사운드 팩(snd)·별명 색(nc)
     th: Object.fromEntries(Object.entries(d.th && typeof d.th === "object" ? d.th : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
     trail: /^[a-z]{1,12}$/.test(d.trail || "") ? d.trail : undefined, snd: /^[a-z]{1,12}$/.test(d.snd || "") ? d.snd : undefined,
     nc: /^[a-z]{1,12}$/.test(d.nc || "") ? d.nc : undefined,
+    // 게임별 미니 상점에서 고른 아이템 {"range:xh":"gold"}
+    gi: Object.fromEntries(Object.entries(d.gi && typeof d.gi === "object" ? d.gi : {}).filter(([k, v]) => /^[a-z0-9]{1,12}:[a-z]{1,6}$/.test(k) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 40)),
     shield: Math.max(0, Math.min(2, Math.floor(+d.shield || 0))) || undefined,
     mis: d.mis && typeof d.mis === "object" && /^\d{4}-\d{2}-\d{2}$/.test(d.mis.d || "") ? {
       d: d.mis.d, p: flags(d.mis.p, /^[a-z0-9]{1,12}$/), v: d.mis.v ? 1 : 0, r: d.mis.r ? 1 : 0, got: flags(d.mis.got, /^(p|v|r|all)$/),
