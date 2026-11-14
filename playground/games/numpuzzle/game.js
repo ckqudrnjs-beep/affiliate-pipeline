@@ -88,22 +88,9 @@ document.querySelectorAll('.np-op').forEach(b=>b.onclick=()=>{if(busy)return;cle
 $('np-undo').onclick=undo;$('np-reset').onclick=reset;$('np-hint').onclick=hint;$('np-give').onclick=give;$('np-go').onclick=begin;
 addEventListener('keydown',e=>{if(!S().on||S().done||$('np-play').hidden||/INPUT|TEXTAREA/.test((e.target||{}).tagName||''))return;const k={'+':'+','-':'−','*':'×','x':'×','/':'÷'}[e.key];
  if(k){op=k;draw();e.preventDefault()}else if(e.key==='Backspace'){undo();e.preventDefault()}else if(/^[1-4]$/.test(e.key)){const L=live(),i=L[+e.key-1];if(i!=null)tapTile(i)}});
-// 미니 상점: 이 게임 타일 테마. 코인은 5락실 전체 공통(Bonus), 꾸미기만(점수·난이도 영향 없음)
-const TH=(typeof THEMES!=='undefined'?THEMES:[]).filter(t=>t.g===G);
+// 타일 테마(꾸미기만): 사고 고르기는 공용 '이 게임 상점'(#gshop), 고르면 바로 반영
 function applyTheme(){const id=window.Bonus?Bonus.theme(G):'base';root.className='np'+(id!=='base'?' np-t-'+id:'')}
-let ask='';
-function shop(){const sh=$('np-shop');if(!window.Bonus){sh.innerHTML='<p class="muted">상점을 불러오지 못했어요.</p>';return}const st=Bonus.state(),cu=Bonus.theme(G);$('np-coin').textContent='🪙'+st.coins;
- const pv=()=>'<span class="pv"><span>7</span><span>×</span><span>3</span></span>';
- const it=(id,ic,nm,p)=>{const own=p<=0||!!(st.own||{})['h:'+G+':'+id],now=cu===id;
-  return '<div class="it'+(now?' sel':'')+'"><div class="np'+(id!=='base'?' np-t-'+id:'')+'" style="margin:0;padding:0;border:0;box-shadow:none;background:none">'+pv(id)+'</div><div><b>'+ic+' '+nm+'</b><br><small>'+(own?'가지고 있어요':'🪙 '+p)+'</small></div>'
-  +'<button type="button" data-id="'+id+'" class="'+(now?'now':ask===id?'ask':own?'use':'')+'">'+(now?'사용 중':own?'쓰기':ask===id?'🪙'+p+' 사기 확인':'🪙 '+p)+'</button></div>'};
- sh.innerHTML='<p style="margin:0 0 8px"><b>🎨 숫자 퍼즐 타일 테마</b> · 내 코인 <b style="color:#ffd23f">🪙 '+st.coins+'</b></p><p class="muted" style="margin:0 0 10px;font-size:13px">보는 모양만 바뀌고 문제·점수는 같아요. 코인은 5락실 모든 게임 공통이고 출석·미션으로 모여요(<a href="/bonus">출석·미션 →</a>).</p>'
-  +it('base','🌃','기본 네온',0)+TH.map(t=>it(t.id,t.icon,t.name,t.p)).join('');
- sh.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{const id=b.dataset.id,t=TH.find(x=>x.id===id),own=id==='base'||!!(Bonus.state().own||{})['h:'+G+':'+id];
-  if(Bonus.theme(G)===id)return;if(!own&&ask!==id){ask=id;shop();setTimeout(()=>{if(ask===id){ask='';shop()}},4000);return}ask='';
-  if(Bonus.setTheme(G,id)){applyTheme();if(window.Bonus.toast&&own)Bonus.toast('타일 테마를 바꿨어요!')}shop()})}
-document.querySelectorAll('.np-tabs button').forEach(b=>b.onclick=()=>{const s=b.dataset.tab==='shop';document.querySelectorAll('.np-tabs button').forEach(x=>x.classList.toggle('on',x===b));$('np-play').hidden=s;$('np-shop').hidden=!s;if(s){pause();shop()}else run()});
-applyTheme();try{$('np-coin').textContent=window.Bonus?'🪙'+Bonus.coins():''}catch(e){}
+applyTheme();const gsx=$('gshop');if(gsx)gsx.addEventListener('click',()=>setTimeout(applyTheme,30));
 // 시작 화면/이어 하기
 const st0=streak();$('np-sday').innerHTML='<b>'+KST.slice(5).replace('-','월 ')+'일 숫자 퍼즐</b>';$('np-streak').textContent=st0.n?'🔥 '+st0.n+'일 연속 중 · 오늘도 이어 가요!':'매일 풀면 🔥 연속 기록이 쌓여요';
 if(D.done){$('np-start').hidden=true;result()}else if(D.on){$('np-start').hidden=true;if(D.r>=5)finish();else{run();startRound()}}else{dots();$('np-target').textContent='?';$('np-tiles').innerHTML='<button class="np-tile" type="button">?</button>'.repeat(4)}

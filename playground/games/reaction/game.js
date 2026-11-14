@@ -1,6 +1,8 @@
 const pad=document.getElementById('pad'),log=document.getElementById('log'),sh=document.getElementById('sh');let st='idle',t0=0,tm=0,rs=[];
 const set=(bg,txt)=>{pad.style.background=bg;pad.style.color=bg?'#fff':'';pad.textContent=txt};
-function arm(){st='wait';set('#e5484d','초록색이 되면 누르세요…');tm=setTimeout(()=>{st='go';t0=performance.now();set('#30a46c','지금!')},1200+Math.random()*2500)}
+// 미니 상점 신호 색(겉모습만): 기본 빨강→초록, 바다 보라→하늘, 사탕 분홍→노랑
+const PADC={'':['#e5484d','#30a46c','초록색'],ocean:['#3b2a8f','#0ea5c6','하늘색'],candy:['#d946a8','#e0a800','노란색']};
+function arm(){const c=PADC[window.Bonus?Bonus.gitem('reaction','pad'):'']||PADC[''];st='wait';set(c[0],c[2]+'이 되면 누르세요…');tm=setTimeout(()=>{st='go';t0=performance.now();set(c[1],'지금!')},1200+Math.random()*2500)}
 pad.onpointerdown=()=>{if(st==='idle'||st==='done'){if(st==='done')rs=[];arm();return}
 if(st==='wait'){clearTimeout(tm);st='idle';set('','너무 빨라요! 다시 누르세요');return}
 if(st==='go'){const ms=Math.round(performance.now()-t0);rs.push(ms);log.textContent=rs.map((x,i)=>(i+1)+'회 '+x+'ms').join(' · ');

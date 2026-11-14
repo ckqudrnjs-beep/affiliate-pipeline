@@ -445,11 +445,41 @@ NCOLORS = [  # 최근 7일 순위의 별명 색. own 키 n:<id>
     {"id": "violet", "name": "보라", "c": "#c08bff", "p": 15},
 ]
 QPROP_PRICE = 10
+# 게임별 미니 상점(BK 2026-11-14): 코인은 사이트 전체 하나, 각 게임 화면에는 그 게임 아이템만. 게임 성격에 맞는 꾸미기(점수·판정 영향 없음).
+# own 키 g:<게임>:<종류>:<id>, 고른 것은 nr_bonus.gi["<게임>:<종류>"]
+GAME_ITEMS = [
+    {"g": "range", "k": "xh", "kn": "조준점", "id": "gold", "name": "황금 조준점", "icon": "🟡", "p": 5},
+    {"g": "range", "k": "xh", "kn": "조준점", "id": "ring", "name": "링 조준경", "icon": "⭕", "p": 7},
+    {"g": "range", "k": "xh", "kn": "조준점", "id": "heart", "name": "하트 조준점", "icon": "💗", "p": 9},
+    {"g": "range", "k": "fx", "kn": "총알·총구 불꽃", "id": "plasma", "name": "플라즈마 탄", "icon": "🔵", "p": 8},
+    {"g": "range", "k": "fx", "kn": "총알·총구 불꽃", "id": "laser", "name": "핑크 레이저", "icon": "🩷", "p": 10},
+    {"g": "range", "k": "fx", "kn": "총알·총구 불꽃", "id": "gold", "name": "황금 탄환", "icon": "✨", "p": 14},
+    {"g": "dodge", "k": "ch", "kn": "내 캐릭터", "id": "ufo", "name": "미니 UFO", "icon": "🛸", "p": 5},
+    {"g": "dodge", "k": "ch", "kn": "내 캐릭터", "id": "cat", "name": "우주 고양이", "icon": "🐱", "p": 8},
+    {"g": "dodge", "k": "ch", "kn": "내 캐릭터", "id": "astro", "name": "꼬마 우주인", "icon": "🧑‍🚀", "p": 12},
+    {"g": "dodge", "k": "rk", "kn": "별똥별 모양", "id": "ice", "name": "얼음 운석", "icon": "🧊", "p": 6},
+    {"g": "dodge", "k": "rk", "kn": "별똥별 모양", "id": "candy", "name": "사탕 별똥별", "icon": "🍬", "p": 9},
+    {"g": "stop", "k": "bar", "kn": "막대", "id": "gold", "name": "황금 막대", "icon": "🟨", "p": 4},
+    {"g": "stop", "k": "bar", "kn": "막대", "id": "rainbow", "name": "무지개 막대", "icon": "🌈", "p": 7},
+    {"g": "stop", "k": "fx", "kn": "성공 효과", "id": "star", "name": "별 터짐", "icon": "⭐", "p": 5},
+    {"g": "stop", "k": "fx", "kn": "성공 효과", "id": "heart", "name": "하트 뿅", "icon": "💗", "p": 6},
+    {"g": "reaction", "k": "pad", "kn": "신호 색", "id": "ocean", "name": "바다 신호", "icon": "🌊", "p": 4},
+    {"g": "reaction", "k": "pad", "kn": "신호 색", "id": "candy", "name": "사탕 신호", "icon": "🍭", "p": 6},
+    {"g": "reaction", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
+    {"g": "spot", "k": "cheer", "kn": "다 찾았을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
+    {"g": "spot", "k": "cheer", "kn": "다 찾았을 때 축하", "id": "hearts", "name": "하트 비", "icon": "💗", "p": 6},
+    {"g": "chosung", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
+    {"g": "chosung", "k": "cheer", "kn": "끝났을 때 축하", "id": "stars", "name": "별 비", "icon": "⭐", "p": 6},
+    {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
+    {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "hearts", "name": "하트 비", "icon": "💗", "p": 6},
+]
+GSHOP_SHARED = ["starlight", "tongtong", "survivor"]  # 디자인·배경 테마·꼬리·사운드·네온 색을 쓰는 게임
 
 BONUS_JS = (
     f"const SKINS={json.dumps(SKINS, ensure_ascii=False)},BONUS_MAX={BONUS_MAX_COINS},DESIGNS={json.dumps(DESIGNS, ensure_ascii=False)},DGAMES={json.dumps(DESIGN_GAMES, ensure_ascii=False)},ACH={json.dumps(ACH, ensure_ascii=False)},"
     f"MIS={json.dumps(MISSIONS, ensure_ascii=False)},AVSHOP={json.dumps(AV_SHOP, ensure_ascii=False)},AVTIER={json.dumps(AV_TIER, ensure_ascii=False)},TITLES={json.dumps(TITLES, ensure_ascii=False)},SHIELD=[{SHIELD_PRICE},{SHIELD_MAX}],"
-    f"AVLIM={json.dumps(AV_LIMITED, ensure_ascii=False)},THEMES={json.dumps(THEMES, ensure_ascii=False)},TRAILS={json.dumps(TRAILS, ensure_ascii=False)},SOUNDS={json.dumps(SOUNDS, ensure_ascii=False)},NCOLORS={json.dumps(NCOLORS, ensure_ascii=False)},QPROP={QPROP_PRICE};"
+    f"AVLIM={json.dumps(AV_LIMITED, ensure_ascii=False)},THEMES={json.dumps(THEMES, ensure_ascii=False)},TRAILS={json.dumps(TRAILS, ensure_ascii=False)},SOUNDS={json.dumps(SOUNDS, ensure_ascii=False)},NCOLORS={json.dumps(NCOLORS, ensure_ascii=False)},QPROP={QPROP_PRICE},"
+    f"GITEMS={json.dumps(GAME_ITEMS, ensure_ascii=False)},GSHARED={json.dumps(GSHOP_SHARED)};"
     r"""
 window.Bonus=(function(){const K='nr_bonus',day=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);let s={};
 function ld(){try{s=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){s={}}s.coins=Math.max(0,Math.min(BONUS_MAX,+s.coins||0));s.days=+s.days||0;s.streak=+s.streak||0;s.ach=s.ach||{};s.des=s.des||{};s.own=s.own||{};s.shield=Math.max(0,Math.min(SHIELD[1],+s.shield||0));return s}
@@ -477,7 +507,7 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
  // 게임 한 판이 끝날 때 부른다: 게임마다 첫 판 🪙1(한 번만) + 미션 '게임 2가지'
  played(g){g=String(g||location.pathname.split('/').pop()).replace(/[^a-z0-9]/g,'').slice(0,11);if(!g)return;ld();
   if(!s.ach['f'+g]){s.ach['f'+g]=1;const n=add(1);sv();B.toast('🎮 이 게임 첫 플레이 보너스! 🪙 +'+n)}
-  B.mis().p[g]=1;sv();B.mission('p')},
+  B.mis().p[g]=1;sv();B.mission('p');B.cheer(g)},
  buyShield(){ld();if(s.shield>=SHIELD[1]){B.toast('보호권은 '+SHIELD[1]+'개까지 가질 수 있어요');return false}if(s.coins<SHIELD[0]){B.toast('🪙 코인이 '+(SHIELD[0]-s.coins)+'개 모자라요');return false}
   s.coins-=SHIELD[0];s.shield++;sv();B.toast('🛡️ 출석 보호권 획득! (🪙 -'+SHIELD[0]+')');B.render();return true},
  buyAv(id){ld();const a=AVSHOP.find(x=>x[1]===id);if(!a)return false;if(a[3]&&!s.ach[a[3]]){B.toast('🔒 먼저 업적을 달성해야 살 수 있어요: '+ACH[a[3]][0]);return false}
@@ -497,6 +527,28 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
  sound(){ld();const d=SOUNDS.find(x=>x.id===s.snd);return d&&own('s:'+d.id,d.p)?d.id:''},
  ncolor(){ld();const d=NCOLORS.find(x=>x.id===s.nc);return d&&own('n:'+d.id,d.p)?d:null},
  month:()=>day().slice(0,7),
+ // 게임별 아이템: gitem('range','xh') → 고른 id(산 것만) 또는 ''
+ gitem(g,k){ld();const id=(s.gi||{})[g+':'+k],d=GITEMS.find(x=>x.g===g&&x.k===k&&x.id===id);return d&&own('g:'+g+':'+k+':'+id,d.p)?id:''},
+ setGitem(g,k,id){ld();if(id){const d=GITEMS.find(x=>x.g===g&&x.k===k&&x.id===id);if(!d||!B.buy('g:'+g+':'+k+':'+id,d.p,d.name))return false}s.gi=s.gi||{};if(id)s.gi[g+':'+k]=id;else delete s.gi[g+':'+k];sv();B.render();return true},
+ // 끝났을 때 축하(퀴즈형 게임): 화면 위에서 꽃가루·하트·별이 떨어짐. 3초
+ cheer(g){const id=B.gitem(g,'cheer');if(!id)return;const ch=id==='hearts'?['💗','💖','💕']:id==='stars'?['⭐','🌟','✨']:['🟥','🟨','🟩','🟦','🟪'],box=document.createElement('div');box.className='cheer';
+  for(let i=0;i<34;i++){const e=document.createElement('i');e.textContent=ch[i%ch.length];e.style.left=(Math.random()*100)+'%';e.style.animationDelay=(Math.random()*0.9)+'s';e.style.fontSize=(id==='confetti'?8+Math.random()*8:16+Math.random()*14)+'px';box.appendChild(e)}
+  document.body.appendChild(box);setTimeout(()=>box.remove(),3200)},
+ // 게임 화면 안 미니 상점(<details class="gshop" data-g>): 그 게임 아이템만 보여 주고 판다
+ gshop(el){const g=el.dataset.g,tag=(ok,sel,p)=>sel?'사용 중':ok?'고르기':`<span class="pr">🪙 ${p}</span>${s.coins<p?' 모자라요':' 사기'}`;let h='';
+  const grp=(t,items,cur,key)=>{h+=`<h4>${t}</h4><div class="gsi">`+items.map(([id,ic,nm,p,ok])=>`<button type="button" data-gs="${key}|${id}" class="${cur===id?'sel':''}${ok?'':' lock'}"><span>${ic}</span><b>${nm}</b><small>${tag(ok,cur===id,p)}</small></button>`).join('')+'</div>'};
+  if(DGAMES[g]){grp('캐릭터 스킨',[['base',DGAMES[g][2],DGAMES[g][1],0,1]].concat(DESIGNS.filter(d=>d.g===g).map(d=>[d.id,d.icon,(d.leg?'전설 ':'')+d.name,d.p,own('d:'+g+':'+d.id,d.p)])),B.design(g),'d');}
+  if(THEMES.some(d=>d.g===g))grp('배경 테마',[['base','🌃','기본 배경',0,1]].concat(THEMES.filter(d=>d.g===g).map(d=>[d.id,d.icon,d.name,d.p,own('h:'+g+':'+d.id,d.p)])),B.theme(g),'h');
+  const ks=[...new Set(GITEMS.filter(d=>d.g===g).map(d=>d.k))];
+  for(const k of ks){const L=GITEMS.filter(d=>d.g===g&&d.k===k);grp(L[0].kn,[['','⚪','기본',0,1]].concat(L.map(d=>[d.id,d.icon,d.name,d.p,own('g:'+g+':'+k+':'+d.id,d.p)])),B.gitem(g,k),'g:'+k)}
+  if(GSHARED.includes(g)){grp('꼬리 효과 (여러 게임 같이)',[['','💨','끄기',0,1]].concat(TRAILS.map(d=>[d.id,d.icon,d.name,d.p,own('r:'+d.id,d.p)])),B.trail(),'r');
+   grp('사운드 팩 (여러 게임 같이)',[['','🔊','기본 소리',0,1]].concat(SOUNDS.map(d=>[d.id,d.icon,d.name,d.p,own('s:'+d.id,d.p)])),B.sound(),'s');
+   const sk=B.skin();grp('네온 색 (모든 게임 같이)',SKINS.map(k=>[k.id,`<i class="sw" style="--c:${k.c[1]}"></i>`,k.name,k.p,own('c:'+k.id,k.p)]),sk.id,'c')}
+  if(!h)return;const body=el.querySelector('.gsb');body.innerHTML=h+'<p class="muted">모두 겉모습·소리만 바뀌는 꾸미기예요. 점수·판정은 그대로예요. 다음 판부터 적용돼요. <a href="/bonus">전체 상점(아바타·칭호) →</a></p>';
+  el.querySelector('summary b').textContent=s.coins;
+  body.querySelectorAll('[data-gs]').forEach(b=>b.onclick=e=>{e.preventDefault();const [key,id]=b.dataset.gs.split('|');let ok;
+   if(key==='d')ok=B.setDesign(g,id);else if(key==='h')ok=B.setTheme(g,id);else if(key==='r')ok=B.pick(TRAILS,'r:','trail',id);else if(key==='s')ok=B.pick(SOUNDS,'s:','snd',id);else if(key==='c')ok=B.setSkin(id);else ok=B.setGitem(g,key.slice(2),id);
+   if(ok)B.toast('✨ 바꿨어요! 다음 판부터 적용돼요')})},
  buyLim(id){ld();const a=AVLIM.find(x=>x[1]===id);if(!a)return false;if(!s.own['a:'+id]&&a[3]!==B.month()){B.toast('이 한정 아바타는 '+a[3].slice(5).replace(/^0/,'')+'월에만 살 수 있어요');return false}const ok=B.buy('a:'+id,a[2],'한정 아바타 '+a[0]);if(ok)B.render();return ok},
  render(){ld();const done=s.last===day(),sk=B.skin();
   document.querySelectorAll('.att').forEach(a=>{a.classList.toggle('new',!done);a.querySelector('b').textContent=s.coins});
@@ -504,18 +556,8 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
    el.innerHTML=done?`✅ 오늘 출석 완료 · 🪙 <b>${s.coins}</b>개${sw} <a href="/bonus">미션·코인 상점 →</a>`
    :`📅 오늘 출석하면 🪙 코인 +1 <small>(${el.dataset.use||'이어하기·스킨 사기에 써요'})</small> <button type="button" class="ck">출석하기</button>`;
    const b=el.querySelector('.ck');if(b)b.onclick=()=>{const g=B.checkin();B.toast(g>0?`🪙 +${g} 출석 완료! (연속 ${s.streak}일)`:'코인이 가득 찼어요(최대 '+BONUS_MAX+'개). 출석 일수는 올라가요!')}});
-  document.querySelectorAll('.mini-shop').forEach(B.mini);
+  document.querySelectorAll('.gshop').forEach(el=>B.gshop(el));
   const pg=document.getElementById('bonuspage');if(pg)B.page(pg)},
- // 게임별 미니 상점(BK 11/14): 그 게임의 디자인 스킨·배경 테마만 보여 주고, 코인은 사이트 공통 1종을 그대로 쓴다
- mini(el){const g=el.dataset.g;if(!g||!DGAMES[g])return;const [gn,bn,bi]=DGAMES[g],cd=B.design(g),ct=B.theme(g),c=s.coins;
-  const tag=(ok,sel,p)=>sel?'사용 중':ok?'고르기':`<span class="pr">🪙 ${p}</span>${c<p?' 모자라요':' 사기'}`;
-  const it=(attr,id,ok,sel,ic,nm,p,leg)=>`<button type="button" data-${attr}="${id}" class="${sel?'sel':''}${ok?'':' lock'}${leg?' leg':''}"><span class="di">${ic}</span><b>${leg?'<i>전설</i> ':''}${nm}</b><small>${tag(ok,sel,p)}</small></button>`;
-  el.innerHTML=`<h2 style="margin-top:0">🛍️ ${gn} 미니 상점</h2><p class="muted">보유 <b style="color:var(--y)">🪙 ${c}</b> · 코인은 5락실 전체 공통(출석·미션으로 모아요). 겉모습만 바뀌고 점수·난이도는 같아요.</p>`
-   +`<h3>캐릭터 스킨</h3><div class="skins">`+it('md','base',1,cd==='base',bi,bn,0)+DESIGNS.filter(d=>d.g===g).map(d=>it('md',d.id,own('d:'+g+':'+d.id,d.p),cd===d.id,d.icon,d.name,d.p,d.leg)).join('')+'</div>'
-   +(THEMES.some(d=>d.g===g)?`<h3>배경 테마</h3><div class="skins">`+it('mt','base',1,ct==='base','🌃','기본 배경',0)+THEMES.filter(d=>d.g===g).map(d=>it('mt',d.id,own('h:'+g+':'+d.id,d.p),ct===d.id,d.icon,d.name,d.p)).join('')+'</div>':'')
-   +`<p class="muted" style="margin-bottom:0">색·꼬리 효과·사운드 팩·아바타·칭호는 <a href="/bonus">전체 코인 상점 →</a></p>`;
-  el.querySelectorAll('[data-md]').forEach(b=>b.onclick=()=>{if(B.setDesign(g,b.dataset.md))B.toast('스킨을 바꿨어요! 다음 판부터 적용돼요')});
-  el.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{if(B.setTheme(g,b.dataset.mt))B.toast('배경 테마를 바꿨어요! 다음 판부터 적용돼요')})},
  toast(t){const d=document.createElement('div');d.className='btoast';d.textContent=t;const n=Math.min(2,document.querySelectorAll('.btoast').length);if(document.fullscreenElement||document.documentElement.style.overflow==='hidden'){d.style.bottom='auto';d.style.top=(64+n*58)+'px'}else d.style.bottom=(24+n*62)+'px';(document.fullscreenElement||document.body).appendChild(d);setTimeout(()=>d.remove(),2600)},
  page(pg){const done=s.last===day(),st=done?s.streak:(s.last===yday()?s.streak:0),pos=done?((st-1)%7)+1:(st%7);
   let stamps='';for(let i=1;i<=7;i++)stamps+=`<li class="${i<=pos?'on':''}${i===7?' big':''}"><small>${i}일</small>${i<=pos?'✔':(i===7?'🪙2':'🪙')}</li>`;
@@ -553,6 +595,7 @@ const B={state:()=>Object.assign({},ld()),done:()=>ld().last===day(),coins:()=>l
   pg.querySelector('.trails').innerHTML=opt(TRAILS,'r:',B.trail(),'tr','💨');pg.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{if(B.pick(TRAILS,'r:','trail',b.dataset.tr))B.toast(b.dataset.tr?'꼬리 효과를 달았어요! 별빛·통통에 보여요':'꼬리 효과를 껐어요')});
   pg.querySelector('.sounds').innerHTML=opt(SOUNDS,'s:',B.sound(),'sd','🔊');pg.querySelectorAll('[data-sd]').forEach(b=>b.onclick=()=>{if(B.pick(SOUNDS,'s:','snd',b.dataset.sd))B.toast(b.dataset.sd?'사운드 팩을 켰어요! 별빛·통통 소리가 바뀌어요':'기본 소리로 돌렸어요')});
   const nc=B.ncolor();pg.querySelector('.ncols').innerHTML=opt(NCOLORS,'n:',nc&&nc.id,'nc','⚪');pg.querySelectorAll('[data-nc]').forEach(b=>b.onclick=()=>{if(B.pick(NCOLORS,'n:','nc',b.dataset.nc))B.toast(b.dataset.nc?'별명 색을 바꿨어요! 최근 7일 순위에 보여요':'별명 색을 껐어요')});
+  const gsx=pg.querySelector('.gshops');if(gsx&&!gsx.dataset.init){gsx.dataset.init=1;const GN=window.FPG||{};gsx.innerHTML=[...new Set(GITEMS.map(d=>d.g))].map(g=>`<details class="gshop" data-g="${g}"><summary>${GN[g]?GN[g][1]+' '+GN[g][0]:g} <small>🪙 <b></b></small></summary><div class="gsb"></div></details>`).join('');gsx.querySelectorAll('.gshop').forEach(el=>B.gshop(el))}
   const qp=pg.querySelector('.qprop');if(qp&&!qp.dataset.init){qp.dataset.init=1;qp.querySelector('button').onclick=async()=>{const a=qp.querySelector('[name=qa]').value.trim(),b2=qp.querySelector('[name=qb]').value.trim(),m=qp.querySelector('.qmsg');
    const code=window.Profile&&Profile.code();if(!code){m.textContent='질문 제안은 프로필(복구 코드)이 있어야 해요.';return}if(a.length<2||b2.length<2){m.textContent='A·B 둘 다 2자 이상 써 주세요.';return}
    if(!B.spend(QPROP)){m.textContent='🪙 코인이 '+QPROP+'개 있어야 해요.';return}m.textContent='보내는 중…';let j={};
@@ -576,9 +619,6 @@ nav a.att{position:relative;color:var(--y);border-color:#ffd23f66;display:flex;a
 #bonuspage .stamps li small{font-size:11px;color:var(--muted)}#bonuspage .stamps li.on{border-color:var(--y);background:#ffd23f22;color:var(--y);box-shadow:0 0 10px #ffd23f55}#bonuspage .stamps li.big{border-color:#ff3d7f88}
 #bonuspage .bigck{display:block;width:100%;font:inherit;font-size:19px;font-weight:800;padding:14px;border-radius:14px;border:0;background:var(--y);color:#1a0f00;box-shadow:0 5px 0 #b8860b,0 0 24px #ffd23f66;cursor:pointer}
 #bonuspage .bigck:disabled{background:var(--soft);color:var(--muted);box-shadow:none;cursor:default}
-.mini-shop:empty{display:none}.mini-shop h3{margin:14px 0 8px;font-size:15px;color:var(--y)}.mini-shop .skins,#bonuspage .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.mini-shop .skins button{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer}.mini-shop .skins button small{color:var(--muted);font-size:12px}.mini-shop .di{grid-row:span 2;font-size:26px;line-height:1;width:30px;text-align:center}
-.mini-shop .skins button.lock{border-style:dashed}.mini-shop .skins button .pr{color:var(--y);font-weight:800}.mini-shop .skins button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f55}
 #bonuspage .skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 #bonuspage .skins button{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer}
 #bonuspage .skins button .sw{grid-row:span 2;width:26px;height:26px}#bonuspage .skins button small{color:var(--muted);font-size:12px}
@@ -591,6 +631,12 @@ nav a.att{position:relative;color:var(--y);border-color:#ffd23f66;display:flex;a
 #bonuspage .avg button span{font-size:28px;line-height:1.2}#bonuspage .avg button small{font-size:11px;color:var(--muted);white-space:nowrap}#bonuspage .avg button.lock{border-style:dashed}#bonuspage .avg button.lock span{filter:grayscale(1);opacity:.45}#bonuspage .avg button.own small{color:#3ddc84}#bonuspage .avg button.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f55}
 #bonuspage .titles button{grid-template-columns:1fr}#bonuspage .shield{font:inherit;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer;width:100%;max-width:340px}#bonuspage .shield small{color:var(--muted);font-size:12px}#bonuspage .shield .pr{color:var(--y);font-weight:800}
 .ttl{font-size:.78em;color:var(--y);font-weight:700}
+.gshop{margin:12px 0;border:2px solid #ffd23f66;border-radius:14px;background:#ffd23f0a;padding:0 12px}.gshop summary{cursor:pointer;padding:11px 0;font-weight:800;color:var(--y);list-style:none}.gshop summary::-webkit-details-marker{display:none}.gshop summary small{color:var(--muted);font-weight:400}
+.gshop h4{margin:10px 0 6px;font-size:14px;color:var(--ink)}.gshop .gsi{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.gshop .gsi button{font:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;border-radius:12px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer;text-align:center}
+.gshop .gsi button span{font-size:24px;line-height:1.2}.gshop .gsi button .sw{width:22px;height:22px}.gshop .gsi button b{font-size:12.5px}.gshop .gsi button small{font-size:11px;color:var(--muted)}.gshop .gsi button .pr{color:var(--y);font-weight:800}
+.gshop .gsi button.lock{border-style:dashed}.gshop .gsi button.sel{border-color:var(--y);box-shadow:0 0 10px #ffd23f55}.gshop>.gsb>p{font-size:12.5px}
+.cheer{position:fixed;inset:0;pointer-events:none;z-index:2147483646;overflow:hidden}.cheer i{position:absolute;top:-30px;font-style:normal;animation:cheerfall 2.2s ease-in forwards}@keyframes cheerfall{to{transform:translateY(105vh) rotate(540deg);opacity:.6}}
 #bonuspage .coll{margin:10px 0;padding:10px 12px;border:2px dashed #ffd23f66;border-radius:12px;font-size:14px}#bonuspage .avlim{margin-top:6px}
 #bonuspage .qprop{display:flex;flex-wrap:wrap;gap:6px;align-items:center}#bonuspage .qprop input{flex:1 1 120px;min-width:0;font:inherit;padding:9px 10px;border-radius:10px;border:2px solid var(--line);background:var(--bg2);color:var(--ink)}#bonuspage .qprop .qmsg{flex-basis:100%;margin:4px 0 0}
 """
@@ -602,6 +648,7 @@ BONUS_BODY = f"""<h1>📅 출석체크 · 코인 상점</h1><p class="lead">출�
 <h2>🧑 아바타 수집 <small class="avn"></small></h2><p class="muted">순위·게시판에서 별명 앞에 보이는 아바타예요. 사면 계속 내 것이고, 누르면 바로 바꿔 써요(프로필 별명이 있어야 해요). 🪐⚡💎 는 업적을 먼저 달성해야 살 수 있어요.</p><div class="avshop"></div>
 <h2>🗓️ 이달의 한정 아바타</h2><p class="muted">그 달에만 살 수 있어요. 한 번 사면 달이 바뀌어도 계속 내 것이에요.</p><div class="avg avlim"></div><p class="coll"></p>
 <h2>🏷️ 칭호</h2><p class="muted">프로필과 '최근 7일' 순위에서 별명 옆에 보여요. 하나만 달 수 있고 언제든 바꿀 수 있어요.</p><div class="skins titles"></div>
+<h2>🎮 게임별 꾸미기</h2><p class="muted">게임마다 어울리는 꾸미기예요. 각 게임 화면의 '🛒 이 게임 상점'에서도 사고 바꿀 수 있어요.</p><div class="gshops"></div>
 <h2>🌌 게임 배경 테마</h2><p class="muted">게임 배경 분위기를 바꿔요. 장애물·적·총알은 그대로라 난이도는 같아요.</p><div class="themes"></div>
 <h2>💫 꼬리 효과</h2><p class="muted">별빛 요격대 우주선, 통통이, 네온 생존자 루미 뒤에 따라오는 효과예요.</p><div class="skins trails"></div>
 <h2>🎵 사운드 팩</h2><p class="muted">별빛 요격대·통통 네온런·네온 생존자의 효과음과 음악 음색이 옛날 오락기 소리로 바뀌어요.</p><div class="skins sounds"></div>
@@ -922,6 +969,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                f'data-d="{esc(g["short"] + " · 가입 없이 무료, 같이 해 볼래?")}">📤 친구에게 이 게임 공유</button> <small class="muted">첫 공유 🪙+2</small></p>')
         m = re.search(r'<h1>.*?</h1>(\s*<p class="lead">.*?</p>)?', body, re.S)
         body = body[:m.end()] + pshare + body[m.end():] if m else pshare + body
+        if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED or g["slug"] in DESIGN_GAMES or any(t["g"] == g["slug"] for t in THEMES):  # 게임별 미니 상점(그 게임 아이템만). DESIGNS·THEMES 만 있는 새 게임도 자동
+            gs = f'<details id="gshop" class="gshop" data-g="{g["slug"]}"><summary>🛒 이 게임 상점 <small>· 보유 🪙 <b>0</b> · 눌러서 열기</small></summary><div class="gsb"></div></details>'
+            body = body.replace("<!--RANK-->", gs + "<!--RANK-->") if "<!--RANK-->" in body else body + gs
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
         script = pre + COMMON_JS + g["js"]
         if g.get("ranked"):
