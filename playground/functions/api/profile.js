@@ -26,14 +26,22 @@ function newCode() {
 export function clean(d) {
   d = d && typeof d === "object" ? d : {};
   const day = /^\d{4}-\d{2}-\d{2}$/.test(d.last || "") ? d.last : undefined;
-  const flags = (o, re) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, 60).map(([k]) => [k, 1]));
+  const flags = (o, re) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([k]) => re.test(k)).slice(0, 150).map(([k]) => [k, 1]));
   const out = {
-    coins: Math.max(0, Math.min(60, Math.floor(+d.coins || 0))), days: Math.max(0, Math.min(100000, Math.floor(+d.days || 0))),
+    coins: Math.max(0, Math.min(199, Math.floor(+d.coins || 0))), days: Math.max(0, Math.min(100000, Math.floor(+d.days || 0))),
     streak: Math.max(0, Math.min(100000, Math.floor(+d.streak || 0))), last: day,
     skin: /^[a-z]{1,8}$/.test(d.skin || "") ? d.skin : undefined,
     des: Object.fromEntries(Object.entries(d.des && typeof d.des === "object" ? d.des : {}).filter(([g, v]) => /^[a-z]{1,12}$/.test(g) && /^[a-z]{1,12}$/.test(String(v))).slice(0, 10)),
-    own: flags(d.own, /^[cd]:[a-z:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
+    own: flags(d.own, /^[cdat]:[a-z0-9:]{1,30}$/), ach: flags(d.ach, /^[a-z0-9]{1,12}$/),
+    // 코인 쓰임 1단계(2026-11-14): 칭호·출석 보호권·오늘의 미션
+    title: /^[a-z0-9]{1,12}$/.test(d.title || "") ? d.title : undefined,
+    shield: Math.max(0, Math.min(2, Math.floor(+d.shield || 0))) || undefined,
+    mis: d.mis && typeof d.mis === "object" && /^\d{4}-\d{2}-\d{2}$/.test(d.mis.d || "") ? {
+      d: d.mis.d, p: flags(d.mis.p, /^[a-z0-9]{1,12}$/), v: d.mis.v ? 1 : 0, r: d.mis.r ? 1 : 0, got: flags(d.mis.got, /^(p|v|r|all)$/),
+    } : undefined,
   };
+  // 칭호는 산 것(t:) 또는 출석 조건 무료 칭호(개근상 30일)만
+  if (out.title && !out.own["t:" + out.title] && !(out.title === "regular" && out.days >= 30)) out.title = undefined;
   return JSON.stringify(out).length <= 4096 ? out : null;
 }
 let ready = false;

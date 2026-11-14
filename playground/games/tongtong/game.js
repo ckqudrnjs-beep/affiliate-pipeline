@@ -10,6 +10,8 @@ const bpmAt=x=>100+6*Math.min(Math.max(0,Math.floor(x/SEC)),12);
 const kAt=x=>bpmAt(x)/120;
 // ── 코스: 칸(타일)별 버킷에 물체 등록
 const B=[];let genX=0,frontier=null,RNG=null,chunkN=0;
+// 이어 달리기(🪙3, 한 판에 1번) 부활 지점: 조각마다 끝에서 '살아서 착지 가능'이 검증된 상태
+const CPS=[{i:0,y:0,vy:0,g:true}];let SAFE=[];
 function put(o){const a=Math.floor(o.x),b=Math.ceil(o.x+(o.w||1));for(let t=a;t<b;t++)(B[t]||(B[t]=[])).push(o)}
 const solid=(x,y,w,h)=>({k:0,x,y,w,h});
 function sim(s,jump,m){
@@ -68,10 +70,10 @@ function genChunk(){
   const before=B.length,snap=[];for(let t=genX-2;t<end+2;t++)snap[t]=B[t]?B[t].slice():undefined;
   objs.forEach(put);groundFill(genX,end,holes);
   const arr=solve(frontier,end-1,0.1,true);
-  if(arr.length){frontier=arr.filter((s,i)=>i%Math.ceil(arr.length/24)===0);genX=end;chunkN++;return}
+  if(arr.length){frontier=arr.filter((s,i)=>i%Math.ceil(arr.length/24)===0);CPS.push(clone(frontier[0]));genX=end;chunkN++;return}
   for(let t=genX-2;t<end+2;t++)B[t]=snap[t];B.length=Math.max(before,0);
  }
- const end=genX+8;put({k:1,x:genX+4,y:0});groundFill(genX,end,[]);const arr=solve(frontier,end-1,0,true);if(arr.length)frontier=arr.slice(0,24);genX=end;chunkN++;
+ const end=genX+8;put({k:1,x:genX+4,y:0});groundFill(genX,end,[]);const arr=solve(frontier,end-1,0,true);if(arr.length){frontier=arr.slice(0,24);CPS.push(clone(frontier[0]))}genX=end;chunkN++;
 }
 function ensure(x){let n=0;while(genX<x&&n++<6)genChunk()}
 // ── 오디오(웹오디오로 직접 합성)
@@ -109,7 +111,7 @@ function size(){const r=cab.getBoundingClientRect();W=Math.max(1,r.width);H=Math
  if(W*H*DPR*DPR>2.6e6)DPR=Math.sqrt(2.6e6/(W*H));cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cx.setTransform(DPR,0,0,DPR,0,0);T=Math.min(H/8,W/14);if(state!=='run')draw()}
 const HUES=[188,300,48,140,265,20,330,100];
 const hash=n=>{n=Math.imul(n^0x9e3779b9,0x85ebca6b);n^=n>>>13;n=Math.imul(n,0xc2b2ae35);return((n^n>>>16)>>>0)/4294967296};
-let state='title',P={i:0,y:0,vy:0,g:true},held=false,buf=0,acc=0,camY=0,squash=0,trail=[],parts=[],deadT=0,readyT=0,pauseUsed=false,lastDist=0,newBest=false,attempts=0,best=0,shownBest=0,lastSub=0,subBest=0,flash=0,beatPulse=0;
+let state='title',P={i:0,y:0,vy:0,g:true},held=false,buf=0,acc=0,camY=0,squash=0,trail=[],parts=[],deadT=0,readyT=0,pauseUsed=false,contUsed=false,lastDist=0,newBest=false,attempts=0,best=0,shownBest=0,lastSub=0,subBest=0,flash=0,beatPulse=0;
 try{best=+localStorage.getItem('tt_best_'+KST)||0}catch(e){}subBest=best;shownBest=best;
 function px(){return P.i*DX}
 function draw(){
@@ -218,25 +220,33 @@ function skinFx(k){const x=px(),y=P.y,add=o=>parts.push(Object.assign({x,y,vx:0,
  if(k==='land')for(let i=0;i<5;i++)add({vx:(rnd()-0.5)*6,vy:1+rnd()*2,s:4,c:SKC[0],l:0.6})}
 // ── 진행
 let SKC=['#e9fdff','#22d3ee','#0e7490'],DES='base';// 출석 보너스 '내 네온 색'·디자인 스킨(겉모습만, 판정 동일)
-function reset(){try{if(window.Bonus){SKC=Bonus.skin().c;DES=Bonus.design('tongtong');if(DES==='whale')SKC=['#9fd8ff','#4b5dff','#6a2bd8']}}catch(e){}P={i:0,y:0,vy:0,g:true};acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
+function reset(){try{if(window.Bonus){SKC=Bonus.skin().c;DES=Bonus.design('tongtong');if(DES==='whale')SKC=['#9fd8ff','#4b5dff','#6a2bd8']}}catch(e){}P={i:0,y:0,vy:0,g:true};SAFE=[];acc=0;trail=[];squash=0;camY=0;lastN=-1;buf=0}
 function tick(){
  const wasG=P.g,jump=P.g&&(held||buf>0)||(DEBUG&&window.__ttBot&&bot());buf-=STEP;
  const ok=sim(P,jump,0);if(jump)sfx.jump();if(P.pad){P.pad=0;sfx.pad()}
  if(!wasG&&P.g){squash=1;skinFx('land')}if(jump&&wasG)skinFx('jump');
  if(!ok){die();return}
  const x=px();if(P.i%3===0){trail.push([x,P.y]);if(trail.length>10)trail.shift()}
+ if(P.g&&P.i%6===0){SAFE.push(clone(P));if(SAFE.length>80)SAFE.shift()}
  ensure(x+90);
 }
 function bot(){if(!P.g)return false;const w=clone(P);let ok=sim(w,false,0),c=0;while(ok&&!w.g&&c++<400)ok=sim(w,false,0);return !(ok&&solve([w],px()+30,0,false).length)}
 function die(){state='dead';deadT=0.75;flash=1;sfx.die();const x=px(),dist=Math.floor(x);if(dist>=500&&!DEBUG&&window.Bonus)Bonus.ach('tt500');
  for(let k=0;k<26;k++){const a=Math.random()*7,v=2+Math.random()*7;parts.push({x,y:P.y+R,vx:Math.cos(a)*v,vy:Math.sin(a)*v+3,l:1,s:3+Math.random()*6,c:k%3?SKC[1]:'#ff3d7f'})}
  lastDist=dist;newBest=dist>best&&dist>0;if(dist>best){best=dist;try{localStorage.setItem('tt_best_'+KST,best)}catch(e){}}
- held=false;submit()}
+ held=false;if(!DEBUG&&window.Bonus)Bonus.played('tongtong');submit()}
 // 죽으면 멈추고 결과 화면: 거리·오늘 최고·다시 시작(가운데)·공유·순위. 버튼을 눌러야 새 판 시작.
-function over(){state='over';$('tt-go').hidden=false;$('tt-go').textContent='↻ 다시 시작';$('tt-ov').style.display='flex';draw()}
+function over(){state='over';$('tt-go').hidden=false;$('tt-go').textContent='↻ 다시 시작';$('tt-ov').style.display='flex';
+ const co=$('tt-co');co.hidden=contUsed||DEBUG||!window.Bonus;if(!co.hidden)co.textContent='🪙3 이어 달리기 (보유 '+Bonus.coins()+')';draw()}
+// 이어 달리기: 코인 3개로 죽은 곳 바로 앞 안전한 지점에서 다시(한 판에 1번). 거리는 이어서 셈.
+function cont(){if(state!=='over'||contUsed)return;if(!Bonus.spend(3)){Bonus.toast('🪙 코인이 모자라요. 출석·미션으로 모아요!');return}contUsed=true;
+ // 실제로 밟고 지나온 땅 중 죽은 곳에서 2칸 이상 앞 + 거기서 살아 나갈 길이 있는(검사기 통과) 지점. 없으면 조각 시작점
+ let cp=null;for(let k=SAFE.length-1;k>=0&&!cp;k--){const c=SAFE[k];if(c.i*DX<lastDist-2&&solve([c],c.i*DX+16,0.05,false).length)cp=c}
+ if(!cp){cp=CPS[0];for(const c of CPS)if(c.i*DX<lastDist-1)cp=c}P=clone(cp);acc=0;trail=[];squash=0;held=false;lastN=Math.floor(px());
+ $('tt-go').hidden=true;$('tt-ov').style.display='none';state='count';readyT=3;padUI()}
 function shareBest(){shareText('5락실 통통 네온런 '+KST.slice(5)+'\n🎵 오늘 코스 '+best+'m 달렸어요. 이겨 볼래?\n'+challengeUrl(best))}
 function submit(){if(DEBUG||best<=subBest||!window.submitScore)return;subBest=best;lastSub=performance.now();submitScore(best)}
-function restart(){reset();attempts++;shownBest=best;pauseUsed=false;padUI();state='run'}
+function restart(){reset();attempts++;shownBest=best;pauseUsed=false;contUsed=false;padUI();state='run'}
 // 일시정지: 한 번 달릴 때(시도마다) 직접 멈춤 1회. 탭 전환·전화 같은 자동 멈춤은 횟수에 안 셈. 멈춘 동안 코스를 가리고, 이어 달릴 때 3-2-1.
 function pause(auto){if(state!=='run'&&state!=='ready'&&state!=='count')return;if(!auto){if(pauseUsed||state!=='run')return;pauseUsed=true}state='paused';held=false;$('tt-go').hidden=false;$('tt-go').textContent='▶ 이어 달리기';padUI();draw()}
 function padUI(){const b=$('tt-pa');if(!b)return;b.disabled=pauseUsed;b.style.opacity=pauseUsed?0.35:1;b.title=pauseUsed?'이번 판 일시정지를 이미 썼어요':'일시정지(한 판에 1번)'}
@@ -255,7 +265,7 @@ function full(){if(!COARSE)return;const el=document.documentElement;try{if(el.re
 function go(){audio();full();cab.classList.add('on');document.documentElement.style.overflow='hidden';$('tt-go').hidden=true;$('tt-ov').style.display='none';
  if(IOS&&!navigator.standalone){$('tt-ios').style.display='block';setTimeout(()=>$('tt-ios').style.display='none',4500)}
  ensure(200);size();
- if(state==='title'){reset();attempts++;pauseUsed=false;state='ready';readyT=0.7}else if(state==='paused'){state='count';readyT=3}else if(state==='over'){restart();state='ready';readyT=0.5}
+ if(state==='title'){reset();attempts++;pauseUsed=false;contUsed=false;state='ready';readyT=0.7}else if(state==='paused'){state='count';readyT=3}else if(state==='over'){restart();state='ready';readyT=0.5}
  padUI()
  cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(frame)}
 function exit(){cancelAnimationFrame(raf);submit();state='title';$('tt-ov').style.display='none';reset();cab.classList.remove('on');document.documentElement.style.overflow='';$('tt-go').hidden=false;$('tt-go').textContent='▶ 다시 달리기';
@@ -266,6 +276,7 @@ function exit(){cancelAnimationFrame(raf);submit();state='title';$('tt-ov').styl
 $('tt-go').onclick=e=>{e.stopPropagation();go()};
 $('tt-x').onclick=e=>{e.stopPropagation();exit()};
 $('tt-sh').onclick=e=>{e.stopPropagation();shareBest()};
+$('tt-co').onclick=e=>{e.stopPropagation();cont()};
 $('tt-rk').onclick=e=>{e.stopPropagation();exit()};
 function muteUI(){$('tt-mu').textContent=muted?'🔇':'🔊'}muteUI();
 $('tt-mu').onclick=e=>{e.stopPropagation();muted=!muted;try{localStorage.setItem('tt_mute',muted?'1':'0')}catch(x){}if(master)master.gain.value=muted?0:0.5;muteUI()};
