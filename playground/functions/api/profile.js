@@ -9,7 +9,7 @@
 import { profileNickOk } from "../../lib/nick.js";
 
 const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 헷갈리는 0·O·1·I 제외, 32자 → 12자리 = 60비트
-const LIMIT = { get: 20, new: 5, put: 300, del: 10, bad: 10 }; // IP당 하루 횟수. bad = 틀린 코드 입력
+const LIMIT = { tester: 300, get: 300, new: 5, put: 300, del: 10, bad: 10 }; // IP당 하루 횟수. bad = 틀린 코드 입력. get 은 페이지 열 때마다 동기화로 불려 20 이면 한 집에서 금방 막혀 300(11/14), tester 는 따로 셈
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 async function sha(s) {
@@ -86,7 +86,7 @@ export async function onRequestPost({ request, env }) {
   }
   if (!["new", "get", "put", "del", "tester"].includes(a)) return json({ error: "bad" }, 400);
   if (!(await hit(env, ip, "bad", 0))) return json({ error: "limit", msg: "틀린 코드를 너무 많이 넣었어요. 내일 다시 해 주세요." }, 429);
-  if (!(await hit(env, ip, a === "tester" ? "get" : a))) return json({ error: "limit", msg: "오늘 요청이 너무 많아요. 내일 다시 해 주세요." }, 429);
+  if (!(await hit(env, ip, a))) return json({ error: "limit", msg: "오늘 요청이 너무 많아요. 내일 다시 해 주세요." }, 429);
   const today = kst();
   if (a === "new") {
     if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
