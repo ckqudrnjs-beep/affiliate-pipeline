@@ -207,6 +207,32 @@ def game_grid(games: list[dict]) -> str:
 ADJ = ["빠른", "느긋한", "용감한", "졸린", "배고픈", "신난", "수줍은", "똑똑한", "엉뚱한", "반짝이는", "조용한", "씩씩한", "날쌘", "포근한", "명랑한", "꼼꼼한"]
 ANI = ["수달", "고양이", "강아지", "판다", "펭귄", "다람쥐", "여우", "너구리", "부엉이", "고래", "토끼", "햄스터", "거북이", "사슴", "오리", "곰"]
 
+
+# 가로 화면 = 게임만 꽉 차게(BK 11/14). 휴대폰(터치)에서 가로로 돌리면 머리글·설명·규칙을 숨기고 게임 부분만 화면에 채운다.
+# 화면 회전은 '사용자 동작'이 아니라서 브라우저가 전체 화면 요청을 막는다. 그래서 가로 상태에서 처음 누를 때 전체 화면을 요청한다.
+# 아이폰 사파리는 일반 페이지 전체 화면 API가 없어서 CSS로 화면 채우기만 한다(주소창은 사파리가 알아서 줄임).
+# 자체 전체 화면이 있는 게임(meta.json "ownfs": true)은 건드리지 않는다.
+LAND_CSS = """html.lsm header,html.lsm footer,html.lsm .lsx{display:none!important}html.lsm main.wrap{max-width:none;padding:6px 10px 10px}html.lsm main.wrap>.lsp{margin-top:0;margin-bottom:8px}
+html.lsm .challenge{display:none}.lsbar{display:none}html.lsm .lsbar{display:flex;justify-content:flex-end;gap:6px;margin:0 0 8px}html.lsm .lsbar button{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:#0c0620cc;color:var(--ink);border-radius:999px;padding:6px 10px;cursor:pointer}
+html.lsm #dg{width:min(100%,calc((100dvh - 40px) / 1.2))!important;margin:0 auto}html.lsm .pad{height:min(220px,calc(100dvh - 120px))}"""
+LAND_JS = r"""(function(){const T=matchMedia('(pointer: coarse)'),L=matchMedia('(orientation: landscape)'),H=document.documentElement,d=document;
+const m=d.querySelector('main.wrap');if(!m)return;let play=false;
+// 게임 부분 = 제목·설명·공유 버튼 다음부터, 상점·순위·규칙 제목·광고 전까지.
+for(const e of m.children){if(e.id==='gshop'||e.id==='rankbox'||e.tagName==='H2'||e.classList.contains('ad'))play=null;
+ if(play&&e.tagName!=='SCRIPT')e.classList.add('lsp');else e.classList.add('lsx');if(play===false&&e.classList.contains('preshare'))play=true}
+if(!m.querySelector('.lsp'))return;
+const bar=d.createElement('div');bar.className='lsbar';bar.innerHTML='<button type="button" data-k="f">⛶ 전체 화면</button><button type="button" data-k="x">✕ 원래 화면</button>';const ps=m.querySelectorAll('.lsp');ps[ps.length-1].after(bar);
+let off=false;const fs=()=>d.fullscreenElement||d.webkitFullscreenElement;
+function full(){if(fs())return;const r=H.requestFullscreen||H.webkitRequestFullscreen;if(!r)return;try{const p=r.call(H,{navigationUI:'hide'});if(p&&p.catch)p.catch(()=>{})}catch(e){}}
+const fb=bar.querySelector('[data-k=f]');function fbtn(){fb.hidden=!(H.requestFullscreen||H.webkitRequestFullscreen)||!!fs()}
+function apply(){const on=T.matches&&L.matches&&!off;if(on===H.classList.contains('lsm'))return;H.classList.toggle('lsm',on);fbtn();
+ if(on)scrollTo(0,0);else if(fs()){try{(d.exitFullscreen||d.webkitExitFullscreen).call(d)}catch(e){}}setTimeout(()=>dispatchEvent(new Event('resize')),60)}
+L.addEventListener?L.addEventListener('change',()=>{off=false;apply()}):L.addListener(()=>{off=false;apply()});apply();
+// 가로 상태의 첫 터치에서 주소창까지 숨기는 진짜 전체 화면으로(안드로이드 크롬·삼성 인터넷).
+d.addEventListener('pointerdown',e=>{if(H.classList.contains('lsm')&&!bar.contains(e.target))full()},true);
+bar.addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k==='f')full();if(k==='x'){off=true;apply()}});
+d.addEventListener('fullscreenchange',()=>{fbtn();setTimeout(()=>dispatchEvent(new Event('resize')),60)})})();"""
+
 COMMON_JS = (
     "const KST=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);"
     "function seeded(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}"
@@ -974,6 +1000,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
             body = body.replace("<!--RANK-->", gs + "<!--RANK-->") if "<!--RANK-->" in body else body + gs
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
         script = pre + COMMON_JS + g["js"]
+        if not g.get("ownfs"):
+            body = f"<style>{LAND_CSS}</style>" + body
+            script += LAND_JS
         if g.get("ranked"):
             body = body.replace("<!--RANK-->", RANK_HTML)
             script += RANK_JS
