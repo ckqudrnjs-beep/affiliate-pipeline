@@ -55,6 +55,8 @@ const EXTRA = [['garland', '전구 줄', 120], ['mobile', '별 모빌', 100], ['
 const PALS = [['mint', '민트', 0], ['peach', '복숭아', 3], ['sky', '하늘', 3], ['lilac', '라일락', 3]]; // 가격 = 5락실 코인
 const WEAR = [['scarf', '목도리', 80], ['hat', '밀짚모자', 150]]; // 도토리
 
+// 관리자(/admin) 지급: Bonus own 키 g:mongle:<종류>:<id> 도 가진 것으로 친다 (games/mongle/items.json)
+function gOwn(k, id) { try { const B = opts && opts.bonus; return !!(B && (B.state().own || {})['g:mongle:' + k + ':' + id]); } catch (e) { return false; } }
 // ── 저장
 let SV;
 function fresh() {
@@ -469,7 +471,7 @@ function sGrow() {
   btn(W - 112, 336, 84, 32, '바꾸기', '#e0a030', exl > 0 && coins > 0 ? exchange : null, 15);
   // 몽글이 색 (5락실 코인)
   card(16, 412, W - 32, 150); txt('몽글이 색', 32, 434, 15, '#6a4a40'); txt('5락실 코인 · 겉모습만 바뀌어요', W - 32, 434, 11.5, '#a58a7a', 'right');
-  PALS.forEach((p, i) => { const x = 28 + i * 86, own = SV.palOwn[p[0]], on = SV.pal === p[0];
+  PALS.forEach((p, i) => { const x = 28 + i * 86, own = SV.palOwn[p[0]] || gOwn('p', p[0]), on = SV.pal === p[0];
     A.rr(c, x, 448, 78, 104, 16); c.fillStyle = on ? '#ffe9d6' : '#fff'; c.fill(); c.strokeStyle = on ? '#f29a6b' : '#efd3ba'; c.lineWidth = on ? 3 : 2; c.stroke();
     A.mongle(c, x + 39, 508, 0.5, { stage: Math.max(1, Math.min(2, st)), pal: p[0], t: T + i, mood: on ? 'happy' : 'idle' });
     txt(on ? '사용 중' : own ? p[1] : '', x + 39, 530, 12, on ? '#c75b3f' : '#6a4a40', 'center');
@@ -477,7 +479,7 @@ function sGrow() {
     hit(x, 448, 78, 104, () => { if (own) { SV.pal = p[0]; sfx('tap'); save(); bgCache.k = ''; return; } const B = opts.bonus; if (B && B.coins() >= p[2] && B.spend(p[2])) { SV.palOwn[p[0]] = 1; SV.pal = p[0]; sfx('ok'); burst(x + 39, 500, 'spark', 14); save(); } else { sfx('no'); say('5락실 코인이 ' + p[2] + '개 필요해요'); tab = 'home'; } }); });
   // 옷 (도토리)
   card(16, 574, W - 32, 92); txt('몽글이 옷', 32, 596, 15, '#6a4a40'); txt('도토리로 사요 · 눌러서 입기/벗기', W - 32, 596, 11.5, '#a58a7a', 'right');
-  WEAR.forEach((w, i) => { const x = 28 + i * 172, own = SV.wear[w[0]], on = SV.wearOn[w[0]];
+  WEAR.forEach((w, i) => { const x = 28 + i * 172, own = SV.wear[w[0]] || gOwn('w', w[0]), on = SV.wearOn[w[0]];
     A.rr(c, x, 610, 162, 46, 14); c.fillStyle = on ? '#ffe9d6' : '#fff'; c.fill(); c.strokeStyle = on ? '#f29a6b' : '#efd3ba'; c.lineWidth = on ? 3 : 2; c.stroke();
     A.mongle(c, x + 28, 652, 0.36, { stage: 2, pal: SV.pal, t: 0, scarf: w[0] === 'scarf' ? '#ff8f6b' : null, hat: w[0] === 'hat' ? 'straw' : null });
     txt(w[1], x + 56, 626, 14, '#4a3530'); if (own) txt(on ? '입는 중' : '벗음', x + 56, 644, 12, on ? '#c75b3f' : '#a58a7a'); else { A.coinAcorn(c, x + 64, 646, 0.55); txt(String(w[2]), x + 74, 644, 12.5, '#6b4423'); }
@@ -533,7 +535,7 @@ function sDeco() {
   txt('도토리로 사요 · 산 건 언제든 바꿀 수 있어요', W / 2, y + 54, 12, '#a58a7a', 'center');
   DECOK.forEach((k, i) => { const x = 32 + i * 82, on = decoCat === k; pill(x, y + 70, 76, 30, on ? '#f29a6b' : '#fff', on ? null : '#efd3ba'); txt(DECO[k].n, x + 38, y + 85.5, 14, on ? '#fff' : '#a5735a', 'center'); hit(x, y + 70, 76, 30, () => { decoCat = k; sfx('tap'); }); });
   const D = DECO[decoCat];
-  D.o.forEach((o, i) => { const x = 36 + (i % 2) * 162, yy = y + 112 + ((i / 2) | 0) * 104, own = o[2] === 0 || SV.decoOwn[decoCat + ':' + o[0]], on = SV.deco[decoCat] === o[0];
+  D.o.forEach((o, i) => { const x = 36 + (i % 2) * 162, yy = y + 112 + ((i / 2) | 0) * 104, own = o[2] === 0 || SV.decoOwn[decoCat + ':' + o[0]] || gOwn(decoCat, o[0]), on = SV.deco[decoCat] === o[0];
     A.rr(c, x, yy, 154, 96, 16); c.fillStyle = on ? '#ffe9d6' : '#fff'; c.fill(); c.strokeStyle = on ? '#f29a6b' : '#efd3ba'; c.lineWidth = on ? 3 : 2; c.stroke();
     // 견본
     c.save(); c.translate(x + 40, yy + 48);
@@ -546,7 +548,7 @@ function sDeco() {
     if (on) txt('사용 중', x + 84, yy + 62, 12.5, '#c75b3f'); else if (own) txt('고르기', x + 84, yy + 62, 12.5, '#7cc3a8'); else { A.coinAcorn(c, x + 92, yy + 66, 0.6); txt(String(o[2]), x + 104, yy + 63, 13, '#6b4423'); }
     hit(x, yy, 154, 96, () => buyDeco(decoCat, o)); });
   txt('소품', 40, y + 330, 15, '#6a4a40');
-  EXTRA.forEach((e, i) => { const x = 36 + i * 108, yy = y + 346, own = SV.decoOwn['x:' + e[0]], on = SV.extra[e[0]];
+  EXTRA.forEach((e, i) => { const x = 36 + i * 108, yy = y + 346, own = SV.decoOwn['x:' + e[0]] || gOwn('x', e[0]), on = SV.extra[e[0]];
     A.rr(c, x, yy, 100, 70, 14); c.fillStyle = on ? '#ffe9d6' : '#fff'; c.fill(); c.strokeStyle = on ? '#f29a6b' : '#efd3ba'; c.lineWidth = on ? 3 : 2; c.stroke();
     txt(e[1], x + 50, yy + 24, 14, '#4a3530', 'center');
     if (own) txt(on ? '켜짐' : '꺼짐', x + 50, yy + 48, 12.5, on ? '#c75b3f' : '#a58a7a', 'center'); else { A.coinAcorn(c, x + 40, yy + 52, 0.6); txt(String(e[2]), x + 52, yy + 49, 13, '#6b4423'); }
@@ -554,7 +556,7 @@ function sDeco() {
   btn(W / 2 - 70, y + 446, 140, 42, '다 꾸몄어요', '#9b8ae0', () => { modal = null; tab = 'home'; });
 }
 function buyDeco(cat, o) {
-  const key = cat + ':' + o[0], own = o[2] === 0 || SV.decoOwn[key];
+  const key = cat + ':' + o[0], own = o[2] === 0 || SV.decoOwn[key] || gOwn(cat, o[0]);
   if (!own) { if (SV.acorn < o[2]) { sfx('no'); return; } SV.acorn -= o[2]; SV.decoOwn[key] = 1; sfx('ok'); } else sfx('tap');
   if (SV.deco[cat] !== o[0]) careMark('deco');
   SV.deco[cat] = o[0]; bgCache.k = ''; save();

@@ -425,6 +425,7 @@ const SKINS = [
 ].map(([id, s, name, cost, col, fx]) => ({ id, s, name, cost, col, fx }));
 function skA(h, a) { const n = parseInt(h.slice(1), 16); return "rgba(" + (n >> 16) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; }
 const SKIN = Object.fromEntries(SKINS.map(o => [o.id, o])), SKSLOT = { c: '옷 색', a: '오라', t: '자국' };
+function skOwn(S) { if (SV.sk.own[S.id]) return true; try { const B = opts && opts.bonus; return !!(B && (B.state().own || {})['g:raid:' + S.s + ':' + S.id.replace(/_/g, '')]); } catch (e) { return false; } } // 관리자 지급(/admin)도 가진 것
 function skEq(cls) { SV.sk = SV.sk || { own: {}, eq: {} }; return SV.sk.eq[cls] || (SV.sk.eq[cls] = {}); }
 function hexHsl(h) { const n = parseInt(h.slice(1), 16), r = (n >> 16) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn; let hh = 0, s = 0; if (d) { s = d / (1 - Math.abs(2 * l - 1)); hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; } return [(hh * 60 + 360) % 360, s, l]; }
 function hsl2(h, s, l, o, i) { const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2; let r, g, b; if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0]; else if (h < 180) [r, g, b] = [0, c, x]; else if (h < 240) [r, g, b] = [0, x, c]; else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x]; o[i] = (r + m) * 255; o[i + 1] = (g + m) * 255; o[i + 2] = (b + m) * 255; }
@@ -2178,8 +2179,8 @@ function lobby() {
     if (b.dataset.pk) { SV.pet.k = b.dataset.pk; sfx('pet'); save(); lobby(); return; }
     if (b.dataset.skc) { pick = b.dataset.skc; skPrev = null; lobby(); return; }
     if (b.dataset.skp) { const S = SKIN[b.dataset.skp]; skPrev = Object.assign({}, skPrev || skEq(pick), { [S.s]: S.id }); sfx('pick'); lobby(); return; }
-    if (b.dataset.skb) { const S = SKIN[b.dataset.skb]; if (S && !SV.sk.own[S.id] && SV.mats.gold >= S.cost) { SV.mats.gold -= S.cost; SV.sk.own[S.id] = 1; skEq(pick)[S.s] = S.id; skPrev = null; sfx('lv'); save(); } lobby(); return; }
-    if (b.dataset.ske) { const S = SKIN[b.dataset.ske]; if (S && SV.sk.own[S.id]) { const e = skEq(pick); e[S.s] = e[S.s] === S.id ? null : S.id; skPrev = null; sfx('pick'); save(); } lobby(); return; }
+    if (b.dataset.skb) { const S = SKIN[b.dataset.skb]; if (S && !skOwn(S) && SV.mats.gold >= S.cost) { SV.mats.gold -= S.cost; SV.sk.own[S.id] = 1; skEq(pick)[S.s] = S.id; skPrev = null; sfx('lv'); save(); } lobby(); return; }
+    if (b.dataset.ske) { const S = SKIN[b.dataset.ske]; if (S && skOwn(S)) { const e = skEq(pick); e[S.s] = e[S.s] === S.id ? null : S.id; skPrev = null; sfx('pick'); save(); } lobby(); return; }
     if (b.dataset.skx) { skPrev = null; lobby(); return; }
     if (b.dataset.feed) { if (SV.mats.jelly > 0) { SV.mats.jelly--; SV.pet.xp++; sfx('pet'); const nd = SV.pet.lv * 2 + 1; if (SV.pet.xp >= nd) { SV.pet.xp -= nd; const f0 = petForm(); SV.pet.lv++; sfx('lv'); if (petForm() > f0) SV.dex.p[petForm()] = 1; } save(); lobby(); } return; }
     if (b.dataset.up) { const q = gearOf(+b.dataset.up); if (q && SV.mats.stone > q.p && SV.mats.gold >= (q.p + 1) * 100 && q.p < 10) { SV.mats.stone -= q.p + 1; SV.mats.gold -= (q.p + 1) * 100; q.p++; sfx('lv'); save(); lobby(); } return; }
@@ -2189,13 +2190,13 @@ function lobby() {
   };
 }
 function skinTab() {
-  const e = skEq(pick), pv = skPrev || e, nOwn = Object.keys(SV.sk.own).length;
+  const e = skEq(pick), pv = skPrev || e, nOwn = SKINS.filter(skOwn).length;
   let h = '<div class="nr-box"><h3>✨ 캐릭터 꾸미기</h3><p class="nr-note">겉모습만 바뀌어요(능력치 없음). 한 번 사면 모든 직업이 쓸 수 있고, 착용은 직업마다 따로예요. 보유 ' + nOwn + ' / ' + SKINS.length + ' · 💰 ' + SV.mats.gold.toLocaleString() + 'G</p>';
   h += '<div class="nr-skc">' + CLS.map(k => '<button type="button" data-skc="' + k + '"' + (pick === k ? ' class="on"' : '') + ' style="--c:' + CL[k].col + '">' + CL[k].name + '</button>').join('') + '</div>';
   h += '<div class="nr-skv"><span class="skv"></span><div>' + ['c', 'a', 't'].map(sl => '<p><b>' + SKSLOT[sl] + '</b> ' + (pv[sl] ? SKIN[pv[sl]].name : '기본') + (skPrev && skPrev[sl] !== e[sl] ? ' <em>(미리보기)</em>' : '') + '</p>').join('') + (skPrev ? '<button type="button" class="nr-sb g" data-skx="1">미리보기 끄기</button>' : '') + '</div></div>';
   for (const sl of ['c', 'a', 't']) {
     h += '<h3 style="margin-top:10px">' + SKSLOT[sl] + '</h3><div class="nr-skl">';
-    for (const S of SKINS.filter(o => o.s === sl)) { const own = SV.sk.own[S.id], on = e[sl] === S.id;
+    for (const S of SKINS.filter(o => o.s === sl)) { const own = skOwn(S), on = e[sl] === S.id;
       h += '<div class="nr-ski' + (on ? ' on' : '') + '"><span class="sks" data-s="' + S.id + '"></span><b>' + S.name + '</b>' + (own ? '<button type="button" class="nr-sb' + (on ? ' g' : '') + '" data-ske="' + S.id + '">' + (on ? '벗기' : '착용') + '</button>' : '<small>' + S.cost.toLocaleString() + 'G</small><button type="button" class="nr-sb g" data-skp="' + S.id + '">미리보기</button><button type="button" class="nr-sb" data-skb="' + S.id + '"' + (SV.mats.gold >= S.cost ? '' : ' disabled') + '>사기</button>') + '</div>'; }
     h += '</div>';
   }

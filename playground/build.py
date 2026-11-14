@@ -533,6 +533,23 @@ GAME_ITEMS = [
     {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
     {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "hearts", "name": "하트 비", "icon": "💗", "p": 6},
 ]
+# 관리자 지급용 '게임 안 아이템'(BK 11/14): 게임 안 화폐(골드·도토리)로 사는 꾸미기. 미니 상점(코인)에는 안 나오고 /admin 에만.
+# 새 게임은 games/<slug>/items.json {"items":[{k,kn,id,name,icon}]} 만 두면 관리자 페이지에 자동으로 생긴다.
+# own 키 g:<slug>:<k>:<id> (id 는 영문 소문자·숫자만). 게임은 Bonus.state().own 에 이 키가 있으면 가진 것으로 친다.
+def load_grant_items(gdir: Path) -> list[dict]:
+    out = []
+    for f in sorted(gdir.glob("*/items.json")):
+        slug = f.parent.name
+        js = ""
+        for src in [f.parent / "game.js", HERE / "static" / "js" / f"{slug}.js"]:
+            if src.exists():
+                js += src.read_text(encoding="utf-8")
+        flat = re.sub(r"[^a-z0-9]", "", js)
+        for it in json.loads(f.read_text(encoding="utf-8"))["items"]:
+            assert re.fullmatch(r"[a-z0-9]{1,12}", it["id"]) and re.fullmatch(r"[a-z0-9]{1,8}", it["k"]) and len(f"{slug}:{it['k']}:{it['id']}") <= 30, f"{f}: 잘못된 id/k {it}"
+            assert it["id"] in flat, f"{f}: 게임 코드에 없는 아이템 id {it['id']}"
+            out.append(dict(it, g=slug))
+    return out
 GSHOP_SHARED = ["starlight", "tongtong", "survivor"]  # 디자인·배경 테마·꼬리·사운드·네온 색을 쓰는 게임
 
 BONUS_JS = (
@@ -781,11 +798,12 @@ const SHOPS=[{id:'site',name:'🌐 사이트 공통 상점 (출석·코인 상�
  {name:'💫 꼬리 효과 (별빛·통통)',items:TRAILS.map(d=>['r:'+d.id,d.icon+' '+d.name]),eq:['trail','','없음',TRAILS.map(d=>[d.id,d.icon+' '+d.name])]},
  {name:'🔊 사운드 팩',items:SOUNDS.map(d=>['s:'+d.id,d.icon+' '+d.name]),eq:['snd','','기본',SOUNDS.map(d=>[d.id,d.icon+' '+d.name])]},
  {name:'🖍️ 별명 색 (최근 7일 순위)',items:NCOLORS.map(d=>['n:'+d.id,d.name]),eq:['nc','','기본',NCOLORS.map(d=>[d.id,d.name])]}]}];
-const gs=[...new Set(DESIGNS.map(d=>d.g).concat(THEMES.map(d=>d.g),GITEMS.map(d=>d.g)))].sort((a,b)=>((AGN[a]||[])[2]||99)-((AGN[b]||[])[2]||99));
+const AGI=window.AGI||[],gs=[...new Set(DESIGNS.map(d=>d.g).concat(THEMES.map(d=>d.g),GITEMS.map(d=>d.g),AGI.map(d=>d.g)))].sort((a,b)=>((AGN[a]||[])[2]||99)-((AGN[b]||[])[2]||99));
 gs.forEach(g=>{const groups=[],ds=DESIGNS.filter(d=>d.g===g),ts=THEMES.filter(d=>d.g===g);
  if(ds.length)groups.push({name:'🧍 캐릭터 디자인',items:ds.map(d=>['d:'+g+':'+d.id,d.icon+' '+d.name+(d.leg?' (전설)':'')]),eq:['des',g,(DGAMES[g]||['','기본'])[1],ds.map(d=>[d.id,d.icon+' '+d.name]),'base']});
  if(ts.length)groups.push({name:'🖼️ 배경 테마',items:ts.map(d=>['h:'+g+':'+d.id,d.icon+' '+d.name]),eq:['th',g,'기본',ts.map(d=>[d.id,d.icon+' '+d.name]),'base']});
  [...new Set(GITEMS.filter(d=>d.g===g).map(d=>d.k))].forEach(k=>{const it=GITEMS.filter(d=>d.g===g&&d.k===k);groups.push({name:'✨ '+it[0].kn,items:it.map(d=>['g:'+g+':'+k+':'+d.id,d.icon+' '+d.name]),eq:['gi',g+':'+k,'기본',it.map(d=>[d.id,d.icon+' '+d.name]),'']})});
+ [...new Set(AGI.filter(d=>d.g===g).map(d=>d.k))].forEach(k=>{const it=AGI.filter(d=>d.g===g&&d.k===k);groups.push({name:'🎁 '+it[0].kn+' (게임 안 상점)',items:it.map(d=>['g:'+g+':'+k+':'+d.id,d.icon+' '+d.name])})});
  SHOPS.push({id:g,name:'🎮 '+gname(g)+' 상점',groups})});
 const ALLK=SHOPS.flatMap(s=>s.groups.flatMap(gr=>gr.items.map(i=>i[0])));
 const OPEN=new Set(['site']);// 저장 뒤에도 펼쳐 둔 상점 유지
@@ -1107,7 +1125,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY + MYREC_BODY, COMMON_JS + PROFILE_PAGE_JS + f"const GN={gnames};" + MYREC_JS, noindex=True)
     write("bonus", f"출석체크·코인 상점 | {cfg['siteName']}", "5락실 출석체크·오늘의 미션. 코인을 모아 아바타·칭호·스킨을 모으고 이어하기에 써요. 게임은 모두 무료.",
           BONUS_BODY, "window.FPG=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮")] for g in games}, ensure_ascii=False) + ";", noindex=True)
-    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), i] for i, g in enumerate(games)}, ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), i] for i, g in enumerate(games)}, ensure_ascii=False) + ";" + "window.AGI=" + json.dumps(load_grant_items(HERE / "games"), ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
     write("board", f"게시판 | {cfg['siteName']}", "5락실 게시판. 게임 이야기, 건의, 오류 제보, 프로필 문의.", BOARD_BODY, BOARD_JS, noindex=True)
     write("board-rules", f"게시판 이용 지침 | {cfg['siteName']}", "5락실 게시판 이용 지침과 제재 기준.", BOARD_RULES, noindex=True)
 
