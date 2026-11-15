@@ -89,7 +89,8 @@ def title_of(q: dict) -> str:
 
 def description_of(q: dict, res: dict | None, ai_voice: bool) -> str:
     lines = [f"오늘의 밸런스게임: {q['a']} vs {q['b']}", "",
-             f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}", f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}", ""]
+             f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}", f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
+             "▶ 매일 17시 새 밸런스게임은 구독으로", ""]
     if res:
         lines += [f"어제 결과({res['n']}표): {res['a']} {res['pa']}% / {res['b']} {res['pb']}%", ""]
     if ai_voice:
@@ -262,7 +263,7 @@ def cta_card(t: float):
     blink = PINK if int(t * 3) % 2 == 0 else YEL
     glow_text(img, (W / 2, 1000), ["5raksil.com"], font(130), 130, blink, glow=20)
     glow_text(img, (W / 2, 1260), ["댓글로 A? B?"], font(80), 80, CYAN, glow=12)
-    glow_text(img, (W / 2, 1480), ["INSERT COIN"], font(56), 56, YEL, glow=8)
+    glow_text(img, (W / 2, 1480), ["구독하면 매일 새 질문"], font(56), 56, YEL, glow=8)
     return img
 
 

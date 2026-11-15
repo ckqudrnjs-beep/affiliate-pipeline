@@ -58,7 +58,7 @@ class T(unittest.TestCase):
 
     def test_texts(self):
         g = {"slug": "tower", "name": "하늘 탑 쌓기", "short": "블록 쌓기", "order": 1}
-        self.assertIn("[NEW]", rg.title_of(g, "new"))
+        self.assertIn("[신작]", rg.title_of(g, "new"))
         self.assertLessEqual(len(rg.title_of(g, "play")), 100)
         d = rg.description_of(g, "new", True)
         self.assertIn("https://5raksil.com/games/tower", d)
