@@ -114,7 +114,7 @@ function placeProps(Wd, PM) {
   for (const s of Wd.islands) { if (s.kind === 'rock') continue; const n = s.kind === 'town' ? 6 : s.kind === 'hill' ? 8 : s.kind === 'marsh' ? 18 : 12;
     for (let i = 0; i < n * 3 && n; i++) { const a = R() * TAU, d = s.r * (.25 + R() * .68), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, [k, sol] = s.kind === 'marsh' || s.kind === 'heron' ? (R() < .6 ? ['reeds', 0] : DECO[Math.floor(R() * DECO.length)]) : DECO[Math.floor(R() * DECO.length)];
       if (s.kind === 'town' && k === 'log') continue; const f = PM[k] ? PM[k][6] : .3; if (free(x, y, f + .2) && onLand(Wd, x, y)) add(k, x, y, !!sol); } }
-  if (PM.sign) { const T2 = Wd.islands[Wd.town]; add('sign', T2.cx + 5.5, T2.cy + 5.2); }
+  { const T2 = Wd.islands[Wd.town]; Wd.signAt = [T2.cx + 5.5, T2.cy + 5.2]; if (PM.sign) add('sign', T2.cx + 5.5, T2.cy + 5.2); }
   for (let i = 0; i < block.length; i++) if (block[i] === 2) block[i] = 0;
   return props;
 }
