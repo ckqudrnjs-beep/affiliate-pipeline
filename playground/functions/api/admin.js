@@ -13,6 +13,7 @@
 // 질문 제안: {a:"qprops"} 대기 목록 / {a:"qadopt", id} 채택(칭호 「출제자」 + 🪙10 돌려줌, rev+1) / {a:"qreject", id} 반려
 // POST /api/admin {a:"devtoken"}                   → {t} 개발자 토큰(이 기기에서 테스터 전용 체험판을 열 수 있게)
 // POST /api/admin {a:"visits", site?:"d3"}        → 순 방문자 수(site d3 = 돈삼촌)(오늘·어제·7일·30일 + 날짜별, visit.js 2026-11-15)
+// 끊어진 하늘 베타 의견: {a:"skyfb", page, ch?, tag?} 목록 + 장별 요약 / {a:"fbhide", id, on} / {a:"fbban", id, days(0=해제, 7, 9999=영구)} (게시판과 같은 bans 표)
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
 // Pages 변수 ACCESS_TEAM·ACCESS_AUD 가 있으면 Cloudflare Access 로그인 증표도 확인(lib/access.js, 2026-11-15)
@@ -20,6 +21,7 @@ import { clean, normCode, devToken } from "./profile.js";
 import { ensureBoard } from "./board.js";
 import { ensureQ } from "./qprop.js";
 import { visitStats } from "./visit.js";
+import { ensureFb } from "./skyfb.js";
 import { accessOn, accessOk } from "../../lib/access.js";
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -117,6 +119,28 @@ export async function onRequestPost({ request, env }) {
         await env.DB.prepare("INSERT INTO bans (h, nick, until, reason) VALUES (?, ?, ?, ?) ON CONFLICT(h) DO UPDATE SET until = excluded.until, reason = excluded.reason").bind(p.h, p.nick, until, `글 #${id}`).run(); }
     }
     await log(env, a, p.nick, { id, on: b.on, days: b.days });
+    return json({ ok: true });
+  }
+  if (["skyfb", "fbhide", "fbban"].includes(a)) {
+    await ensureFb(env.DB);
+    const id = Math.floor(+b.id || 0);
+    if (a === "skyfb") {
+      const pg = Math.max(0, Math.min(500, Math.floor(+b.page || 0))), ch = Math.floor(+b.ch || 0), tag = /^[a-z]{2,5}$/.test(b.tag || "") ? b.tag : "";
+      const { results } = await env.DB.prepare("SELECT f.*, x.until FROM sky_fb f LEFT JOIN bans x ON x.h = f.h WHERE (? = 0 OR f.ch = ?) AND (? = '' OR (',' || f.tags || ',') LIKE ?) ORDER BY f.id DESC LIMIT 31 OFFSET ?").bind(ch, ch, tag, `%,${tag},%`, pg * 30).all();
+      const sum = (await env.DB.prepare("SELECT ch, COUNT(*) AS n, ROUND(AVG(star), 1) AS star, SUM(CASE WHEN (',' || tags || ',') LIKE '%,bug,%' THEN 1 ELSE 0 END) AS bug, SUM(CASE WHEN (',' || tags || ',') LIKE '%,hard,%' THEN 1 ELSE 0 END) AS hard, SUM(CASE WHEN (',' || tags || ',') LIKE '%,dull,%' THEN 1 ELSE 0 END) AS dull FROM sky_fb WHERE hidden = 0 GROUP BY ch ORDER BY ch").all()).results || [];
+      return json({ sum, list: (results || []).slice(0, 30).map((r) => ({ id: r.id, nick: r.nick, anon: r.h.startsWith("ip:"), star: r.star, tags: r.tags, text: r.text, ctx: JSON.parse(r.ctx || "{}"), created: r.created, hidden: r.hidden, post: r.post, ban: r.until && r.until >= kst() ? r.until : null })), more: (results || []).length > 30 });
+    }
+    const f = await env.DB.prepare("SELECT * FROM sky_fb WHERE id = ?").bind(id).first();
+    if (!f) return json({ error: "none", msg: "의견이 없어요." }, 404);
+    if (a === "fbhide") await env.DB.prepare("UPDATE sky_fb SET hidden = ? WHERE id = ?").bind(b.on ? 1 : 0, id).run();
+    if (a === "fbban") {
+      const d = Math.floor(+b.days || 0);
+      if (d <= 0) await env.DB.prepare("DELETE FROM bans WHERE h = ?").bind(f.h).run();
+      else { const until = d >= 9999 ? "9999-12-31" : new Date(Date.now() + 9 * 3600e3 + d * 864e5).toISOString().slice(0, 10);
+        await env.DB.prepare("INSERT INTO bans (h, nick, until, reason) VALUES (?, ?, ?, ?) ON CONFLICT(h) DO UPDATE SET until = excluded.until, reason = excluded.reason").bind(f.h, f.nick, until, `하늘 의견 #${id}`).run();
+        if (b.hideAll) await env.DB.prepare("UPDATE sky_fb SET hidden = 1 WHERE h = ?").bind(f.h).run(); }
+    }
+    await log(env, a, f.nick, { id, on: b.on, days: b.days });
     return json({ ok: true });
   }
   if (a === "find") {
