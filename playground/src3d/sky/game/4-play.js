@@ -51,8 +51,8 @@ function loadSave(cls) { try { const s = JSON.parse(localStorage.getItem('sky_' 
 const ISL_LV = { 0: [1, 2], 1: [2, 3], 2: [4, 5], 3: [6, 7], 4: [5, 6] };
 function mkMob(t, x, y, lv, elite) {
   const D = MOBDEF[t], E = elite ? ELITE[elite - 1] : null, m = E ? E[2] : {};
-  const hp = Math.round((D.hp[0] + D.hp[1] * lv) * (m.hp || 1) * (elite ? 1.3 : 1));
-  return { t, D, x, y, hx: x, hy: y, lv, hp, mhp: hp, dmg: [(D.dmg[0] + D.dmg[2] * lv) * (m.dmg || 1), (D.dmg[1] + D.dmg[2] * lv * 1.3) * (m.dmg || 1)], spd: D.spd * (m.spd || 1), r: D.r, dir: ri(0, 7), an: 'idle', at: Math.random(), cd: 1, st: 'idle', kx: 0, ky: 0, stun: 0, slow: 0, elite, E, kbimm: m.kbimm, wan: rnd(1, 4), fl: 0, fear: 0, taunt: 0, miss: 0, bleed: 0, id: Math.random() };
+  const hp = Math.round((D.hp[0] + D.hp[1] * lv) * (m.hp || 1) * (elite ? 1.3 : 1) * DIFF.hp);
+  return { t, D, x, y, hx: x, hy: y, lv, hp, mhp: hp, dmg: [(D.dmg[0] + D.dmg[2] * lv) * (m.dmg || 1) * DIFF.dmg, (D.dmg[1] + D.dmg[2] * lv * 1.3) * (m.dmg || 1) * DIFF.dmg], spd: D.spd * (m.spd || 1) * DIFF.spd, r: D.r, dir: ri(0, 7), an: 'idle', at: Math.random(), cd: 1, st: 'idle', kx: 0, ky: 0, stun: 0, slow: 0, elite, E, kbimm: m.kbimm, wan: rnd(1, 4), fl: 0, fear: 0, taunt: 0, miss: 0, bleed: 0, id: Math.random() };
 }
 function spawnPack(pk) {
   const s = G.Wd.islands[pk.isl], R = Math.random; pk.mobs = []; if (G.today === pk.isl && !pk.boss && !pk.elite) pk.elite = ri(1, ELITE.length);
@@ -187,7 +187,7 @@ function hurtPlayer(d, src) {
   if (P.buf.cloud && P.cloudHP > 0) { const a = Math.min(P.cloudHP, d); P.cloudHP -= a; d -= a; if (P.fork.cloud === 0 && src) src.slow = 2; if (P.cloudHP <= 0) P.buf.cloud = 0; }
   if (P.thorn && src && src.hp > 0) hitMob(src, P.thorn, false);
   d = Math.max(0, Math.round(d)); if (!d) return;
-  P.hp -= d; P.hurt = .25; G.txt.push({ x: P.x, y: P.y, z: 1.2, t: 0, s: String(d), c: '#ff7a6a' }); G.shake = Math.max(G.shake, 2.5); sfx('hurt');
+  P.hp -= d; P.hurt = .25; hurtFx(src, d); G.txt.push({ x: P.x, y: P.y, z: 1.2, t: 0, s: String(d), c: '#ff7a6a' }); G.shake = Math.max(G.shake, 2.5); sfx('hurt');
   if (src && src.t === 'bird') P.wind = Math.max(0, P.wind - 3);
   if (P.hp <= 0) { P.hp = 0; P.dead = 2.6; P.an = 'die'; P.at = 0; sfx('die'); say('쓰러졌어요… 마을에서 다시 일어나요(골드 10% 잃음).', '#ff9a8a'); }
 }
@@ -356,27 +356,27 @@ function mobUpdate(m, dt) {
   m.miss = G.areas.some(a => a.k === 'mist' && hyp(a.x - m.x, a.y - m.y) < a.r);
   if (m.an === 'atk') { // 공격 동작 중
     const wind = m.D.big ? .8 : .35;
-    if (!m.hitDone && m.at > wind) { m.hitDone = 1; if (m.D.big) bossHit(m); else if (hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .55) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); }
+    if (!m.hitDone && m.at > wind) { m.hitDone = 1; if (m.D.big) bossHit(m); else { const h = hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .55; mobAtkHit(m, h); if (h) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); } }
     if (m.at > wind + .3) { m.an = 'idle'; m.at = 0; } return;
   }
   if (m.an === 'hurt' && m.at < .2) return;
   if (P.dead) { m.st = 'idle'; }
-  const aggro = m.D.boss ? 9 : m.D.mini ? 7.5 : m.D.fly ? 8 : 6.5;
+  const aggro = (m.D.boss ? 9 : m.D.mini ? 7.5 : m.D.fly ? 8 : 6.5) + DIFF.aggro;
   if (m.st === 'idle') { if (d < aggro && !P.dead) m.st = 'chase'; else { m.wan -= dt; if (m.wan < 0) { m.wan = rnd(2, 5); m.wx = m.hx + rnd(-1.5, 1.5); m.wy = m.hy + rnd(-1.5, 1.5); }
       if (m.wx != null) { const ex = m.wx - m.x, ey = m.wy - m.y, el = hyp(ex, ey); if (el > .2) { move(m, ex / el * sp * .4 * dt, ey / el * sp * .4 * dt); m.dir = w2dir(ex, ey); m.an = 'move'; } else m.an = 'idle'; } } return; }
   // 집에서 너무 멀면 돌아감
   if (hyp(m.x - m.hx, m.y - m.hy) > 16 && m.taunt <= 0 || P.dead) { m.st = 'idle'; m.wx = m.hx; m.wy = m.hy; return; }
   if (m.fear > 0) { move(m, -dx / d * sp * dt, -dy / d * sp * dt); m.dir = w2dir(-dx, -dy); m.an = 'move'; return; }
   m.dir = w2dir(dx, dy);
-  if (m.D.ai === 'charge' && m.cd <= 0 && d > 2.2 && d < 5) { m.charge = .55; m.cvx = dx / d * 6.5; m.cvy = dy / d * 6.5; m.cd = 3.5; m.hitC = 0; }
-  if (m.charge > 0) { m.charge -= dt; move(m, m.cvx * dt, m.cvy * dt); m.an = 'atk'; m.at = .1; m.hitDone = 1; if (!m.hitC && hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .2) { m.hitC = 1; hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * 1.3, m); } if (m.charge <= 0) { m.an = 'idle'; m.at = 0; } return; }
+  if (m.D.ai === 'charge' && m.cd <= 0 && d > 2.2 && d < 5) { m.charge = .55; m.cvx = dx / d * 6.5; m.cvy = dy / d * 6.5; m.cd = 3.5; m.hitC = 0; mobAtkStart(m); }
+  if (m.charge > 0) { m.charge -= dt; chargeTrail(m); move(m, m.cvx * dt, m.cvy * dt); m.an = 'atk'; m.at = .1; m.hitDone = 1; if (!m.hitC && hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .2) { m.hitC = 1; hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * 1.3, m); } if (m.charge <= 0) { m.an = 'idle'; m.at = 0; } return; }
   if (m.D.ai === 'dive' && m.back > 0) { m.back -= dt; move(m, -dx / d * sp * dt, -dy / d * sp * dt); m.an = 'move'; return; }
   if (m.D.big) return bossAI(m, dt, d, dx, dy);
   if (m.D.ai === 'spit') return spitAI(m, dt, d, dx, dy, sp);
   if (m.D.ai === 'spin') return spinAI(m, dt, d, dx, dy, sp);
   const reach = m.r + P.r + .35;
   if (d > reach) { move(m, dx / d * sp * dt, dy / d * sp * dt); m.an = 'move'; separate(m); }
-  else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = m.D.atk * rnd(.9, 1.3); if (m.D.ai === 'dive') m.back = .8; }
+  else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = m.D.atk * rnd(.9, 1.3) * DIFF.cd; mobAtkStart(m); if (m.D.ai === 'dive') m.back = .8; }
   else m.an = 'idle';
 }
 function separate(m) { for (const o of G.mobs) { if (o === m || o.dead) continue; const dx = m.x - o.x, dy = m.y - o.y, d = hyp(dx, dy), rr = m.r + o.r; if (d < rr && d > 0) { move(m, dx / d * (rr - d) * .3, dy / d * (rr - d) * .3); } } }
@@ -429,13 +429,29 @@ function areaUpdate(a, dt) {
 function pickUp(d) {
   const P = G.P;
   if (d.gold) { P.gold += d.gold; d.got = 1; G.txt.push({ x: d.x, y: d.y, z: 1, t: 0, s: '+' + d.gold + 'G', c: '#ffd166', small: 1 }); sfx('coin'); return; }
-  if (!addInv(d.it)) { if (!d.warn) { d.warn = 1; say('가방이 꽉 찼어요(60칸). 팔거나 대장간에서 분해해 주세요', '#ff9a8a', 1); } return; }
+  if (!addInv(d.it)) { if (!d.warn) { d.warn = 1; say(P.inv.length >= INV_MAX ? '가방 칸이 다 찼어요(60칸). 팔거나 분해하거나 창고에 넣어 주세요' : '너무 무거워서 더 못 들어요. 팔거나 분해하거나 창고에 넣어 주세요', '#ff9a8a', 1); } return; }
   d.got = 1; sfx('pick'); if (d.it.g === 'plank') say('다리 널빤지 ' + count('plank') + '/6', '#ffe08a', 1);
   else if (!d.it.g && d.it.r >= 2) say(RAR[d.it.r].n + ' 장비! ' + itemName(d.it), RAR[d.it.r].c);
 }
-function addInv(it) { const P = G.P; if (it.g) { const h = P.inv.find(x => x.g === it.g); if (h) { h.n += it.n; return true; } } if (P.inv.length >= INV_MAX) return false; const was = P.inv.length >= INV_N; P.inv.push(it); if (!was && P.inv.length > INV_N) say('가방이 무거워졌어요! 40칸을 넘으면 걸음이 느려져요', '#ff9a8a'); return true; }
-// 가방: 40칸까지는 가볍고, 넘으면 60칸까지 더 담을 수 있지만 걸음이 느려짐
-const INV_N = 40, INV_MAX = 60, heavyMul = P => P.inv.length > INV_N ? .55 : 1;
+// 가방: 같은 물건은 한 칸에 묶고(개수 표시), 무게는 개수만큼 더해짐. 무게가 들 수 있는 양을 넘으면 걸음이 느려지고, 1.5배를 넘으면 더 못 주움.
+const INV_N = 40, INV_MAX = 60;
+const WT_SLOT = { weapon: 4, off: 3, armor: 6, helm: 2, legs: 3, inner: 1, cloak: 1.5, gloves: 1, belt: 1, boots: 2, amulet: .3, ear: .2, ring: .2, sail: 2 };
+function weightOf(it) { if (it.g) return (it.g === 'pot' || it.g === 'wpot' ? .2 : GOODS[it.g].quest ? .3 : .1) * it.n; const b = BASE[it.b]; return (b && WT_SLOT[b.s] || 1) * (it.n || 1); }
+function bagWeight(P) { let w = 0; for (const it of P.inv) w += weightOf(it); return Math.round(w * 10) / 10; }
+function bagCap(P) { return 60 + Math.floor(P.st && P.st.str || 10); }
+const heavyMul = P => bagWeight(P) > bagCap(P) ? .55 : 1;
+// 묶을 수 있는 장비: 보통 등급, 강화·옵션·이름 없는 같은 물건
+function stackKey(it) { if (it.g || it.r !== 0 || it.en || it.u || it.set || it.hid || it.af && it.af.length) return null; return it.b + '|' + (it.id ? 1 : 0) + '|' + (it.st || 0); }
+function addInv(it) { const P = G.P;
+  if (it.g) { const h = P.inv.find(x => x.g === it.g); if (h) { h.n += it.n; return true; } }
+  const k = stackKey(it), w0 = bagWeight(P), cap = bagCap(P);
+  if (w0 + weightOf(it) > cap * 1.5) return false;
+  const h = k && P.inv.find(x => !x.g && stackKey(x) === k);
+  if (h) h.n = (h.n || 1) + (it.n || 1); else { if (P.inv.length >= INV_MAX) return false; P.inv.push(it); }
+  if (w0 <= cap && bagWeight(P) > cap) say('가방이 무거워졌어요! 걸음이 느려져요 (무게 ' + bagWeight(P) + '/' + cap + ')', '#ff9a8a');
+  return true; }
+// 묶음에서 하나 떼어 내기: 떼어 낸 물건의 칸 번호를 돌려줌
+function single(i) { const P = G.P, it = P.inv[i]; if (!it || it.g || !(it.n > 1)) return i; it.n--; const c = { ...it, uid: UID++ }; delete c.n; P.inv.splice(i + 1, 0, c); return i + 1; }
 function count(g) { const h = G.P.inv.find(x => x.g === g); return h ? h.n : 0; }
 function useGood(g, n) { const P = G.P, h = P.inv.find(x => x.g === g); if (!h || h.n < (n || 1)) return false; h.n -= n || 1; if (h.n <= 0) P.inv.splice(P.inv.indexOf(h), 1); return true; }
 function drink(g) { const P = G.P; if (P.dead) return; if (!useGood(g)) { say(g === 'pot' ? '민들레 차가 없어요' : '바람 사탕이 없어요', '#ccc', 1); return; } if (g === 'pot') P.hp = Math.min(P.mhp, P.hp + P.mhp * .4); else P.wind = Math.min(P.mwind, P.wind + P.mwind * .5); G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .5, c: g === 'pot' ? '#b6f0a0' : '#9fe4ff' }); sfx('drink'); }

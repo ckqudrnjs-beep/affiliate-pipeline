@@ -55,3 +55,28 @@ function mobMotion(m) { const D = m.D, P = G.P; let oy = 0, ox = 0, scx = 1, scy
   return [ox, oy, scx, scy, rot]; }
 // 마을 건물 표시(창고·우물): 가까이 가면 떠 있는 이름표
 function drawTownMarks() { const Wd = G.Wd, P = G.P; for (const [p, s] of [[Wd.stashAt, '🏠 창고'], [Wd.wellAt, '💧 우물']]) { if (!p) continue; const d = hyp(P.x - p[0], P.y - p[1]); if (d > 6) continue; const [sx, sy] = iso(p[0], p[1]), yy = sy - 46 + Math.sin(G.t * 3) * 3; x.globalAlpha = clamp((6 - d) / 2, 0, 1); x.font = '800 11px system-ui'; x.textAlign = 'center'; const w = x.measureText(s).width + 12; x.fillStyle = 'rgba(30,24,18,.7)'; rr(sx - w / 2, yy - 12, w, 17, 6); x.fill(); x.fillStyle = '#ffe9b0'; x.fillText(s, sx, yy + 1); x.globalAlpha = 1; } }
+// 난이도: 적 체력·피해·발빠르기·공격 간격
+const DIFF = { hp: 1.35, dmg: 1.3, spd: 1.08, cd: .85, aggro: 1.5 };
+// 적 공격 효과: 휘두르기 전 번쩍(예고) → 할퀴기·물기 자국 → 맞으면 붉은 튐·화면 가장자리 붉어짐·살짝 밀림
+const MOBATK = { bird: 'peck', rustcrow: 'peck', gull: 'peck', heronling: 'peck', seed: 'bite', bogpod: 'bite', boltpod: 'bite', barnpod: 'bite' };
+function mobAtkStart(m) { G.fx.push({ k: 'mtele', x: m.x, y: m.y, t: 0, life: .32, c: m.elite ? m.E[1] : '#ff6a4a', big: m.D.mini }); }
+function mobAtkHit(m, hit) { const P = G.P, dx = P.x - m.x, dy = P.y - m.y, d = hyp(dx, dy) || 1, kind = MOBATK[m.t] || 'claw';
+  G.fx.push({ k: 'mclaw', x: m.x + dx / d * Math.min(d, m.r + .45), y: m.y + dy / d * Math.min(d, m.r + .45), dx: dx / d, dy: dy / d, t: 0, life: .26, c: hit ? '#ff5a3a' : '#f0e0c8', kind });
+  if (!hit) G.parts.push({ k: 'dust', x: m.x + dx / d * .6, y: m.y + dy / d * .6, z: 2, vx: dx / d, vy: dy / d, vz: 30, t: 0, life: .35, c: 'rgba(200,190,160,.5)', s: 4 }); }
+function hurtFx(src, dmg) { const P = G.P; G.hurtV = Math.min(1, (G.hurtV || 0) + .35 + dmg / P.mhp * 2);
+  for (let i = 0; i < 9; i++) { const a = Math.random() * TAU, sp = rnd(2, 5); G.parts.push({ k: 'spark', x: P.x, y: P.y, z: 26, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 200), t: 0, life: rnd(.2, .35), c: i % 3 ? '#ff6a4a' : '#ffd0b0', s: 2.4 }); }
+  if (src && !src.D.big) { const dx = P.x - src.x, dy = P.y - src.y, d = hyp(dx, dy) || 1; for (let i = 0; i < 4; i++) move(P, dx / d * .06, dy / d * .06); } }
+function chargeTrail(m) { if (Math.random() < .6) G.parts.push({ k: 'dust', x: m.x + rnd(-.15, .15), y: m.y + rnd(-.15, .15), z: 3, vx: -m.cvx * .08, vy: -m.cvy * .08, vz: rnd(10, 40), t: 0, life: .4, c: 'rgba(170,150,110,.5)', s: 4 });
+  if (Math.random() < .5) G.fx.push({ k: 'speedl', x: m.x, y: m.y, dx: m.cvx, dy: m.cvy, t: 0, life: .18 }); }
+function drawEnemyFx(f, k, sx, sy) {
+  if (f.k === 'mtele') { const Y = sy - (f.big ? 60 : 40); x.save(); x.globalAlpha = k < .5 ? k * 2 : (1 - k) * 2; x.fillStyle = f.c; x.strokeStyle = 'rgba(40,10,0,.8)'; x.lineWidth = 2; x.font = '900 18px system-ui'; x.textAlign = 'center'; x.strokeText('!', sx, Y); x.fillText('!', sx, Y);
+    x.globalCompositeOperation = 'lighter'; x.globalAlpha *= .6; const g = x.createRadialGradient(sx, sy - 18, 0, sx, sy - 18, 26); g.addColorStop(0, f.c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.beginPath(); x.arc(sx, sy - 18, 26, 0, TAU); x.fill(); x.restore(); return true; }
+  if (f.k === 'mclaw') { const [ex, ey] = iso(f.dx, f.dy), a = Math.atan2(ey, ex); x.save(); x.translate(sx, sy - 20); x.rotate(a); x.globalAlpha = 1 - k; x.strokeStyle = f.c; x.lineCap = 'round'; x.shadowColor = f.c; x.shadowBlur = 6;
+    if (f.kind === 'peck') { x.lineWidth = 3 * (1 - k) + 1; x.beginPath(); x.moveTo(-6, 0); x.lineTo(16 + k * 8, 0); x.stroke(); x.beginPath(); x.moveTo(10, -6); x.lineTo(18 + k * 6, 0); x.lineTo(10, 6); x.stroke(); }
+    else if (f.kind === 'bite') { x.lineWidth = 2.5; const o = 9 * (1 - k * .5); for (const sgn of [-1, 1]) { x.beginPath(); for (let i = 0; i < 4; i++) { const xx = -8 + i * 6; x.lineTo(xx, sgn * o); x.lineTo(xx + 3, sgn * (o - 6)); } x.stroke(); } }
+    else { for (let i = -1; i <= 1; i++) { x.lineWidth = 3 * (1 - k) + .8; x.beginPath(); x.moveTo(-10, i * 7 - 6); x.quadraticCurveTo(4, i * 7, 14 + k * 6, i * 7 + 6); x.stroke(); } }
+    x.restore(); return true; }
+  if (f.k === 'speedl') { const [vx, vy] = iso(f.dx, f.dy), l = hyp(vx, vy) || 1; x.save(); x.globalAlpha = (1 - k) * .7; x.strokeStyle = '#fff'; x.lineWidth = 1.5; for (let i = -1; i <= 1; i++) { const ox = -vy / l * i * 7, oy = vx / l * i * 7; x.beginPath(); x.moveTo(sx + ox, sy - 16 + oy); x.lineTo(sx + ox - vx / l * 26, sy - 16 + oy - vy / l * 26); x.stroke(); } x.restore(); return true; }
+  return false; }
+// 맞았을 때 화면 가장자리 붉게
+function drawHurtVignette(cw, ch) { const v = G.hurtV || 0; if (v < .01) return; G.hurtV = v * .9; const R = Math.hypot(cw, ch) / 2, g = x.createRadialGradient(cw / 2, ch / 2, R * .45, cw / 2, ch / 2, R); g.addColorStop(0, 'rgba(200,20,10,0)'); g.addColorStop(1, `rgba(200,20,10,${.55 * v})`); x.fillStyle = g; x.fillRect(0, 0, cw, ch); }
