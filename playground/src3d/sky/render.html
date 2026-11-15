@@ -376,6 +376,84 @@ const MODELS = {
       legs.forEach(([l, s2, j]) => { l.rotation.x = Math.sin(t * Math.PI * 4 + j * 2) * (st === 'move' ? .5 : .05); });
     } };
   },
+  golem(o) { // 덩이 병정(4~7장 특수 밑것): 뭉툭한 몸통 + 큰 두 팔 + 빛나는 눈, 이끼·수정·돌 장식은 o.deco
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const C = o.col || 0x6a5a48, C2 = o.col2 || 0x4a3e30;
+    const torso = new THREE.Mesh(new THREE.DodecahedronGeometry(.24, 0), std(C, { rough: .9 })); torso.scale.set(1.1, 1, .9); torso.position.y = .3; body.add(torso);
+    const hip = new THREE.Mesh(new THREE.DodecahedronGeometry(.16, 0), std(C2, { rough: .9 })); hip.position.y = .1; body.add(hip);
+    const head = new THREE.Group(); head.position.y = .56; body.add(head); const hd = new THREE.Mesh(new THREE.DodecahedronGeometry(.13, 0), std(C, { rough: .9 })); hd.scale.set(1.1, .9, 1); head.add(hd);
+    glare(head, .13, .01, .11, .4, o.eye || 0x7aff6a, .22);
+    for (let i = 0; i < 6; i++) { const a = i * 1.1; const d = o.deco === 'crystal' ? new THREE.Mesh(new THREE.OctahedronGeometry(.05, 0), GLOW(o.dc || 0x9fe4ff)) : o.deco === 'stone' ? new THREE.Mesh(new THREE.BoxGeometry(.07, .05, .06), std(0x8a8478)) : new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), std(o.dc || 0x4a8a3a, { rough: 1 }));
+      d.position.set(Math.cos(a) * .2, .42 + (i % 2) * .06, Math.sin(a) * .15 - .04); if (o.deco === 'crystal') d.scale.y = 2; body.add(d); }
+    const arms = []; for (const s2 of [-1, 1]) { const a = new THREE.Group(); a.position.set(s2 * .27, .38, 0); body.add(a);
+      const up = new THREE.Mesh(new THREE.DodecahedronGeometry(.08, 0), std(C2)); up.position.y = -.08; a.add(up);
+      const fist = new THREE.Mesh(new THREE.DodecahedronGeometry(.11, 0), std(C)); fist.position.y = -.24; a.add(fist); arms.push(a); }
+    const legs = []; for (const s2 of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, .14, 6), std(C2)); l.position.set(s2 * .1, .02, 0); body.add(l); legs.push(l); }
+    outlineAll(body, 1.06); const by = .1; body.position.y = by;
+    return { g, pose(st, t) { let y = by, rz = 0, rx = 0, la = 0, ra = 0;
+      if (st === 'idle') { y = by + Math.sin(t * Math.PI * 2) * .01; la = ra = Math.sin(t * Math.PI * 2) * .08; }
+      if (st === 'move') { y = by + Math.abs(Math.sin(t * Math.PI * 2)) * .05; rz = Math.sin(t * Math.PI * 2) * .1; la = Math.sin(t * Math.PI * 2) * .5; ra = -la; legs[0].position.y = .02 + Math.max(0, Math.sin(t * Math.PI * 2)) * .05; legs[1].position.y = .02 + Math.max(0, -Math.sin(t * Math.PI * 2)) * .05; }
+      if (st === 'atk') { const k = Math.round(t * 2); la = ra = [-2.4, -.4, .4][k]; rx = [-.25, .3, .35][k]; y = by + [.04, -.02, -.03][k]; }
+      if (st === 'hurt') { rx = -.3; la = ra = .4; }
+      if (st === 'die') { const k = Math.round(t); rx = [-.6, -1.4][k]; y = by - [.04, .1][k]; la = ra = 1; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); arms[0].rotation.x = la; arms[1].rotation.x = ra; } };
+  },
+  oldtree(o) { // 뒤집힌 고목(4장 보스): 뿌리가 하늘로 뻗고 가지가 다리처럼 땅을 짚는 고목, 몸통에 얼굴
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const BARK = 0x5a4430, BARK2 = 0x3e2e20, MOSS = 0x4a7a34;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.24, .32, .7, 12), std(BARK, { rough: 1 })); trunk.position.y = .5; body.add(trunk);
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, gr = new THREE.Mesh(new THREE.BoxGeometry(.03, .6, .03), std(BARK2)); gr.position.set(Math.cos(a) * .28, .5, Math.sin(a) * .28); body.add(gr); }
+    glare(body, .3, .62, .27, .3, 0x9aff5a, .18); maw(body, .3, .42, .29, .4, 6);
+    const roots = []; for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, r = new THREE.Group(); r.position.set(Math.cos(a) * .18, .84, Math.sin(a) * .18); body.add(r);
+      const h = horn(1, 4, .16, .06, .25, BARK, BARK2); h.rotation.y = -a; r.add(h); roots.push(r); }
+    for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), std(MOSS, { rough: 1 })); const a = i * .8; m.scale.y = .5; m.position.set(Math.cos(a) * .3, .3 + (i % 3) * .15, Math.sin(a) * .3); body.add(m); }
+    for (let i = 0; i < 5; i++) { const lf = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 4), GLOW(0xc8ff8a)); const a = i * 1.3; lf.position.set(Math.cos(a) * .4, 1.05 + (i % 2) * .1, Math.sin(a) * .3); body.add(lf); }
+    const legs = []; for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + .78, l = new THREE.Group(); l.position.set(Math.cos(a) * .22, .2, Math.sin(a) * .22); body.add(l);
+      const s1 = new THREE.Mesh(new THREE.CylinderGeometry(.04, .07, .3, 6), std(BARK)); s1.position.set(Math.cos(a) * .1, -.08, Math.sin(a) * .1); s1.rotation.set(Math.sin(a) * .7, 0, -Math.cos(a) * .7); l.add(s1); legs.push(l); }
+    const arms = []; for (const s2 of [-1, 1]) { const a = new THREE.Group(); a.position.set(s2 * .3, .62, 0); body.add(a); const h = horn(s2, 4, .17, .06, .3, BARK, BARK2); h.rotation.z = s2 * 1.6; a.add(h); arms.push(a); }
+    outlineAll(body, 1.04); const by = 0; body.position.y = by;
+    return { g, pose(st, t) { let y = by, rx = 0, rz = 0, la = 0, rw = Math.sin(t * Math.PI * 2) * .12;
+      if (st === 'move') { y = by + Math.abs(Math.sin(t * Math.PI * 2)) * .04; rz = Math.sin(t * Math.PI * 2) * .06; legs.forEach((l, i) => l.rotation.x = Math.sin(t * Math.PI * 2 + i * 1.6) * .3); }
+      if (st === 'atk') { const k = Math.round(t * 2); la = [-1.2, .5, .8][k]; rx = [-.2, .15, .2][k]; rw = [.5, -.3, -.4][k]; }
+      if (st === 'hurt') { rx = -.2; rz = .15; }
+      if (st === 'die') { const k = Math.round(t); rz = [.4, 1.2][k]; y = by - [.05, .15][k]; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); arms[0].rotation.x = la; arms[1].rotation.x = la; roots.forEach((r, i) => r.rotation.z = Math.sin(i + t * Math.PI * 2) * .15 + rw * .5); } };
+  },
+  whale(o) { // 구름 고래(5장 보스): 먹구름 털을 두른 고래, 배에 번개 줄무늬, 둥실둥실
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const C = 0x4a5878, BELLY = 0x8a98b8;
+    const bg = new THREE.SphereGeometry(.42, 24, 16); bg.scale(1, .7, 1.8); const b = new THREE.Mesh(bg, std(C, { rough: .7 })); body.add(b);
+    const bel = new THREE.SphereGeometry(.38, 20, 12); bel.scale(.85, .5, 1.6); const be = new THREE.Mesh(bel, std(BELLY)); be.position.y = -.1; body.add(be);
+    for (let i = 0; i < 4; i++) { const st = new THREE.Mesh(new THREE.BoxGeometry(.5, .02, .04), GLOW(0xfff27a)); st.position.set(0, -.2, -.3 + i * .2); st.rotation.y = i % 2 ? .3 : -.3; body.add(st); }
+    glare(body, .3, .08, .66, .5, 0xfff27a, .16); maw(body, .3, -.12, .7, .55, 7);
+    for (let i = 0; i < 14; i++) { const cl = new THREE.Mesh(new THREE.SphereGeometry(.12 + (i % 3) * .04, 10, 8), std(i % 2 ? 0x6a7898 : 0x3a4460, { rough: 1 })); const a = i * .9; cl.position.set(Math.cos(a) * .3, .25 + (i % 2) * .05, -.6 + i * .09); body.add(cl); }
+    const fins = []; for (const s2 of [-1, 1]) { const f = new THREE.Mesh(new THREE.BoxGeometry(.4, .03, .2), std(C)); f.position.set(s2 * .45, -.1, .2); f.rotation.z = s2 * -.3; body.add(f); fins.push(f); }
+    const tail = new THREE.Group(); tail.position.z = -.75; body.add(tail); const tl = new THREE.Mesh(new THREE.BoxGeometry(.6, .03, .22), std(C)); tl.position.z = -.12; tail.add(tl);
+    for (let i = 0; i < 3; i++) { const bolt = new THREE.Mesh(new THREE.ConeGeometry(.03, .25, 4), GLOW(0xfff6a0)); bolt.position.set(-.1 + i * .1, .45, -.2 + i * .2); bolt.rotation.z = (i - 1) * .4; body.add(bolt); }
+    outlineAll(body, 1.04); const by = 1.0; body.position.y = by;
+    return { g, flying: 1, pose(st, t) { let y = by + Math.sin(t * Math.PI * 2) * .05, rx = 0, rz = Math.sin(t * Math.PI * 2) * .04, tw = Math.sin(t * Math.PI * 2) * .3, fw = Math.sin(t * Math.PI * 2) * .3;
+      if (st === 'move') { rx = .1; tw *= 1.5; }
+      if (st === 'atk') { const k = Math.round(t * 2); rx = [-.3, .1, .25][k]; y = by + [.1, 0, -.1][k]; tw = [.5, -.4, -.5][k]; }
+      if (st === 'hurt') { rz = .3; }
+      if (st === 'die') { const k = Math.round(t); rz = [.6, 1.4][k]; y = by - [.3, .75][k]; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); tail.rotation.x = tw; fins[0].rotation.x = fw; fins[1].rotation.x = fw; } };
+  },
+  windlord(o) { // 지친 첫바람(7장 반전 보스): 두건 쓴 키 큰 이야기꾼 모습, 등 뒤 바람 고리, 발 대신 소용돌이
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const ROBE = o.col || 0x5a6a9a, ROBE2 = 0x3a4470;
+    const robe = new THREE.Mesh(new THREE.ConeGeometry(.3, .8, 14, 1, true), std(ROBE, { side: THREE.DoubleSide })); robe.position.y = .45; body.add(robe);
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(.17, 14, 10), std(ROBE2)); chest.scale.set(1, 1.2, .8); chest.position.y = .72; body.add(chest);
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(.16, 16, 12, 0, Math.PI * 2, 0, Math.PI * .7), std(ROBE, { side: THREE.DoubleSide })); hood.position.y = .96; body.add(hood);
+    const face = new THREE.Mesh(new THREE.SphereGeometry(.11, 12, 10), DARK); face.position.set(0, .93, .06); body.add(face);
+    glare(body, .14, .94, .15, .38, 0x9fe4ff, .2);
+    const ring = new THREE.Group(); ring.position.set(0, .85, -.15); body.add(ring); for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(.32 + i * .07, .012, 6, 40, Math.PI * 1.6), GLOW(i % 2 ? 0xdff4ff : 0x9fe4ff)); r.rotation.z = i * 1.2; ring.add(r); }
+    const sw = new THREE.Group(); body.add(sw); for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(.12 + i * .05, .015, 6, 24, Math.PI * 1.4), GLOW(0xbfe8ff)); r.rotation.x = Math.PI / 2; r.position.y = .02 + i * .05; r.rotation.z = i; sw.add(r); }
+    const arms = []; for (const s2 of [-1, 1]) { const a = new THREE.Group(); a.position.set(s2 * .17, .78, 0); body.add(a); const sl = new THREE.Mesh(new THREE.ConeGeometry(.07, .35, 8, 1, true), std(ROBE, { side: THREE.DoubleSide })); sl.position.y = -.15; a.add(sl); const hd = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 6), GLOW(0xdff4ff)); hd.position.y = -.33; a.add(hd); arms.push(a); }
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .9, 6), std(0x6a4a2a)); staff.position.set(.25, .5, .05); body.add(staff); const orb = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), GLOW(0xffffff)); orb.position.set(.25, .97, .05); body.add(orb);
+    outlineAll(body, 1.04); const by = .15; body.position.y = by;
+    return { g, flying: 1, pose(st, t) { let y = by + Math.sin(t * Math.PI * 2) * .03, rx = 0, rz = 0, la = 0, rr = t * Math.PI * 2;
+      if (st === 'move') { rx = .12; }
+      if (st === 'atk') { const k = Math.round(t * 2); la = [-2.2, -1, .3][k]; rx = [-.15, .05, .15][k]; }
+      if (st === 'hurt') { rx = -.25; la = .5; }
+      if (st === 'die') { const k = Math.round(t); rx = [-.4, -.9][k]; y = by - [.05, .12][k]; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); arms[0].rotation.x = la; arms[1].rotation.x = la * .7; ring.rotation.z = rr; sw.rotation.y = rr * 2; } };
+  },
   rustship(o) { // 녹슨 비행선(3장 보스): 기운 배 몸통 + 찢긴 기구 주머니 + 프로펠러, 닻 매달고 둥실
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const WOOD = 0x6a4a30, IRON = 0x4e4a4a, RUST = 0x9a5a2a, BAG = 0xb8a888;
     const hullG = new THREE.SphereGeometry(.42, 22, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2); hullG.scale(1, .55, 1.7); const hull = new THREE.Mesh(hullG, std(WOOD, { rough: .85 })); body.add(hull);

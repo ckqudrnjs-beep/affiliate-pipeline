@@ -69,6 +69,34 @@ export const MOBS = {
   crab: { model: 'crab', scale: 1.4, cell: [150, 120, 75, 104] },
   barnkeeper: { model: 'seed', keeper: 1, col: 0x3a4a4e, scale: 1.9, cell: [196, 212, 98, 192] },
   rustship: { model: 'rustship', scale: 1.75, cell: [320, 400, 160, 372] },
+  // 4장 거꾸로 숲
+  mossfluff: { model: 'fluff', col: 0x4a7a3a, tip: 0x2e4a24, feet: 0x1e2a14, eye: 0xd8ff5a, scale: 1.15, cell: [110, 110, 55, 96] },
+  thornpod: { model: 'seed', col: 0x3e5a2a, cell: [96, 104, 48, 92] },
+  mothbird: { model: 'bird', col: 0x6a5a7a, eye: 0xc8ff6a, cell: [104, 132, 52, 120] },
+  rootling: { model: 'golem', col: 0x6a5038, col2: 0x4a3626, eye: 0x9aff5a, deco: 'moss', scale: 1.3, cell: [140, 150, 70, 136] },
+  rootkeeper: { model: 'seed', keeper: 1, col: 0x2e4a24, scale: 1.9, cell: [196, 212, 98, 192] },
+  oldtree: { model: 'oldtree', scale: 2.2, cell: [300, 340, 150, 316] },
+  // 5장 번개 둥지
+  stormfluff: { model: 'fluff', col: 0x4a5070, tip: 0x2a2e48, feet: 0x14182a, eye: 0xfff27a, scale: 1.15, cell: [110, 110, 55, 96] },
+  sparkpod: { model: 'seed', col: 0x3a3a5a, cell: [96, 104, 48, 92] },
+  stormbird: { model: 'bird', col: 0x2a3050, eye: 0xfff27a, cell: [104, 132, 52, 120] },
+  stormling: { model: 'golem', col: 0x3a4060, col2: 0x262a40, eye: 0xfff27a, deco: 'crystal', dc: 0xfff27a, scale: 1.3, cell: [140, 160, 70, 146] },
+  stormkeeper: { model: 'seed', keeper: 1, col: 0x2a2e48, scale: 1.9, cell: [196, 212, 98, 192] },
+  whale: { model: 'whale', scale: 1.9, cell: [340, 380, 170, 352] },
+  // 6장 가라앉는 옛 도읍
+  dustfluff: { model: 'fluff', col: 0xb8a88a, tip: 0x8a7a5a, feet: 0x3a3020, eye: 0xff8a3a, scale: 1.15, cell: [110, 110, 55, 96] },
+  stonepod: { model: 'seed', col: 0x6a6458, cell: [96, 104, 48, 92] },
+  ashbird: { model: 'bird', col: 0x4a4440, eye: 0xff8a3a, cell: [104, 132, 52, 120] },
+  stoneguard: { model: 'golem', col: 0x8a8478, col2: 0x5a564e, eye: 0xff8a3a, deco: 'stone', scale: 1.35, cell: [146, 160, 73, 146] },
+  stonekeeper: { model: 'seed', keeper: 1, col: 0x5a564e, scale: 1.9, cell: [196, 212, 98, 192] },
+  gatekeeper: { model: 'golem', col: 0x7a7468, col2: 0x4a463e, eye: 0xffb03a, deco: 'stone', scale: 3.1, cell: [300, 340, 150, 320] },
+  // 7장 첫바람 언덕
+  galefluff: { model: 'fluff', col: 0xd8e4f0, tip: 0x9ab8d8, feet: 0x3a4a6a, eye: 0x5ab8ff, scale: 1.15, cell: [110, 110, 55, 96] },
+  galepod: { model: 'seed', col: 0x5a6a8a, cell: [96, 104, 48, 92] },
+  galebird: { model: 'bird', col: 0x8aa8d8, eye: 0x5ab8ff, cell: [104, 132, 52, 120] },
+  galeling: { model: 'golem', col: 0x9ab0d0, col2: 0x6a80a8, eye: 0xdff4ff, deco: 'crystal', dc: 0xdff4ff, scale: 1.3, cell: [140, 160, 70, 146] },
+  galekeeper: { model: 'seed', keeper: 1, col: 0x4a5a7a, scale: 1.9, cell: [196, 212, 98, 192] },
+  windlord: { model: 'windlord', scale: 2.4, cell: [260, 360, 130, 330] },
 };
 // 소품: KayKit Medieval Hexagon (CC0). s = 크기 배율, foot = 바닥 차지 반경(칸)
 export const PROPS = [
