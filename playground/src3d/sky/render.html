@@ -621,5 +621,65 @@ window.renderIcons = async function (keys) {
   }
   return { url: out.toDataURL('image/png'), meta };
 };
+
+// ---------- 아이템마다 다른 아이콘(2026-11-15 BK "아이템 이미지를 모두 디테일하게") ----------
+// 같은 틀 그림(ICON)에 장마다 재질·빛깔·장식, 같은 장 안 높은 단계는 보석·빛, 전해진 물건은 금빛 고리를 더한다.
+const ITH = {
+  1: { tint: null, metal: null, deco: null },
+  2: { tint: '#b8693a', ta: .38, metal: .45, rough: .55, deco: 'rivet', gem: 0xff8a3a },
+  3: { tint: '#d8b878', ta: .34, metal: .55, rough: .45, deco: 'rope', gem: 0x6ad0e0 },
+  4: { tint: '#6aa84a', ta: .42, metal: .05, rough: .8, deco: 'leaf', gem: 0xa8ff6a },
+  5: { tint: '#3a4ac8', ta: .55, metal: .55, rough: .3, deco: 'bolt', gem: 0xfff27a },
+  6: { tint: '#b8ae98', ta: .5, metal: .25, rough: .75, deco: 'rune', gem: 0xffb03a },
+  7: { tint: '#eef6ff', ta: .55, metal: .45, rough: .3, glow: 0x9fe4ff, gi: .28, deco: 'wing', gem: 0x9fe4ff } };
+function restyle(g, T, hi) { g.traverse(q => { if (!q.isMesh || q.userData.ol || !q.material || q.material.isMeshPhysicalMaterial) return; const o = q.material;
+  q.material = softRim(o, { color: o.color ? o.color.getHex() : 0xffffff, vc: o.vertexColors, tint: T.tint, ta: T.ta, metal: T.metal ?? o.metalness, rough: T.rough ?? o.roughness, glow: T.glow || (o.emissive && o.emissiveIntensity ? o.emissive.getHex() : null), gi: (T.gi || o.emissiveIntensity || 0) * (hi ? 1.6 : 1) }); }); }
+function decorate(g, T, ch, hi, uq) {
+  g.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(g), c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3()), R = Math.max(sz.x, sz.y), add = m => { g.add(m); return m; };
+  const top = new THREE.Vector3(c.x, bb.max.y - sz.y * .18, bb.max.z);
+  if (T.deco === 'rivet') for (let i = 0; i < 4; i++) { const m = add(new THREE.Mesh(new THREE.SphereGeometry(R * .035, 8, 6), std(0x5a3a2a, { metal: .7 }))); m.position.set(c.x - sz.x * .3 + i * sz.x * .2, c.y + sz.y * .05 * (i % 2), bb.max.z); }
+  if (T.deco === 'rope') for (let i = 0; i < 3; i++) { const m = add(new THREE.Mesh(new THREE.TorusGeometry(R * (.11 - i * .025), R * .018, 6, 24), std(0xc8a070, { rough: .9 }))); m.position.set(bb.min.x + sz.x * .18, bb.min.y + sz.y * .2, bb.max.z + i * .01); }
+  if (T.deco === 'leaf') for (let i = 0; i < 3; i++) { const geo = new THREE.SphereGeometry(R * .09, 10, 8); geo.scale(1, .35, .5); const m = add(new THREE.Mesh(geo, std([0x6ac04a, 0x4a9a34, 0x8ad86a][i], { rough: .8 }))); m.position.set(c.x + (i - 1) * R * .14, bb.min.y + sz.y * (.2 + i * .25), bb.max.z); m.rotation.z = (i - 1) * .8; }
+  if (T.deco === 'bolt') { const sh = new THREE.Shape(); [[0, 1], [.45, .1], [.1, .1], [.35, -1], [-.3, -.05], [.05, -.05], [-.2, 1]].forEach(([a, b2], i) => i ? sh.lineTo(a, b2) : sh.moveTo(a, b2)); const geo = new THREE.ExtrudeGeometry(sh, { depth: .08, bevelEnabled: false }); geo.scale(R * .16, R * .16, R * .16); const m = add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xfff27a }))); m.position.set(bb.max.x - sz.x * .16, bb.min.y + sz.y * .26, bb.max.z); m.rotation.z = -.25; }
+  if (T.deco === 'rune') { for (let i = 0; i < 2; i++) { const m = add(new THREE.Mesh(new THREE.TorusGeometry(R * (.11 - i * .05), R * .016, 6, 6), std(0xd8a84a, { metal: .8, rough: .3, glow: 0xffb03a, gi: .45 }))); m.position.set(bb.max.x - sz.x * .16, bb.min.y + sz.y * .2, bb.max.z); m.rotation.z = Math.PI / 6 + i * .5; } }
+  if (T.deco === 'wing') for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const geo = new THREE.SphereGeometry(R * .1, 10, 8); geo.scale(.4, 1.6, .1); const m = add(new THREE.Mesh(geo, std(0xffffff, { glow: 0xdff4ff, gi: .3 }))); m.position.set(c.x + s * (sz.x * .42 + i * R * .03), c.y + sz.y * .1 - i * R * .06, c.z - .02); m.rotation.z = -s * (.9 + i * .35); }
+  if (hi || uq) { const gm = add(new THREE.Mesh(new THREE.OctahedronGeometry(R * (uq ? .1 : .075)), std(uq ? 0xffd23a : T.gem || 0x6ab4ff, { metal: .3, rough: .15, glow: uq ? 0xffd23a : T.gem || 0x6ab4ff, gi: .55 }))); gm.position.copy(top); gm.scale.y = 1.25; }
+  if (uq) { const h = add(new THREE.Mesh(new THREE.TorusGeometry(R * .55, R * .022, 8, 48), GLOW(0xffe08a))); h.position.set(c.x, c.y, bb.min.z - .1); h.scale.y = .92;
+    for (let i = 0; i < 6; i++) { const sp = add(new THREE.Mesh(new THREE.OctahedronGeometry(R * .03), GLOW(0xfff4c0))); const a = i / 6 * Math.PI * 2 + .3; sp.position.set(c.x + Math.cos(a) * R * .55, c.y + Math.sin(a) * R * .5, bb.min.z - .05); } }
+}
+// 재료 아이콘(장마다 새로 생긴 재료). 기존 ICON 에 없는 것만.
+function GOODICON(k) { const g = new THREE.Group();
+  const stone = (col, glow) => { const m = new THREE.Mesh(new THREE.DodecahedronGeometry(.42, 0), std(col, { rough: .8, glow, gi: glow ? .5 : 0 })); m.scale.set(1.1, .8, .9); m.rotation.set(.4, .5, 0); return m; };
+  const crys = (col, n) => { const q = new THREE.Group(); for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.OctahedronGeometry(.18 + (i % 2) * .08), std(col, { metal: .2, rough: .15, glow: col, gi: .35 })); m.scale.y = 2.2; m.position.set((i - (n - 1) / 2) * .2, .1 + (i % 2) * .08, 0); m.rotation.z = (i - (n - 1) / 2) * .3; q.add(m); } return q; };
+  switch (k) {
+    case 'chain': for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.2, .06, 8, 20), std(0x7a7f88, { metal: .8, rough: .35 })); t.scale.y = 1.5; t.position.set(-.3 + i * .3, 0, 0); t.rotation.x = i % 2 ? Math.PI / 2 : 0; t.rotation.z = Math.PI / 2; g.add(t); } break;
+    case 'cog': { const m = std(0x9a5a2a, { metal: .7, rough: .5 }), t = new THREE.Mesh(new THREE.CylinderGeometry(.38, .38, .14, 24), m); t.rotation.x = Math.PI / 2 - .4; g.add(t); for (let i = 0; i < 10; i++) { const tb = new THREE.Mesh(new THREE.BoxGeometry(.12, .14, .14), m); const a = i / 10 * Math.PI * 2; tb.position.set(Math.cos(a) * .44, Math.sin(a) * .44 * Math.cos(.4), 0); tb.rotation.z = a; g.add(tb); } const h = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .16, 12), std(0x3a2a1a)); h.rotation.x = Math.PI / 2 - .4; g.add(h); break; }
+    case 'rope': for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.34 - i * .02, .06, 8, 28), std(0xc8a070, { rough: .95 })); t.rotation.x = 1.2; t.position.y = i * .08; g.add(t); } break;
+    case 'salt': g.add(crys(0xf0f6ff, 3)); break;
+    case 'shell': { const s2 = new THREE.Mesh(new THREE.SphereGeometry(.4, 20, 14, 0, Math.PI * 2, 0, Math.PI * .5), std(0xe8dcc8, { rough: .6 })); s2.material.side = THREE.DoubleSide; s2.rotation.x = -.5; g.add(s2); for (let i = 0; i < 5; i++) { const r2 = new THREE.Mesh(new THREE.TorusGeometry(.1 + i * .065, .015, 6, 24, Math.PI), std(0xb8a888)); r2.rotation.x = -.5 - Math.PI / 2; r2.position.y = .02; g.add(r2); } break; }
+    case 'vine': for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.3, .05, 8, 28, Math.PI * 1.7), std(0x4a8a34, { rough: .8 })); t.rotation.set(1.1, 0, i * 2); t.position.y = i * .1; g.add(t); const lf = new THREE.Mesh(new THREE.SphereGeometry(.1, 10, 8), std(0x7ad05a)); lf.scale.set(1, .35, .6); lf.position.set(Math.cos(i * 2) * .3, i * .1 + .05, Math.sin(i * 2) * .2); g.add(lf); } break;
+    case 'sap': { const d = lathe([[0, 0], [.22, .05], [.3, .25], [.2, .5], [0, .75]], std(0xe0a030, { rough: .15, glow: 0xffb030, gi: .3 })); g.add(d); break; }
+    case 'boltstone': { g.add(stone(0x4a4a6a)); const b = crys(0xfff27a, 2); b.position.y = .3; b.scale.setScalar(.7); g.add(b); break; }
+    case 'ozone': for (let i = 0; i < 7; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.06 + (i % 3) * .03, 8, 6), GLOW([0xfff27a, 0xffffff, 0xc8d0ff][i % 3])); m.position.set(Math.cos(i * 2.3) * .3, Math.sin(i * 1.7) * .3, 0); g.add(m); } { const p = new THREE.Mesh(new THREE.SphereGeometry(.3, 16, 12), std(0x8a90d0, { rough: .4, glow: 0xc8d0ff, gi: .3 })); p.scale.set(1, .6, 1); p.position.y = -.25; g.add(p); } break;
+    case 'cutstone': { const m = new THREE.Mesh(new THREE.BoxGeometry(.7, .4, .45), std(0xb8b0a0, { rough: .9 })); m.rotation.set(.3, .6, 0); g.add(m); const ln = new THREE.Mesh(new THREE.BoxGeometry(.72, .03, .47), std(0x8a8270)); ln.rotation.copy(m.rotation); g.add(ln); break; }
+    case 'oldiron': for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(.5 - i * .1, .08, .2), std(0x6a6058, { metal: .8, rough: .55, glow: i === 0 ? 0xffb03a : null, gi: .15 })); m.position.set(i * .06, i * .1, 0); m.rotation.set(.4, .3 + i * .4, .1); g.add(m); } break;
+    case 'windknot': { const k2 = new THREE.Mesh(new THREE.TorusKnotGeometry(.26, .07, 64, 10, 2, 3), std(0xdff4ff, { rough: .3, glow: 0x9fe4ff, gi: .45 })); g.add(k2); break; }
+    case 'skysilk': for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.28 + i * .03, .02, 6, 32), std(0xffffff, { glow: 0xdff4ff, gi: .5 })); t.rotation.set(1.1 + i * .15, i * .4, 0); g.add(t); } { const sp = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .5, 10), std(0x8a5a32)); sp.rotation.z = .8; g.add(sp); } break;
+    case 'chart': { const pp = new THREE.Mesh(new THREE.PlaneGeometry(.9, .65, 6, 4), std(0xf0e0b8, { rough: .9 })); pp.material.side = THREE.DoubleSide; const pa = pp.geometry.attributes.position; for (let i = 0; i < pa.count; i++) pa.setZ(i, Math.sin(pa.getX(i) * 6) * .03); pp.geometry.computeVertexNormals(); pp.rotation.x = -.3; g.add(pp);
+      for (const [x2, y2] of [[-.25, .1], [.05, -.1], [.25, .12]]) { const d = new THREE.Mesh(new THREE.CircleGeometry(.06, 12), std(0x6a9a4a)); d.position.set(x2, y2, .02); d.rotation.x = -.3; g.add(d); } const ln = new THREE.Mesh(new THREE.TorusGeometry(.2, .012, 4, 20, Math.PI), std(0xc84a3a)); ln.position.set(0, 0, .03); ln.rotation.x = -.3; g.add(ln);
+      for (const s of [-1, 1]) { const r2 = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .7, 10), std(0x8a5a32)); r2.rotation.x = Math.PI / 2 - .3; r2.rotation.z = Math.PI / 2; r2.position.set(s * .47, 0, 0); r2.rotation.set(0, 0, 0); r2.position.set(s * .47, 0, .02); g.add(r2); } break; }
+  }
+  return g; }
+window.renderItemIcons = async function (specs) {
+  const S = 128, cols = 16, out = document.createElement('canvas'); out.width = cols * S; out.height = Math.ceil(specs.length / cols) * S; const o = out.getContext('2d'), meta = {};
+  for (let i = 0; i < specs.length; i++) { const sp = specs[i];
+    const g = sp.good ? GOODICON(sp.good) : await ICON(sp.ic); const T = ITH[sp.ch] || ITH[1];
+    if (!sp.good) { if (T.tint) restyle(g, T, sp.hi); decorate(g, T, sp.ch, sp.hi, sp.u); }
+    const w = new THREE.Group(); w.add(g); w.rotation.x = .35; scene.add(w); outlineAll(g, 1.05); w.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(w), c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3()), R = Math.max(sz.x, sz.y) * .56;
+    const cam = new THREE.OrthographicCamera(-R, R, R, -R, -50, 50); cam.position.set(c.x, c.y, c.z + 10); cam.lookAt(c.x, c.y, c.z); cam.updateMatrixWorld(true);
+    r.setSize(S * SS, S * SS); r.render(scene, cam); o.drawImage(r.domElement, (i % cols) * S, Math.floor(i / cols) * S, S, S); meta[sp.k] = [(i % cols) * S, Math.floor(i / cols) * S, S, S]; scene.remove(w); }
+  return { url: out.toDataURL('image/png'), meta };
+};
 window.READY = 1;
 </script></body></html>

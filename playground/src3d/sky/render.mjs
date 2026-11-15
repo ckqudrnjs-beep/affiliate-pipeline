@@ -23,6 +23,7 @@ for (const it of items) {
   let url;
   if (it === 'props') { const r = await pg.evaluate(() => window.renderProps()); url = r.url; fs.writeFileSync(path.join(OUT, 'props.json'), JSON.stringify(r.meta)); }
   else if (it === 'icons') { const r = await pg.evaluate(k => window.renderIcons(k), ICONS); url = r.url; fs.writeFileSync(path.join(OUT, 'icons.json'), JSON.stringify(r.meta)); }
+  else if (it === 'items') { const r = await pg.evaluate(k => window.renderItemIcons(k), JSON.parse(fs.readFileSync(path.join(HERE, 'items.json'), 'utf8'))); url = r.url; fs.writeFileSync(path.join(OUT, 'items.json'), JSON.stringify(r.meta)); }
   else if (it === 'npc') { const r = await pg.evaluate(() => window.renderNPCs()); url = r.url; fs.writeFileSync(path.join(OUT, 'npc.json'), JSON.stringify(r.keys)); }
   else if (it === 'heads') url = await pg.evaluate(k => window.renderHeads(k), HEROK);
   else if (HEROK.includes(it)) url = await pg.evaluate(k => window.renderHero(k), it);
