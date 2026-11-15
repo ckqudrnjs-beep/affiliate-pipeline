@@ -1,0 +1,27 @@
+name: health
+
+# 매일 아침 상태 점검 (2026-11-15 BK, plan/SECURITY.md A). 예약 작업 실패·자동 글 공백·사이트 응답을 보고
+# 문제가 있을 때만 텔레그램으로 BK 개인 대화에 알린다. 월요일엔 "이상 없음" 한 줄도 보낸다.
+on:
+  schedule:
+    - cron: "30 1 * * *"   # 10:30 KST (GitHub 예약이 몇 시간 늦는 날이 있어 새벽 작업 뒤 여유를 둠)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - name: 점검
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: python3 scripts/health_check.py

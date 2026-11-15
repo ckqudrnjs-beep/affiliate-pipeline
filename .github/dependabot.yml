@@ -1,0 +1,13 @@
+# 의존성 업데이트 알림 (2026-11-15 BK, plan/SECURITY.md F).
+# GitHub 작업에 쓰는 외부 액션만 한 달에 한 번 묶어서 PR 로 올린다(손이 덜 가게).
+# 보안 취약점이 있는 패키지는 저장소 설정 'Dependabot alerts / security updates' 가 따로 알려 준다.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ["*"]

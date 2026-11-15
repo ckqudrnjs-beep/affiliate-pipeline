@@ -14,9 +14,11 @@
 // POST /api/admin {a:"devtoken"}                   → {t} 개발자 토큰(이 기기에서 테스터 전용 체험판을 열 수 있게)
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
+// Pages 변수 ACCESS_TEAM·ACCESS_AUD 가 있으면 Cloudflare Access 로그인 증표도 확인(lib/access.js, 2026-11-15)
 import { clean, normCode, devToken } from "./profile.js";
 import { ensureBoard } from "./board.js";
 import { ensureQ } from "./qprop.js";
+import { accessOn, accessOk } from "../../lib/access.js";
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
@@ -46,6 +48,8 @@ const log = (env, act, nick, detail) => env.DB.prepare("INSERT INTO admin_log (t
 export async function onRequestPost({ request, env }) {
   if (!env.ADMIN_KEY || String(env.ADMIN_KEY).length < 10) return json({ error: "off", msg: "관리자 비밀번호(ADMIN_KEY)가 아직 설정되지 않았어요." }, 503);
   if (!env.DB) return json({ error: "nodb" }, 500);
+  // Cloudflare Access 를 켰으면(ACCESS_TEAM·ACCESS_AUD) BK 메일 인증 없이는 비밀번호 확인까지 가지도 않는다
+  if (accessOn(env) && !(await accessOk(request, env))) return json({ error: "access", msg: "관리자 로그인(Cloudflare Access)이 필요해요. 페이지를 새로 고쳐 메일 인증을 해 주세요." }, 403);
   await ensure(env.DB);
   const ip = request.headers.get("cf-connecting-ip") || "0", day = kst();
   const th = (await sha(`${ip}|adm|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);

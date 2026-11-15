@@ -18,7 +18,7 @@
 | 게시 | Instagram Graph API(공식, 무료): 릴스 `media_type=REELS`, 카드뉴스 `CAROUSEL` → `media_publish` |
 | 기록 | `data/instagram/published.json` (하루 1개 상한, 같은 글 반복 금지) |
 
-워크플로: `.github/workflows/instagram.yml` · 코드: `src/pipeline/instagram.py` · 토큰 갱신: `refresh-tokens.yml`(2주마다).
+워크플로: `.github/workflows/instagram.yml` · 코드: `src/pipeline/instagram.py` · 토큰 갱신 작업 `refresh-tokens.yml` 은 2026-11-15 삭제(Meta 자동 게시 중단, docs/SECURITY.md).
 
 글 JSON 형식:
 ```json

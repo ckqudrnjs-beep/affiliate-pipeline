@@ -1,0 +1,11 @@
+# 보안 헤더 (2026-11-15 BK, plan/SECURITY.md E). 광고·게임이 깨지지 않게 CSP 는 넣지 않는다.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+/admin*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store

@@ -13,7 +13,7 @@ tests/            단위 테스트 (python -m unittest)
 drafts/           날짜별 초안 (PR로 승인)
 .github/workflows/daily-drafts.yml   매일 07:00 KST 초안 생성 → 자동 승인/검토 PR
 .github/workflows/publish.yml        하루 4번 스레드·인스타 발행 (PUBLISH_ENABLED=true일 때만)
-.github/workflows/refresh-tokens.yml 월 2회 Meta 토큰 갱신
+(refresh-tokens.yml 은 2026-11-15 삭제: Meta 자동 게시 중단)
 docs/             PLAN, AFFILIATES, CHANNELS, COMPLIANCE, DECISIONS
 ```
 
