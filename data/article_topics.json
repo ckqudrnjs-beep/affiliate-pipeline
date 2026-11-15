@@ -42,8 +42,9 @@
  },
  {
   "q": "삼촌의 일기: 알리 장바구니 정리하다 깨달은 것",
-  "done": false,
-  "format": "일기"
+  "done": true,
+  "format": "일기",
+  "slug": "ali-cart-cleanup-diary"
  },
  {
   "q": "해외직구 처음 하는 법 (알리 주문부터 통관까지)",
