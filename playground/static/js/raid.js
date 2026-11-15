@@ -656,7 +656,30 @@ function gearName(q) { return GEAR[q.s][q.t] + (q.p ? ' +' + q.p : ''); }
 let opts, ov, cv, x, panel, btnBar, lay, G = null, raf = 0, last = 0, acc = 0, paused = false, SPR = {}, SPK = 0, BG = {};
 let VW = 640; const VH = 360, FY0 = 204, FY1 = 344, BGH = 236, CS = .82; // CS: 캐릭터·일반 적 그림 크기(BK 11/15 조금 작게). BK 11/15: 바닥(싸우는 곳)을 위로 넓힘. 배경 그림은 원래 높이 BGH 그대로 위쪽만 잘림
 const keys = {}, touch = { on: false, stick: null, btn: {} };
-let inp = { mx: 0, my: 0, atk: 0, atkH: 0, jump: 0, dash: 0, sk: [0, 0, 0, 0], ult: 0 };
+let inp = { mx: 0, my: 0, atk: 0, atkH: 0, jump: 0, dash: 0, sk: [0, 0, 0, 0], ult: 0, rev: 0 };
+/* 협동 살리기(BK 11/15): 쓰러지면 그 자리에 누워 못 움직인다. 살아 있는 동료가 옆에서 '살리기'(E키·💚 버튼)를 누르면 1.5초 뒤 체력 40%로 일어난다 */
+const REV_T = 1.5, REV_R = 64;
+function revTarget() { const P = G.P; if (!NET.on || P.ghost || G.mode !== 'play') return null; let best = null, bd = REV_R; for (const p of NET.peers.values()) { if (!p.s || !p.gh) continue; const d = Math.hypot(p.s.x - P.x, (p.s.y - P.y) * 1.6); if (d < bd) { bd = d; best = p; } } return best; }
+function reviveStep(P, dt) {
+  if (inp.rev) { inp.rev = 0; const t = revTarget(); if (t && !P.rev && !P.act && P.z <= 0) { P.rev = { id: t.id, t: 0 }; sfx('pick'); } }
+  if (!P.rev) return false; const t = NET.peers.get(P.rev.id);
+  if (!t || !t.gh || !t.s || Math.hypot(t.s.x - P.x, (t.s.y - P.y) * 1.6) > REV_R + 10 || inp.mx || inp.my || P.hurt > 0 || P.down > 0) { P.rev = null; return false; }
+  P.vx = 0; P.f = Math.sign(t.s.x - P.x) || P.f; P.rev.t += dt; if (Math.random() < .3) burst(t.s.x + rnd(-14, 14), t.s.y, 10, '#6bff9a', 1, 60);
+  if (P.rev.t >= REV_T) { NET.send({ k: 'rev', to: t.id }); tx(t.s.x, t.s.y - 120, '살렸어요!', '#6bff9a', 15); sfx('lv'); burst(t.s.x, t.s.y, 40, '#6bff9a', 26, 200); ring(t.s.x, t.s.y, 90, '#6bff9a'); P.rev = null; }
+  return true;
+}
+function gotRevived() { const P = G.P; if (!P.ghost) return; P.ghost = 0; P.hp = Math.round(G.st.hp * .4); P.inv = 2.5; P.down = 0; P.hurt = 0; P.vz = 0; tx(P.x, P.y - 120, '동료가 살려 줬어요!', '#6bff9a', 15); sfx('lv'); burst(P.x, P.y, 40, '#6bff9a', 26, 200); ring(P.x, P.y, 90, '#6bff9a'); NET.cast({ k: 'p', ...NET.me() }); }
+function drawRevive(g) { // 쓰러진 동료 위 안내 + 살리는 중 원형 게이지
+  if (!NET.on) return; const P = G.P, me = revTarget();
+  for (const p of NET.peers.values()) { if (!p.s || !p.gh) continue; const x = p.s.x, y = p.s.y, pu = .5 + .5 * Math.sin(G.t * 6);
+    g.save(); g.strokeStyle = 'rgba(107,255,154,' + (.35 + .3 * pu) + ')'; g.lineWidth = 2; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(x, y, REV_R, REV_R / 1.6, 0, 0, TAU); g.stroke(); g.setLineDash([]);
+    const prog = P.rev && P.rev.id === p.id ? P.rev.t / REV_T : (p.rvBy || 0); g.font = '400 11px ' + FONT_K; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)';
+    const msg = prog > 0 ? '살리는 중…' : me === p ? (touch.on ? '💚 버튼을 눌러 살리기' : 'E 키로 살리기') : '도와줘요!'; g.strokeText(msg, x, y - 70); g.fillStyle = '#9dffb8'; g.fillText(msg, x, y - 70);
+    if (prog > 0) { g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 6; g.beginPath(); g.arc(x, y - 96, 14, 0, TAU); g.stroke(); g.strokeStyle = '#6bff9a'; g.lineWidth = 4; g.beginPath(); g.arc(x, y - 96, 14, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, prog)); g.stroke(); }
+    g.restore(); }
+  if (P.ghost) { let by = 0; for (const p of NET.peers.values()) if (p.rv && p.rv.to === NET.id) by = Math.max(by, p.rv.p / 100); g.save(); g.font = '400 12px ' + FONT_K; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; const m2 = by > 0 ? '동료가 살리는 중…' : '쓰러졌어요 · 동료가 살려 줄 때까지 기다려요'; g.strokeText(m2, P.x, P.y - 110); g.fillStyle = '#ffb3c6'; g.fillText(m2, P.x, P.y - 110);
+    if (by > 0) { g.strokeStyle = '#6bff9a'; g.lineWidth = 4; g.beginPath(); g.arc(P.x, P.y - 136, 14, -Math.PI / 2, -Math.PI / 2 + TAU * by); g.stroke(); } g.restore(); }
+}
 
 /* =================== 스프라이트 준비 =================== */
 function sprK() { return clamp(.5 * lay.s * lay.dpr, .5, 1.5); }
@@ -711,7 +734,7 @@ function nextRoom() {
   G.room++; G.si = G.ch * 5 + G.room; const R = ROOMS[G.room]; G.R = R; G.L = R.L; G.wave = -1; G.en = []; G.pr = []; G.ar = []; G.fx = []; G.tx = []; G.it = []; G.ep = []; G.haz = []; G.totems = [];
   G.camX = 0; G.gate = 0; G.roomT = 0; G.roomHits = 0; G.tipT = 5; G.hazT = 3; G.boss = null;
   const P = G.P; P.x = 90 - (NET.on ? NET.slot() * 22 : 0); P.y = 292 - (NET.on ? NET.slot() * 16 : 0); P.z = 0; P.vx = 0; P.vz = 0; P.f = 1; P.act = null; G.fade = 1;
-  if (P.ghost) { P.ghost = 0; P.hp = Math.round(G.st.hp * .5); P.inv = 2; P.down = 0; P.hurt = 0; tx(P.x, P.y - 120, '다시 일어났어요!', '#6bff9a', 14); }
+  P.rev = null; // 쓰러진 채로 다음 방에 같이 옮겨 가고, 동료가 살려 줘야 일어난다(BK 11/15)
   if (R.boss) talk(G.ch, 'b');
   if (NET.guest) return; // 협동 손님: 적은 방장이 보내 준다
   if (R.crates) for (let i = 0; i < 5; i++) G.en.push(mkEnemy('crate', 300 + i * 160, FY0 + 20 + (i * 37) % 80));
@@ -748,7 +771,8 @@ function startAct(def, kind, idx) {
 function playerUpdate(dt) {
   const P = G.P, c = G.c; P.inv -= dt; P.hurt -= dt; for (let i = 0; i < 4; i++) P.cd[i] -= dt; P.ultCd = (P.ultCd || 0) - dt;
   P.mp = Math.min(G.st.mp, P.mp + dt * 6);
-  if (P.ghost) { P.act = null; physics(P, dt, 1); return; }
+  if (P.ghost) { P.act = null; P.vx = 0; P.rev = null; if (P.z > 0 || P.vz) { P.vz -= 1100 * dt; P.z += P.vz * dt; if (P.z <= 0) { P.z = 0; P.vz = 0; } } inp.rev = 0; return; }
+  if (reviveStep(P, dt)) return;
   if (P.down > 0) { P.down -= dt; physics(P, dt, 1); return; }
   const mx = inp.mx, my = inp.my, A_ = P.act;
   // 입력: 기술(취소 가능), 필살기, 공격
@@ -929,7 +953,7 @@ function hurtP(dmg, dir, knock, src) {
   P.hp -= dmg; P.inv = knock ? 1.1 : .55; P.hurt = knock ? .5 : .3; P.act = null; P.vx = dir * (knock ? 260 : 120); G.combo = 0; G.roomHits += 0; G.hurtN = (G.hurtN || 0) + 1;
   if (knock) { P.vz = 260; P.air = 1; P.down = .75; }
   sfx('hurt'); G.shake = Math.max(G.shake, 6); G.stop = Math.max(G.stop, .06); G.redT = .35; tx(P.x, P.y - P.z - 110, '-' + dmg, '#ff5e7e', 16);
-  if (P.hp <= 0) { P.hp = 0; sfx('die'); if (NET.on) { P.ghost = 1; P.act = null; tx(P.x, P.y - 130, '쓰러짐… 동료가 방을 정리하면 다시 일어나요', '#ffb3c6', 12); NET.dead(); } else { G.mode = 'dying'; G.deadT = 1.4; G.slow = 1.2; } }
+  if (P.hp <= 0) { P.hp = 0; sfx('die'); if (NET.on) { P.ghost = 1; P.act = null; tx(P.x, P.y - 130, '쓰러짐… 동료가 옆에서 살려 줘야 일어나요', '#ffb3c6', 12); NET.dead(); } else { G.mode = 'dying'; G.deadT = 1.4; G.slow = 1.2; } }
   return true;
 }
 function enemyUpdate(e, dt) {
@@ -1428,6 +1452,7 @@ function draw() {
   L.sort((a, b) => a.y - b.y);
   for (const o of L) { g.fillStyle = 'rgba(0,0,0,.45)'; const sw = o === G.P || o.peer ? 26 : o.t === 'boss' ? 90 : isB(o) ? ET[o.t].w : o.w || 12; if (!o.item && !o.totem) { g.beginPath(); g.ellipse(o.x, o.y, sw * (1 - Math.min(.5, (o.z || 0) / 300)), 6, 0, 0, TAU); g.fill(); } }
   for (const o of L) { if (o === G.P) drawP(g); else if (o.peer) drawPeer(g, o.peer); else if (o === G.pet) drawPet(g, o); else if (o.item) drawItem(g, o.item); else if (o.totem) drawTotem(g, o.totem); else if (isB(o)) drawBoss(g, o); else drawE(g, o); }
+  drawRevive(g);
   for (const p of G.pr) drawProj(g, p);
   for (const q of G.ep) { const yy = q.y - q.z; if (q.k === 'zap') { glw(g, q.x, yy, 18, q.col || '#4fd8ff', .9); glw(g, q.x, yy, 6, '#ffffff', 1); g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#bff8ff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(q.x, yy); for (let i = 1; i < 4; i++) g.lineTo(q.x + rnd(-6, 6), yy - i * 7); g.stroke(); g.restore(); } if (q.k === 'bomb') { glw(g, q.x, yy, 22, q.col || '#ff8a3d', .9); g.fillStyle = '#3a2a2a'; g.beginPath(); g.arc(q.x, yy, 6, 0, TAU); g.fill(); glw(g, q.x + 3, yy - 6, 6 + Math.random() * 3, '#ffd08a', 1); } }
   drawFx(g);
@@ -1685,9 +1710,10 @@ function skBtn(g, bx, by, r, i, key) {
   g.restore();
 }
 function skillBar(g) { const y = VH - 30, x0 = VW / 2 - 100; ['A', 'S', 'D', 'F'].forEach((k, i) => skBtn(g, x0 + i * 42, y, 15, i, k)); skBtn(g, x0 + 4 * 42 + 14, y, 17, 4, 'V'); g.fillStyle = 'rgba(255,255,255,.4)'; g.font = '400 8px ' + FONT_K; g.textAlign = 'left'; g.fillText('←→↑↓ 이동 · Z 공격 · X 점프 · C 대시', 12, VH - 10); }
-function touchLayout() { const r = VW - 64, b = VH - 62, A = (deg, R) => [r + Math.cos(deg * Math.PI / 180) * R, b + Math.sin(deg * Math.PI / 180) * R]; return { atk: [r, b, 34], s0: [...A(175, 80), 20], s1: [...A(205, 80), 20], s2: [...A(235, 80), 20], s3: [...A(265, 80), 20], dash: [...A(296, 80), 18], jump: [r - 110, b + 42, 20], ult: [r - 166, b + 20, 21] }; }
+function touchLayout() { const r = VW - 64, b = VH - 62, A = (deg, R) => [r + Math.cos(deg * Math.PI / 180) * R, b + Math.sin(deg * Math.PI / 180) * R]; return { atk: [r, b, 34], s0: [...A(175, 80), 20], s1: [...A(205, 80), 20], s2: [...A(235, 80), 20], s3: [...A(265, 80), 20], dash: [...A(296, 80), 18], jump: [r - 110, b + 42, 20], ult: [r - 166, b + 20, 21], ...(G && revTarget() ? { rev: [r - 150, b - 92, 26] } : {}) }; }
 function drawTouch(g) {
   const T = touchLayout();
+  if (T.rev) { const [bx, by, r] = T.rev, pu = .5 + .5 * Math.sin(G.t * 6); g.save(); g.fillStyle = 'rgba(20,60,36,.85)'; g.beginPath(); g.arc(bx, by, r, 0, TAU); g.fill(); g.strokeStyle = 'rgba(107,255,154,' + (.6 + .4 * pu) + ')'; g.lineWidth = 2.5; g.stroke(); g.fillStyle = '#fff'; g.font = '400 10px ' + FONT_K; g.textAlign = 'center'; g.fillText('💚 살리기', bx, by + 4); g.restore(); }
   if (touch.stick) { const s = touch.stick; g.fillStyle = 'rgba(255,255,255,.07)'; g.beginPath(); g.arc(s.x0, s.y0, 46, 0, TAU); g.fill(); g.strokeStyle = 'rgba(125,249,255,.35)'; g.stroke(); g.fillStyle = 'rgba(125,249,255,.4)'; g.beginPath(); g.arc(s.x0 + s.dx * 34, s.y0 + s.dy * 34, 20, 0, TAU); g.fill(); }
   else { g.fillStyle = 'rgba(255,255,255,.05)'; g.beginPath(); g.arc(80, VH - 80, 46, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.font = '400 9px ' + FONT_K; g.textAlign = 'center'; g.fillText('여기를 대고 끌어 이동', 80, VH - 77); }
   const [ax, ay, ar] = T.atk; g.save(); g.beginPath(); g.arc(ax, ay, ar, 0, TAU); g.fillStyle = rg(g, ax, ay - 10, 4, ar, [[0, G.c.col + '99'], [1, 'rgba(20,10,40,.8)']]); g.fill(); g.strokeStyle = G.c.col; g.lineWidth = 2; g.stroke(); g.fillStyle = '#fff'; g.font = '400 13px ' + FONT_K; g.textAlign = 'center'; g.fillText('공격', ax, ay + 4); g.restore();
@@ -2037,18 +2063,20 @@ const NET = {
     if (k === 'gate' && NET.guest) { if (!G.gate) { G.gate = 1; roomClear(); } return; }
     if (k === 'room' && NET.guest) { while (G.room < o.n) nextRoom(); return; }
     if (k === 'pr') { if (pr) for (const q of o.a) G.pr.push(Object.assign(q, { vis: 1, hit: new Set(), t: 0, col: CL[pr.cls] && CL[pr.cls].col })); return; }
+    if (k === 'rev') { if (o.to === NET.id) gotRevived(); return; }
     if (k === 'over') { if (G.mode === 'play') finish(false); return; }
   },
   // 동료 위치: 받은 값으로 부드럽게 따라감
   peerState(pr, o) {
     if (!pr.s) { pr.s = { x: o.x, y: o.y, z: o.z }; buildPeer(pr.cls); }
-    Object.assign(pr, { tx: o.x, ty: o.y, tz: o.z, dd: o.d, fr: o.fr, hp: o.hp, mh: o.mh, gh: o.gh, inv: o.inv, cls: o.c || pr.cls, seen: G.t });
+    Object.assign(pr, { tx: o.x, ty: o.y, tz: o.z, dd: o.d, fr: o.fr, hp: o.hp, mh: o.mh, gh: o.gh, inv: o.inv, cls: o.c || pr.cls, seen: G.t, rv: o.rv || 0 });
+    for (const q of NET.peers.values()) q.rvBy = 0; for (const q of NET.peers.values()) if (q.rv && NET.peers.get(q.rv.to)) NET.peers.get(q.rv.to).rvBy = Math.max(NET.peers.get(q.rv.to).rvBy || 0, q.rv.p / 100);
   },
   tgtList() { const l = [G.P]; for (const p of NET.peers.values()) if (p.s && !p.gh && p.hp > 0 && G.t - (p.seen || 0) < 3) l.push(p.s); return l.filter(o => !(o === G.P && G.P.ghost)); },
   atGate() { for (const p of NET.peers.values()) if (p.s && p.s.x > G.L - 40) return true; return false; },
   dead() { NET.cast({ k: 'p', ...NET.me() }); NET.checkOver(); },
   checkOver() { if (!NET.host) return; const alive = !G.P.ghost || [...NET.peers.values()].some(p => p.s && !p.gh && p.hp > 0); if (!alive) { NET.cast({ k: 'over' }); finish(false); } },
-  me() { const P = G.P; return { x: Math.round(P.x), y: Math.round(P.y), z: Math.round(P.z), d: P.f, fr: P.ghost ? 'hurt' : pFrame(), hp: Math.round(P.hp), mh: G.st.hp, gh: P.ghost ? 1 : 0, inv: P.inv > 0 ? 1 : 0, c: G.cls }; },
+  me() { const P = G.P; return { x: Math.round(P.x), y: Math.round(P.y), z: Math.round(P.z), d: P.f, fr: P.ghost ? 'hurt' : pFrame(), hp: Math.round(P.hp), mh: G.st.hp, gh: P.ghost ? 1 : 0, inv: P.inv > 0 ? 1 : 0, c: G.cls, rv: P.rev ? { to: P.rev.id, p: Math.round(P.rev.t / REV_T * 100) } : 0 }; },
   tick(dt) {
     for (const p of NET.peers.values()) if (p.s) { const a = Math.min(1, dt * 14); p.s.x = lerp(p.s.x, p.tx, a); p.s.y = lerp(p.s.y, p.ty, a); p.s.z = lerp(p.s.z, p.tz, a); }
     NET.pT -= dt; if (NET.pT <= 0) { NET.pT = 1 / 12; NET.send({ k: 'p', ...NET.me() }); }
@@ -2183,7 +2211,7 @@ function layout() {
   touch.on = matchMedia('(pointer:coarse)').matches || DEBUG && /touch/.test(location.hash);
   if (G) buildSprites(G.cls);
 }
-const KEYMAP = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd', KeyZ: 'atk', KeyJ: 'atk', KeyX: 'jump', KeyK: 'jump', KeyC: 'dash', KeyL: 'dash', KeyA: 's0', KeyS: 's1', KeyD: 's2', KeyF: 's3', KeyV: 'ult', Space: 'ult' };
+const KEYMAP = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd', KeyZ: 'atk', KeyJ: 'atk', KeyX: 'jump', KeyK: 'jump', KeyC: 'dash', KeyL: 'dash', KeyA: 's0', KeyS: 's1', KeyD: 's2', KeyF: 's3', KeyV: 'ult', Space: 'ult', KeyE: 'rev' };
 function input() {
   addEventListener('keydown', e => {
     if (ov.hidden) return; if (e.code === 'KeyP' || e.code === 'Escape') { pause(!paused); return; }
@@ -2191,14 +2219,14 @@ function input() {
     if (G && G.talk && !NET.on && !paused) { if (!e.repeat) talkNext(); e.preventDefault(); return; }
     const k = KEYMAP[e.code]; if (!k) return; e.preventDefault(); if (e.repeat) return; keys[k] = 1;
     if (k === 'l' || k === 'r') { const now = performance.now(); if (keys['last' + k] && now - keys['last' + k] < 260) inp.dash = 1; keys['last' + k] = now; }
-    if (k === 'atk') inp.atk = 1; if (k === 'jump') inp.jump = 1; if (k === 'dash') inp.dash = 1; if (k[0] === 's' && k.length === 2) inp.sk[+k[1]] = 1; if (k === 'ult') inp.ult = 1;
+    if (k === 'atk') inp.atk = 1; if (k === 'jump') inp.jump = 1; if (k === 'dash') inp.dash = 1; if (k[0] === 's' && k.length === 2) inp.sk[+k[1]] = 1; if (k === 'ult') inp.ult = 1; if (k === 'rev') inp.rev = 1;
   });
   addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = 0; });
   const toL = e => { const r = cv.getBoundingClientRect(); return [((e.clientX - r.left) - lay.ox) / lay.s, ((e.clientY - r.top) - lay.oy) / lay.s]; };
   cv.addEventListener('pointerdown', e => {
     audioInit(); if (!G) return; if (paused && G.autoP) { pause(false); return; } if (G.talk && !NET.on && !paused) { talkNext(); return; }
     const [lx, ly] = toL(e); touch.on = touch.on || e.pointerType === 'touch'; if (!touch.on) return;
-    const T = touchLayout(); for (const k in T) { const [bx, by, r] = T[k]; if (Math.hypot(lx - bx, ly - by) < r + 8) { touch.btn[e.pointerId] = k; if (k === 'atk') { inp.atk = 1; inp.atkH = 1; } else if (k === 'jump') inp.jump = 1; else if (k === 'dash') inp.dash = 1; else if (k === 'ult') inp.ult = 1; else inp.sk[+k[1]] = 1; return; } }
+    const T = touchLayout(); for (const k in T) { const [bx, by, r] = T[k]; if (Math.hypot(lx - bx, ly - by) < r + 8) { touch.btn[e.pointerId] = k; if (k === 'atk') { inp.atk = 1; inp.atkH = 1; } else if (k === 'jump') inp.jump = 1; else if (k === 'dash') inp.dash = 1; else if (k === 'ult') inp.ult = 1; else if (k === 'rev') inp.rev = 1; else inp.sk[+k[1]] = 1; return; } }
     if (lx < VW * .55 && !touch.stick) touch.stick = { id: e.pointerId, x0: lx, y0: ly, dx: 0, dy: 0 };
   });
   cv.addEventListener('pointermove', e => { const s = touch.stick; if (!s || s.id !== e.pointerId) return; const [lx, ly] = toL(e); let dx = (lx - s.x0) / 34, dy = (ly - s.y0) / 34; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } if (l > 2.2) { s.x0 = lx - dx * 34; s.y0 = ly - dy * 34; } s.dx = dx; s.dy = dy; });
