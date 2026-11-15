@@ -47,20 +47,31 @@ async function ensure(db) {
 }
 const log = (env, act, nick, detail) => env.DB.prepare("INSERT INTO admin_log (t, act, nick, detail) VALUES (?, ?, ?, ?)").bind(now(), act, nick || "", JSON.stringify(detail || {}).slice(0, 500)).run();
 
+// 비밀번호 확인 + 틀린 횟수 제한(IP당 하루 5번). 통과하면 null, 아니면 돌려줄 응답. vstats.js(돈삼촌 관리자)도 같이 쓴다.
+export async function gate(request, env, hdr = {}) {
+  const j = (o, st) => { const r = json(o, st); for (const k in hdr) r.headers.set(k, hdr[k]); return r; };
+  if (!env.ADMIN_KEY || String(env.ADMIN_KEY).length < 10) return j({ error: "off", msg: "관리자 비밀번호(ADMIN_KEY)가 아직 설정되지 않았어요." }, 503);
+  if (!env.DB) return j({ error: "nodb" }, 500);
+  await ensure(env.DB);
+  const ip = request.headers.get("cf-connecting-ip") || "0", day = kst();
+  const th = (await sha(`${ip}|adm|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
+  const tr = await env.DB.prepare("SELECT n FROM ptries WHERE h = ?").bind(th).first();
+  if (tr && tr.n >= 5) return j({ error: "limit", msg: "비밀번호를 너무 많이 틀렸어요. 내일 다시 해 주세요." }, 429);
+  if (!same(request.headers.get("x-admin-key") || "", String(env.ADMIN_KEY))) {
+    await env.DB.prepare("INSERT INTO ptries (h, day, n) VALUES (?, ?, 1) ON CONFLICT(h) DO UPDATE SET n = n + 1").bind(th, day).run();
+    return j({ error: "key", msg: "관리자 비밀번호가 틀렸어요." }, 401);
+  }
+  return null;
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.ADMIN_KEY || String(env.ADMIN_KEY).length < 10) return json({ error: "off", msg: "관리자 비밀번호(ADMIN_KEY)가 아직 설정되지 않았어요." }, 503);
   if (!env.DB) return json({ error: "nodb" }, 500);
   // Cloudflare Access 를 켰으면(ACCESS_TEAM·ACCESS_AUD) BK 메일 인증 없이는 비밀번호 확인까지 가지도 않는다
   if (accessOn(env) && !(await accessOk(request, env))) return json({ error: "access", msg: "관리자 로그인(Cloudflare Access)이 필요해요. 페이지를 새로 고쳐 메일 인증을 해 주세요." }, 403);
-  await ensure(env.DB);
-  const ip = request.headers.get("cf-connecting-ip") || "0", day = kst();
-  const th = (await sha(`${ip}|adm|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
-  const tr = await env.DB.prepare("SELECT n FROM ptries WHERE h = ?").bind(th).first();
-  if (tr && tr.n >= 5) return json({ error: "limit", msg: "비밀번호를 너무 많이 틀렸어요. 내일 다시 해 주세요." }, 429);
-  if (!same(request.headers.get("x-admin-key") || "", String(env.ADMIN_KEY))) {
-    await env.DB.prepare("INSERT INTO ptries (h, day, n) VALUES (?, ?, 1) ON CONFLICT(h) DO UPDATE SET n = n + 1").bind(th, day).run();
-    return json({ error: "key", msg: "관리자 비밀번호가 틀렸어요." }, 401);
-  }
+  const g = await gate(request, env);
+  if (g) return g;
+  const day = kst();
   let b;
   try { b = await request.json(); } catch { return json({ error: "bad" }, 400); }
   const a = b && b.a;

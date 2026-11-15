@@ -600,9 +600,34 @@ def calc_page(c: dict, products: list[dict], arts: list[dict] | None = None, qs:
 
 # 순 방문자 수(2026-11-15 BK): 정적 사이트라 서버가 없어서 5락실 서버(/api/visit)에 브라우저당 하루 1번 빈 신호를 보낸다.
 # 서버는 Origin(don3chon.com)을 보고 돈삼촌 표에 따로 센다. IP는 날짜+비밀값 해시로 하루만, 다음 날 날짜별 숫자만 남김. 숫자는 5락실 /admin 에서 본다.
-VISIT_JS = r"""(function(){try{if(location.hostname!=='don3chon.com'||navigator.webdriver)return;
+VISIT_JS = r"""(function(){try{if(location.hostname!=='don3chon.com'||location.pathname.indexOf('/admin')===0||navigator.webdriver)return;
 var d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);if(localStorage.getItem('d3_vday')===d)return;
 setTimeout(function(){try{if(document.visibilityState==='hidden')return;localStorage.setItem('d3_vday',d);fetch('https://5raksil.com/api/visit',{method:'POST',mode:'no-cors',keepalive:true,credentials:'omit'}).catch(function(){})}catch(e){}},1500)}catch(e){}})();"""
+
+# 돈삼촌 관리자 페이지(/admin.html, 2026-11-15 BK): 링크 없음·noindex·사이트맵 제외. 비밀번호는 5락실 관리자와 같은 ADMIN_KEY(이 탭에만 잠깐 보관).
+# 숫자는 5락실 서버 https://5raksil.com/api/vstats 에서 읽는다(읽기 전용, 틀린 비밀번호 IP당 하루 5번).
+ADMIN_BODY = """<h1>관리자</h1><p class="small">돈 줍는 삼촌 순 방문자 수. 같은 IP는 하루 1명(봇 제외, 원본 IP 저장 안 함). 7일·30일은 날마다 센 순 방문자를 더한 값이에요(이틀 온 사람은 2명).</p>
+<form id="af" class="adm"><label>관리자 비밀번호 <input type="password" id="ak" autocomplete="off"></label> <button type="submit">보기</button> <button type="button" id="aout">이 탭에서 지우기</button></form>
+<p id="am" class="small"></p><div id="avs" class="avs"></div><div id="avd" class="avd" aria-hidden="true"></div><ol id="avl" class="avl"></ol>"""
+ADMIN_CSS = """.adm{margin:14px 0}.adm input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;max-width:100%}.adm button{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer}.adm button[type=button]{background:none;color:var(--green)}
+.avs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.avs span{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px}.avs b{font-size:20px;color:var(--green)}
+.avd{display:flex;align-items:flex-end;gap:2px;height:120px;margin:12px 0;border-bottom:1px solid var(--line)}.avd i{flex:1;background:var(--green);opacity:.75;border-radius:3px 3px 0 0;min-height:2px}.avd i:last-child{opacity:1;background:#c9a227}
+.avl{columns:2;font-size:14px;color:var(--muted);padding-left:20px}"""
+ADMIN_JS = r"""(function(){var $=function(i){return document.getElementById(i)},ak=$('ak');try{ak.value=sessionStorage.getItem('d3_admk')||''}catch(e){}
+var f=function(n){return Number(n).toLocaleString('ko-KR')};
+async function load(){if(!ak.value)return;$('am').textContent='불러오는 중…';var r,j={};
+ try{r=await fetch('https://5raksil.com/api/vstats',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:'{}',credentials:'omit'});j=await r.json()}catch(e){$('am').textContent='불러오지 못했어요. 잠시 뒤 다시 해 주세요.';return}
+ if(!r.ok){$('am').textContent=j.msg||('오류 '+r.status);return}
+ try{sessionStorage.setItem('d3_admk',ak.value)}catch(e){}
+ $('am').textContent='집계 시작 '+j.since+' · 지금 기준(한국 시간)';
+ $('avs').innerHTML='<span>오늘 <b>'+f(j.today)+'</b>명</span><span>어제 <b>'+f(j.yday)+'</b>명</span><span>최근 7일 <b>'+f(j.d7)+'</b>명 <small>(하루 평균 '+f(Math.round(j.d7/7))+')</small></span><span>최근 30일 <b>'+f(j.d30)+'</b>명</span>';
+ var m={};j.days.forEach(function(x){m[x.day]=x.n});var ds=[];for(var i=29;i>=0;i--){var d=new Date(Date.now()+9*3600e3-i*864e5).toISOString().slice(0,10);ds.push([d,m[d]||0])}
+ var mx=Math.max.apply(null,[1].concat(ds.map(function(x){return x[1]})));
+ $('avd').innerHTML=ds.map(function(x){return '<i style="height:'+Math.round(x[1]/mx*100)+'%" title="'+x[0].slice(5)+' '+x[1]+'명"></i>'}).join('');
+ $('avl').innerHTML=ds.slice().reverse().map(function(x){return '<li>'+x[0].slice(5).replace('-','/')+' '+f(x[1])+'명</li>'}).join('')}
+$('af').onsubmit=function(e){e.preventDefault();load()};
+$('aout').onclick=function(){ak.value='';try{sessionStorage.removeItem('d3_admk')}catch(e){}$('avs').innerHTML=$('avd').innerHTML=$('avl').innerHTML='';$('am').textContent='이 탭에서 비밀번호를 지웠어요.'};
+load()})();"""
 
 PRIVACY = """<h1>개인정보처리방침</h1>
 <p class="small">시행일: 2026년 11월 15일</p>
@@ -698,6 +723,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
     (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
         PR.page_body(products, HIST) + tg_box(), path="prices.html"), encoding="utf-8")
+    (o / "admin.html").write_text(page(f"관리자 | {BRAND}", "관리자 전용", f"<style>{ADMIN_CSS}</style>{ADMIN_BODY}<script>{ADMIN_JS}</script>", path="admin.html", ads=False, noindex=True), encoding="utf-8")
     (o / "about.html").write_text(page(f"소개 | {BRAND}", "돈 줍는 삼촌은 사기 전에 한 번 계산해 보는 살림 사이트입니다. 운영 원칙과 광고·제휴 안내.", ABOUT, path="about.html"), encoding="utf-8")
     (o / "terms.html").write_text(page(f"이용약관 | {BRAND}", "돈 줍는 삼촌 이용약관: 서비스 범위, 정보의 한계, 광고·제휴 링크, 금지 행위, 저작권.", TERMS, path="terms.html"), encoding="utf-8")
     (o / "contact.html").write_text(page(f"문의 | {BRAND}", "돈 줍는 삼촌에 글 오류, 계산기 문제, 제휴 문의를 보내는 방법.", contact_body(), path="contact.html"), encoding="utf-8")

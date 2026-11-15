@@ -13,3 +13,7 @@ https://:project.pages.dev/*
 
 https://:version.:project.pages.dev/*
   X-Robots-Tag: noindex
+
+# 관리자 페이지(2026-11-15): 검색 제외
+/admin*
+  X-Robots-Tag: noindex

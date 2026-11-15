@@ -13,7 +13,7 @@ const busy = () => new Response(JSON.stringify({ error: "busy", msg: BUSY }), {
 
 export async function onRequest({ request, env, next, waitUntil }) {
   const u = new URL(request.url), get = request.method === "GET";
-  if (!get && String(env.API_PAUSE || "") === "1" && u.pathname !== "/api/admin") return busy();
+  if (!get && String(env.API_PAUSE || "") === "1" && u.pathname !== "/api/admin" && u.pathname !== "/api/vstats") return busy();
   const ttl = get && TTL[u.pathname] ? TTL[u.pathname](u) : 0;
   const cache = ttl && typeof caches !== "undefined" ? caches.default : null;
   let key = null;
