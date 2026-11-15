@@ -125,9 +125,9 @@ function placeProps(Wd, PM) {
     add('ruin', Hh.cx + 4.5, Hh.cy - 3.5); add('lumber', Hh.cx - 5, Hh.cy - 2.5); add('crateB', Hh.cx + 4.5, Hh.cy + 2.5); add('barrel', Hh.cx - 4.5, Hh.cy + 3);
     for (const k of [Wd.town, ...Wd.fi, ...Wd.ci]) { const s = Wd.islands[k], n = k === Wd.town ? 3 : 4; for (let i = 0; i < n; i++) { const a = R() * TAU, d = s.r * (k === Wd.town ? .78 : .45 + R() * .3); add(['crateB', 'barrel', 'crateS', 'sack', 'lumber'][Math.floor(R() * 5)], s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d); } } }
   else if (Wd.ch >= 4) { const C = CHX[Wd.ch], C0 = Wd.islands[Wd.ci[0]]; Wd.wps[0].n = C.town; Wd.wps.push({ n: C.ci[0], x: C0.cx - 1.5, y: C0.cy + 2, on: 0 }, { n: C.hill, x: Hh.cx - 3, y: Hh.cy + 3.5, on: 0 });
-    const HP = { 4: ['treesBL', 'treesL', 'stump', 'log'], 5: ['rock4', 'rock3', 'windmill', 'rock5'], 6: ['ruin', 'ruin', 'stone', 'rock4'], 7: ['rock2', 'flag', 'ruin', 'rock3'] }[Wd.ch];
+    const PC = C.src || Wd.ch, HP = { 4: ['treesBL', 'treesL', 'stump', 'log'], 5: ['rock4', 'rock3', 'windmill', 'rock5'], 6: ['ruin', 'ruin', 'stone', 'rock4'], 7: ['rock2', 'flag', 'ruin', 'rock3'] }[PC];
     [[4.5, -3.5], [-5, -2.5], [4.5, 2.5], [-4.5, 3]].forEach(([ox, oy], i) => add(HP[i], Hh.cx + ox, Hh.cy + oy));
-    const XP = { 4: ['treesBM', 'treesBS', 'stump', 'log'], 5: ['rock1', 'rock3', 'rock5', 'windmill'], 6: ['ruin', 'stone', 'rock4', 'crateO'], 7: ['rock2', 'flag', 'stone', 'rock1'] }[Wd.ch];
+    const XP = { 4: ['treesBM', 'treesBS', 'stump', 'log'], 5: ['rock1', 'rock3', 'rock5', 'windmill'], 6: ['ruin', 'stone', 'rock4', 'crateO'], 7: ['rock2', 'flag', 'stone', 'rock1'] }[PC];
     for (const k of [...Wd.fi, ...Wd.ci]) { const s = Wd.islands[k]; for (let i = 0; i < 2; i++) { const a = R() * TAU, d = s.r * (.45 + R() * .25); add(XP[Math.floor(R() * XP.length)], s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d); } } }
   else if (Wd.ch === 2) { Wd.wps[0].n = '쇠바퀴 마을'; const C0 = Wd.islands[Wd.ci[0]]; Wd.wps.push({ n: '사슬 나루', x: C0.cx - 1.5, y: C0.cy + 2, on: 0 }, { n: '큰 풍차섬', x: Hh.cx - 3, y: Hh.cy + 3.5, on: 0 });
     add('windmill', Hh.cx + 4, Hh.cy - 4); add('windmill', Hh.cx - 5, Hh.cy - 2.5); add('ruin', Hh.cx + 4.5, Hh.cy + 2.5); add('crateB', Hh.cx - 4.5, Hh.cy + 3);

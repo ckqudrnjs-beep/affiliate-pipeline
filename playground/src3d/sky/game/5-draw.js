@@ -220,9 +220,9 @@ function islandTop(Wd, s, g, T) {
       else { const r = 7 + hsh(xx, yy + 4) * 10; x.fillStyle = 'rgba(245,248,250,.5)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } } }
   if (Wd.ch >= 4 && s.kind !== 'rock' && CHX[Wd.ch]) { const C = CHX[Wd.ch], boss = s.kind === C.hkind; // 4~7장 섬 빛깔 + 장마다 다른 얼룩(이끼·물웅덩이·돌판·흰 풀)
     x.fillStyle = C.tint[0]; if (boss) { x.globalAlpha = 1.3; } x.fill(g.top); x.globalAlpha = 1;
-    for (const [xx, yy, t, own] of g.cells) { if (!own) continue; const h2 = hsh(xx + 7, yy + 3); if (h2 > (Wd.ch === 6 ? .14 : .08)) continue; const [sx, sy] = iso(xx, yy), r = 7 + hsh(xx, yy + 6) * 12;
-      x.fillStyle = Wd.ch === 6 && h2 < .08 ? 'rgba(120,110,95,.5)' : C.tint[1].replace(/[\d.]+\)$/, '.28)');
-      if (Wd.ch === 6 && h2 < .08) { x.beginPath(); x.moveTo(sx - 22, sy + TH / 2); x.lineTo(sx, sy + TH / 2 - 11); x.lineTo(sx + 22, sy + TH / 2); x.lineTo(sx, sy + TH / 2 + 11); x.closePath(); x.fill(); }
+    for (const [xx, yy, t, own] of g.cells) { if (!own) continue; const h2 = hsh(xx + 7, yy + 3); if (h2 > ((C.src || Wd.ch) === 6 ? .14 : .08)) continue; const [sx, sy] = iso(xx, yy), r = 7 + hsh(xx, yy + 6) * 12;
+      x.fillStyle = (C.src || Wd.ch) === 6 && h2 < .08 ? 'rgba(120,110,95,.5)' : C.tint[1].replace(/[\d.]+\)$/, '.28)');
+      if ((C.src || Wd.ch) === 6 && h2 < .08) { x.beginPath(); x.moveTo(sx - 22, sy + TH / 2); x.lineTo(sx, sy + TH / 2 - 11); x.lineTo(sx + 22, sy + TH / 2); x.lineTo(sx, sy + TH / 2 + 11); x.closePath(); x.fill(); }
       else { x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } } }
   if (s.kind === 'mill' || s.kind === 'gear' || s.kind === 'town' && Wd.ch === 2) { // 녹슨 풍차 군도: 늦가을 들판 + 녹 얼룩
     x.fillStyle = s.kind === 'gear' ? 'rgba(120,70,40,.32)' : 'rgba(200,135,40,.3)'; x.fill(g.top);
