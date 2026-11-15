@@ -111,7 +111,7 @@ function placeProps(Wd, PM) {
   // 마을: 집·풍차·대장간·시장·우물 (광장 둘레)
   const ring = [['windmill', -6, -5], ['home1', -6.5, 2.5], ['home2', -2.5, 6.5], ['smithy', 5.5, -5.5], ['market', 6.2, 3], ['tavern', -1, -7.5]];
   for (const [k, dx, dy] of ring) add(k, T.cx + dx, T.cy + dy);
-  add('well', T.cx + 0.2, T.cy - 0.2);
+  add('well', T.cx + 0.2, T.cy - 0.2); Wd.wellAt = [T.cx + 1.5, T.cy - 1.5]; Wd.stashAt = [T.cx - 4.6, T.cy + 3.6];
   for (const [k, dx, dy] of [['barrel', 4, -3], ['crateB', 4.6, -2.2], ['sack', 3.6, 4.6], ['barrow', -4, 4.4], ['lumber', -4.4, -2.6], ['flag', 2.6, 2.4], ['crateS', 5.4, 1.3], ['bucket', 1.6, -1.6]]) add(k, T.cx + dx, T.cy + dy);
   Wd.npcAt = { chief: [T.cx - 1.6, T.cy + 1.8], smith: [T.cx + 3.6, T.cy - 3.6], merchant: [T.cx + 3.8, T.cy + 2.2], sage: [T.cx - 3.4, T.cy - 1.2] };
   Wd.wps = [{ n: '민들레 마을', x: T.cx + 1.6, y: T.cy + .2, on: 1 }];

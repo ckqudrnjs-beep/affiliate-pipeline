@@ -40,3 +40,12 @@ function errandTrack() { const E = G.P.errand; if (!E) return null; const left =
 // 대장간 분해: 안 쓰는 장비를 숫돌·아교로 바꿔요(무기 → 숫돌, 나머지 → 아교)
 function salvageOf(it) { const b = BASE[it.b]; if (!b || it.g) return null; const n = [1, 1, 2, 3, 3][it.r] + (b.lv >= 18 ? 1 : 0) + (it.en >= 4 ? 1 : 0); return [b.s === 'weapon' ? 'hone' : 'glue', n]; }
 function salvage(i) { const P = G.P, it = P.inv[i], s = salvageOf(it); if (!s) return; P.inv.splice(i, 1); addInv(goods(s[0], s[1])); sfx('ench'); toast(itemName(it) + ' → ' + GOODS[s[0]].n + ' ' + s[1] + '개'); save(); }
+// 마을 건물 쓰임: 내 집 = 창고(60칸) · 우물 = 마시면 생명·바람 가득 + 2분 동안 맑은 물(생명 천천히 회복)
+const STASH_N = 60;
+function stashMove(c) { const P = G.P; P.stash = P.stash || [];
+  if (c[0] === 'i') { const it = P.inv[+c.slice(1)]; if (!it) return; { const k = stackKey(it), h = it.g ? P.stash.find(x2 => x2.g === it.g) : k && P.stash.find(x2 => !x2.g && stackKey(x2) === k); if (h) { h.n = (h.n || 1) + (it.n || 1); P.inv.splice(P.inv.indexOf(it), 1); sfx('pick'); return; } } if (P.stash.length >= STASH_N) { toast('창고가 가득 찼어요'); return; } P.inv.splice(P.inv.indexOf(it), 1); P.stash.push(it); sfx('pick'); }
+  else if (c[0] === 's') { const it = P.stash[+c.slice(1)]; if (!it) return; if (!addInv(it)) { toast('가방이 꽉 차거나 너무 무거워요'); return; } P.stash.splice(P.stash.indexOf(it), 1); sfx('pick'); } }
+function stashHtml(X) { const P = G.P, S = P.stash || [];
+  return `<div class="sk-bx">${X}<h3>내 집 창고 <small style="font-size:12px;color:#8a7458">누르면 옮겨요 · 장마다 같은 창고</small></h3><div class="sk-two"><div><h4>가방 ${P.inv.length}칸 · 무게 ${bagWeight(P)}/${bagCap(P)}</h4><div class="sk-grid">${[...Array(Math.max(INV_N, P.inv.length))].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div><h4>창고 ${S.length}/${STASH_N}</h4><div class="sk-grid">${[...Array(STASH_N)].map((_, i) => cell(S[i], 's' + i)).join('')}</div></div></div>${TOAST}</div>`; }
+function drinkWell() { const P = G.P; P.hp = P.mhp; P.wind = P.mwind; P.buf.well = 120; G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .6, c: '#9fe4ff' }, { k: 'ring', x: P.x, y: P.y, r: 1.4, t: 0, life: .4, c: '#bfe8ff' }); sfx('lvl'); say('시원한 우물물! 생명·바람이 가득 차고, 2분 동안 생명이 천천히 차올라요', '#9fe4ff', 1); }
+function townNear(P, Wd) { if (Wd.stashAt && hyp(P.x - Wd.stashAt[0], P.y - Wd.stashAt[1]) < 1.6) return { k: 'stash', label: '내 집 창고 열기' }; if (Wd.wellAt && hyp(P.x - Wd.wellAt[0], P.y - Wd.wellAt[1]) < 1.5) return { k: 'well', label: '우물물 마시기' }; return null; }
