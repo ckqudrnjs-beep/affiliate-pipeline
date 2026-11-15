@@ -590,10 +590,32 @@ function sfx(k, p) {
   else if (k === 'roar') { tone('sawtooth', 90, t, .4, 1.2, 50); tone('sawtooth', 96, t, .3, 1.2, 46); noise(t, .4, 1, 'lowpass', 800, 200, 1); }
   else if (k === 'pet') [1047, 1568].forEach((f, i) => tone('sine', f, t + i * .04, .08, .1));
 }
+function bossMusic(M, rage) {
+  const sp = 60 / M.bpm / 2, now = A.ctx.currentTime; if (A.next < now) A.next = now + .05;
+  while (A.next < now + .2) {
+    const s = A.step++, ch = M.prg[(s >> 4) % 4], t = A.next, mf = n => 440 * Math.pow(2, (n - 69) / 12);
+    if (s % 2 === 0) tone('sawtooth', mf(ch[0] - 12 + (s % 8 === 6 ? 12 : 0)), t, .38, sp * 1.7, 0, A.mus);
+    if (s % 4 === 0 || (M.kick === 2 && s % 8 === 3)) tone('sine', 62, t, .75, .18, 38, A.mus);
+    if (s % 8 === 4) noise(t, .32, .14, 'bandpass', 1800, 500, 1);
+    if (s % 2 === 1 || rage) noise(t, rage ? .09 : .06, .03, 'highpass', 8000, 0, 1);
+    if (s % 2 === 0) { const n = M.lead[(s >> 1) % 8]; tone(M.wv, mf(ch[1] + 12 + n + (rage && (s >> 4) % 2 ? 12 : 0)), t, .07, sp * 1.6, 0, A.mus); }
+    if (s % 16 === 0) tone('triangle', mf(ch[2] + 12), t, .1, sp * 14, 0, A.mus); // 긴 화음 패드
+    A.next += sp;
+  }
+}
 // 배경음: 어두운 신스 베이스 + 하이햇. 보스 때 빨라짐
 const PRG = [[38, 50, 53, 57], [34, 46, 50, 53], [36, 48, 52, 55], [33, 45, 48, 52]];
+// 보스마다 다른 곡(BK 11/15): 템포·코드·멜로디·음색. 체력 절반(분노) 뒤엔 하이햇·옥타브가 더해져 몰아친다
+const BMUS = {
+  boss: { bpm: 150, prg: [[38, 50, 53, 57], [38, 50, 53, 56], [36, 48, 51, 55], [37, 49, 52, 56]], lead: [0, 3, 7, 10, 7, 3, 12, 10], wv: 'square', kick: 1 },   // 기계 행진: 무겁고 일정한 박
+  spider: { bpm: 164, prg: [[40, 52, 55, 59], [41, 53, 56, 60], [43, 55, 58, 62], [41, 53, 56, 60]], lead: [0, 1, 5, 7, 8, 7, 5, 1], wv: 'sawtooth', kick: 2 }, // 네온 거리: 빠르고 날카로운 반음
+  hydra: { bpm: 132, prg: [[33, 45, 48, 52], [29, 41, 45, 48], [31, 43, 46, 50], [28, 40, 44, 47]], lead: [0, 7, 3, 10, 12, 10, 7, 3], wv: 'triangle', kick: 1 }, // 심해 서버: 느리고 깊게 울림
+  echo: { bpm: 172, prg: [[35, 47, 50, 54], [31, 43, 47, 50], [33, 45, 48, 52], [30, 42, 46, 49]], lead: [12, 10, 7, 5, 7, 10, 14, 12], wv: 'sawtooth', kick: 2 }, // 균열 군주: 가장 빠른 결전 곡
+};
 function music(boss) {
-  if (!A.ctx || A.muted) return; const bpm = boss ? 150 : 118, sp = 60 / bpm / 2, now = A.ctx.currentTime; if (A.next < now) A.next = now + .05;
+  if (!A.ctx || A.muted) return;
+  const BM = boss && G && G.boss && BMUS[G.boss.t]; if (BM) { bossMusic(BM, !!G.boss.ph2); return; }
+  const bpm = boss ? 150 : 118, sp = 60 / bpm / 2, now = A.ctx.currentTime; if (A.next < now) A.next = now + .05;
   while (A.next < now + .2) {
     const s = A.step++, ch = PRG[(s >> 4) % 4], t = A.next, tr = G ? [0, 3, -2, 5][G.ch | 0] : 0, mf = n => 440 * Math.pow(2, (n + tr - 69) / 12);
     if (s % 2 === 0) tone('sawtooth', mf(ch[0] - 12 + (s % 8 === 6 ? 12 : 0)), t, .35, sp * 1.6, 0, A.mus);
@@ -693,7 +715,7 @@ function nextRoom() {
   if (R.boss) talk(G.ch, 'b');
   if (NET.guest) return; // 협동 손님: 적은 방장이 보내 준다
   if (R.crates) for (let i = 0; i < 5; i++) G.en.push(mkEnemy('crate', 300 + i * 160, FY0 + 20 + (i * 37) % 80));
-  if (R.boss) { const b = mkEnemy(R.boss === 1 ? 'boss' : R.boss, 760, 296); G.boss = b; G.en.push(b); b.st = 'enter'; b.tm = 2.2; sfx('roar'); G.shake = 8; }
+  if (R.boss) { const b = mkEnemy(R.boss === 1 ? 'boss' : R.boss, 760, 296); G.boss = b; G.en.push(b); b.st = 'enter'; b.tm = 2.2; sfx('roar'); G.shake = 8; G.bossCut = { t: 0 }; }
   else spawnWave();
 }
 function mkEnemy(t, ex, ey) {
@@ -1352,7 +1374,7 @@ const THEME = [
   { wall: ['#220c18', '#0e050a'], stripe: '#ff2244', lamp: '#ff6a8a', floor: ['#1e0d16', '#08040a'], sign: '균열 심부', glow: 'rgba(255,40,80,.25)' },
 ];
 function buildBg(i) {
-  const T = THEME[i], k = lay.s * lay.dpr, W = 640, Hh = FY0, c = mkc(W * k, Hh * k), g = c.getContext('2d'); g.scale(k, k);
+  const T = THEME[i], k = lay.s * lay.dpr, W = 640, Hh = BGH, c = mkc(W * k, Hh * k), g = c.getContext('2d'); g.scale(k, k);
   g.fillStyle = lg(g, 0, 0, 0, Hh, [[0, '#05060f'], [.4, T.wall[0]], [1, T.wall[1]]]); g.fillRect(0, 0, W, Hh);
   g.fillStyle = '#07081a'; g.fillRect(0, 0, W, 54); for (let b = 0; b < 4; b++) { g.fillStyle = '#0c0d22'; g.fillRect(20 + b * 160, 0, 18, 60); }
   for (let l = 0; l < 3; l++) { const lx = 40 + l * 220; g.save(); g.shadowColor = T.lamp; g.shadowBlur = 16; g.fillStyle = l === 1 && i === 1 ? '#3a2a30' : T.lamp; g.fillRect(lx, 56, 80, 4); g.restore();
@@ -1367,6 +1389,7 @@ function buildBg(i) {
   // 표지판
   g.save(); g.fillStyle = 'rgba(8,20,24,.9)'; g.beginPath(); g.roundRect(250, 86, 150, 34, 6); g.fill(); g.shadowColor = T.stripe; g.shadowBlur = 10; g.strokeStyle = T.stripe; g.lineWidth = 1.5; g.stroke(); g.restore();
   g.fillStyle = '#eafffb'; g.font = '700 15px ' + FONT_K; g.textAlign = 'center'; g.fillText(T.sign, 325, 109);
+  if (i === 4) { bossArena(g, W, Hh, 'boss'); return c; }
   // 균열(배경)
   g.save(); g.translate(540, 110); g.fillStyle = rg(g, 0, 0, 0, 90, [[0, T.glow.replace(/[\d.]+\)$/, '.6)')], [1, 'rgba(0,0,0,0)']]); g.beginPath(); g.arc(0, 0, 90, 0, TAU); g.fill();
   g.shadowColor = '#b46bff'; g.shadowBlur = 20; shape(g, [[0, -60], [8, -30], [2, 0], [10, 30], [0, 58], [-6, 28], [-2, 0], [-10, -30]], lg(g, 0, -60, 0, 60, [[0, '#7df9ff'], [.5, '#f1e3ff'], [1, '#c084ff']]), .3); g.restore();
@@ -1381,6 +1404,7 @@ function draw() {
   if (!BG[bk] || BG.k !== lay.s * lay.dpr) { if (BG.k !== lay.s * lay.dpr) BG = { k: lay.s * lay.dpr }; BG[bk] = G.ch ? buildBg2(G.ch, G.room) : buildBg(G.room); }
   const bg = BG[bk], px = -(cx * .55) % 640;
   for (let i = -1; i < VW / 640 + 1; i++) g.drawImage(bg, px + i * 640, cy - (BGH - FY0), 640, BGH);
+  if (G.R && G.R.boss) bossAmb(g, G.R.boss === 1 ? 'boss' : G.R.boss, cy);
   g.fillStyle = lg(g, 0, FY0 - 12, 0, VH, [[0, T.floor[0]], [1, T.floor[1]]]); g.fillRect(0, FY0 - 12 + cy, VW, VH);
   g.fillStyle = T.stripe; g.globalAlpha = .7; g.fillRect(0, FY0 - 12 + cy, VW, 3); g.globalAlpha = 1;
   g.strokeStyle = 'rgba(160,170,255,.07)'; g.lineWidth = 1; const off = -cx % 60;
@@ -1413,6 +1437,7 @@ function draw() {
   // 화면 효과
   if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(.6, G.flash) + ')'; g.fillRect(0, 0, VW, VH); if (G.flashC) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.min(.5, G.flash); g.fillStyle = rg(g, VW / 2, VH / 2, 0, VW * .7, [[0, hexA(G.flashC) + '00'], [1, hexA(G.flashC)]]); g.fillRect(0, 0, VW, VH); g.restore(); } }
   if (G.redT > 0) { g.fillStyle = rg(g, VW / 2, VH / 2, VH * .3, VW * .7, [[0, 'rgba(255,0,40,0)'], [1, 'rgba(255,0,40,' + G.redT + ')']]); g.fillRect(0, 0, VW, VH); }
+  if (G.bossCut && G.boss && !G.talk) bossCut(g, G.bossCut.t, G.boss);
   if (G.ultCut) ultCut(g, G.ultCut.t); else if (G.ultFx > 0) { g.fillStyle = 'rgba(0,0,0,' + G.ultFx * .3 + ')'; g.fillRect(0, 0, VW, VH); }
   g.fillStyle = rg(g, VW / 2, VH / 2, VH * .45, VW * .72, [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, VW, VH);
   hud(g); drawTalk(g);
@@ -1573,6 +1598,26 @@ function ultCircle(g, P) {
   g.rotate(-G.t * 4.8); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; g.fillStyle = i % 2 ? c2 : '#ffffff'; g.fillRect(Math.cos(a) * R * .9 - 3, Math.sin(a) * R * .9 - 3, 6, 6); }
   g.restore(); glw(g, P.x, P.y - 4, R * 1.3, c2, .45 * k); for (let i = 0; i < 4; i++) { const yy = (G.t * 260 + i * 60) % 220; glw(g, P.x + Math.sin(i * 2.3 + G.t) * R * .8, P.y - yy, 8, c2, 1 - yy / 220); }
 }
+// 보스 등장 클로즈업(BK 11/15): 보스전은 옆 진행 그대로, 나올 때만 2.4초 크게 보여 준다
+function bossCut(g, t, b) {
+  const a = t < .2 ? t / .2 : t > 2 ? Math.max(0, (2.4 - t) / .4) : 1, col = hexA((CH[G.ch] && CH[G.ch].col) || ET[b.t].rim || '#ff2244'), yc = VH * .5, bh = 210 * Math.min(1, t / .25);
+  const Z = 1.5 + Math.min(1, t / 2.2) * .35, by = b.t === 'boss' ? b.y - 70 : b.t === 'spider' ? b.y - 120 : b.y - 95, bx = b.t === 'boss' ? b.x + 60 : b.x;
+  g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(2,0,8,.62)'; g.fillRect(0, 0, VW, VH);
+  g.fillStyle = '#000'; g.fillRect(0, 0, VW, yc - bh / 2); g.fillRect(0, yc + bh / 2, VW, VH);
+  g.save(); g.beginPath(); g.rect(0, yc - bh / 2, VW, bh); g.clip();
+  g.fillStyle = rg(g, VW * .42, yc, 10, VW * .6, [[0, col + '55'], [1, 'rgba(0,0,0,.9)']]); g.fillRect(0, yc - bh / 2, VW, bh);
+  g.globalCompositeOperation = 'lighter'; g.strokeStyle = col; for (let i = 0; i < 26; i++) { const y0 = yc - bh / 2 + ((i * 53) % bh), x0 = ((i * 131 - t * 1400) % (VW + 300)) + VW; g.globalAlpha = .18 * a; g.lineWidth = 1 + (i % 3); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + 160, y0); g.stroke(); }
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = a;
+  g.save(); g.translate(VW * .3, yc + 40); g.scale(Z, Z); g.translate(-bx, -by); const fl = b.fl; b.fl = 0; try { drawBoss(g, b); } catch (e) {} b.fl = fl; g.restore();
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = lg(g, VW * .5, 0, VW * .66, 0, [[0, 'rgba(4,2,12,0)'], [1, 'rgba(4,2,12,.82)']]); g.fillRect(VW * .5, yc - bh / 2, VW * .5, bh);
+  g.restore();
+  g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); g.moveTo(0, yc - bh / 2); g.lineTo(VW, yc - bh / 2); g.moveTo(0, yc + bh / 2); g.lineTo(VW, yc + bh / 2); g.stroke();
+  const k = Math.min(1, Math.max(0, (t - .35) / .3)), tx0 = VW * .8 + (1 - k) * 120; g.globalAlpha = a * k; g.textAlign = 'center';
+  g.font = '400 12px ' + FONT_K; g.fillStyle = col; g.fillText('BOSS · ' + (G.ch + 1) + '장', tx0, yc - 34);
+  const sc = 1 + Math.max(0, .55 - t) * 1.2; g.save(); g.translate(tx0, yc + 4); g.scale(sc, sc); g.font = '400 ' + (ET[b.t].name.length > 8 ? 22 : 30) + 'px ' + FONT_K; g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(ET[b.t].name, 0, 0); g.fillStyle = '#fff'; g.fillText(ET[b.t].name, 0, 0); g.restore();
+  g.font = '400 10px sans-serif'; g.fillStyle = 'rgba(255,255,255,.8)'; const ds = ET[b.t].desc || '', mid = ds.indexOf(' ', ds.length / 2); g.fillText(mid > 0 ? ds.slice(0, mid) : ds, tx0, yc + 30); if (mid > 0) g.fillText(ds.slice(mid + 1), tx0, yc + 44);
+  g.restore();
+}
 function ultCut(g, t) {
   const c = G.c, c2 = hexA(c.col), a = t < .1 ? t / .1 : t > .85 ? Math.max(0, (1.15 - t) / .3) : 1, yc = VH * .4, bh = 116;
   const inS = t < .16 ? Math.pow(1 - t / .16, 3) : 0, outS = t > .8 ? Math.pow((t - .8) / .35, 2) : 0, sx = (outS - inS) * VW * 1.2;
@@ -1650,10 +1695,56 @@ function drawTouch(g) {
   for (let i = 0; i < 4; i++) { const [bx, by, r] = T['s' + i]; skBtn(g, bx, by, r, i); } const [ux, uy, ur] = T.ult; skBtn(g, ux, uy, ur, 4);
 }
 /* =================== 2~4장 그리기: 배경·함정·보스·대화 =================== */
+/* 보스방 무대(BK 11/15): 보스마다 어울리는 배경 그림. 가운데 위(방 이름판 자리)는 비워 둔다 */
+function bossArena(g, W, Hh, kind) {
+  let sd = 991; const R = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+  g.save(); g.fillStyle = lg(g, 0, 0, 0, Hh, [[0, 'rgba(0,0,0,.55)'], [.6, 'rgba(0,0,0,.15)'], [1, 'rgba(0,0,0,.35)']]); g.fillRect(0, 0, W, Hh);
+  if (kind === 'boss') { // 폐선 기지 끝: 거대한 터널 입구와 회전 경고등
+    g.fillStyle = 'rgba(40,6,14,.55)'; g.fillRect(0, 0, W, Hh);
+    for (const [tx, r] of [[520, 120], [96, 84]]) { g.fillStyle = rg(g, tx, Hh - 20, r * .3, r, [[0, '#000'], [.75, '#05020a'], [1, 'rgba(60,20,30,0)']]); g.beginPath(); g.ellipse(tx, Hh - 10, r, r * 1.05, 0, Math.PI, TAU); g.fill();
+      g.strokeStyle = '#3a2430'; g.lineWidth = 9; g.beginPath(); g.ellipse(tx, Hh - 10, r, r * 1.05, 0, Math.PI, TAU); g.stroke(); g.strokeStyle = '#ff2244'; g.lineWidth = 2; g.globalAlpha = .7; g.stroke(); g.globalAlpha = 1;
+      for (let a = 0; a < 9; a++) { const an = Math.PI + a / 8 * Math.PI; g.fillStyle = '#5a3a44'; g.fillRect(tx + Math.cos(an) * r - 4, Hh - 10 + Math.sin(an) * r * 1.05 - 4, 8, 8); }
+      g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = rg(g, tx, Hh - 40, 0, r * .7, [[0, 'rgba(255,40,70,.45)'], [1, 'rgba(255,40,70,0)']]); g.beginPath(); g.arc(tx, Hh - 40, r * .7, 0, TAU); g.fill(); g.restore(); }
+    for (let x = 0; x < W; x += 40) { g.fillStyle = (x / 40) % 2 ? '#ffcc33' : '#1a1012'; g.beginPath(); g.moveTo(x, Hh - 12); g.lineTo(x + 20, Hh - 12); g.lineTo(x + 40, Hh); g.lineTo(x + 20, Hh); g.fill(); }
+    for (const lx of [40, 250, 410, 610]) { g.fillStyle = '#2a1018'; g.fillRect(lx - 7, 40, 14, 10); dot(g, lx, 54, 6, '#ff2244'); }
+  } else if (kind === 'spider') { // 폭풍 치는 옥상: 쓰러진 거대 간판과 거미줄 케이블
+    g.fillStyle = 'rgba(30,0,40,.45)'; g.fillRect(0, 0, W, Hh);
+    g.save(); g.translate(500, 150); g.rotate(-.22); g.fillStyle = '#100616'; g.fillRect(-120, -60, 240, 110); g.strokeStyle = '#ff5ad8'; g.lineWidth = 3; g.shadowColor = '#ff5ad8'; g.shadowBlur = 14; g.strokeRect(-112, -52, 224, 94);
+    g.font = '700 38px ' + FONT_K; g.textAlign = 'center'; g.fillStyle = '#ff8ae6'; g.fillText('균 열 세 일', 0, 6); g.shadowBlur = 0; g.fillStyle = '#05020a'; g.beginPath(); g.moveTo(40, -60); g.lineTo(78, -10); g.lineTo(52, 50); g.lineTo(120, 50); g.lineTo(120, -60); g.fill(); g.restore();
+    g.strokeStyle = 'rgba(230,200,255,.28)'; g.lineWidth = 1; for (let i = 0; i < 7; i++) { g.beginPath(); g.moveTo(0, 20 + i * 9); g.quadraticCurveTo(110, 70 + i * 14, 220, 10 + i * 6); g.stroke(); g.beginPath(); g.moveTo(W, 30 + i * 10); g.quadraticCurveTo(W - 90, 80 + i * 12, W - 200, 12 + i * 5); g.stroke(); }
+    for (const [cx0, cy0] of [[60, 60], [W - 70, 70]]) for (let k = 1; k < 5; k++) { g.beginPath(); for (let a = 0; a <= 8; a++) { const an = a / 8 * TAU, rr = k * 14; g.lineTo(cx0 + Math.cos(an) * rr, cy0 + Math.sin(an) * rr * .7); } g.stroke(); }
+  } else if (kind === 'hydra') { // 심해 데이터 센터 심장부: 거대 서버 코어와 늘어진 케이블
+    g.fillStyle = 'rgba(0,20,40,.45)'; g.fillRect(0, 0, W, Hh);
+    const cx0 = 520; g.fillStyle = lg(g, cx0 - 70, 0, cx0 + 70, 0, [[0, '#04101c'], [.5, '#14344c'], [1, '#04101c']]); g.fillRect(cx0 - 70, 20, 140, Hh - 20);
+    for (let y = 40; y < Hh - 10; y += 22) { g.fillStyle = 'rgba(80,220,255,.55)'; g.fillRect(cx0 - 66, y, 132, 2); for (let x = cx0 - 60; x < cx0 + 60; x += 10) if (R() < .5) { g.fillStyle = R() < .3 ? '#ff5ad8' : '#4fd8ff'; g.fillRect(x, y + 6, 4, 3); } }
+    g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = rg(g, cx0, 120, 0, 120, [[0, 'rgba(80,220,255,.45)'], [1, 'rgba(80,220,255,0)']]); g.fillRect(cx0 - 140, 0, 280, Hh); g.restore();
+    g.strokeStyle = '#0a1a26'; g.lineWidth = 6; for (let i = 0; i < 9; i++) { const x0 = 20 + i * 52 + R() * 20; g.beginPath(); g.moveTo(x0, 0); g.quadraticCurveTo(x0 + 20, 70 + R() * 50, x0 + R() * 40 - 20, 120 + R() * 60); g.stroke(); }
+    g.strokeStyle = 'rgba(79,216,255,.35)'; g.lineWidth = 1.5; for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(26 + i * 52, 0); g.lineTo(26 + i * 52, 30 + (i % 3) * 20); g.stroke(); }
+  } else { // 균열 군주: 깨진 하늘의 큰 틈과 떠 있는 섬
+    g.fillStyle = 'rgba(10,0,30,.5)'; g.fillRect(0, 0, W, Hh);
+    g.save(); g.translate(500, 110); g.globalCompositeOperation = 'lighter'; g.fillStyle = rg(g, 0, 0, 0, 150, [[0, 'rgba(200,140,255,.55)'], [1, 'rgba(120,60,255,0)']]); g.beginPath(); g.arc(0, 0, 150, 0, TAU); g.fill();
+    g.fillStyle = '#f4ecff'; g.beginPath(); g.moveTo(-6, -100); for (let i = 0; i < 10; i++) g.lineTo((i % 2 ? 22 : -14) + R() * 8, -100 + i * 22); g.lineTo(4, 120); for (let i = 9; i >= 0; i--) g.lineTo((i % 2 ? 6 : -30) + R() * 8, -100 + i * 22); g.fill(); g.restore();
+    g.strokeStyle = 'rgba(230,210,255,.45)'; g.lineWidth = 1.2; for (let i = 0; i < 14; i++) { const a = R() * TAU, l = 40 + R() * 90; g.beginPath(); g.moveTo(500, 110); g.lineTo(500 + Math.cos(a) * l, 110 + Math.sin(a) * l * .7); g.stroke(); }
+    for (const [ix, iy, w] of [[80, 70, 70], [190, 130, 46], [600, 40, 40]]) { g.fillStyle = '#1a1030'; g.beginPath(); g.moveTo(ix - w / 2, iy); g.lineTo(ix + w / 2, iy); g.lineTo(ix + w * .1, iy + w * .7); g.lineTo(ix - w * .2, iy + w * .5); g.fill(); g.fillStyle = '#4a6a5a'; g.fillRect(ix - w / 2, iy - 4, w, 5); }
+  }
+  g.restore();
+}
+// 보스방 움직이는 분위기(매 프레임, 배경 위·바닥 아래)
+function bossAmb(g, kind, cy) {
+  const t = G.t, Hh = FY0; g.save(); g.globalCompositeOperation = 'lighter';
+  const col = { boss: '#ff3355', spider: '#ff5ad8', hydra: '#4fd8ff', echo: '#c48aff' }[kind] || '#ff3355';
+  for (let i = 0; i < 18; i++) { const k = ((t * .25 + i * .137) % 1), x = (i * 97 + Math.sin(t + i) * 20) % VW, y = Hh - k * Hh; glw(g, x, y + cy, 2.5 + (i % 3), col, (1 - k) * .7); }
+  if (kind === 'boss') for (const lx of [40, 250, 410, 610]) { const a = t * 3 + lx; g.fillStyle = 'rgba(255,40,70,' + (.12 + .1 * Math.sin(a)) + ')'; g.beginPath(); g.moveTo(lx, 54 - (BGH - FY0) + cy); g.lineTo(lx + Math.cos(a) * 160 - 40, Hh + cy); g.lineTo(lx + Math.cos(a) * 160 + 40, Hh + cy); g.fill(); }
+  if (kind === 'spider') { const p = (t % 4.2); if (p < .18) { g.fillStyle = 'rgba(230,200,255,' + (.35 * (1 - p / .18)) + ')'; g.fillRect(0, 0, VW, Hh + cy); g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); let bx = 80 + ((t / 4.2 | 0) * 173) % (VW - 160), by = 0; g.moveTo(bx, by); while (by < 120) { bx += rnd(-18, 18); by += rnd(10, 22); g.lineTo(bx, by + cy); } g.stroke(); } }
+  if (kind === 'hydra') for (let i = 0; i < 10; i++) { const x = (i * 71 + 30) % VW, y = ((t * 90 + i * 53) % (Hh + 40)) - 40; g.fillStyle = 'rgba(79,216,255,.18)'; g.fillRect(x, y + cy, 2, 30); }
+  if (kind === 'echo') { const pu = .5 + .5 * Math.sin(t * 2.4); glw(g, 500, 110 - (BGH - FY0) + cy, 90 + pu * 30, '#b07aff', .25); for (let i = 0; i < 8; i++) { const a = t * .4 + i * .8, x = (i * 89 + t * 14) % VW, y = 40 + Math.sin(a) * 30 + i * 12; g.fillStyle = 'rgba(220,200,255,.35)'; g.save(); g.translate(x, y + cy); g.rotate(a); g.fillRect(-5, -2, 10, 4); g.restore(); } }
+  g.restore();
+}
 function buildBg2(ch, ri) {
-  const C = CH[ch], T = C.th, k = lay.s * lay.dpr, W = 640, Hh = FY0, c = mkc(W * k, Hh * k), g = c.getContext('2d'); g.scale(k, k);
+  const C = CH[ch], T = C.th, k = lay.s * lay.dpr, W = 640, Hh = BGH, c = mkc(W * k, Hh * k), g = c.getContext('2d'); g.scale(k, k);
   let sd = ch * 97 + ri * 13 + 7; const R = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; }, boss = !!C.rooms[ri].boss;
   if (C.bg === 'roof') bgRoof(g, W, Hh, R, boss); else if (C.bg === 'server') bgServer(g, W, Hh, R, boss); else bgSky(g, W, Hh, R, boss);
+  if (boss) bossArena(g, W, Hh, C.rooms[ri].boss);
   // 방 이름 표지판
   const label = boss ? '⚠ ' + ET[C.rooms[ri].boss].name : C.rooms[ri].name;
   g.save(); g.font = '700 15px ' + FONT_K; const tw = Math.max(150, g.measureText(label).width + 30); g.fillStyle = 'rgba(8,10,24,.88)'; g.beginPath(); g.roundRect(325 - tw / 2, 86, tw, 34, 6); g.fill(); g.shadowColor = T.stripe; g.shadowBlur = 10; g.strokeStyle = T.stripe; g.lineWidth = 1.5; g.stroke(); g.restore();
@@ -2133,7 +2224,7 @@ function update(dt) {
   if (G.talk) { talkUpdate(dt); if (!NET.on) return; }
   if (G.stop > 0) { G.stop -= dt; return; }
   const real = dt; if (G.slow > 0) { G.slow -= real; dt *= .3; }
-  G.t += dt; G.ultFx = Math.max(0, (G.ultFx || 0) - real * 1.2); if (G.ultCut && (G.ultCut.t += real) > 1.15) G.ultCut = null; G.flashC = G.flash > 0 ? G.flashC : null; G.tipT -= dt; if (G.rank) G.rank.t -= real; if (G.hatch > 0) G.hatch -= real;
+  G.t += dt; G.ultFx = Math.max(0, (G.ultFx || 0) - real * 1.2); if (G.ultCut && (G.ultCut.t += real) > 1.15) G.ultCut = null; if (G.bossCut && !G.talk && (G.bossCut.t += real) > 2.4) G.bossCut = null; G.flashC = G.flash > 0 ? G.flashC : null; G.tipT -= dt; if (G.rank) G.rank.t -= real; if (G.hatch > 0) G.hatch -= real;
   G.comboT -= dt; if (G.comboT <= 0) G.combo = 0;
   if (G.mode === 'dying') { G.deadT -= real; fxUpdate(dt); for (const e of G.en) if (!e.dead && !isB(e)) physE(e, dt); if (G.deadT <= 0) finish(false); return; }
   playerUpdate(dt);
