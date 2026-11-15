@@ -29,7 +29,7 @@ function errandClaim() { const P = G.P, E = P.errand; if (!E || errandLeft(E) > 
   const gold = Math.round(lv * (E.k === 'far' ? 160 : E.k === 'mid' ? 55 : 18)); P.gold += gold;
   if (E.k === 'near') { add(goods('pot', 2)); add(goods('wpot', 2)); add(goods(Math.random() < .5 ? 'hone' : 'glue')); }
   if (E.k === 'mid') { add(goods('hone', 2)); add(goods('glue', 2)); if (Math.random() < .5) add(rollDrop(lv, P.find + 80, P.cls)); }
-  if (E.k === 'far') { add(goods('hone', 3)); add(goods('glue', 3)); add(goods(Math.random() < .5 ? 'bhone' : 'bglue')); add(rollDrop(lv + 1, P.find + 180, P.cls)); if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: Math.random() < .3 ? 2 : 1 }); }
+  if (E.k === 'far') { add(goods('hone', 3)); add(goods('glue', 3)); add(goods(Math.random() < .5 ? 'bhone' : 'bglue')); add(rollDrop(lv + 1, P.find + 180, P.cls)); if (endDone(P) && Math.random() < .3) add(goods('chart')); if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: Math.random() < .3 ? 2 : 1 }); }
   P.errand = null; sfx('coin'); toast('비행선이 돌아왔어요! ' + gold + 'G · ' + got.join(', ')); save(); }
 const fmtLeft = ms => { const m = Math.ceil(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + '시간 ' + (m % 60 ? m % 60 + '분' : '') : m + '분'; };
 function errandHtml() { const P = G.P, E = P.errand; let h = '<h4 style="margin:10px 0 4px">비행선 심부름</h4>';

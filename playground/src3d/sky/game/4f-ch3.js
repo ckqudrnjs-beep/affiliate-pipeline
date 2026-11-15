@@ -41,7 +41,7 @@ Object.assign(QUESTS, {
     done: ['좋아, 이 정도면 한 해 내내 담금질하겠다. 수고비로 축복 받은 숫돌이랑 아교를 줄게.'] },
   q17: { ch: 3, n: '녹슨 정박장의 비행선', from: 'chief', goal: '녹슨 정박장의 녹슨 비행선을 떨어뜨리고 정박장 바람개비 표지에 손 얹기', need: 1,
     talk: ['녹슨 비행선이 정박장 위에 떠서 항구로 오는 바람을 다 막고 있네.', '녀석은 뱃전의 포를 한꺼번에 쏘아 바닥에 둥근 표시를 여러 개 띄우고, 닻을 내리꽂는다네. 갈매기 떼도 불러내지.', '성이 나면 머리 위를 지나가며 줄줄이 폭탄을 떨군다는군. 표시가 줄로 뜨면 옆으로 비켜서게.'],
-    done: ['…바람이다! 묶여 있던 비행선들 돛이 부풀고 있어!', '고맙네, 이음꾼. 바람이 항구를 지나 더 높은 쪽으로 흘러가는구먼. 저 위 구름 너머에서 무언가가 바람을 기다리고 있는 것 같아.'] },
+    done: ['…바람이다! 묶여 있던 비행선들 돛이 부풀고 있어!', '고맙네, 이음꾼. 바람이 항구를 지나 더 높은 쪽으로 흘러가는구먼. 저 위 구름 너머에서 무언가가 바람을 기다리고 있는 것 같아.', '바람개비 표지의 바람길로 4장 거꾸로 숲에 갈 수 있다네.'] },
 });
 const C3NPC = { chief: '항구지기 닻줄', smith: '대장장이 소금쇠', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' };
 function qAvail3(id) { const q = G.P.q; if (G.Wd.ch !== 3) return false; if (id === 'q13' || id === 'q15' || id === 'q16') return true; if (id === 'q14') return q.q13 && q.q13.s === 3; if (id === 'q17') return q.q14 && q.q14.s === 3; return false; }
@@ -112,4 +112,4 @@ function ch3Goals(Wd, P, goals) { const q = P.q, bq = Wd.bridges[Wd.bq];
   if (q.q14 && q.q14.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q17 && q.q17.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
   if (q.q17 && q.q17.s === 2 && !P.flags['wp_녹슨 정박장']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
-function endHtml3() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>3장 「닻 내린 항구」 끝</h3><p>녹슨 비행선이 정박장 위로 천천히 내려앉자, 막혀 있던 바람이 한꺼번에 항구로 쏟아져 들어왔다.</p><p>묶여 있던 비행선들의 돛이 부푼다. 바람은 이제 구름 너머 더 높은 곳으로 흘러간다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>4장은 다음에 열려요. 그동안 오늘의 섬과 하루 의뢰로 장비를 모아 보세요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
+function endHtml3() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>3장 「닻 내린 항구」 끝</h3><p>녹슨 비행선이 정박장 위로 천천히 내려앉자, 막혀 있던 바람이 한꺼번에 항구로 쏟아져 들어왔다.</p><p>묶여 있던 비행선들의 돛이 부푼다. 바람은 이제 구름 너머 더 높은 곳으로 흘러간다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 4장 거꾸로 숲으로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }

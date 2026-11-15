@@ -218,6 +218,12 @@ function islandTop(Wd, s, g, T) {
     for (const [xx, yy, t, own] of g.cells) { if (!own) continue; const h2 = hsh(xx + 5, yy + 1); if (h2 > .16) continue; const [sx, sy] = iso(xx, yy);
       if (h2 < .07) { x.fillStyle = 'rgba(110,80,50,.45)'; x.beginPath(); x.moveTo(sx - 20, sy + TH / 2); x.lineTo(sx, sy + TH / 2 - 10); x.lineTo(sx + 20, sy + TH / 2); x.lineTo(sx, sy + TH / 2 + 10); x.closePath(); x.fill(); }
       else { const r = 7 + hsh(xx, yy + 4) * 10; x.fillStyle = 'rgba(245,248,250,.5)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } } }
+  if (Wd.ch >= 4 && s.kind !== 'rock' && CHX[Wd.ch]) { const C = CHX[Wd.ch], boss = s.kind === C.hkind; // 4~7장 섬 빛깔 + 장마다 다른 얼룩(이끼·물웅덩이·돌판·흰 풀)
+    x.fillStyle = C.tint[0]; if (boss) { x.globalAlpha = 1.3; } x.fill(g.top); x.globalAlpha = 1;
+    for (const [xx, yy, t, own] of g.cells) { if (!own) continue; const h2 = hsh(xx + 7, yy + 3); if (h2 > ((C.src || Wd.ch) === 6 ? .14 : .08)) continue; const [sx, sy] = iso(xx, yy), r = 7 + hsh(xx, yy + 6) * 12;
+      x.fillStyle = (C.src || Wd.ch) === 6 && h2 < .08 ? 'rgba(120,110,95,.5)' : C.tint[1].replace(/[\d.]+\)$/, '.28)');
+      if ((C.src || Wd.ch) === 6 && h2 < .08) { x.beginPath(); x.moveTo(sx - 22, sy + TH / 2); x.lineTo(sx, sy + TH / 2 - 11); x.lineTo(sx + 22, sy + TH / 2); x.lineTo(sx, sy + TH / 2 + 11); x.closePath(); x.fill(); }
+      else { x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } } }
   if (s.kind === 'mill' || s.kind === 'gear' || s.kind === 'town' && Wd.ch === 2) { // 녹슨 풍차 군도: 늦가을 들판 + 녹 얼룩
     x.fillStyle = s.kind === 'gear' ? 'rgba(120,70,40,.32)' : 'rgba(200,135,40,.3)'; x.fill(g.top);
     for (const [xx, yy, t, own] of g.cells) { if (!own || hsh(xx + 3, yy + 9) > .07) continue; const [sx, sy] = iso(xx, yy), r = 8 + hsh(xx, yy + 2) * 12; x.fillStyle = 'rgba(140,70,30,.28)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } }
@@ -246,7 +252,7 @@ function drawHero(P) {
   drawClsHero(P, sx, sy - jz, 1);
 }
 function drawMob(m) {
-  if (!IM[m.D.spr]) { const [sx, sy] = iso(m.x, m.y); shadow(sx, sy, m.D.boss ? 36 : 24); return; } // 큰 그림 받는 중
+  if (!IM[m.D.spr]) { lazyImg(m.D.spr); const [sx, sy] = iso(m.x, m.y); shadow(sx, sy, m.D.boss ? 36 : 24); return; } // 큰 그림 받는 중
   const D = m.D, c = MC[D.spr], [sx, sy0] = iso(m.x, m.y), sy = sy0 + (m.fy || 0) * 30;
   const a = m.dead ? Math.max(0, 1 - Math.max(0, m.at - .5) * 1.6) * (m.fl ? Math.max(0, 1 - m.fy * .4) : 1) : 1;
   if (!m.fl) shadow(sx, sy0, D.boss ? 36 : D.mini ? 26 : D.fly ? 9 : m.elite ? 14 : 11);
@@ -349,7 +355,7 @@ function drawVortex(a) { const [ax, ay] = iso(a.x, a.y), k = a.t / a.life, al = 
   for (let i = 0; i < 9; i++) { const rr2 = a.r * (1 - i / 10) * 45, y2 = ay - i * 9; x.globalAlpha = al * (.85 - i * .05); x.strokeStyle = i % 2 ? '#ffffff' : '#9fe4ff'; x.lineWidth = 3.2 - i * .2; x.beginPath(); x.ellipse(ax + Math.sin(G.t * 6 + i) * 4, y2, rr2 * (.35 + i * .02 + .65 * (1 - k * .3)), rr2 * .42, 0, G.t * (9 + i) + i, G.t * (9 + i) + i + 3.6); x.stroke(); }
   x.globalAlpha = 1; }
 function questMark(k) { const P = G.P; for (const id in QUESTS) { const Q = QUESTS[id]; if (Q.from !== k || qCh(id) !== G.Wd.ch) continue; const q = P.q[id]; if (q && q.s === 2) return '?'; if (!q && qAvail(id)) return '!'; } return ''; }
-function qAvail(id) { const q = G.P.q; if (qCh(id) === 2) return qAvail2(id); if (qCh(id) === 3) return qAvail3(id); if (G.Wd.ch !== 1) return false; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
+function qAvail(id) { const q = G.P.q; if (qCh(id) === 2) return qAvail2(id); if (qCh(id) === 3) return qAvail3(id); if (qCh(id) >= 4) return qAvailX(id); if (G.Wd.ch !== 1) return false; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
 
 /* ---------- 화면 위 정보(HUD) ---------- */
 let BTN = [];
@@ -462,7 +468,7 @@ function minimap(R, T, s) {
   x.fillStyle = '#fff'; x.beginPath(); x.arc(P.x * 2, P.y * 2, 3, 0, TAU); x.fill(); x.restore();
 }
 function questTracker(R, T, s) {
-  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; else t = track2(id, q) || track3(id, q) || t; L.push([Q.n, t]); }
+  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; else t = track2(id, q) || track3(id, q) || trackX(id, q) || t; L.push([Q.n, t]); }
   const dt2 = dailyTrack(); if (dt2) L.push(dt2); const et = errandTrack(); if (et) L.push(et);
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
