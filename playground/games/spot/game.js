@@ -213,7 +213,7 @@ $('sp-b').addEventListener('click',e=>{if(done)return;ac();const s=$('sp-b').que
  const hit=diffs.find(i=>!found.has(i)&&[O[i],B[i]].some(o=>{const c=cen(o);return Math.hypot(q.x-c.x,q.y-c.y)<Math.max(22,rad(o)+10)}));
  if(hit!==undefined){found.add(hit);mark(hit,'ok');spFx(q,1);$('sp-found').textContent='찾은 개수 '+found.size+' / 5';if(found.size===5)finish()}else{pen+=3;spFx(q,0);$('sp-msg').textContent='틀린 곳이 아니에요 (+3초)'}});
 $('sp-hint').onclick=()=>{if(done)return;const i=diffs.find(i=>!found.has(i));pen+=30;const c=cen(O[i]);document.querySelectorAll('.marks').forEach(g=>g.insertAdjacentHTML('beforeend',`<circle cx="${c.x}" cy="${c.y}" r="30" fill="#ffd23f" opacity=".5"><animate attributeName="opacity" values=".6;0;.6" dur="1s" repeatCount="3"/></circle>`))};
-function finish(){done=true;clearInterval(tick);const sec=Math.floor((Date.now()-t0)/1000+pen);$('sp-time').textContent=sec+'초';const score=Math.max(1,3000-sec*10);spConfetti();
+function finish(){done=true;clearInterval(tick);const ds=Math.round(((Date.now()-t0)/1000+pen)*10),sec=(ds/10).toFixed(1);$('sp-time').textContent=sec+'초';const score=Math.max(1,30000-ds*10);spConfetti();
  $('sp-msg').innerHTML='<span class="sp-win">🎉 다 찾았어요! <b>'+sec+'초</b> · <b>'+score.toLocaleString()+'점</b></span>';$('sp-share').hidden=false;$('sp-share').onclick=()=>shareText('5락실 오늘의 틀린그림찾기 '+KST.slice(5)+'\n🔍 5개 모두 '+sec+'초 ('+score+'점)\n나보다 빨리 찾을 수 있어? '+challengeUrl(score));if(window.submitScore)submitScore(score)}
 if(location.hash==='#spdebug')window.__sp={O,B,diffs,cen,theme:THEME.name,time:TIME};
 })();
