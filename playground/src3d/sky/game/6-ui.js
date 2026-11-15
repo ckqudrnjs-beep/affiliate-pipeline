@@ -9,7 +9,7 @@ function css() {
     + '.sk-bx{background:linear-gradient(#fbf6ea,#efe5d0);border:2px solid #b89a6a;border-radius:16px;box-shadow:0 10px 40px rgba(30,20,10,.35),inset 0 0 0 3px #fffaf0;max-width:min(860px,100%);max-height:100%;width:100%;overflow:auto;padding:12px 14px;position:relative}'
     + '.sk-bx h3{margin:0 0 8px;font-size:17px;color:#5a3e22}.sk-bx h4{margin:10px 0 6px;font-size:13px;color:#7a5a32}.sk-x{position:sticky;top:0;float:right;border:0;background:#c8a06a;color:#fff;border-radius:10px;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2}'
     + '.sk-b{border:1.5px solid #b89a6a;background:#fffaf0;color:#5a3e22;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;margin:3px}.sk-b.p{background:#4f9fc8;border-color:#3a7fa8;color:#fff}.sk-b.g{background:#7ab85a;border-color:#5a9a3a;color:#fff}.sk-b:disabled{opacity:.45;cursor:default}'
-    + '.sk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px}.sk-c{aspect-ratio:1;border-radius:9px;background:#e6dac0;border:1.5px solid #c8b088;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center}.sk-c canvas{width:84%;height:84%}.sk-c.on{outline:3px solid #4f9fc8}.sk-c i{position:absolute;right:2px;bottom:0;font-style:normal;font-size:10px;font-weight:800;color:#5a3e22;text-shadow:0 0 2px #fff}.sk-c b{position:absolute;left:3px;top:1px;font-size:10px;color:#a88a5a}.sk-c.r1{border-color:#5ab88a;background:#dff0e0}.sk-c.r2{border-color:#9a7ad8;background:#ebe2f6}.sk-c.r3{border-color:#e8805a;background:#f8e2d6}.sk-c.r4{border-color:#e88ab8;background:#f8e0ec}.sk-c.cu{box-shadow:inset 0 0 0 2px #a83a3a}'
+    + '.sk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px}.sk-c{aspect-ratio:1;border-radius:9px;background:#e6dac0;border:1.5px solid #c8b088;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center}.sk-c canvas{width:84%;height:84%}.sk-c.on{outline:3px solid #4f9fc8}.sk-c i{position:absolute;right:2px;bottom:0;font-style:normal;font-size:10px;font-weight:800;color:#5a3e22;text-shadow:0 0 2px #fff}.sk-c b{position:absolute;left:3px;top:1px;font-size:10px;color:#a88a5a}.sk-c.r1{border-color:#3a8ae8;background:#dcebfb;box-shadow:inset 0 0 0 1px #6ab4ff}.sk-c.r2{border-color:#d8a800;background:#fbf0c8;box-shadow:inset 0 0 0 1px #ffd23a,0 0 6px #ffd23a88}.sk-c.r3{border-color:#e8661a;background:#fde0c8;box-shadow:inset 0 0 0 1px #ff8a3a,0 0 8px #ff8a3aaa}.sk-c.r4{border-color:#28b04a;background:#dcf6e0;box-shadow:inset 0 0 0 1px #5ee07a,0 0 8px #5ee07aaa}.sk-c.cu{box-shadow:inset 0 0 0 2px #a83a3a}'
     + '.sk-eq{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}@media (max-width:520px){.sk-eq{grid-template-columns:repeat(5,minmax(0,1fr))}}'
     + '.sk-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:640px){.sk-two{grid-template-columns:1fr}}'
     + '.sk-card{background:#fffaf0;border:1.5px solid #c8b088;border-radius:12px;padding:8px 10px;font-size:12.5px;line-height:1.55}.sk-card .n{font-size:15px;font-weight:800}.sk-card .m{color:#8a7458;font-size:11.5px}.sk-card .a{color:#3a7fa8}.sk-card .h{color:#9a7ad8}.sk-card .bad{color:#c84a3a}.sk-card .st{color:#7a5a32;font-style:italic;font-size:11.5px}'
@@ -168,10 +168,10 @@ function itemCard(it, P, cmp) {
   L.push(`<div class="m">팔 때 ${priceOf(it)}G</div>`);
   return '<div class="sk-card">' + L.join('') + '</div>' + (cmp ? '<div class="m" style="font-size:11px;margin:6px 0 2px">지금 낀 것</div>' + itemCard(cmp, P) : '');
 }
-function shade(c) { return c === '#ece6d6' ? '#5a4a36' : c === '#8ee8b0' ? '#2a8a5a' : c === '#c9a8ff' ? '#6a4ab8' : c === '#ff9f7c' ? '#c8502a' : c === '#ffb7dc' ? '#c84a8a' : c; }
+function shade(c) { const r = RAR.find(r => r.c === c); return r ? r.d : c; }
 function slotFor(P, it) { const s = BASE[it.b].s; if (s === 'ring') return !P.eq.ring1 ? 'ring1' : !P.eq.ring2 ? 'ring2' : 'ring1'; return s; }
 function equip(i) { const P = G.P, it = P.inv[i], why = canWear(P, it); if (why) { toast(why); return; } const s = slotFor(P, it), old = P.eq[s]; if (old && old.st === -1 && old.id) { toast('저주받은 장비는 정화하기 전에 벗을 수 없어요'); return; } P.inv.splice(i, 1); if (old) P.inv.push(old); P.eq[s] = it; if (it.st === -1) it.id = true; calc(P); }
-function unequip(s) { const P = G.P, it = P.eq[s]; if (!it) return; if (it.st === -1 && it.id) { toast('저주받은 장비는 정화하기 전에 벗을 수 없어요'); return; } if (P.inv.length >= 40) { toast('가방이 가득 찼어요'); return; } P.inv.push(it); delete P.eq[s]; calc(P); }
+function unequip(s) { const P = G.P, it = P.eq[s]; if (!it) return; if (it.st === -1 && it.id) { toast('저주받은 장비는 정화하기 전에 벗을 수 없어요'); return; } if (P.inv.length >= INV_MAX) { toast('가방이 가득 찼어요'); return; } P.inv.push(it); delete P.eq[s]; calc(P); }
 let toastT = 0; function toast(s) { const t = panel.querySelector('.sk-toast'); if (t) { t.textContent = s; t.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => { t.style.opacity = 0; }, 1800); } else if (G) say(s, '#fff', 1); }
 const TOAST = '<div class="sk-toast" style="position:sticky;bottom:0;margin-top:8px;background:#5a3e22;color:#fff;border-radius:10px;padding:7px 10px;font-size:13px;opacity:0;transition:opacity .3s;text-align:center">.</div>';
 function render(arg) {
@@ -179,7 +179,7 @@ function render(arg) {
   const X = '<button class="sk-x" data-a="x" aria-label="닫기">✕</button>';
   if (k === 'inv') {
     const sel = SEL, si = sel && sel[0] === 'i' ? +sel.slice(1) : -1, ss = sel && sel[0] === 'e' ? sel.slice(1) : null, it = si >= 0 ? P.inv[si] : ss ? P.eq[ss] : null;
-    h = `<div class="sk-bx">${X}<h3>가방 <small style="font-size:12px;color:#8a7458">${P.gold.toLocaleString()}G · ${P.inv.length}/40${SHOP ? ' · 상점: 물건을 눌러 팔기' : ''}</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${[...Array(40)].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div>`;
+    h = `<div class="sk-bx">${X}<h3>가방 <small style="font-size:12px;color:#8a7458">${P.gold.toLocaleString()}G · ${P.inv.length > INV_N ? '<b style="color:#d0402a">' + P.inv.length + '/40 · 무거워서 걸음이 느려요</b>' : P.inv.length + '/40'}${SHOP ? ' · 상점: 물건을 눌러 팔기' : ''}</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${[...Array(P.inv.length > INV_N ? INV_MAX : INV_N)].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div>`;
     if (it) { const cmp = si >= 0 && !it.g ? P.eq[slotFor(P, it)] : null; h += itemCard(it, P, cmp) + '<div style="margin-top:6px">';
       if (si >= 0) { if (it.g === 'pot' || it.g === 'wpot') h += `<button class="sk-b g" data-a="use">마시기</button>`; if (!it.g) h += `<button class="sk-b p" data-a="eq">입기</button>`; if (it.g === 'look') h += '<p class="m" style="font-size:11.5px">감정 안 된 장비를 고른 뒤 「쪽지로 감정」</p>'; if (!it.g && !it.id && count('look')) h += `<button class="sk-b" data-a="lookit">쪽지로 감정</button>`; if (it.g === 'pure' || !it.g && it.st === -1 && count('pure')) h += ''; if (SHOP) h += `<button class="sk-b" data-a="sell">팔기 ${priceOf(it)}G</button>`; else h += `<button class="sk-b" data-a="drop">내려놓기</button>`; }
       else h += `<button class="sk-b" data-a="uneq">벗기</button>` + (it.st === -1 && count('pure') ? `<button class="sk-b g" data-a="purify">샘물로 정화</button>` : '');
@@ -210,6 +210,7 @@ function render(arg) {
     h += TOAST + '</div>';
   } else if (k === 'board') h = boardHtml();
   else if (k === 'daily') h = dailyHtml(X);
+  else if (k === 'stash') h = stashHtml(X);
   else if (k === 'talk') h = talkHtml(arg);
   else if (k === 'smith') h = smithHtml();
   else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}${chapHtml()}</div>`; }
@@ -219,6 +220,7 @@ function render(arg) {
   else if (k === 'end') h = endHtml();
   panel.innerHTML = h; bindPanel(arg);
   if (k === 'inv') fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 'b' ? SHOP[+c.slice(1)] : null);
+  if (k === 'stash') fillIcons(c => c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 's' ? (P.stash || [])[+c.slice(1)] : null);
   if (k === 'char') { fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : null); panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 150))); }
   if (k === 'map') drawMap(panel.querySelector('[data-map]'));
   if (k === 'board') CONF = null;
@@ -250,7 +252,7 @@ function boardHtml() {
     <h4>지금 얻는 힘</h4><div class="sk-card">${fxs}</div><h4>잇기 보너스</h4><div class="sk-card">${sets}</div>
     <button class="sk-b" data-a="skillp">← 스킬로</button></div></div>${TOAST}</div>`;
 }
-function shopHtml() { const td = SHOP.filter(it => it.today); return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기 · 자정에 물건이 바뀌어요)</small></h4>${td.length ? '<p class="m" style="font-size:11.5px;color:#b0702a">오늘만: ' + td.map(it => it.g ? GOODS[it.g].n : itemName(it)).join(', ') + '</p>' : ''}<div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + coinHtml(); }
+function shopHtml() { const td = SHOP.filter(it => it.today), jk = G.P.inv.filter(it => !it.g && it.r === 0), jg = jk.reduce((a, it) => a + priceOf(it), 0); return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기 · 자정에 물건이 바뀌어요)</small></h4>${td.length ? '<p class="m" style="font-size:11.5px;color:#b0702a">오늘만: ' + td.map(it => it.g ? GOODS[it.g].n : itemName(it)).join(', ') + '</p>' : ''}<div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + (jk.length ? `<h4>한꺼번에 팔기</h4><button class="sk-b" data-a="selljunk">보통 장비 ${jk.length}개 팔기 (+${jg}G)</button>` : '') + coinHtml(); }
 function coinHtml() { const B = opts.bonus; if (!B) return ''; const day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), used = G.P.flags.coinDay === day ? G.P.flags.coinN || 0 : 0; return `<h4>5락실 코인 바꾸기</h4><p class="m" style="font-size:11.5px;color:#8a7458">코인 1개 = 200G, 하루 5개까지 (보유 ${B.coins()}개, 오늘 ${used}/5)</p><button class="sk-b" data-a="coin" ${B.coins() > 0 && used < 5 ? '' : 'disabled'}>🪙 1개 → 200G</button>`; }
 const buyPrice = it => it.pr ? it.pr : it.g ? GOODS[it.g].price : priceOf(it) * 4;
 function talkHtml(id) {
@@ -286,6 +288,7 @@ function bindPanel(arg) {
   panel.onclick = e => {
     const t = e.target.closest('[data-a],[data-c],[data-sk]'); if (!t) { if (e.target === panel && PANEL !== 'title') closePanel(); return; }
     const P = G && G.P, a = t.dataset.a;
+    if (t.dataset.c && PANEL === 'stash') { stashMove(t.dataset.c); render(arg); return; }
     if (t.dataset.c) { SEL = t.dataset.c; if (SEL[0] === 'b' && PANEL === 'inv') {} render(arg); return; }
     if (t.dataset.sk) { SEL = t.dataset.sk; render(); return; }
     if (a === 'x') { closePanel(); if (PANEL === null && G && G.endNext) { G.endNext = 0; openPanel('end'); } return; }
@@ -296,6 +299,7 @@ function bindPanel(arg) {
     else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
     else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
+    else if (a === 'selljunk') { let g = 0; P.inv = P.inv.filter(it => { if (!it.g && it.r === 0) { g += priceOf(it); return false; } return true; }); P.gold += g; SEL = null; sfx('coin'); render(); toast(g + 'G 받았어요'); }
     else if (a === 'coin') { const B = opts.bonus, day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10); if (P.flags.coinDay !== day) { P.flags.coinDay = day; P.flags.coinN = 0; } if (P.flags.coinN >= 5 || !B.spend(1)) return; P.flags.coinN++; P.gold += 200; sfx('coin'); render(); }
     else if (a === 'lookit') { const it = P.inv[+SEL.slice(1)]; if (useGood('look')) { it.id = true; sfx('ench'); SEL = 'i' + P.inv.indexOf(it); } render(); }
     else if (a === 'purify') { const it = P.eq[SEL.slice(1)]; if (useGood('pure')) { it.st = 0; calc(P); sfx('ench'); toast('정화했어요'); } render(); }
