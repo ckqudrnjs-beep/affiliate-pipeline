@@ -1,0 +1,110 @@
+220	Toll
+221	Echo
+222	Weapon
+223	Off-hand
+224	Helm
+225	Top
+226	Legs
+227	Lining
+228	Cloak
+229	Gloves
+230	Belt
+231	Boots
+232	Amulet
+233	Earring
+234	Ring
+235	Sail
+236	Wooden Spear
+237	Shepherd's Spear
+238	Iron-tip Spear
+239	Willow Staff
+240	Pinwheel Staff
+241	Paper Kite Staff
+242	Wanderer's Twin Blades
+243	Reed Twin Blades
+244	Frostedge Twin Blades
+245	Wooden Crossbow
+246	Hunter's Crossbow
+247	Skyhawk Crossbow
+248	Bell Hammer
+249	Iron-band Hammer
+250	Dawn Hammer
+251	Short Blade
+252	Wind Blade
+253	Trap Box
+254	Iron-tooth Trap Box
+255	Hand Bell
+256	Bronze Hand Bell
+257	Round Wooden Shield
+258	Iron-band Shield
+259	Wind Chime
+260	Feather Bundle
+261	Leather Hood
+262	Iron Helm
+263	Feather Hat
+264	Quilted Shirt
+265	Leather Armor
+266	Scale Vest
+267	Cotton Pants
+268	Leather Pants
+269	Iron Mail Leggings
+270	Cotton Lining
+271	Fur Lining
+272	Worn Cloak
+273	Wildflower Cloak
+274	Cloth Gloves
+275	Leather Gloves
+276	Straw Rope Belt
+277	Leather Belt
+278	Straw Sandals
+279	Leather Boots
+280	Dandelion Amulet
+281	Pebble Amulet
+282	Feather Earring
+283	Copper Earring
+284	Grass Ring
+285	Copper Ring
+286	Rag Sail
+287	Lotus Leaf Sail
+288	Gull Sail
+289	Dandelion Tea
+290	Restores 40% life
+291	Wind Candy
+292	Restores 50% wind
+293	Wind Whetstone
+294	Weapon enchant material
+295	Wind Glue
+296	Armor enchant material
+297	Blessed Whetstone
+298	Enchants a weapon 1–2 steps; nothing lost on failure
+299	Blessed Glue
+300	Enchants armor 1–2 steps; nothing lost on failure
+301	Clear Spring Water
+302	Purifies cursed gear
+303	Appraisal Note
+304	Identifies one unidentified item
+305	Bridge Plank
+306	Material for fixing broken bridges
+307	Nest Shell
+308	The Nestkeeper's hard shell. Used to prop up bridges
+309	Common
+310	Refined
+311	Famed
+312	Legendary
+313	Set
+314	Damage +{}%
+315	Defense +{}
+316	Attack speed +{}%
+317	Life +{}
+318	Wind +{}
+319	Wind regen +{}%
+320	Crit +{}%
+321	Move speed +{}%
+322	Reflects {} when hit
+323	Knockback +{}%
+324	STR +{}
+325	AGI +{}
+326	VIT +{}
+327	BRE +{}
+328	All resistances +{}%
+329	Life +{} on kill

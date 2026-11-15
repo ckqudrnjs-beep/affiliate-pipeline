@@ -42,7 +42,7 @@ function itemName(it) {
   if (!it.id) return '감정 안 된 ' + b.n;
   if (it.u) n = UNIQ.find(u => u.id === it.u).n;
   else if (it.set) n = SETS[it.set].parts.find(p => p[0] === it.b)[1];
-  else if (it.r === 2) n = it.nm;
+  else if (it.r === 2) n = LANG === 'en' ? it.nm.replace(/^(\S+) (.+)$/, (_, a, b2) => tr(a) + ' ' + tr(b2)) : it.nm;
   else if (it.r === 1 && it.af.length) n = ADJ[it.af[0][0]] + ' ' + b.n;
   else n = b.n;
   return (it.st === 1 ? '축복 받은 ' : it.st === -1 ? '저주받은 ' : '') + (it.en ? '+' + it.en + ' ' : '') + n;
@@ -62,7 +62,7 @@ function itemMods(it, out) {
   return out;
 }
 function priceOf(it) { if (it.g) return Math.round((GOODS[it.g].price || 8) * .4) * it.n; const b = BASE[it.b]; return Math.round((6 + b.lv * 4 + it.en * 10) * [1, 2, 4, 8, 6][it.r] * (it.id ? 1 : .6)); }
-function canWear(P, it) { const b = BASE[it.b]; if (it.g) return '장비가 아니에요'; if (b.cls && b.cls !== P.cls) return CLASSES[b.cls].name + ' 전용'; if (P.lv < b.lv) return b.lv + '레벨부터';
+function canWear(P, it) { const b = BASE[it.b]; if (it.g) return '장비가 아니에요'; if (b.cls && b.cls !== P.cls) return CLASSES[b.cls].name + ' 전용'; if (P.lv < b.lv) return lvT(b.lv) + '부터';
   for (const k in b.req || {}) if (P.st[k] < b.req[k]) return STATS.find(s => s[0] === k)[1] + ' ' + b.req[k] + ' 필요'; return ''; }
 // 강화: mat = 'hone'|'glue'|'bhone'|'bglue' → {ok, msg}
 function enchant(it, mat) {
@@ -74,7 +74,7 @@ function enchant(it, mat) {
   const next = it.en + 1, safe = next <= SAFE[kind], rate = safe ? 1 : ENCH_RATE[kind][next] || .05;
   if (blessedMat) { if (safe || Math.random() < Math.max(rate, .5)) { const up = (Math.random() < .35 && next < MAXENCH) ? 2 : 1; it.en += up; return { ok: 1, up, msg: '+' + it.en + ' 성공!' + (up > 1 ? ' 두 단계!' : '') }; } return { ok: 2, msg: '실패했지만 축복 덕분에 그대로예요' }; }
   if (Math.random() < rate) { it.en = next; return { ok: 1, up: 1, msg: '+' + it.en + ' 성공!' }; }
-  if (it.st === 1) { it.st = 0; return { ok: 2, msg: '실패! 축복이 대신 사라졌어요(단계 유지)' }; }
+  if (it.st === 1) { it.st = 0; return { ok: 2, bl: 1, msg: '실패! 축복이 대신 사라졌어요(단계 유지)' }; }
   it.en = Math.max(0, it.en - 1); return { ok: 3, msg: '실패… +' + it.en + '(으)로 내려갔어요' };
 }
 function reroll(it) { const b = BASE[it.b]; if (!(it.r === 1 || it.r === 2) || !it.af.length) return false; const i = Math.floor(Math.random() * it.af.length); const rest = it.af.filter((_, j) => j !== i); const n = rollAfx(b, it.ilv, 1, rest.concat([it.af[i]]))[0]; if (!n) return false; it.af[i] = n; return i; }

@@ -3,7 +3,7 @@
 const FBT = [['bug', '🐞 버그'], ['hard', '😵 너무 어려움'], ['easy', '😴 너무 쉬움'], ['dull', '🥱 지루함'], ['good', '😍 좋아요'], ['idea', '💡 제안']];
 const FB = { star: 0, tags: [], why: 'menu', busy: 0, chip: null, last: 0 };
 function fbCtx() { const P = G.P, Wd = G.Wd, k = Wd.isl[Wd.id(Math.floor(P.x), Math.floor(P.y))], s = k >= 0 && Wd.islands[k];
-  return { ch: Wd.ch, isle: (s && s.name) || '', lv: P.lv, cls: P.cls, diff: P.diff || 0, play: Math.round(P.play || 0), dev: matchMedia('(pointer: coarse)').matches ? 'phone' : 'pc', why: FB.why, v: '__ASSETV__'.slice(0, 8) }; }
+  return { ch: Wd.ch, isle: (s && s.name) || '', lv: P.lv, cls: P.cls, diff: P.diff || 0, play: Math.round(P.play || 0), dev: matchMedia('(pointer: coarse)').matches ? 'phone' : 'pc', why: FB.why, lang: LANG, v: '__ASSETV__'.slice(0, 8) }; }
 function fbOpen(why) { FB.why = why || 'menu'; FB.star = 0; FB.tags = []; fbChipOff(); openPanel('fb'); }
 const FBWHY = { end: '이 장', boss: '방금 보스 싸움', die: '방금 쓰러진 싸움', lv: '지금까지', menu: '' };
 function fbHtml(X) { const c = fbCtx(), code = pcode();

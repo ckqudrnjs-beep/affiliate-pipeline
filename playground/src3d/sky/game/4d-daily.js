@@ -9,7 +9,7 @@ const f2Of = (P, id) => (P.sk[id] || 0) >= 10 && P.fork2 ? P.fork2[id] : null;
 const dayKey = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
 const dayNum = k => Math.floor(Date.parse(k + 'T00:00:00Z') / 864e5);
 const DAILY_LV = 3, ISLE_N = 15;
-function isleName(k) { const D = G.P.daily; if (D && k === D.isle && D.ich && D.ich !== G.Wd.ch) return D.iname + '(' + D.ich + '장)'; const s = G.Wd.islands[k]; return s && s.name || '섬'; }
+function isleName(k) { const D = G.P.daily; if (D && k === D.isle && D.ich && D.ich !== G.Wd.ch) return tr(D.iname) + '(' + D.ich + '장)'; const s = G.Wd.islands[k]; return s && s.name || '섬'; }
 // 갈 수 있는 사냥 섬 중 내 레벨에 맞는 곳 몇 개에서 날마다 하나
 function isleCands(P) { const Wd = G.Wd, L = (Wd.ch >= 3 ? [...Wd.fi, ...(P.flags['c' + Wd.ch + 'bridge'] ? Wd.ci : [])] : Wd.ch === 3 ? [...Wd.fi, ...(P.flags.c3bridge ? Wd.ci : [])] : Wd.ch === 2 ? [...Wd.fi, ...(P.flags.c2bridge ? Wd.ci : [])] : [...Wd.fi, ...(P.flags.bridge ? [Wd.hill] : []), ...(P.flags.bridge2 ? Wd.mi : [])]).map(k => [k, Wd.islands[k].lv[1]]);
   const fit = L.filter(([, lv]) => lv >= P.lv - 4 && lv <= P.lv + 3); return (fit.length ? fit : L.sort((a, b) => b[1] - a[1]).slice(0, 2)).map(a => a[0]); }

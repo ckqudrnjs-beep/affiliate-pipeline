@@ -1245,6 +1245,12 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                                   f'<description>{esc(cfg["description"])}</description><language>ko</language>{items}</channel></rss>', encoding="utf-8")
     import shutil
     shutil.copytree(HERE / "static", out, dirs_exist_ok=True)
+    # 끊어진 하늘 영어판(레딧 베타, BK 11/15): games/sky/en.html → /en/sky (번역 결과물 static/js/sky-en.js 는 src3d/sky/i18n/build-en.mjs 로 만들어 커밋)
+    if (HERE / "games/sky/en.html").exists() and (HERE / "static/js/sky-en.js").exists():
+        (out / "en").mkdir(exist_ok=True)
+        v = lambda rel: (f"?v={static_ver(rel)}" if static_ver(rel) else "")
+        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("{{SKYV}}", v("js/sky-en.js")).replace("{{POSTERV}}", v("img/sky-poster.jpg")).replace("{{OGV}}", v("og/sky.jpg")), encoding="utf-8")
+        sm += f"<url><loc>{base}/en/sky</loc><lastmod>{lm}</lastmod></url>"
     (out / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>', encoding="utf-8")
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")
     (out / "favicon.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c0620"/><rect x="2" y="2" width="28" height="28" rx="7" fill="none" stroke="#ff3d7f" stroke-width="2"/><path d="M10 8h12v4h-8v3h6l2 2v6l-2 2H10v-4h8v-3h-8z" fill="#ffd23f"/></svg>', encoding="utf-8")

@@ -1,0 +1,110 @@
+5220	You defeated the warden?! Touch the Pinwheel Beacon on Great Windmill Isle. Let the wind come back.
+5221	Great Windmill Isle is at the end of Cogwheel Plain, past Chain Ferry. When it's enraged, wind blades fly everywhere. Watch for the gaps.
+5222	The isles' windmills are turning again. All thanks to you, Mender.
+5223	A Windway to Anchored Harbor has opened. Cross over from the Pinwheel Beacon.
+5224	When windmills stop, the wind pools and goes stale. That's why rust sets in so fast here.
+5225	Show me anything unidentified. 15G each and I'll take a look.
+5226	<button class="sk-b" data-a="ident" ⟨0⟩>Identify (⟨1⟩ items · 15G each)</button>
+5227	Oh, you got all five cogs!
+5228	<button class="sk-b g" data-a="finish" data-q="q11">Hand over cogs</button>
+5229	Rust flufflings and nail pods carry rusty cogs around. I need five.
+5230	Enchanting or rerolling, leave it to me. The iron here is tough; it bonds better than Musoe's.
+5231	<button class="sk-b p" data-a="smith">Open forge</button>
+5232	We meet again! When the Windway opened, I followed. The metalwork here is good.
+5233	<button class="sk-b p" data-a="shop">Buy & sell</button>
+5234	Rusty murklings 
+5235	Chain Links 
+5236	/4 → broken bridge east of Middle Windmill Isle
+5237	Scythe Scarecrows 
+5238	Rusty Cogs 
+5239	Dropped a Chain Link!
+5240	The Creaking Warden's blades spin backwards!
+5241	The Creaking Warden summoned nail pods!
+5242	Ch. 1 · Dandelion Isle
+5243	Return to Dandelion Village
+5244	Ch. 2 · Rusty Windmill Isles
+5245	Ride the Windway across (Lv 15–25)
+5246	Ch. 3 · Anchored Harbor
+5247	Ride the Windway across (Lv 25–34)
+5248	<div class="sk-row"><div class="f"><b>⟨0⟩</b><br><small>⟨1⟩</small></div><button class="sk-b⟨2⟩" data-a="chap" data-i="⟨3⟩">Cross</button></div>
+5249	Cross again
+5250	<h4 style="margin:10px 0 4px">Windways</h4>
+5251	<div class="sk-bx sk-talk" style="text-align:center"><h3>End of Chapter 2: "Rusty Windmill Isles"</h3><p>As the Creaking Warden fell, the great windmill that had been turning backwards faltered, then slowly began to turn the right way.</p><p>One by one, the isles' windmills follow. The wind now flows toward Anchored Harbor — where the airships lie moored.</p><p style="font-size:13px;color:#8a7458">⟨0⟩ Lv ⟨1⟩ · Murklings defeated ⟨2⟩ · Played ⟨3⟩ min<br>Cross to Chapter 3, Anchored Harbor, from the "Windways" at the Pinwheel Beacon (travel).</p><button class="sk-b p" data-a="x">Keep exploring</button></div>
+5252	Salt Fluffling
+5253	A fluffling crusted with dried sea salt. Swarms in, stinging.
+5254	Barnacle Pod
+5255	A pod covered in barnacles. Charges from afar.
+5256	Grumpy Gull
+5257	A gull that perches on moored airship masts, then dives in flocks.
+5258	Anchor Crab
+5259	A crab with a giant anchor-shaped claw. Swings it around when you get close (watch the floor marker and dodge).
+5260	Barnacle Nestkeeper
+5261	A nestkeeper armored in barnacles. Nests on every wharf, hoarding rope coils.
+5262	Rusty Airship
+5263	An old airship once moored in the harbor. When the wind stopped, it cut its anchor rope, rose on its own, and now bombards the harbor from above.
+5264	Rope Coil
+5265	A thick coil of rope held by Barnacle Nestkeepers. Used to tie rope bridges
+5266	Salt Crystal
+5267	A lump of salt hardened by sea wind. Smiths use it for quenching
+5268	Anchor-rope Spear
+5269	Harpoon Spear
+5270	Lighthouse Keeper's Staff
+5271	Mast Staff
+5272	Hook Twin Blades
+5273	Spray Twin Blades
+5274	Wharf Crossbow
+5275	Harpoon Crossbow
+5276	Anchor Hammer
+5277	Great Anchor Hammer
+5278	Salt Wind Blade
+5279	Net Trap Box
+5280	Ship's Bell
+5281	Fender Shield
+5282	Harbor Wind Chime
+5283	Harbormaster's Hood
+5284	Diving Helm
+5285	Harbormaster's Raincoat
+5286	Barnacle Armor
+5287	Sailor's Trousers
+5288	Anchor-chain Greaves
+5289	Salt-cured Lining
+5290	Sailcloth Cape
+5291	Harbormaster's Gloves
+5292	Harbormaster's Belt
+5293	Deck Boots
+5294	Anchor Amulet
+5295	Pearl Earring
+5296	Barnacle Ring
+5297	Compass Ring
+5298	Airship Sail
+5299	Harbormaster
+5300	The Anchor's Last Weight
+5301	A small iron anchor that hung from the rope the Rusty Airship snapped as it rose. Wear it and no wind can lift your feet.
+5302	Anchorstone Harbor's Request
+5303	Defeat 20 murklings on the wharves
+5304	A Mender who rode the Windway. News from the windmill isles got here faster than the gulls.
+5305	This is Anchorstone Harbor. Since the wind stopped, not one airship has flown. The wharves are crawling with salt flufflings and anchor crabs.
+5306	Clear out twenty first, so the porters can get back on the wharves.
+5307	Cart wheels rattling on the wharves again. Thank you.
+5308	The Rope Bridge
+5309	Collect 4 Rope Coils from Barnacle Nestkeepers and tie the rope bridge east of Central Wharf
+5310	There was a rope bridge from Central Wharf to Rope Ferry. It snapped the day the Rusty Airship cut its anchor rope and rose.
+5311	Barnacle Nestkeepers nest on every wharf, holding rope coils. Four coils and we can tie the bridge again.
+5312	The rope bridge is up again! Beyond it: Rope Ferry, Barnacle Shallows… and Rusty Dock.
+5313	That's where the airship floats. Keep an eye on the sky.
+5314	Crab Chase
+5315	Defeat 12 Anchor Crabs
+5316	It's Solbaram. I followed you here! Seen the anchor crabs? They used to be gentle, just collecting broken anchors.
+5317	With the wind gone, they swing their claws at people. Back off when a round marker shows on the ground. Let twelve of them rest.
+5318	Thank you. The sea breeze smells salty again. Here's a ring I found.
+5319	Salt Quenching
+5320	Bring 5 Salt Crystals
+5321	I'm Saltiron, the harbor smith. I've heard about Musoe and Pulmu.
+5322	Quench iron in sea salt and it never rusts. Salt flufflings and barnacle pods carry salt crystals. Five, please.
+5323	Good, that's a whole year of quenching. For your trouble, a blessed whetstone and blessed glue.
+5324	The Airship over Rusty Dock
+5325	Bring down the Rusty Airship over Rusty Dock and touch the dock's Pinwheel Beacon
+5326	The Rusty Airship hovers over the dock, blocking all wind into the harbor.
+5327	It fires its broadside all at once, scattering round markers on the ground, and drops its anchor. It calls gull flocks too.
+5328	When enraged, it passes overhead dropping bombs in a line. When the markers form a line, step aside.
+5329	…Wind! The moored airships' sails are filling!

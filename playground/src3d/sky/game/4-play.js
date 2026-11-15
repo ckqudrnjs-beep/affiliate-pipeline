@@ -19,7 +19,7 @@ function startGame(S) {
   else if (Wd.ch >= 3) { if (S.flags['c' + Wd.ch + 'bridge']) repairBridge(Wd, Wd.bq); }
   else if (Wd.ch === 2) { if (S.flags.c2bridge) repairBridge(Wd, Wd.bq); }
   else { if (S.flags.bridge) repairBridge(Wd, Wd.bq); if (S.flags.bridge2) repairBridge(Wd, Wd.bq2); }
-  for (const w of Wd.wps) if (S.flags['wp_' + w.n]) w.on = 1;
+  for (const w of Wd.wps) if (S.flags[wpk(w.n)]) w.on = 1;
   if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = []; if (!S.fork2) S.fork2 = {};
   const T = Wd.islands[Wd.town];
   const P = { ...S, x: T.cx + 1.5, y: T.cy + 2.5, r: .28, dir: 2, an: 'idle', at: 0, atkT: 0, cds: {}, buf: {}, hp: null, wind: null, dodge: 0, dcd: 0, inv0: 0, tgt: null, path: null, dead: 0, combo: 0 };
@@ -30,7 +30,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13 || CHX[Wd.ch] && Wd.ch < 8 && !S.q[CHX[Wd.ch].qid[0]]) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
@@ -180,7 +180,7 @@ function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) re
 function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
 function gainXp0(n) {
   const P = G.P; P.xp += n; G.txt.push({ x: P.x, y: P.y, z: 2.2, t: 0, s: '+' + n + ' 경험', c: '#b6f0a0', small: 1 });
-  while (P.xp >= xpNeed(P.lv)) { P.xp -= xpNeed(P.lv); P.lv++; P.pts += 5; P.skp++; calc(P); P.hp = P.mhp; P.wind = P.mwind; G.fx.push({ k: 'lvl', x: P.x, y: P.y, t: 0, life: 1.4 }); sfx('lvl'); say(P.lv + '레벨! 스탯 5점, 스킬 1점이 생겼어요.', '#ffd166'); if (P.lv === ULT[P.cls].req) { autoSlots(P); say('궁극 기술 「' + ULT[P.cls].name + '」을 익혔어요! 4번으로 써 보세요.', '#ffcf7a'); } }
+  while (P.xp >= xpNeed(P.lv)) { P.xp -= xpNeed(P.lv); P.lv++; P.flags.lvAt = Date.now(); P.pts += 5; P.skp++; calc(P); P.hp = P.mhp; P.wind = P.mwind; G.fx.push({ k: 'lvl', x: P.x, y: P.y, t: 0, life: 1.4 }); sfx('lvl'); say(lvT(P.lv) + '! 스탯 5점, 스킬 1점이 생겼어요.', '#ffd166'); if (P.lv === ULT[P.cls].req) { autoSlots(P); say('궁극 기술 「' + ULT[P.cls].name + '」을 익혔어요! 4번으로 써 보세요.', '#ffcf7a'); } }
 }
 function hurtPlayer(d, src) {
   const P = G.P; if (P.dead || P.dodge > 0 || P.inv0 > 0 || DEBUG && G.god) return;
@@ -473,7 +473,7 @@ function qAdd(id, n) { const q = G.P.q[id]; if (!q || q.s !== 1) return; q.n += 
 function near() {
   const P = G.P, Wd = G.Wd; G.near = null; if (P.dead) return;
   for (const k in Wd.npcAt) { const [x, y] = Wd.npcAt[k]; if (hyp(P.x - x, P.y - y) < 1.5) { G.near = { k: 'npc', id: k, label: NPCDEF[k].n + ' 말 걸기' }; return; } }
-  for (const w of Wd.wps) if (hyp(P.x - w.x, P.y - w.y) < 1.4) { if (!w.on && (w.n !== '바람개비 언덕' || P.flags.boss) && (w.n !== '둥지섬' || P.flags.heron) && (w.n !== '큰 풍차섬' || P.flags.creaker) && (w.n !== '녹슨 정박장' || P.flags.rustship) && !(CHX[Wd.ch] && w.n === CHX[Wd.ch].hill && !(Wd.ch === 8 ? P.roam.boss : P.flags[CHX[Wd.ch].m.boss]))) { w.on = 1; P.flags['wp_' + w.n] = 1; say('바람개비 표지 「' + w.n + '」에 바람이 깃들었어요', '#9fe4ff'); sfx('lvl'); if (w.n === '바람개비 언덕' && P.q.q3 && P.q.q3.s === 2 || w.n === '둥지섬' && P.q.q7 && P.q.q7.s === 2 || w.n === '큰 풍차섬' && P.q.q12 && P.q.q12.s === 2 || w.n === '녹슨 정박장' && P.q.q17 && P.q.q17.s === 2 || CHX[Wd.ch] && w.n === CHX[Wd.ch].hill) say(NPCDEF.chief.n + '에게 돌아가 소식을 전해요.', '#ffd166'); save(); }
+  for (const w of Wd.wps) if (hyp(P.x - w.x, P.y - w.y) < 1.4) { if (!w.on && (w.n !== '바람개비 언덕' || P.flags.boss) && (w.n !== '둥지섬' || P.flags.heron) && (w.n !== '큰 풍차섬' || P.flags.creaker) && (w.n !== '녹슨 정박장' || P.flags.rustship) && !(CHX[Wd.ch] && w.n === CHX[Wd.ch].hill && !(Wd.ch === 8 ? P.roam.boss : P.flags[CHX[Wd.ch].m.boss]))) { w.on = 1; P.flags[wpk(w.n)] = 1; say('바람개비 표지 「' + w.n + '」에 바람이 깃들었어요', '#9fe4ff'); sfx('lvl'); if (w.n === '바람개비 언덕' && P.q.q3 && P.q.q3.s === 2 || w.n === '둥지섬' && P.q.q7 && P.q.q7.s === 2 || w.n === '큰 풍차섬' && P.q.q12 && P.q.q12.s === 2 || w.n === '녹슨 정박장' && P.q.q17 && P.q.q17.s === 2 || CHX[Wd.ch] && w.n === CHX[Wd.ch].hill) say(NPCDEF.chief.n + '에게 돌아가 소식을 전해요.', '#ffd166'); save(); }
     G.near = w.on ? { k: 'wp', label: '바람개비 표지(이동)' } : { k: 'wpx', label: CHX[Wd.ch] && w.n === CHX[Wd.ch].hill ? '아직 바람이 없어요(' + CHX[Wd.ch].mn.boss + '을(를) 먼저)' : w.n === '녹슨 정박장' ? '아직 바람이 없어요(녹슨 비행선을 먼저)' : w.n === '큰 풍차섬' ? '아직 바람이 없어요(삐걱 파수꾼을 먼저)' : w.n === '둥지섬' ? '아직 바람이 없어요(큰 왜가리를 먼저)' : '아직 바람이 없어요(우두머리를 먼저)' }; return; }
   if (G.chest && hyp(P.x - G.chest.x, P.y - G.chest.y) < 1.5) { G.near = { k: 'chest', label: '오늘의 섬 상자 열기' }; return; }
   { const tn = townNear(P, Wd); if (tn) { G.near = tn; return; } }

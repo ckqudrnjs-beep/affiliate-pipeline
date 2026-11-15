@@ -34,9 +34,9 @@ function errandClaim() { const P = G.P, E = P.errand; if (!E || errandLeft(E) > 
 const fmtLeft = ms => { const m = Math.ceil(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + '시간 ' + (m % 60 ? m % 60 + '분' : '') : m + '분'; };
 function errandHtml() { const P = G.P, E = P.errand; let h = '<h4 style="margin:10px 0 4px">비행선 심부름</h4>';
   if (P.lv < ERRAND_LV) return h + `<p class="m" style="font-size:12px">${ERRAND_LV}레벨이 되면 마을 비행선을 심부름 보낼 수 있어요.</p>`;
-  if (E) { const left = errandLeft(E); return h + `<div class="sk-row"><div class="f"><b>${E.n}</b><br><small>${left > 0 ? fmtLeft(left) + ' 뒤에 돌아와요 · 게임을 꺼 둬도 시간은 흘러요' : '돌아왔어요!'}</small></div><button class="sk-b ${left > 0 ? '' : 'g'}" data-a="errc" ${left > 0 ? 'disabled' : ''}>${left > 0 ? '다녀오는 중' : '짐 받기'}</button></div>`; }
+  if (E) { const left = errandLeft(E); return h + `<div class="sk-row"><div class="f"><b>${tr(E.n)}</b><br><small>${left > 0 ? fmtLeft(left) + ' 뒤에 돌아와요 · 게임을 꺼 둬도 시간은 흘러요' : '돌아왔어요!'}</small></div><button class="sk-b ${left > 0 ? '' : 'g'}" data-a="errc" ${left > 0 ? 'disabled' : ''}>${left > 0 ? '다녀오는 중' : '짐 받기'}</button></div>`; }
   return h + ERRANDS.map((e, i) => `<div class="sk-row"><div class="f"><b>${e.n}</b> <small>${e.m >= 60 ? e.m / 60 + '시간' : e.m + '분'}</small><br><small>${e.d}</small></div><button class="sk-b p" data-a="errs" data-i="${i}">보내기</button></div>`).join('') + '<p class="m" style="font-size:11.5px">한 번에 하나씩 보낼 수 있어요. 횟수 제한은 없어요.</p>'; }
-function errandTrack() { const E = G.P.errand; if (!E) return null; const left = errandLeft(E); return ['비행선 심부름', left > 0 ? E.n + ' · ' + fmtLeft(left) + ' 남음' : '돌아왔어요! 마을 게시판에서 짐 받기']; }
+function errandTrack() { const E = G.P.errand; if (!E) return null; const left = errandLeft(E); return ['비행선 심부름', left > 0 ? tr(E.n) + ' · ' + fmtLeft(left) + ' 남음' : '돌아왔어요! 마을 게시판에서 짐 받기']; }
 // 대장간 분해: 안 쓰는 장비를 숫돌·아교로 바꿔요(무기 → 숫돌, 나머지 → 아교)
 function salvageOf(it) { const b = BASE[it.b]; if (!b || it.g) return null; const n = [1, 1, 2, 3, 3][it.r] + (b.lv >= 18 ? 1 : 0) + (it.en >= 4 ? 1 : 0); return [b.s === 'weapon' ? 'hone' : 'glue', n]; }
 function salvage(i) { const P = G.P, it = P.inv[i], s = salvageOf(it); if (!s) return; P.inv.splice(i, 1); addInv(goods(s[0], s[1])); sfx('ench'); toast(itemName(it) + ' → ' + GOODS[s[0]].n + ' ' + s[1] + '개'); save(); }
