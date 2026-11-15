@@ -138,6 +138,7 @@ function killMob(m, fell) {
   if (fell) { G.txt.push({ x: m.x, y: m.y, z: 1, t: 0, s: '떨어짐!', c: '#9fe4ff' }); sfx('fall'); }
   else { burst(m.x, m.y, m.t, D.boss ? 3 : D.mini ? 2.2 : m.elite ? 1.6 : 1); killFx(m); }
   if (D.mini && m.pk) cleanse(m.pk);
+  if (D.boss && !fell) setTimeout(() => fbNudge('boss', m.t + (P.diff || 0)), 2500);
   drops(m, fell);
   if (m.pk) { m.pk.dead++; if (m.pk.dead >= m.pk.mobs.length) { m.pk.clear = G.t; } }
 }
@@ -173,7 +174,7 @@ function burst(x2, y2, t, k) {
     G.parts.push({ k: t === 'seed' || t === 'keeper' || t === 'bogpod' || t === 'barnpod' || t === 'barnkeeper' || t === 'rustship' || t === 'crab' ? 'chip' : t === 'bird' || t === 'heronling' || t === 'heron' || t === 'gull' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
-function gainXp(n) { gainXp0(n); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
+function gainXp(n) { const l0 = G.P.lv; gainXp0(n); if (Math.floor(G.P.lv / 10) > Math.floor(l0 / 10)) fbNudge('lv', 'lv' + Math.floor(G.P.lv / 10) * 10); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
 // 3레벨: 나침반판이 열리고 처음 조각 2개
 function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) return; P.flags.board0 = 1; giveShard({ c: 'sky', q: 1 }, 1); giveShard({ c: 'fire', q: 1 }, 1); G.cut = { s: '나침반판이 열렸어요 (B)', c: '#9fe4ff', t: 0 }; say('나침반판이 열렸어요! 기술 창(S)이나 B 키로 바람 조각을 끼워 보세요.', '#9fe4ff'); }
 function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
@@ -195,7 +196,7 @@ function hurtPlayer(d, src) {
   d = Math.max(0, Math.round(d)); if (!d) return;
   P.hp -= d; P.hurt = .25; hurtFx(src, d); G.txt.push({ x: P.x, y: P.y, z: 1.2, t: 0, s: String(d), c: '#ff7a6a' }); G.shake = Math.max(G.shake, 2.5); sfx('hurt');
   if (src && src.t === 'bird') P.wind = Math.max(0, P.wind - 3);
-  if (P.hp <= 0) { P.hp = 0; P.dead = 2.6; P.an = 'die'; P.at = 0; sfx('die'); say('쓰러졌어요… 마을에서 다시 일어나요(골드 10% 잃음).', '#ff9a8a'); }
+  if (P.hp <= 0) { fbNudge('die'); P.hp = 0; P.dead = 2.6; P.an = 'die'; P.at = 0; sfx('die'); say('쓰러졌어요… 마을에서 다시 일어나요(골드 10% 잃음).', '#ff9a8a'); }
 }
 const skLvId = id => { const s = SKILLS[G.P.cls].find(x => x.id === id); return s ? skLv(G.P, s) : 0; };
 

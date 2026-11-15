@@ -249,7 +249,7 @@ def trial_box(hidden: list[dict]) -> str:
 
 def _grid(games: list[dict]) -> str:
     colors = ["#ff3d7f", "#22d3ee", "#ffd23f", "#3ddc84", "#b06bff", "#ff8a3d"]
-    cards = "".join(f'<a href="/games/{g["slug"]}" style="--c:{colors[i % len(colors)]}">{"<span class=rk>RANK</span>" if g.get("ranked") else ""}<span class="scr"><span class="ic">{g.get("icon", "🎮")}</span></span><b>{esc(g["name"])}</b><small>{esc(g["short"])}</small><span class="play"><span>PLAY</span><span>▶</span></span></a>' for i, g in enumerate(games))
+    cards = "".join(f'<a href="/games/{g["slug"]}" style="--c:{colors[i % len(colors)]}">{"<span class=rk>RANK</span>" if g.get("ranked") else "<span class=rk style=background:#ffd23f;color:#000>BETA</span>" if g.get("beta") else ""}<span class="scr"><span class="ic">{g.get("icon", "🎮")}</span></span><b>{esc(g["name"])}</b><small>{esc(g["short"])}</small><span class="play"><span>PLAY</span><span>▶</span></span></a>' for i, g in enumerate(games))
     return f'<div class="grid">{cards}</div>'
 
 
@@ -924,6 +924,20 @@ function form(){const f=$('bwf'),c=code(),n=window.Profile&&Profile.nick();
   if(j.ok){$('bt').value='';$('bb').value='';$('bm').textContent='올렸어요!';list();if(j.id)view(j.id)}else $('bm').textContent=j.msg||'올리지 못했어요.'}}
 $('bl').onclick=e=>{const a=e.target.closest('[data-p]');if(!a)return;e.preventDefault();history.replaceState(null,'','?p='+a.dataset.p);view(+a.dataset.p)};$('bmore').onclick=()=>list(true);
 form();list();const q=+new URLSearchParams(location.search).get('p');if(q)view(q)})();"""
+ADMIN_SKYFB = """<div class="card"><h2>🪁 끊어진 하늘 베타 의견</h2><p class="muted">게임 안 「의견 보내기」로 온 의견이에요. 장·섬·레벨·직업·기기가 같이 와요. 차단하면 그 사람(프로필, 익명이면 그 기기)은 의견·게시판·순위·서버 저장이 모두 막혀요.</p><div class="row"><select id="fch" style="background:#0b0620;color:#fff;border:2px solid #ffffff33;border-radius:9px;padding:6px"><option value="0">모든 장</option><option value="1">1장</option><option value="2">2장</option><option value="3">3장</option><option value="4">4장</option><option value="5">5장</option><option value="6">6장</option><option value="7">7장</option><option value="8">떠도는 섬</option></select><select id="ftg" style="background:#0b0620;color:#fff;border:2px solid #ffffff33;border-radius:9px;padding:6px"><option value="">모든 태그</option><option value="bug">버그</option><option value="hard">너무 어려움</option><option value="easy">너무 쉬움</option><option value="dull">지루함</option><option value="good">좋아요</option><option value="idea">제안</option></select><button class="share" type="button" id="fbl">불러오기</button></div><div id="fbs"></div><div id="fba"></div><button class="share" type="button" id="fbm" hidden>더 보기</button></div>"""
+ADMIN_SKYFB_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak'),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)alert(j.msg||('오류 '+r.status));return r.ok?j:null};
+const TN={bug:'🐞버그',hard:'😵어려움',easy:'😴쉬움',dull:'🥱지루함',good:'😍좋아요',idea:'💡제안'},CN={warden:'방패지기',drifter:'떠돌이 검객',windcaller:'바람술사',trapper:'덫사냥꾼',ringer:'종지기'},WN={end:'장 끝',boss:'보스 뒤',die:'쓰러짐',lv:'레벨',menu:'메뉴'};
+let pg=0;async function load(more){if(!more){pg=0;$('fba').innerHTML=''}const j=await api({a:'skyfb',page:pg,ch:+$('fch').value,tag:$('ftg').value});if(!j)return;pg++;$('fbm').hidden=!j.more;
+ if(!more)$('fbs').innerHTML=j.sum.length?'<table style="width:100%;font-size:13px;margin:8px 0"><tr><th>장</th><th>의견</th><th>별점</th><th>버그</th><th>어려움</th><th>지루함</th></tr>'+j.sum.map(r=>`<tr style="text-align:center"><td>${r.ch===8?'떠도는 섬':r.ch+'장'}</td><td>${r.n}</td><td>${r.star}</td><td>${r.bug}</td><td>${r.hard}</td><td>${r.dull}</td></tr>`).join('')+'</table>':'<p class="muted">아직 의견이 없어요.</p>';
+ j.list.forEach(f=>{const c=f.ctx||{},el=document.createElement('div');el.className='ap';el.innerHTML=`<h3>#${f.id} ${'★'.repeat(f.star)}${'☆'.repeat(5-f.star)} ${(f.tags||'').split(',').filter(Boolean).map(t=>TN[t]||t).join(' ')} ${f.hidden?'<span class="tag">숨김</span>':''}</h3><small class="muted">${esc(f.nick)}${f.anon?'(기기)':''} · ${esc(f.created)} · ${c.ch===8?'떠도는 섬':c.ch+'장'} ${esc(c.isle)} · ${c.lv}레벨 ${esc(CN[c.cls]||c.cls)} · ${['보통','먹구름','폭풍'][c.diff||0]} · ${Math.round((c.play||0)/60)}분 · ${c.dev==='pc'?'PC':'폰'} · ${esc(WN[c.why]||c.why)}${f.post?' · 게시판 #'+f.post:''}${f.ban?' · <b>제한 ~'+esc(f.ban)+'</b>':''}</small><p class="bbody">${esc(f.text)}</p>
+ <div class="row"><button class="share" data-x="hide">${f.hidden?'다시 보이기':'숨기기'}</button><button class="share" data-x="b7">7일 차단</button><button class="share" data-x="b0">영구 차단</button><button class="share" data-x="ub">차단 풀기</button></div>`;
+ el.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{const x=b.dataset.x;let r;
+  if(x==='hide')r=await api({a:'fbhide',id:f.id,on:!f.hidden});
+  else{if(!confirm(esc(f.nick)+(x==='ub'?' 님 차단을 풀까요?':x==='b7'?' 님을 7일 차단할까요? (의견·게시판·순위·서버 저장)':' 님을 영구 차단할까요? 이 사람 의견도 모두 숨겨요.')))return;r=await api({a:'fbban',id:f.id,days:x==='ub'?0:x==='b7'?7:9999,hideAll:x==='b0'})}
+  if(r)load()});$('fba').appendChild(el)})}
+$('fbl').onclick=()=>load();$('fbm').onclick=()=>load(true);$('fch').onchange=$('ftg').onchange=()=>load()})();"""
+
 ADMIN_BOARD = """<div class="card"><h2>💬 게시판 관리</h2><p class="muted">자동 숨김(신고 3번) 글이 맨 위에 와요. 비밀글 내용도 여기서 보여요.</p><button class="share" type="button" id="bpl">불러오기</button><div id="bpa"></div><button class="share" type="button" id="bpm" hidden>더 보기</button></div>"""
 ADMIN_Q = """<div class="card"><h2>💡 질문 제안</h2><p class="muted">사용자가 🪙10으로 제안한 밸런스 질문이에요. 채택하면 그 사람에게 칭호 「출제자」와 🪙10을 돌려줘요. 사이트에 올리는 건 질문 목록에 따로 넣어야 해요(채택한 질문을 알려 주시면 넣어 드려요).</p><button class="share" type="button" id="aql">불러오기</button><div id="aqa"></div></div>"""
 ADMIN_Q_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak'),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1154,7 +1168,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           PROFILE_BODY + MYREC_BODY, COMMON_JS + PROFILE_PAGE_JS + f"const GN={gnames};" + MYREC_JS, noindex=True)
     write("bonus", f"출석체크·코인 상점 | {cfg['siteName']}", "5락실 출석체크·오늘의 미션. 코인을 모아 아바타·칭호·스킨을 모으고 이어하기에 써요. 게임은 모두 무료.",
           BONUS_BODY, "window.FPG=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮")] for g in games}, ensure_ascii=False) + ";", noindex=True)
-    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), i] for i, g in enumerate(games)}, ensure_ascii=False) + ";" + "window.AGI=" + json.dumps(load_grant_items(HERE / "games"), ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
+    write("admin", f"관리자 | {cfg['siteName']}", "관리자 전용", ADMIN_BODY + ADMIN_SKYFB + ADMIN_Q + ADMIN_BOARD, "window.AGN=" + json.dumps({g["slug"]: [g["name"], g.get("icon", "🎮"), i] for i, g in enumerate(games)}, ensure_ascii=False) + ";" + "window.AGI=" + json.dumps(load_grant_items(HERE / "games"), ensure_ascii=False) + ";" + ADMIN_JS + ADMIN_SKYFB_JS + ADMIN_Q_JS + ADMIN_BOARD_JS, noindex=True)
     write("board", f"게시판 | {cfg['siteName']}", "5락실 게시판. 게임 이야기, 건의, 오류 제보, 프로필 문의.", BOARD_BODY, BOARD_JS, noindex=True)
     write("board-rules", f"게시판 이용 지침 | {cfg['siteName']}", "5락실 게시판 이용 지침과 제재 기준.", BOARD_RULES, noindex=True)
 

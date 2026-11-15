@@ -5,6 +5,7 @@
 // POST /api/score {a:"mine", code}            → 내 최근 7일 기록(게임별 날짜별 최고 점수)
 // 별명은 자동 생성 목록 조합, 또는 프로필 별명(아바타+이름, lib/nick.js 욕설·사칭 거르기 통과)만 허용. build.py ADJ/ANI와 같은 목록.
 import { profileNickOk } from "../../lib/nick.js";
+import { banUntil, ipKey } from "./skyfb.js";
 import { normCode } from "./profile.js";
 const ADJ = ["빠른", "느긋한", "용감한", "졸린", "배고픈", "신난", "수줍은", "똑똑한", "엉뚱한", "반짝이는", "조용한", "씩씩한", "날쌘", "포근한", "명랑한", "꼼꼼한"];
 const ANI = ["수달", "고양이", "강아지", "판다", "펭귄", "다람쥐", "여우", "너구리", "부엉이", "고래", "토끼", "햄스터", "거북이", "사슴", "오리", "곰"];
@@ -74,6 +75,8 @@ export async function onRequestPost({ request, env }) {
   if (!(game in MAX) || day !== kst() || !nickOk(nick) || !(score > 0 && score <= MAX[game])) return json({ error: "bad" }, 400);
   await ensure(env.DB);
   const ip = request.headers.get("cf-connecting-ip") || "0";
+  // 관리자가 차단한 사람(프로필 또는 기기)은 순위에 안 올림(응답은 똑같이 ok) — 2026-11-15 BK
+  try { const c0 = normCode(b.code); if (await banUntil(env, [c0 && (await sha(`${c0}|${env.VOTE_SALT || ""}`)), await ipKey(env, ip)])) return json({ ok: true }); } catch {}
   const h = (await sha(`${ip}|${game}|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
   await env.DB.prepare("INSERT INTO scores (day, game, h, nick, score, at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(day, game, h) DO UPDATE SET at = CASE WHEN excluded.score > score THEN excluded.at ELSE at END, score = MAX(score, excluded.score), nick = excluded.nick").bind(day, game, h, nick, score, Date.now()).run();
   // 오래된 기록 삭제는 매번 대신 가끔만(기록 50번에 한 번쯤)
