@@ -150,10 +150,11 @@ const MAXENCH = 10;
 /* ---------- 밑것들(몹) ---------- */
 // sz: 작은/큰 (무기 피해 열 선택), spr: 아틀라스, ai: 행동
 const MOBDEF = {
-  fluff: { n: '보풀이', hp: [8, 4], dmg: [2, 4, .9], spd: 1.6, r: .3, sz: 0, xp: [6, 3], atk: 1, ai: 'melee', spr: 'fluff', desc: '바람을 먹고 부푼 솜털 뭉치. 떼로 몰려다녀요.' },
-  seed: { n: '가시씨앗', hp: [14, 6], dmg: [3, 6, 1.3], spd: 1.15, r: .32, sz: 1, xp: [10, 4], atk: 1.2, ai: 'charge', spr: 'seed', desc: '가시 돋친 씨앗 꼬투리. 굴러서 들이받아요.' },
-  bird: { n: '바람도둑', hp: [7, 3], dmg: [2, 4, .8], spd: 2.5, r: .28, sz: 0, xp: [7, 3], atk: .9, ai: 'dive', fly: 1, spr: 'bird', desc: '남의 바람을 훔쳐 나는 새. 맞으면 바람이 줄어요.' },
-  fluffking: { n: '우두머리 보풀', hp: [520, 0], dmg: [8, 14, 0], spd: 1.1, r: .9, sz: 1, xp: [400, 0], atk: 2.2, ai: 'boss', boss: 1, spr: 'fluffking', desc: '들판의 바람을 혼자 다 먹어 치운 커다란 보풀이.' },
+  fluff: { n: '보풀이', hp: [8, 4], dmg: [2, 4, .9], spd: 1.6, r: .3, sz: 0, xp: [6, 3], atk: 1, ai: 'melee', spr: 'fluff', desc: '구름 밑 먼지가 엉겨 붙은 털 뭉치. 떼로 몰려와 물어뜯어요.' },
+  seed: { n: '가시씨앗', hp: [14, 6], dmg: [3, 6, 1.3], spd: 1.15, r: .32, sz: 1, xp: [10, 4], atk: 1.2, ai: 'charge', spr: 'seed', desc: '시든 껍질에 붉은 가시가 돋은 꼬투리. 쩍 벌린 입으로 들이받아요.' },
+  bird: { n: '바람도둑', hp: [7, 3], dmg: [2, 4, .8], spd: 2.5, r: .28, sz: 0, xp: [7, 3], atk: .9, ai: 'dive', fly: 1, spr: 'bird', desc: '너덜너덜한 검은 깃의 새. 남의 바람을 훔쳐 날아요. 맞으면 바람이 줄어요.' },
+  fluffking: { n: '우두머리 보풀', hp: [520, 0], dmg: [8, 14, 0], spd: 1.1, r: .9, sz: 1, xp: [400, 0], atk: 2.2, ai: 'boss', boss: 1, big: 1, spr: 'fluffking', desc: '들판의 바람을 혼자 다 먹어 치운 커다란 보풀이. 뿔 왕관을 쓰고 보풀이를 부려요.' },
+  keeper: { n: '둥지지기', hp: [70, 20], dmg: [5, 9, 1.4], spd: 1.05, r: .55, sz: 1, xp: [60, 22], atk: 1.8, ai: 'boss', mini: 1, big: 1, spr: 'keeper', desc: '밑것 둥지를 지키는 껍질 짐승. 둥지 둘레의 땅을 시들게 해요. 쓰러뜨리면 둥지가 걷혀요.' },
 };
 const ELITE = [['빠른', '#9fe4ff', { spd: 1.4 }], ['단단한', '#ffd27a', { hp: 2.2 }], ['바람 두른', '#c9a8ff', { kbimm: 1, hp: 1.5 }], ['성난', '#ff8f7a', { dmg: 1.5 }]];
 
