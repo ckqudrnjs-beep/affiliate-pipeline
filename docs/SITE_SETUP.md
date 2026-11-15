@@ -17,6 +17,7 @@
    - Environment variables: `PYTHON_VERSION` = `3.12`
 4. **Save and Deploy** → `xxx.pages.dev` 주소가 열리면 성공
 5. 프로젝트 → **Custom domains** → **Set up a custom domain** → `don3chon.com` 입력 → DNS 자동 추가 승인. `www.don3chon.com`도 같은 방법으로 추가
+6. 주소 하나로 모으기(2026-11-15): `xxx.pages.dev`·www·http 는 본 주소로 301. Bulk Redirects·Always Use HTTPS·www 리다이렉트 순서는 plan/SCALING.md 9장. `static/_headers` 가 pages.dev 에 noindex 를 붙인다.
 
 ## 2. 구글 검색 등록 (약 5분)
 1. search.google.com/search-console → **속성 추가** → 왼쪽 **도메인** → `don3chon.com`
