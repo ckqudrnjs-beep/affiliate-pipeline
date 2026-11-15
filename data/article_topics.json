@@ -52,8 +52,9 @@
  },
  {
   "q": "보일러 난방비 아끼는 법 (외출 모드 vs 끄기)",
-  "done": false,
-  "format": "비교"
+  "done": true,
+  "format": "비교",
+  "slug": "boiler-away-mode-vs-off"
  },
  {
   "q": "직구 제품 A/S와 반품 현실",
