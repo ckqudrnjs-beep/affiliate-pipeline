@@ -15,9 +15,14 @@ const IMG = '/img/sky/';
 /* ---------- 직업 ---------- */
 const CLASSES = {
   warden: { name: '방패지기', desc: '창과 방패로 막고 되받아치는 앞줄 싸움꾼. 적을 섬 끝으로 밀어 떨어뜨리는 데 능해요.', stat: { str: 13, agi: 8, vit: 12, spi: 6 }, melee: 1, range: 1.35, aspd: 1.45, col: '#4fb3d9' },
+  drifter: { name: '떠돌이 검객', desc: '두 자루 칼로 빠르게 베고, 몸을 흘려 피한 뒤 되받아쳐요.', stat: { str: 12, agi: 14, vit: 9, spi: 5 }, melee: 1, range: 1.25, aspd: 1.85, col: '#ff9a7a' },
   windcaller: { name: '바람술사', desc: '바람과 번개를 다루는 술사. 멀리서 몰아치고, 구름으로 몸을 지켜요.', stat: { str: 6, agi: 9, vit: 9, spi: 15 }, melee: 0, range: 6, aspd: 1.25, col: '#9fe4ff' },
+  trapper: { name: '덫사냥꾼', desc: '석궁과 덫으로 거리를 두고 싸워요. 덫에 걸린 적은 꼼짝 못 해요.', stat: { str: 8, agi: 14, vit: 9, spi: 9 }, melee: 0, range: 7, aspd: 1.15, main: 'agi', col: '#c6e07a' },
+  ringer: { name: '종지기', desc: '망치로 종을 울려 파동을 퍼뜨려요. 메아리 분신을 불러 함께 싸워요.', stat: { str: 12, agi: 7, vit: 13, spi: 8 }, melee: 1, range: 1.45, aspd: 1.2, col: '#c9a8ff' },
 };
-const STATS = [['str', '힘', '근접 피해 +1%, 무거운 장비 조건'], ['agi', '민첩', '공격 속도·치명타·회피'], ['vit', '인내', '생명력 +4, 상태이상 저항'], ['spi', '숨', '바람 +2·회복, 마법 피해 +1%']];
+// 시작 장비·첫 스킬·유니크(직업별)
+const CLS_START = { warden: ['spear0', 'shield0', 'pierce', 'armor1', 'u_late'], windcaller: ['staff0', 'bell0', 'gust', 'cloak1', 'u_cloudfan'], drifter: ['sword0', 'dagger0', 'slash3', 'cloak1', 'u_twin'], trapper: ['xbow0', 'trapbox0', 'pshot', 'cloak1', 'u_hawkeye'], ringer: ['hammer0', 'gong0', 'toll', 'armor1', 'u_dawnbell'] };
+const STATS = [['str', '힘', '근접 피해 +1%, 무거운 장비 조건'], ['agi', '민첩', '공격 속도·치명타·회피(덫사냥꾼은 피해 +1%)'], ['vit', '인내', '생명력 +4, 상태이상 저항'], ['spi', '숨', '바람 +2·회복, 마법 피해 +1%']];
 
 /* ---------- 스킬: 직업당 3갈래 × 2 (맛보기판). 스킬 레벨 5에서 갈래 고르기 ---------- */
 // t: 종류(엔진 구현), br: 갈래, req: 필요 레벨, cost: 바람, cd: 재사용(초), m: 피해 배율(레벨당 +ml)
@@ -50,14 +55,59 @@ const SKILLS = {
     { id: 'mist', name: '안개 장막', br: 2, req: 8, cost: 14, cd: 15, m: .3, ml: .04, t: 'mist', r: 3.2, dur: 6, desc: '안개를 깔아 안의 적이 느려지고 자주 헛손질해요.',
       fork: [['짙은 안개', '10초 동안 유지돼요.'], ['번개 구름', '1초마다 안의 적을 번개로 때려요.']] },
   ],
+  drifter: [
+    { id: 'slash3', name: '연속 베기', br: 0, req: 1, cost: 5, cd: .55, m: .7, ml: .08, t: 'combo', r: 1.7, arc: 1.9, desc: '앞쪽을 세 번 빠르게 베어요(한 번에 70%).',
+      fork: [['네 번째 베기', '마지막에 한 번 더, 크게 베어요(200%).'], ['베어 가르기', '범위가 넓어지고 맞은 적이 3초 동안 피를 흘려요.']] },
+    { id: 'whirl', name: '칼바람 돌기', br: 0, req: 4, cost: 9, cd: 4, m: .5, ml: .05, t: 'whirl', r: 1.7, dur: 1.2, desc: '1.2초 동안 돌며 둘레를 계속 베어요. 도는 동안 움직일 수 있어요.',
+      fork: [['긴 돌기', '2초 동안 돌아요.'], ['끌어당기는 칼바람', '둘레 적을 안쪽으로 끌어당겨요.']] },
+    { id: 'dashcut', name: '바람 가르기', br: 1, req: 2, cost: 6, cd: 3.5, m: 1.3, ml: .1, t: 'dashcut', len: 3.5, desc: '앞으로 빠르게 내달리며 길목의 적을 모두 베어요. 달리는 동안 맞지 않아요.',
+      fork: [['되돌아 가르기', '잠시 뒤 제자리로 되돌아오며 한 번 더 베어요.'], ['잔상', '지나간 길에 칼바람이 2초 동안 남아요.']] },
+    { id: 'parry', name: '흘려 받기', br: 1, req: 6, cost: 8, cd: 9, m: 2.5, ml: .15, t: 'parry', dur: 1.2, desc: '1.2초 동안 자세를 잡아요. 그 사이 맞으면 피해를 흘려 내고 둘레를 크게 되받아쳐요(250%).',
+      fork: [['세 번 되받기', '되받아치기가 세 번 베어요.'], ['바람 몸놀림', '받아넘긴 뒤 5초 동안 공격 속도 +40%.']] },
+    { id: 'mark', name: '약점 찌르기', br: 2, req: 3, cost: 6, cd: 6, m: 1.6, ml: .1, t: 'mark', dur: 6, desc: '한 적을 깊게 찔러 6초 동안 받는 피해가 30% 늘어요.',
+      fork: [['깊은 상처', '표식 동안 피를 흘려요.'], ['표식 옮기기', '표식이 붙은 적이 쓰러지면 가까운 적에게 옮겨 가요.']] },
+    { id: 'shadow', name: '그림자 베기', br: 2, req: 8, cost: 14, cd: 14, m: 1.0, ml: .08, t: 'shadow', jumps: 5, desc: '그림자처럼 사라졌다 나타나며 둘레 적 다섯을 차례로 베어요. 그동안 맞지 않아요.',
+      fork: [['일곱 번 베기', '일곱까지 베어요.'], ['마무리 일격', '끝에 둘레를 크게 베어요(250%).']] },
+  ],
+  trapper: [
+    { id: 'pshot', name: '꿰뚫는 화살', br: 0, req: 1, cost: 4, cd: .7, m: 1.4, ml: .1, t: 'pshot', desc: '적을 꿰뚫고 날아가는 화살.',
+      fork: [['세 발 쏘기', '세 갈래로 쏴요(한 발에 70%).'], ['무거운 화살', '피해 +30%, 맞은 적을 크게 밀어내요.']] },
+    { id: 'rain', name: '화살비', br: 0, req: 4, cost: 10, cd: 4, m: .32, ml: .04, t: 'rain', r: 2.2, dur: 1.6, desc: '적이 모인 곳에 1.6초 동안 화살비를 퍼부어요.',
+      fork: [['넓은 화살비', '범위가 40% 넓어져요.'], ['긴 화살비', '3초 동안 내려요.']] },
+    { id: 'trap', name: '덫 놓기', br: 1, req: 2, cost: 6, cd: 1.5, m: 1.8, ml: .12, t: 'trap', dur: 20, desc: '발밑에 덫을 놓아요(최대 3개). 밟은 적은 크게 다치고 2초 동안 묶여요.',
+      fork: [['터지는 덫', '터지며 둘레 적도 함께 때려요.'], ['얽는 덫', '3.5초 동안 묶고, 풀린 뒤에도 느려요.']] },
+    { id: 'net', name: '그물 던지기', br: 1, req: 6, cost: 10, cd: 8, m: .5, ml: .05, t: 'net', r: 2, desc: '그물을 던져 그 자리 적을 1초 묶고 4초 동안 느리게 해요.',
+      fork: [['끈끈이 그물', '2.5초 동안 묶어요.'], ['가시 그물', '4초 동안 안에서 계속 다쳐요.']] },
+    { id: 'roll', name: '물러나 쏘기', br: 2, req: 3, cost: 5, cd: 5, m: 1.1, ml: .08, t: 'roll', desc: '뒤로 굴러 물러나며 가장 가까운 적에게 화살을 쏴요.',
+      fork: [['덫 남기기', '떠난 자리에 덫을 놓아요.'], ['연속 사격', '물러나며 세 발을 쏴요.']] },
+    { id: 'hawk', name: '매 부르기', br: 2, req: 8, cost: 12, cd: 18, m: .7, ml: .06, t: 'hawk', dur: 12, desc: '12초 동안 매가 함께 날며 1초마다 적을 덮쳐요.',
+      fork: [['매 두 마리', '두 마리가 와요.'], ['사냥매', '매가 덮친 적은 받는 피해가 20% 늘어요.']] },
+  ],
+  ringer: [
+    { id: 'toll', name: '큰 종 내리치기', br: 0, req: 1, cost: 5, cd: .9, m: 1.3, ml: .1, t: 'toll', r: 1.5, desc: '앞쪽 땅을 망치로 내리쳐 종소리로 둘레를 때려요.',
+      fork: [['여운', '맞은 자리에 3초 동안 떨림이 남아 계속 때려요.'], ['겹울림', '한 번 더 내리쳐요(두 번째는 범위가 좁아요).']] },
+    { id: 'wave', name: '울림 파동', br: 0, req: 4, cost: 9, cd: 3, m: 1.0, ml: .08, t: 'wave', r: 3.6, desc: '종을 울려 둥글게 퍼지는 파동으로 둘레 적을 밀어내요.',
+      fork: [['세 겹 파동', '파동이 세 번 퍼져요(한 번에 60%).'], ['멀리 울림', '반경이 50% 넓어져요.']] },
+    { id: 'echo', name: '메아리 분신', br: 1, req: 2, cost: 10, cd: 10, m: .6, ml: .06, t: 'echo', dur: 8, desc: '8초 동안 메아리 분신이 나와 1초마다 둘레를 울려요.',
+      fork: [['두 메아리', '분신이 둘 나와요.'], ['터지는 메아리', '사라질 때 큰 파동을 내요(200%).']] },
+    { id: 'resound', name: '되울림', br: 1, req: 6, cost: 8, cd: 6, m: .9, ml: .08, t: 'resound', r: 2.4, desc: '나와 모든 메아리 분신이 한꺼번에 울려 둘레를 때려요.',
+      fork: [['깊은 되울림', '맞은 적이 1초 기절해요.'], ['메아리 부르기', '분신이 3초 더 머물러요.']] },
+    { id: 'clang', name: '쇳소리', br: 2, req: 3, cost: 6, cd: 8, m: .6, ml: .05, t: 'clang', r: 2.6, desc: '날카로운 쇳소리로 둘레 적을 1.5초 기절시켜요.',
+      fork: [['긴 기절', '2.5초 동안 기절해요.'], ['깨지는 소리', '맞은 적이 6초 동안 받는 피해가 20% 늘어요.']] },
+    { id: 'dome', name: '종 덮개', br: 2, req: 8, cost: 12, cd: 16, m: 0, ml: 0, t: 'dome', dur: 5, desc: '5초 동안 커다란 종 그림자가 감싸 받는 피해가 50% 줄어요.',
+      fork: [['울리는 덮개', '맞을 때마다 둘레에 작은 파동이 퍼져요.'], ['굳은 덮개', '피해가 70% 줄어요.']] },
+  ],
 };
 // 궁극 기술: 6레벨에 저절로 익히고 4번 칸에 놓인다(점수 안 씀)
 const ULT = {
   warden: { id: 'ult', name: '땅울림 말뚝', br: 3, req: 6, cost: 0, cd: 40, t: 'ult', desc: '높이 뛰어올라 창을 땅에 내리꽂아요. 둘레 적을 크게 튕겨 내고 기절시켜요. 섬 끝이라면 우수수 떨어져요.' },
+  drifter: { id: 'ult', name: '천 갈래 바람베기', br: 3, req: 6, cost: 0, cd: 40, t: 'ult', desc: '바람이 되어 둘레 적 사이를 휘저으며 열두 번 베어요. 그동안 맞지 않아요.' },
+  trapper: { id: 'ult', name: '사냥터 열기', br: 3, req: 6, cost: 0, cd: 40, t: 'ult', desc: '둘레에 덫 여섯 개를 둥글게 깔고, 3초 동안 넓게 화살비를 퍼부어요.' },
+  ringer: { id: 'ult', name: '하늘 종', br: 3, req: 6, cost: 0, cd: 40, t: 'ult', desc: '하늘에서 커다란 종을 떨어뜨려 둘레 적을 크게 때리고 2초 기절시켜요. 이어서 종소리가 세 번 더 울려요.' },
   windcaller: { id: 'ult', name: '큰바람 한 숨', br: 3, req: 6, cost: 0, cd: 40, t: 'ult', desc: '커다란 소용돌이로 둘레 적을 빨아들여 계속 때린 뒤, 한꺼번에 멀리 날려 버려요.' },
 };
 const skillOf = (cls, id) => id === 'ult' ? ULT[cls] : SKILLS[cls].find(q => q.id === id);
-const BRANCH = { warden: ['창', '방패', '함성'], windcaller: ['바람', '번개', '구름'] };
+const BRANCH = { warden: ['창', '방패', '함성'], drifter: ['칼날', '바람걸음', '그림자'], windcaller: ['바람', '번개', '구름'], trapper: ['사격', '덫', '사냥'], ringer: ['울림', '메아리', '쇳소리'] };
 
 /* ---------- 장비 ---------- */
 const SLOTS = [['weapon', '무기'], ['off', '보조'], ['helm', '투구'], ['armor', '상의'], ['legs', '하의'], ['inner', '안감'], ['cloak', '망토'], ['gloves', '장갑'], ['belt', '허리띠'], ['boots', '장화'], ['amulet', '목걸이'], ['ear', '귀걸이'], ['ring1', '반지'], ['ring2', '반지'], ['sail', '돛']];
@@ -70,6 +120,21 @@ const BASES = [
   { id: 'staff0', n: '버드나무 지팡이', s: 'weapon', ic: 'staff', cls: 'windcaller', dmg: [3, 6, 3, 7], spd: 1, lv: 1 },
   { id: 'staff1', n: '바람개비 지팡이', s: 'weapon', ic: 'staff2', cls: 'windcaller', dmg: [3, 7, 3, 8], spd: 1, lv: 4, fix: { spi: 1 } },
   { id: 'staff2', n: '종이연 지팡이', s: 'weapon', ic: 'staff2', cls: 'windcaller', dmg: [4, 10, 5, 11], spd: 1.05, lv: 8, req: { spi: 22 } },
+  { id: 'sword0', n: '나그네 쌍칼', s: 'weapon', ic: 'sword', cls: 'drifter', dmg: [2, 6, 3, 7], spd: 1, lv: 1 },
+  { id: 'sword1', n: '갈대 쌍칼', s: 'weapon', ic: 'sword', cls: 'drifter', dmg: [3, 7, 3, 8], spd: 1.05, lv: 4 },
+  { id: 'sword2', n: '서릿날 쌍칼', s: 'weapon', ic: 'sword2', cls: 'drifter', dmg: [4, 9, 5, 10], spd: 1.05, lv: 8, req: { agi: 22 } },
+  { id: 'xbow0', n: '나무 석궁', s: 'weapon', ic: 'xbow', cls: 'trapper', dmg: [3, 7, 3, 7], spd: 1, lv: 1 },
+  { id: 'xbow1', n: '사냥꾼 석궁', s: 'weapon', ic: 'xbow', cls: 'trapper', dmg: [3, 8, 4, 9], spd: 1, lv: 4 },
+  { id: 'xbow2', n: '하늘매 석궁', s: 'weapon', ic: 'xbow2', cls: 'trapper', dmg: [5, 11, 5, 12], spd: 1, lv: 8, req: { agi: 22 } },
+  { id: 'hammer0', n: '종 치는 망치', s: 'weapon', ic: 'hammer', cls: 'ringer', dmg: [4, 8, 5, 9], spd: 1, lv: 1 },
+  { id: 'hammer1', n: '쇠테 망치', s: 'weapon', ic: 'hammer', cls: 'ringer', dmg: [4, 9, 5, 11], spd: .95, lv: 4 },
+  { id: 'hammer2', n: '새벽 망치', s: 'weapon', ic: 'hammer2', cls: 'ringer', dmg: [6, 12, 7, 14], spd: .95, lv: 8, req: { str: 20 } },
+  { id: 'dagger0', n: '짧은 칼', s: 'off', ic: 'dagger', cls: 'drifter', ac: 1, fix: { crit: 2 }, lv: 1 },
+  { id: 'dagger1', n: '바람칼', s: 'off', ic: 'dagger', cls: 'drifter', ac: 1, fix: { aspd: 6 }, lv: 6 },
+  { id: 'trapbox0', n: '덫 상자', s: 'off', ic: 'trapbox', cls: 'trapper', ac: 1, fix: { wreg: 8 }, lv: 1 },
+  { id: 'trapbox1', n: '쇠이빨 덫 상자', s: 'off', ic: 'trapbox', cls: 'trapper', ac: 2, fix: { agi: 2 }, lv: 6 },
+  { id: 'gong0', n: '손종', s: 'off', ic: 'gong', cls: 'ringer', ac: 2, fix: { hp: 8 }, lv: 1 },
+  { id: 'gong1', n: '청동 손종', s: 'off', ic: 'gong', cls: 'ringer', ac: 3, fix: { vit: 2 }, lv: 6 },
   { id: 'shield0', n: '둥근 나무 방패', s: 'off', ic: 'shield', cls: 'warden', ac: 2, blk: 8, lv: 1 },
   { id: 'shield1', n: '쇠테 방패', s: 'off', ic: 'shield2', cls: 'warden', ac: 4, blk: 12, lv: 6, req: { str: 18 } },
   { id: 'bell0', n: '바람 방울', s: 'off', ic: 'bell', cls: 'windcaller', ac: 1, fix: { wreg: 10 }, lv: 1 },
@@ -133,10 +198,13 @@ const AFX = [
 const AFXK = Object.fromEntries(AFX.map(a => [a.k, a]));
 // 이름난 장비 이름 = 앞말 + 부위 말
 const NM1 = ['바람결', '늦가을', '들꽃', '소금빛', '새벽', '해질녘', '솜털', '풍차지기', '잿빛', '구름결', '빗방울', '서리', '종다리', '보릿고개', '물안개', '첫눈', '달무리', '갈대'];
-const NM2 = { weapon: ['찌르개', '바늘', '가시', '꼬챙이'], weaponS: ['가지', '회초리', '부지깽이', '지휘봉'], off: ['울', '덮개', '방울', '등딱지'], helm: ['머리쓰개', '갓', '고깔'], armor: ['겉옷', '두루마기', '가죽옷'], legs: ['바지', '다리싸개', '잠방이'], inner: ['속옷', '내의'], cloak: ['날개', '두름', '자락'], gloves: ['손싸개', '토시'], belt: ['띠', '고리'], boots: ['발싸개', '걸음', '신'], amulet: ['매듭', '부적'], ear: ['방울', '고리'], ring: ['가락지', '고리'], sail: ['돛폭', '날개천'] };
+const NM2 = { weapon: ['찌르개', '바늘', '가시', '꼬챙이'], weaponS: ['가지', '회초리', '부지깽이', '지휘봉'], weaponD: ['쌍날', '칼바람', '두 갈래'], weaponT: ['석궁', '활시위', '매부리'], weaponR: ['망치', '종채', '쇠메'], off: ['울', '덮개', '방울', '등딱지'], helm: ['머리쓰개', '갓', '고깔'], armor: ['겉옷', '두루마기', '가죽옷'], legs: ['바지', '다리싸개', '잠방이'], inner: ['속옷', '내의'], cloak: ['날개', '두름', '자락'], gloves: ['손싸개', '토시'], belt: ['띠', '고리'], boots: ['발싸개', '걸음', '신'], amulet: ['매듭', '부적'], ear: ['방울', '고리'], ring: ['가락지', '고리'], sail: ['돛폭', '날개천'] };
 // 전해진 장비(맛보기판 2종) · 한 벌(민들레 나그네 3종)
 const UNIQ = [
   { id: 'u_late', n: '늦바람', base: 'spear1', story: '다리가 끊기던 날 섬 끝에 꽂혀 있던 창. 아직도 그날 바람이 남아 있다.', fx: [['dmgp', 30], ['kb', 100], ['windk', 3], ['agi', 3]], lv: 6 },
+  { id: 'u_twin', n: '쌍둥이 바람', base: 'sword1', story: '갈라진 섬 양쪽에서 하나씩 찾았다는 칼 두 자루. 맞대면 휘파람 소리가 난다.', fx: [['dmgp', 25], ['aspd', 15], ['crit', 6], ['agi', 3]], lv: 6 },
+  { id: 'u_hawkeye', n: '매눈', base: 'xbow1', story: '늙은 매사냥꾼이 남긴 석궁. 시위를 당기면 멀리 있는 것이 가까이 보인다.', fx: [['dmgp', 25], ['crit', 8], ['windk', 2], ['sk1', 1]], lv: 6 },
+  { id: 'u_dawnbell', n: '새벽 종치기', base: 'hammer1', story: '다리가 끊기던 날 아침, 이 망치로 친 종소리를 듣고 사람들이 섬 안쪽으로 달아났다.', fx: [['dmgp', 25], ['hp', 30], ['vit', 4], ['sk0', 1]], lv: 6 },
   { id: 'u_cloudfan', n: '작은 구름 부채', base: 'staff1', story: '솔바람이 어릴 적 쓰던 지팡이 끝에 구름 한 조각이 엉겨 붙었다.', fx: [['dmgp', 25], ['spi', 5], ['wreg', 40], ['sk1', 1]], lv: 6 },
   { id: 'u_millcap', n: '풍차지기 고깔', base: 'helm2', story: '바람이 멎은 뒤에도 하루도 빠짐없이 풍차를 닦던 사람의 모자.', fx: [['ac', 4], ['hp', 30], ['xp', 8], ['res', 10]], lv: 4 },
 ];
@@ -363,7 +431,7 @@ function rollAfx(b, ilv, n, have) {
 function makeItem(bid, rar, ilv, o) {
   o = o || {}; const b = BASE[bid], it = { uid: UID++, b: bid, r: rar, ilv, en: 0, st: 0, id: rar < 2, af: [], tame: 0 };
   if (rar === 1 || rar === 2) { const [a, c] = RAR[rar].k; it.af = rollAfx(b, ilv, ri(a, c)); it.hid = rollAfx(b, ilv, 1, it.af)[0] || null; }
-  if (rar === 2) it.nm = pick(NM1) + ' ' + pick(b.s === 'weapon' && b.cls === 'windcaller' ? NM2.weaponS : NM2[b.s] || ['물건']);
+  if (rar === 2) it.nm = pick(NM1) + ' ' + pick(b.s === 'weapon' && ({ windcaller: NM2.weaponS, drifter: NM2.weaponD, trapper: NM2.weaponT, ringer: NM2.weaponR })[b.cls] || NM2[b.s] || ['물건']);
   if (o.u) { const U = UNIQ.find(u => u.id === o.u); it.u = o.u; it.af = U.fx.map(x => x.slice()); it.id = false; }
   if (o.set) { it.set = o.set; it.af = []; it.id = false; }
   if (b.s !== 'ring' && b.s !== 'amulet' && b.s !== 'ear' && !o.u && !o.set) { const r = Math.random(); it.st = r < .06 ? 1 : r < .1 ? -1 : 0; }
@@ -435,8 +503,8 @@ function calc(P) {
   P.mwind = Math.round(18 + S.spi * 2 + P.lv * 2 + (m.wind || 0));
   P.ac = (m.ac || 0) + Math.floor(S.agi / 5) + (P.buf.shout ? 6 : 0);
   P.dmg = m.dmg || [1, 2, 1, 3]; if (m.mind) { P.dmg = P.dmg.slice(); P.dmg[0] += m.mind; P.dmg[2] += m.mind; }
-  P.dmgp = (m.dmgp || 0) + (C.melee ? S.str : S.spi) + (P.buf.brave ? 25 : 0);
-  P.aspd = C.aspd * (m.wspd || 1) * (1 + ((m.aspd || 0) + S.agi * .6) / 100);
+  P.dmgp = (m.dmgp || 0) + (C.main ? S[C.main] : C.melee ? S.str : S.spi) + (P.buf.brave ? 25 : 0);
+  P.aspd = C.aspd * (m.wspd || 1) * (1 + ((m.aspd || 0) + S.agi * .6) / 100) * (P.buf && P.buf.haste ? 1.4 : 1);
   P.crit = 3 + S.agi * .25 + (m.crit || 0);
   P.move = 3.6 * (1 + ((m.move || 0) + Math.min(10, S.agi * .2)) / 100);
   P.wreg = (.9 + S.spi * .06) * (1 + (m.wreg || 0) / 100);
@@ -483,8 +551,8 @@ const dirW = d => scr2w(DIRV[d][0] * TW, DIRV[d][1] * TH * 2); // 방향 d 의 �
 
 function newSave(cls) {
   const seed = (Math.random() * 1e9) | 0, it = id => makeItem(id, 0, 1, { id: 1, st: 0 });
-  const eq = cls === 'warden' ? { weapon: it('spear0'), off: it('shield0'), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') } : { weapon: it('staff0'), off: it('bell0'), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
-  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [cls === 'warden' ? 'pierce' : 'gust']: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
+  const CS = CLS_START[cls], eq = { weapon: it(CS[0]), off: it(CS[1]), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
+  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
 }
 function startGame(S) {
   const Wd = makeWorld(S.seed); Wd.props = placeProps(Wd, PM);
@@ -570,6 +638,7 @@ function rollDmg(P, m, mult) {
 }
 function hitMob(m, dmg, crit, o) {
   if (m.hp <= 0 || m.fl) return; o = o || {};
+  if (m.mark > 0) dmg = Math.round(dmg * (1 + (m.markP || .3)));
   m.hp -= dmg; m.flash = .16; m.sq = .2; G.txt.push({ x: m.x + rnd(-.2, .2), y: m.y + rnd(-.2, .2), z: 1, t: 0, s: crit ? dmg + '!' : String(dmg), c: crit ? '#ffcf4a' : o.tick ? '#e8e8e8' : '#fff', big: crit, pop: 1 });
   if (o.kb) knock(m, m.x - (o.fx ?? G.P.x), m.y - (o.fy ?? G.P.y), o.kb * G.P.kbm);
   if (o.stun) m.stun = Math.max(m.stun, o.stun); if (o.slow) m.slow = Math.max(m.slow, o.slow); if (o.bleed) m.bleed = { t: 3, d: o.bleed };
@@ -586,6 +655,7 @@ function hitMob(m, dmg, crit, o) {
 }
 function killMob(m, fell) {
   if (m.dead) return; m.dead = 1; m.an = 'die'; m.at = 0; const P = G.P, D = m.D;
+  if (m.mark > 0 && m.markT) markMove(m);
   let xp = (D.xp[0] + D.xp[1] * m.lv) * (m.elite ? 3 : 1) * P.xpm; if (m.lv < P.lv - 5) xp *= .3;
   const bonus = Math.min(P.rested, xp); P.rested -= bonus; gainXp(Math.round(xp + bonus));
   if (P.lifek) P.hp = Math.min(P.mhp, P.hp + P.lifek); if (P.windk) P.wind = Math.min(P.mwind, P.wind + P.windk);
@@ -606,7 +676,7 @@ function drops(m, fell) {
   if (Math.random() < .55 || m.elite || D.mini) put({ gold: ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) });
   const nItem = D.boss ? 3 : D.mini ? 2 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
   for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
-  if (D.boss) { const u = P.cls === 'warden' ? 'u_late' : 'u_cloudfan'; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
+  if (D.boss) { const u = CLS_START[P.cls][4]; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
   // 바람 조각: 둥지지기 1개, 우두머리 2개, 정예는 가끔
   const col = () => pick(Object.keys(SHARD));
   if (P.lv >= BOARD_LV || D.big) { if (D.mini) giveShard({ c: col(), q: Math.random() < .3 ? 2 : 1 }); else if (D.boss) { giveShard({ c: col(), q: 3 }); giveShard({ c: col(), q: 2 }); } else if (m.elite && Math.random() < .1) giveShard({ c: col(), q: 1 }); }
@@ -641,6 +711,8 @@ function hurtPlayer(d, src) {
   const hitCh = clamp(.92 - P.ac * .008, .55, .95); if (Math.random() > hitCh) { G.txt.push({ x: P.x, y: P.y, z: 1.4, t: 0, s: '피함', c: '#9fe4ff', small: 1 }); return; }
   if (Math.random() * 100 < P.blk) { G.txt.push({ x: P.x, y: P.y, z: 1.4, t: 0, s: '막음', c: '#ffd27a', small: 1 }); sfx('block'); return; }
   d = d * 100 / (100 + P.ac * 3);
+  if (P.buf.parry) { parryHit(P, src); return; }
+  if (P.buf.dome) { d *= P.fork.dome === 1 ? .3 : .5; if (P.fork.dome === 0) ringWave(P.x, P.y, 1.8, .4, { kb: 3 }); }
   if (P.buf.hold) { d *= 1 - (.3 + .02 * skLvId('hold')); if (P.fork.hold === 0 && src && src.hp > 0) hitMob(src, Math.round(d * .4), false); }
   if (P.buf.cloud && P.cloudHP > 0) { const a = Math.min(P.cloudHP, d); P.cloudHP -= a; d -= a; if (P.fork.cloud === 0 && src) src.slow = 2; if (P.cloudHP <= 0) P.buf.cloud = 0; }
   if (P.thorn && src && src.hp > 0) hitMob(src, P.thorn, false);
@@ -665,7 +737,8 @@ function castSkill(i) {
   const t = nearestMob(P.x, P.y, s.t === 'bolt' || s.t === 'twister' || s.t === 'chain' || s.t === 'mist' ? 8 : 3); if (t && !P.aimLock) aimAt(P, t);
   const [fx, fy] = facingW(P), mult = s.m * (1 + s.ml * (lv - 1)) * synergy(P, s), D = (m, k) => rollDmg(P, m, mult * (k || 1));
   P.an = ['buff', 'shout', 'flag', 'shield', 'mist', 'chain', 'twister'].includes(s.t) ? 'cast' : 'atk'; P.at = 0; P.atkDur = .38;
-  sfx(s.t);
+  sfx(CSK[s.t] ? CSKS[s.t] || 'nova' : s.t);
+  if (CSK[s.t]) return CSK[s.t]({ P, s, id, lv, fk, t, fx, fy, mult, D });
   if (s.t === 'line') {
     const len = s.len * (fk === 1 ? 1.5 : 1), hits = fk === 0 ? 3 : 1;
     for (let h = 0; h < hits; h++) G.areas.push({ k: 'delay', t: -h * .13, fn: () => { G.fx.push({ k: 'thrust', x: P.x, y: P.y, dx: fx, dy: fy, len, t: 0, life: .22 });
@@ -695,7 +768,8 @@ function castSkill(i) {
 function castUlt() {
   const P = G.P, U = ULT[P.cls]; if (P.lv < U.req || (P.cds.ult || 0) > 0 || P.dead) return; P.cds.ult = U.cd;
   const t = nearestMob(P.x, P.y, 8); if (t && !P.aimLock) aimAt(P, t); const [fx, fy] = facingW(P), mult = 3.2 * (1 + P.lv * .04);
-  G.cut = { s: U.name, t: 0, c: P.cls === 'warden' ? '#ffcf7a' : '#9fe4ff' }; G.flash = .18; sfx('lvl');
+  G.cut = { s: U.name, t: 0, c: P.cls === 'warden' ? '#ffcf7a' : CLASSES[P.cls].col }; G.flash = .18; sfx('lvl');
+  if (ULTF[P.cls]) return ULTF[P.cls](P, t, fx, fy, mult);
   if (P.cls === 'warden') { P.an = 'cast'; P.at = 0; P.atkDur = .5; P.jump = .48; P.inv0 = .7;
     G.areas.push({ k: 'delay', t: -.46, fn: () => { G.shake = 14; G.hitstop = .12; G.flash = .3; sfx('slam');
       G.fx.push({ k: 'ring', x: P.x, y: P.y, r: 4, t: 0, life: .55, c: '#fff1c8' }, { k: 'ring', x: P.x, y: P.y, r: 2.4, t: 0, life: .4, c: '#ffcf7a' }, { k: 'crack', x: P.x, y: P.y, t: 0, life: 2.4 });
@@ -719,8 +793,9 @@ function resolveBasic(m) {
   if (C.melee) {
     if (!m || m.dead || hyp(m.x - P.x, m.y - P.y) > C.range + m.r + .3) m = mobsIn(o => { const rx = o.x - P.x, ry = o.y - P.y, d = hyp(rx, ry); return d < C.range + o.r + .2 && (rx * ax + ry * ay) / (d || 1) > .45; }).sort((p, q) => hyp(p.x - P.x, p.y - P.y) - hyp(q.x - P.x, q.y - P.y))[0];
     G.fx.push({ k: 'slash', x: P.x, y: P.y, dx: ax, dy: ay, len: C.range, t: 0, life: .2, s: (P.combo = (P.combo || 0) + 1) % 2 });
-    if (m) { const [d, c] = rollDmg(P, m, 1); hitMob(m, d, c, { kb: 1.4 }); } else sfx('dodge');
-  } else { G.proj.push({ k: 'wind', x: P.x + ax * .4, y: P.y + ay * .4, vx: ax * 10, vy: ay * 10, life: .8, mult: .95, hit: new Set() }); sfx('shoot'); }
+    if (m) { const [d, c] = rollDmg(P, m, 1); hitMob(m, d, c, { kb: 1.4 }); if (P.cls === 'ringer') G.fx.push({ k: 'bellw', x: m.x, y: m.y, r: .9, t: 0, life: .3, c: '#e8d0ff' }); } else sfx('dodge');
+  } else if (P.cls === 'trapper') { G.proj.push({ k: 'arrow', x: P.x + ax * .4, y: P.y + ay * .4, vx: ax * 15, vy: ay * 15, life: .55, mult: 1, hit: new Set() }); sfx('shoot'); }
+  else { G.proj.push({ k: 'wind', x: P.x + ax * .4, y: P.y + ay * .4, vx: ax * 10, vy: ay * 10, life: .8, mult: .95, hit: new Set() }); sfx('shoot'); }
 }
 
 /* ---------- 매 프레임 ---------- */
@@ -737,6 +812,7 @@ function update(dt) {
   for (const k in P.cds) if (P.cds[k] > 0) P.cds[k] -= dt;
   let rc = 0; for (const k in P.buf) if (P.buf[k] > 0) { P.buf[k] -= dt; if (P.buf[k] <= 0) { P.buf[k] = 0; rc = 1; } } if (rc) calc(P);
   if (P.buf.hold && P.fork.hold === 1) P.hp = Math.min(P.mhp, P.hp + P.mhp * .02 * dt);
+  clsUpdate(P, dt);
   if (P.buf.cloud && P.fork.cloud === 1) P.hp = Math.min(P.mhp, P.hp + P.mhp * .015 * dt);
   P.atkT -= dt; P.dcd -= dt; P.inv0 -= dt; if (P.hurt) P.hurt = Math.max(0, P.hurt - dt);
   if (!P.dead) { P.wind = Math.min(P.mwind, P.wind + P.wreg * dt); P.hp = Math.min(P.mhp, P.hp + (.15 + P.st.vit * .01) * dt * (inTown() ? 8 : 1)); if (inTown()) P.wind = Math.min(P.mwind, P.wind + 4 * dt); }
@@ -799,6 +875,7 @@ function mobUpdate(m, dt) {
   if (m.dead) { if (m.fl) m.fy = (m.fy || 0) + dt * 6; return; }
   physKnock(m, dt); if (m.dead) return;
   if (m.bleed) { m.bleed.t -= dt; m.btick = (m.btick || 0) + dt; if (m.btick > .5) { m.btick = 0; hitMob(m, Math.max(1, Math.round(m.bleed.d)), false); } if (m.bleed && m.bleed.t <= 0) m.bleed = 0; if (m.dead) return; }
+  if (m.mark > 0) m.mark -= dt;
   if (m.stun > 0) { m.stun -= dt; m.an = 'hurt'; return; }
   if (m.slow > 0) m.slow -= dt; if (m.taunt > 0) m.taunt -= dt; if (m.fear > 0) m.fear -= dt; m.cd -= dt;
   const P = G.P, dx = P.x - m.x, dy = P.y - m.y, d = hyp(dx, dy), sp = m.spd * (m.slow > 0 ? .55 : 1) * (G.areas.some(a => a.k === 'mist' && hyp(a.x - m.x, a.y - m.y) < a.r) ? .6 : 1);
@@ -853,11 +930,12 @@ function projUpdate(p, dt) {
   if (p.k !== 'twister' && !ground(G.Wd, p.x, p.y) && !G.Wd.inb(Math.floor(p.x), Math.floor(p.y))) p.life = 0;
   const P = G.P;
   if (p.k === 'twister') { p.tick -= dt; for (const m of mobsIn(m => hyp(m.x - p.x, m.y - p.y) < p.r + m.r)) { if (!m.D.big) move(m, (p.x - m.x) * dt * 2.5, (p.y - m.y) * dt * 2.5); } if (p.tick <= 0) { p.tick = .3; for (const m of mobsIn(m => hyp(m.x - p.x, m.y - p.y) < p.r * .8 + m.r)) { const [d, c] = rollDmg(P, m, p.mult); hitMob(m, d, c); } } return; }
-  for (const m of G.mobs) { if (m.dead || p.hit.has(m)) continue; if (hyp(m.x - p.x, m.y - p.y) < m.r + .25) { p.hit.add(m); const [d, c] = rollDmg(P, m, p.mult); hitMob(m, d, c, { kb: p.k === 'wind' ? 1.5 : 0, fx: p.x - p.vx, fy: p.y - p.vy }); G.fx.push({ k: 'pop', x: p.x, y: p.y, t: 0, life: .25, c: p.k === 'bolt' ? '#fff3a0' : '#dff4ff' }); if (!p.pierce) { p.life = 0; break; } } }
+  for (const m of G.mobs) { if (m.dead || p.hit.has(m)) continue; if (hyp(m.x - p.x, m.y - p.y) < m.r + .25) { p.hit.add(m); const [d, c] = rollDmg(P, m, p.mult); hitMob(m, d, c, { kb: p.k === 'wind' ? 1.5 : p.kb || 0, fx: p.x - p.vx, fy: p.y - p.vy, col: p.k === 'arrow' ? '#f0e0b0' : undefined }); G.fx.push({ k: 'pop', x: p.x, y: p.y, t: 0, life: .25, c: p.k === 'bolt' ? '#fff3a0' : p.k === 'arrow' ? '#f0e0b0' : '#dff4ff' }); if (!p.pierce) { p.life = 0; break; } } }
 }
 function areaUpdate(a, dt) {
   if (a.k === 'delay') { a.t += dt; if (a.t >= 0 && !a.done) { a.done = 1; a.fn(); } return; }
   a.t += dt; const P = G.P;
+  if (clsArea(a, dt)) return;
   if (a.k === 'flag') { a.tick -= dt; if (hyp(P.x - a.x, P.y - a.y) < a.r) { const k = a.fk === 1 ? 2 : 1; P.hp = Math.min(P.mhp, P.hp + P.mhp * .025 * k * dt); P.wind = Math.min(P.mwind, P.wind + 3 * k * dt); }
     if (a.fk === 0 && a.tick <= 0) { a.tick = 2; G.fx.push({ k: 'ring', x: a.x, y: a.y, r: a.r, t: 0, life: .4, c: '#bfe8ff' }); for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { kb: 5, fx: a.x, fy: a.y }); } } }
   if (a.k === 'vortex') { a.tick -= dt; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + 1)) { if (m.D.big) continue; const dx = a.x - m.x, dy = a.y - m.y, d = hyp(dx, dy) || 1; move(m, dx / d * Math.min(d, 3.2 * dt), dy / d * Math.min(d, 3.2 * dt)); }
@@ -899,6 +977,120 @@ function interact() {
   else if (n.k === 'bridge') { if (count('plank') >= 6) { useGood('plank', 6); repairBridge(G.Wd, G.Wd.bq); P.flags.bridge = 1; qSet('q1', 2); G.shake = 5; sfx('lvl'); say('다리를 다시 놓았어요! 바람개비 언덕으로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('다리 널빤지가 ' + (6 - count('plank')) + '개 더 필요해요', '#ffe08a', 1); }
 }
 
+/* ---------- 3단계 직업: 떠돌이 검객 · 덫사냥꾼 · 종지기 (스킬·궁극기·지속 효과) ---------- */
+// 공통 도움
+function coneMobs(P, fx, fy, r, arc) { return mobsIn(m => { const rx = m.x - P.x, ry = m.y - P.y, d = hyp(rx, ry); if (d > r + m.r) return false; const a = Math.acos(clamp((rx * fx + ry * fy) / (d || 1), -1, 1)); return a < arc / 2 || d < .6; }); }
+function later(t, fn) { G.areas.push({ k: 'delay', t: -t, fn }); }
+function ghost(P) { G.fx.push({ k: 'ghost', x: P.x, y: P.y, dir: P.dir, fr: heroFrame(P), t: 0, life: .35 }); }
+// 종소리 파동: 둘레를 한 번 때림
+function ringWave(x2, y2, r, mult, o) {
+  o = o || {}; const P = G.P; G.fx.push({ k: 'bellw', x: x2, y: y2, r, t: 0, life: .45, c: o.col || '#e8d0ff' });
+  for (const m of mobsIn(m => hyp(m.x - x2, m.y - y2) < r + m.r)) { const [d, c] = rollDmg(P, m, mult); hitMob(m, d, c, { kb: o.kb || 0, stun: o.stun ? (m.D.big ? o.stun * .4 : o.stun) : 0, fx: x2, fy: y2, col: '#e8d0ff', tick: o.tick }); if (o.mark && !m.dead) { m.mark = Math.max(m.mark || 0, o.mark); m.markP = Math.max(m.markP || 0, o.markP || .2); } }
+}
+function slashAround(P, r, mult, o) { o = o || {}; G.fx.push({ k: 'ring', x: P.x, y: P.y, r, t: 0, life: .3, c: '#ffd8c8' }, { k: 'slash', x: P.x, y: P.y, dx: 1, dy: 0, len: r, t: 0, life: .22, s: 0 }, { k: 'slash', x: P.x, y: P.y, dx: -1, dy: 0, len: r, t: 0, life: .22, s: 1 });
+  for (const m of mobsIn(m => hyp(m.x - P.x, m.y - P.y) < r + m.r)) { const [d, c] = rollDmg(P, m, mult); hitMob(m, d, c, { kb: o.kb || 1.5, col: '#ffb8a0' }); } }
+function markMob(m, t, p) { m.mark = Math.max(m.mark || 0, t); m.markP = Math.max(m.markP || 0, p); }
+// 표식 옮기기(검객 약점 찌르기 갈래 B)
+function markMove(m) { const n = nearestMob(m.x, m.y, 5); if (!n) return; markMob(n, 6, .3); n.markT = 1; G.fx.push({ k: 'zap', x: m.x, y: m.y, x2: n.x, y2: n.y, t: 0, life: .3, c: '#ff8a7a' }); }
+function placeTrap(x2, y2, mult, fk, arm) {
+  const tr = G.areas.filter(a => a.k === 'trap'); if (tr.length >= 3 + (arm === 0 ? 6 : 0)) tr[0].t = tr[0].life;
+  G.areas.push({ k: 'trap', x: x2, y: y2, t: 0, life: 20, mult, fk, arm: arm ?? .4 }); G.fx.push({ k: 'ring', x: x2, y: y2, r: .7, t: 0, life: .3, c: '#e8d8a0' });
+}
+function shootArrow(P, m, mult, o) { o = o || {}; let ax, ay; if (m) { const dx = m.x - P.x, dy = m.y - P.y, l = hyp(dx, dy) || 1; ax = dx / l; ay = dy / l; } else [ax, ay] = facingW(P);
+  if (o.rot) { const c = Math.cos(o.rot), s = Math.sin(o.rot); [ax, ay] = [ax * c - ay * s, ax * s + ay * c]; }
+  G.proj.push({ k: 'arrow', x: P.x + ax * .4, y: P.y + ay * .4, vx: ax * 16, vy: ay * 16, life: .6, mult, pierce: o.pierce, kb: o.kb || 0, hit: new Set() }); sfx('shoot'); }
+
+// 스킬 종류별 동작 (castSkill 이 부름)
+const CSKS = { combo: 'line', whirl: 'nova', dashcut: 'dodge', parry: 'buff', mark: 'line', shadow: 'dodge', pshot: 'shoot', rain: 'shoot', trap: 'block', net: 'cone', roll: 'dodge', hawk: 'flag', toll: 'slam', wave: 'bell', echo: 'bell', resound: 'bell', clang: 'block', dome: 'buff' };
+const CSK = {
+  combo({ P, s, fk, D }) { const n = fk === 0 ? 4 : 3, r = s.r * (fk === 1 ? 1.3 : 1), arc = s.arc * (fk === 1 ? 1.25 : 1); P.atkDur = .12 * n + .1;
+    for (let h = 0; h < n; h++) later(h * .12, () => { const [ax, ay] = facingW(P), big = fk === 0 && h === 3; P.an = 'atk'; P.at = 0;
+      G.fx.push({ k: 'slash', x: P.x, y: P.y, dx: ax, dy: ay, len: r * (big ? 1.25 : 1), t: 0, life: .2, s: h % 2 }); if (big) G.shake = Math.max(G.shake, 5);
+      for (const m of coneMobs(P, ax, ay, r, arc)) { const [d, c] = D(m, big ? 2.5 : 1); hitMob(m, d, c, { kb: big ? 4 : .8, bleed: fk === 1 ? d * .12 : 0, col: '#ffb8a0' }); } sfx('line'); }); },
+  whirl({ P, s, fk, mult }) { P.buf.whirl = fk === 0 ? 2 : s.dur; P.whirl = { t: 0, mult, r: s.r, pull: fk === 1 }; },
+  dashcut({ P, s, fk, fx, fy, mult }) { const sp = 15, T = s.len / sp, x0 = P.x, y0 = P.y; ghost(P); P.dash = { vx: fx * sp, vy: fy * sp, t: T, hit: new Set(), mult }; P.inv0 = Math.max(P.inv0, T + .1); P.an = 'atk'; P.at = 0;
+    G.fx.push({ k: 'thrust', x: x0, y: y0, dx: fx, dy: fy, len: s.len, t: 0, life: .3 });
+    if (fk === 1) later(T, () => G.areas.push({ k: 'trail', x: x0, y: y0, x1: P.x, y1: P.y, t: 0, life: 2, tick: 0, mult: mult * .3 }));
+    if (fk === 0) later(T + .35, () => { ghost(P); P.dash = { vx: -fx * sp, vy: -fy * sp, t: T, hit: new Set(), mult: mult * .8 }; P.inv0 = Math.max(P.inv0, T + .1); P.an = 'atk'; P.at = 0; G.fx.push({ k: 'thrust', x: P.x, y: P.y, dx: -fx, dy: -fy, len: s.len, t: 0, life: .3 }); }); },
+  parry({ P, s, fk, mult }) { P.buf.parry = s.dur; P.parry = { mult, fk }; P.an = 'cast'; P.atkDur = .5; G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .5, c: '#ffd8c8' }); },
+  mark({ P, s, fk, t, fx, fy, D }) { const m = t && hyp(t.x - P.x, t.y - P.y) < 3 ? t : nearestMob(P.x, P.y, 3);
+    G.fx.push({ k: 'thrust', x: P.x, y: P.y, dx: fx, dy: fy, len: 2, t: 0, life: .22 }); if (!m) return;
+    const [d, c] = D(m); hitMob(m, d, c, { kb: 1, bleed: fk === 0 ? d * .2 : 0, col: '#ff8a7a' }); if (!m.dead) { markMob(m, s.dur, .3); m.markT = fk === 1 ? 1 : 0; if (fk === 0) m.bleed = { t: s.dur, d: d * .2 }; } },
+  shadow({ P, s, fk, mult }) { const n = fk === 0 ? 7 : s.jumps, hit = new Set(); P.inv0 = Math.max(P.inv0, n * .14 + .4);
+    for (let j = 0; j < n; j++) later(j * .14, () => { const m = nearestMob(P.x, P.y, 6, hit); if (!m) return; hit.add(m); ghost(P);
+      const dx = m.x - P.x, dy = m.y - P.y, l = hyp(dx, dy) || 1, nx = m.x + dx / l * .5, ny = m.y + dy / l * .5; if (canAt(P, nx, ny)) { P.x = nx; P.y = ny; } aimAt(P, m); P.an = 'atk'; P.at = 0;
+      G.fx.push({ k: 'slash', x: P.x, y: P.y, dx: -dx / l, dy: -dy / l, len: 1.4, t: 0, life: .2, s: j % 2 }); const [d, c] = rollDmg(P, m, mult); hitMob(m, d, c, { kb: 1, col: '#c8a0ff' }); sfx('line'); });
+    if (fk === 1) later(n * .14 + .1, () => { G.shake = 8; slashAround(P, 2.4, mult * 2.5, { kb: 4 }); }); },
+  pshot({ P, fk, t, mult }) { const n = fk === 0 ? 3 : 1; for (let j = 0; j < n; j++) shootArrow(P, t, mult * (n > 1 ? .7 : fk === 1 ? 1.3 : 1), { pierce: 1, kb: fk === 1 ? 5 : 0, rot: (j - (n - 1) / 2) * .22 }); },
+  rain({ P, s, fk, t, fx, fy, mult }) { const tx = t ? t.x : P.x + fx * 4, ty = t ? t.y : P.y + fy * 4; P.an = 'cast'; G.areas.push({ k: 'rain', x: tx, y: ty, r: s.r * (fk === 0 ? 1.4 : 1), t: 0, life: fk === 1 ? 3 : s.dur, tick: .15, mult }); },
+  trap({ P, fk, mult }) { P.an = 'cast'; placeTrap(P.x, P.y, mult, fk); },
+  net({ P, s, fk, t, fx, fy, mult }) { const tx = t ? t.x : P.x + fx * 3.5, ty = t ? t.y : P.y + fy * 3.5; P.an = 'cast'; G.fx.push({ k: 'zap', x: P.x, y: P.y, x2: tx, y2: ty, t: 0, life: .2, c: '#e8dcb0' });
+    later(.15, () => { G.areas.push({ k: 'net', x: tx, y: ty, r: s.r, t: 0, life: 4, tick: .5, fk, mult }); for (const m of mobsIn(m => hyp(m.x - tx, m.y - ty) < s.r + m.r)) { const st = fk === 0 ? 2.5 : 1; hitMob(m, Math.max(1, Math.round(rollDmg(P, m, mult)[0])), false, { stun: m.D.big ? st * .4 : st, slow: 4, tick: 1 }); } }); },
+  roll({ P, fk, t, fx, fy, mult }) { const x0 = P.x, y0 = P.y; ghost(P); P.dodge = .28; P.dvx = -fx * 11; P.dvy = -fy * 11; P.an = 'dodge'; P.at = 0;
+    if (fk === 0) placeTrap(x0, y0, mult * 1.3, null);
+    const n = fk === 1 ? 3 : 1; for (let j = 0; j < n; j++) later(.12 + j * .1, () => { const m = t && !t.dead ? t : nearestMob(P.x, P.y, 8); shootArrow(P, m, mult * (n > 1 ? .8 : 1)); }); },
+  hawk({ P, s, fk, mult }) { const n = fk === 0 ? 2 : 1; P.an = 'cast'; for (let j = 0; j < n; j++) G.areas.push({ k: 'hawk', x: P.x, y: P.y, z: 60, ang: j * Math.PI, t: 0, life: s.dur, tick: .6 + j * .5, mult, fk }); },
+  toll({ P, s, fk, fx, fy, mult }) { const cx = P.x + fx * 1.1, cy = P.y + fy * 1.1; P.atkDur = .4;
+    later(.14, () => { G.shake = Math.max(G.shake, 4); ringWave(cx, cy, s.r, mult, { kb: 1.5 }); G.fx.push({ k: 'crack', x: cx, y: cy, t: 0, life: .9 }); if (fk === 0) G.areas.push({ k: 'tremor', x: cx, y: cy, r: s.r, t: 0, life: 3, tick: .5, mult: mult * .25 }); });
+    if (fk === 1) later(.45, () => { P.an = 'atk'; P.at = 0; G.shake = Math.max(G.shake, 4); ringWave(cx, cy, s.r * .7, mult * .8, { kb: 2 }); sfx('slam'); }); },
+  wave({ P, s, fk, mult }) { const n = fk === 0 ? 3 : 1, r = s.r * (fk === 1 ? 1.5 : 1); for (let h = 0; h < n; h++) later(h * .28, () => { ringWave(P.x, P.y, r, mult * (n > 1 ? .6 : 1), { kb: 3 }); G.fx.push({ k: 'wave', x: P.x, y: P.y, r, t: 0, life: .5 }); if (h) sfx('bell'); }); },
+  echo({ P, s, fk, fx, fy, mult }) { const n = fk === 0 ? 2 : 1; for (let j = 0; j < n; j++) { const side = n > 1 ? (j ? 1 : -1) : 0, ex = P.x - fy * side * 1.2 + fx * (n > 1 ? .3 : 1), ey = P.y + fx * side * 1.2 + fy * (n > 1 ? .3 : 1), ok = canAt(P, ex, ey);
+    G.areas.push({ k: 'echo', x: ok ? ex : P.x, y: ok ? ey : P.y, dir: P.dir, t: 0, life: s.dur, tick: .5, mult, fk }); G.fx.push({ k: 'bellw', x: ok ? ex : P.x, y: ok ? ey : P.y, r: 1.2, t: 0, life: .5, c: '#c9a8ff' }); } },
+  resound({ P, s, fk, mult }) { const o = { stun: fk === 0 ? 1 : 0, kb: 2 }; ringWave(P.x, P.y, s.r, mult, o); for (const a of G.areas) if (a.k === 'echo' && a.t < a.life) { ringWave(a.x, a.y, s.r, mult, o); if (fk === 1) a.life += 3; a.flash = .3; } },
+  clang({ P, s, fk, mult }) { G.fx.push({ k: 'clang', x: P.x, y: P.y, r: s.r, t: 0, life: .4 }); ringWave(P.x, P.y, s.r, mult, { stun: fk === 0 ? 2.5 : 1.5, mark: fk === 1 ? 6 : 0, markP: .2, col: '#ffffff' }); },
+  dome({ P, s }) { P.buf.dome = s.dur; G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .6, c: '#ffd27a' }); },
+};
+
+// 궁극 기술
+const ULTF = {
+  drifter(P, t, fx, fy, mult) { const x0 = P.x, y0 = P.y; P.inv0 = 2.8; G.flash = .25;
+    for (let j = 0; j < 12; j++) later(j * .2, () => { const cands = mobsIn(m => hyp(m.x - x0, m.y - y0) < 5); const m = cands.length ? pick(cands) : null; ghost(P);
+      if (m) { const a = Math.random() * TAU, nx = m.x + Math.cos(a) * .7, ny = m.y + Math.sin(a) * .7; if (canAt(P, nx, ny)) { P.x = nx; P.y = ny; } aimAt(P, m); }
+      P.an = 'atk'; P.at = 0; const [ax, ay] = facingW(P); G.fx.push({ k: 'slash', x: P.x, y: P.y, dx: ax, dy: ay, len: 1.6, t: 0, life: .22, s: j % 2 }); sfx('line');
+      for (const o of mobsIn(o => hyp(o.x - P.x, o.y - P.y) < 1.6 + o.r)) { const [d, c] = rollDmg(P, o, mult * .35); hitMob(o, d, c, { kb: 1.2, col: '#ffb8a0' }); } });
+    later(2.5, () => { G.shake = 10; G.flash = .2; slashAround(P, 2.6, mult * .8, { kb: 6 }); }); },
+  trapper(P, t, fx, fy, mult) { P.an = 'cast'; P.at = 0; P.atkDur = .5; for (let j = 0; j < 6; j++) { const a = j / 6 * TAU, tx = P.x + Math.cos(a) * 2.6, ty = P.y + Math.sin(a) * 2.6; if (canAt(P, tx, ty)) placeTrap(tx, ty, mult * .5, 0, 0); }
+    G.areas.push({ k: 'rain', x: P.x, y: P.y, r: 4.2, t: 0, life: 3, tick: .2, mult: mult * .12, big: 1 }); },
+  ringer(P, t, fx, fy, mult) { const tx = t ? t.x : P.x + fx * 3, ty = t ? t.y : P.y + fy * 3; P.an = 'cast'; P.at = 0; P.atkDur = .6;
+    G.areas.push({ k: 'bigbell', x: tx, y: ty, t: 0, life: 2.4 });
+    later(.5, () => { G.shake = 16; G.hitstop = .12; G.flash = .3; sfx('slam'); sfx('bell'); G.fx.push({ k: 'crack', x: tx, y: ty, t: 0, life: 2.4 }, { k: 'wave', x: tx, y: ty, r: 4.2, t: 0, life: .6 }); ringWave(tx, ty, 4.2, mult, { kb: 6, stun: 2 }); });
+    for (let h = 1; h <= 3; h++) later(.5 + h * .5, () => { sfx('bell'); G.fx.push({ k: 'wave', x: tx, y: ty, r: 3.5, t: 0, life: .5 }); ringWave(tx, ty, 3.5, mult * .35, { kb: 2 }); }); },
+};
+
+// 맞을 때: 흘려 받기
+function parryHit(P, src) { const o = P.parry || { mult: 2.5 }; P.buf.parry = 0; P.inv0 = Math.max(P.inv0, .5); G.hitstop = .09; G.flash = .12; sfx('block');
+  G.txt.push({ x: P.x, y: P.y, z: 1.6, t: 0, s: '흘림!', c: '#ffd8c8', pop: 1 }); P.an = 'atk'; P.at = 0;
+  const n = o.fk === 0 ? 3 : 1; for (let h = 0; h < n; h++) later(h * .13, () => slashAround(P, 2.2, o.mult, { kb: 3 }));
+  if (o.fk === 1) { P.buf.haste = 5; calc(P); } }
+
+// 매 프레임: 지속 스킬
+function clsUpdate(P, dt) {
+  if (P.buf.whirl > 0 && P.whirl) { const W = P.whirl; W.t -= dt; if (W.t <= 0) { W.t = .2; G.fx.push({ k: 'slash', x: P.x, y: P.y, dx: Math.cos(G.t * 9), dy: Math.sin(G.t * 9), len: W.r, t: 0, life: .2, s: 0 });
+    for (const m of mobsIn(m => hyp(m.x - P.x, m.y - P.y) < W.r + m.r)) { const [d, c] = rollDmg(P, m, W.mult); hitMob(m, d, c, { kb: W.pull ? 0 : .6, tick: 1 }); } sfx('line'); }
+    if (W.pull) for (const m of mobsIn(m => !m.D.big && hyp(m.x - P.x, m.y - P.y) < W.r + 1.5)) move(m, (P.x - m.x) * dt * 2.2, (P.y - m.y) * dt * 2.2); }
+}
+// 지역 효과(areaUpdate 가 부름). true 면 처리 끝
+function clsArea(a, dt) {
+  const P = G.P;
+  if (a.k === 'trail') { a.tick -= dt; if (a.tick <= 0) { a.tick = .3; for (const m of mobsIn(m => segD(m.x, m.y, a.x, a.y, a.x1, a.y1) < .7 + m.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { tick: 1 }); } } return 1; }
+  if (a.k === 'rain') { a.tick -= dt; if (a.tick <= 0) { a.tick = .2; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + m.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { tick: 1 }); } } return 1; }
+  if (a.k === 'trap') { a.arm -= dt; if (a.arm > 0) return 1; const m = G.mobs.find(m => !m.dead && !m.fl && hyp(m.x - a.x, m.y - a.y) < .7 + m.r); if (!m) return 1;
+    a.t = a.life; const st = a.fk === 1 ? 3.5 : 2; const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { stun: m.D.big ? .8 : st, col: '#e8d8a0' }); if (a.fk === 1) m.slow = Math.max(m.slow, st + 3);
+    G.fx.push({ k: 'snap', x: a.x, y: a.y, t: 0, life: .4 }); sfx('block'); if (a.fk === 0) ringWave(a.x, a.y, 1.8, a.mult * .6, { kb: 2, col: '#ffd27a' }); return 1; }
+  if (a.k === 'net') { if (a.fk === 1) { a.tick -= dt; if (a.tick <= 0) { a.tick = .5; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + m.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { tick: 1 }); } } } return 1; }
+  if (a.k === 'hawk') { if (a.dv) { const D = a.dv; D.t += dt; const k = Math.min(1, D.t / .3); if (!D.m.dead) { D.x1 = D.m.x; D.y1 = D.m.y; } a.x = lerp(D.x0, D.x1, k); a.y = lerp(D.y0, D.y1, k); a.z = lerp(60, 14, k);
+      if (k >= 1 && !D.done) { D.done = 1; if (!D.m.dead) { const [d, c] = rollDmg(P, D.m, a.mult); hitMob(D.m, d, c, { kb: 1, col: '#ffe0a0', fx: a.x - .3, fy: a.y - .3 }); if (a.fk === 1 && !D.m.dead) markMob(D.m, 4, .2); } }
+      if (D.t > .55) a.dv = null; return 1; }
+    a.ang += dt * 2.4; const tx = P.x + Math.cos(a.ang) * 1.4, ty = P.y + Math.sin(a.ang) * 1.4; a.x += (tx - a.x) * Math.min(1, dt * 5); a.y += (ty - a.y) * Math.min(1, dt * 5); a.z += (60 - a.z) * Math.min(1, dt * 4);
+    a.tick -= dt; if (a.tick <= 0) { a.tick = 1; const m = nearestMob(P.x, P.y, 7); if (m) a.dv = { m, t: 0, x0: a.x, y0: a.y, x1: m.x, y1: m.y }; } return 1; }
+  if (a.k === 'tremor') { a.tick -= dt; if (a.tick <= 0) { a.tick = .5; G.fx.push({ k: 'bellw', x: a.x, y: a.y, r: a.r, t: 0, life: .35, c: '#d8c0ff' }); for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + m.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { tick: 1 }); } } return 1; }
+  if (a.k === 'echo') { if (a.flash > 0) a.flash -= dt; a.tick -= dt; if (a.tick <= 0) { a.tick = 1; ringWave(a.x, a.y, 1.8, a.mult, { kb: 1, tick: 1 }); }
+    if (a.t + dt >= a.life && a.fk === 1 && !a.boom) { a.boom = 1; G.shake = Math.max(G.shake, 6); G.fx.push({ k: 'wave', x: a.x, y: a.y, r: 3, t: 0, life: .5 }); ringWave(a.x, a.y, 3, a.mult * 3.3, { kb: 4 }); sfx('bell'); } return 1; }
+  if (a.k === 'bigbell') return 1;
+  return 0;
+}
+function segD(px, py, x1, y1, x2, y2) { const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy || 1, k = clamp(((px - x1) * dx + (py - y1) * dy) / l2, 0, 1); return hyp(px - x1 - dx * k, py - y1 - dy * k); }
+
 
 /* =================== 그리기 =================== */
 let ov, cv, x, lay = { Z: 1, dpr: 1, cw: 800, ch: 450 }, IM = {}, NPCK = [];
@@ -906,16 +1098,19 @@ const HC = [112, 120, 56, 100], HF = ['idle0', 'idle1', 'run0', 'run1', 'run2', 
 const MC = { fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
 function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; LOADP.n++; ok(); }; im.onerror = () => { LOADP.n++; ok(); }; im.src = src; }); }
 // 폰 로딩: 처음엔 꼭 필요한 그림만(약 1.4MB) 받고, 큰 보스 그림(둥지지기·우두머리)은 시작한 뒤 뒤에서 받는다
-const LOADP = { n: 0, N: 11 }, LATE = ['keeper', 'fluffking'];
+const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking'];
 let assetsP = null;
 function assets() {
-  if (assetsP) return assetsP; const v = '?v=cb937429';
+  if (assetsP) return assetsP; const v = '?v=846b0e83';
   const J = p => p.then(() => { LOADP.n++; });
-  assetsP = Promise.all([...['warden', 'windcaller', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
+  assetsP = Promise.all([...['heads', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
     J(fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; })), J(fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; })), J(fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {}))])
     .then(() => { LATE.reduce((p, k) => p.then(() => loadImg(k, IMG + k + '.webp' + v)), Promise.resolve()); });
   return assetsP;
 }
+// 영웅 그림은 고른 직업 것만 받는다(직업 5개 → 처음 화면은 얼굴 한 장)
+const HEROP = {};
+function loadHero(cls) { return HEROP[cls] || (HEROP[cls] = IM[cls] ? Promise.resolve() : new Promise(ok => { const im = new Image(); im.onload = () => { IM[cls] = im; ok(); }; im.onerror = () => { delete HEROP[cls]; ok(); }; im.src = IMG + cls + '.webp?v=846b0e83'; })); }
 let ICM = {}; const DIRT = [];
 function sprite(im, cw, ch, ax, ay, fr, row, X, Y, sc, flash, alpha) {
   if (!im) return; const w = cw * sc, h = ch * sc; if (alpha != null) x.globalAlpha = alpha;
@@ -974,6 +1169,7 @@ function draw() {
     if (a.k === 'flag') { const [ax, ay] = iso(a.x, a.y); x.strokeStyle = 'rgba(160,220,255,.6)'; x.lineWidth = 2; x.setLineDash([6, 6]); x.beginPath(); x.ellipse(ax, ay, a.r * TW / 2 * 1.41, a.r * TH / 2 * 1.41, 0, 0, TAU); x.stroke(); x.setLineDash([]); }
     if (a.k === 'warn') { const [ax, ay] = iso(a.x, a.y), k = a.t / a.life; x.fillStyle = `rgba(255,90,70,${.15 + k * .25})`; x.beginPath(); x.ellipse(ax, ay, a.r * TW / 2 * 1.41 * k, a.r * TH / 2 * 1.41 * k, 0, 0, TAU); x.fill(); x.strokeStyle = 'rgba(255,120,90,.8)'; x.lineWidth = 2; x.beginPath(); x.ellipse(ax, ay, a.r * TW / 2 * 1.41, a.r * TH / 2 * 1.41, 0, 0, TAU); x.stroke(); }
   }
+  drawClsGround();
   for (const f of G.fx) if (f.k === 'crack') { const [ax, ay] = iso(f.x, f.y), al = Math.min(1, (f.life - f.t) * 1.5); x.strokeStyle = `rgba(70,46,24,${.7 * al})`; x.lineWidth = 2.2; x.beginPath(); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + .3, l = 30 + hsh(i, 4) * 40; x.moveTo(ax, ay); x.lineTo(ax + Math.cos(a) * l * .5, ay + Math.sin(a) * l * .25 + 3); x.lineTo(ax + Math.cos(a + .2) * l, ay + Math.sin(a + .2) * l * .5); } x.stroke(); x.fillStyle = `rgba(60,40,20,${.35 * al})`; x.beginPath(); x.ellipse(ax, ay, 26, 13, 0, 0, TAU); x.fill(); }
   for (const w of Wd.wps) { const [ax, ay] = iso(w.x, w.y); x.fillStyle = w.on ? 'rgba(160,230,255,.35)' : 'rgba(255,255,255,.12)'; x.beginPath(); x.ellipse(ax, ay, 26, 13, 0, 0, TAU); x.fill(); x.strokeStyle = w.on ? '#9fe4ff' : '#d8d2c4'; x.lineWidth = 2; x.beginPath(); x.ellipse(ax, ay, 26 + (w.on ? Math.sin(G.t * 3) * 2 : 0), 13, 0, 0, TAU); x.stroke(); }
   // 정렬해서 그리기
@@ -983,6 +1179,7 @@ function draw() {
   for (const k in Wd.npcAt) { const [nx, ny] = Wd.npcAt[k]; if (vis(nx, ny)) L.push([nx + ny, 2, k]); }
   for (const d of G.drops) if (vis(d.x, d.y)) L.push([d.x + d.y - .3, 3, d]);
   for (const w of Wd.wps) L.push([w.x + w.y, 5, w]);
+  for (const a of G.areas) if (a.k === 'echo' && vis(a.x, a.y)) L.push([a.x + a.y, 6, a]);
   L.push([P.x + P.y, 4, P]); L.sort((a, b) => a[0] - b[0]);
   const hs = .5; // 2배 아틀라스 → 1배
   for (const [, k, o] of L) {
@@ -992,11 +1189,12 @@ function draw() {
     else if (k === 3) drawDrop(o);
     else if (k === 4) drawHero(o);
     else if (k === 5) { const [sx, sy] = iso(o.x, o.y); drawVane(sx, sy, o.on); }
+    else if (k === 6) drawEcho(o);
   }
   drawBlightAir();
   // 투사체·효과
   for (const a of G.areas) if (a.k === 'vortex') drawVortex(a);
-  for (const p of G.proj) drawProj(p); for (const f of G.fx) drawFx(f); drawParts();
+  for (const p of G.proj) drawProj(p); for (const f of G.fx) drawFx(f); drawParts(); drawClsAir();
   for (const a of G.areas) if (a.k === 'flag') { const [ax, ay] = iso(a.x, a.y); x.strokeStyle = '#6a4a2a'; x.lineWidth = 2.5; x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax, ay - 46); x.stroke(); x.fillStyle = a.fk === 0 ? '#9fe4ff' : '#b6f0a0'; x.beginPath(); x.moveTo(ax, ay - 46); x.quadraticCurveTo(ax + 14, ay - 46 + Math.sin(G.t * 6) * 3, ax + 26, ay - 40); x.lineTo(ax, ay - 32); x.fill(); }
   // 이름표
   x.textAlign = 'center';
@@ -1115,10 +1313,12 @@ function drawVane(sx, sy, on) { // 바람개비 표지: 나무 기둥 + 네 날�
 function drawHero(P) {
   const [sx, sy] = iso(P.x, P.y); shadow(sx, sy, 13);
   if (P.buf.cloud) { x.fillStyle = 'rgba(240,248,255,.35)'; x.beginPath(); x.ellipse(sx, sy - 20, 22, 28, 0, 0, TAU); x.fill(); }
+  drawClsHero(P, sx, sy);
   if (P.buf.hold) { x.strokeStyle = 'rgba(255,210,120,.7)'; x.lineWidth = 2; x.beginPath(); x.ellipse(sx, sy, 18, 9, 0, 0, TAU); x.stroke(); }
   const a = P.dodge > 0 ? .75 : P.inv0 > 0 ? .6 + Math.sin(G.t * 30) * .3 : 1;
   const jz = P.jump > 0 ? Math.sin((1 - P.jump / .48) * Math.PI) * 46 : 0;
   sprite(IM[P.cls], HC[0], HC[1], HC[2], HC[3], heroFrame(P), P.dir, sx, sy - jz, .5, P.hurt > .15 ? .1 : 0, a);
+  drawClsHero(P, sx, sy - jz, 1);
 }
 function drawMob(m) {
   if (!IM[m.D.spr]) { const [sx, sy] = iso(m.x, m.y); shadow(sx, sy, m.D.boss ? 36 : 24); return; } // 큰 그림 받는 중
@@ -1184,6 +1384,7 @@ function drawProj(p) {
   const [sx, sy] = iso(p.x, p.y), Y = sy - 22;
   if (p.k === 'wind') { x.strokeStyle = 'rgba(230,248,255,.9)'; x.lineWidth = 2.2; for (let i = 0; i < 3; i++) { x.beginPath(); x.arc(sx, Y, 4 + i * 3, G.t * 12 + i, G.t * 12 + i + 2.2); x.stroke(); } }
   else if (p.k === 'bolt') { const [ex, ey] = iso(p.x - p.vx * .04, p.y - p.vy * .04); x.strokeStyle = '#fff6b0'; x.lineWidth = 3; x.shadowColor = '#ffe066'; x.shadowBlur = 10; x.beginPath(); x.moveTo(ex, ey - 22); x.lineTo(sx, Y); x.stroke(); x.shadowBlur = 0; }
+  else if (p.k === 'arrow') { const [ex, ey] = iso(p.x - p.vx * .035, p.y - p.vy * .035); x.strokeStyle = '#6a4a2a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(ex, ey - 22); x.lineTo(sx, Y); x.stroke(); x.fillStyle = '#e8eef4'; x.beginPath(); x.arc(sx, Y, 2.4, 0, TAU); x.fill(); x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 1; x.beginPath(); x.moveTo(ex, ey - 22); x.lineTo(lerp(ex, sx, -1), lerp(ey, sy, -1) - 22); x.stroke(); }
   else if (p.k === 'twister') { for (let i = 0; i < 7; i++) { const r = 6 + i * 3.2, yy = sy - i * 7; x.strokeStyle = `rgba(225,242,252,${.85 - i * .08})`; x.lineWidth = 2.4; x.beginPath(); x.ellipse(sx + Math.sin(G.t * 9 + i) * 3, yy, r, r * .38, 0, G.t * 14 + i, G.t * 14 + i + 4.4); x.stroke(); } }
 }
 function drawFx(f) {
@@ -1192,7 +1393,7 @@ function drawFx(f) {
   else if (f.k === 'thrust') { const [ex, ey] = iso(f.x + f.dx * f.len, f.y + f.dy * f.len); x.strokeStyle = `rgba(255,250,235,${1 - k})`; x.lineWidth = 4 * (1 - k) + 1; x.beginPath(); x.moveTo(sx, sy - 20); x.lineTo(ex, ey - 20); x.stroke(); }
   else if (f.k === 'gust' || f.k === 'bash') { const a0 = Math.atan2(...(() => { const [ax, ay] = iso(f.dx, f.dy); return [ay, ax]; })()); x.strokeStyle = f.k === 'gust' ? `rgba(230,246,255,${.9 - k})` : `rgba(255,220,150,${.9 - k})`; x.lineWidth = 2.5;
     for (let i = 0; i < 6; i++) { const a = a0 + (i / 5 - .5) * f.arc, r = f.r * 32 * (.4 + k * .7); x.beginPath(); x.ellipse(sx, sy - 14, r, r * .5, 0, a - .15, a + .15); x.stroke(); } }
-  else if (f.k === 'zap') { const [ex, ey] = iso(f.x2, f.y2); x.strokeStyle = `rgba(255,246,170,${1 - k})`; x.lineWidth = 2.5; x.shadowColor = '#ffe066'; x.shadowBlur = 8; x.beginPath(); x.moveTo(sx, sy - 22); for (let i = 1; i < 6; i++) { const t = i / 6; x.lineTo(lerp(sx, ex, t) + rnd(-6, 6), lerp(sy, ey, t) - 22 + rnd(-6, 6)); } x.lineTo(ex, ey - 22); x.stroke(); x.shadowBlur = 0; }
+  else if (f.k === 'zap') { const [ex, ey] = iso(f.x2, f.y2); x.strokeStyle = f.c || `rgba(255,246,170,${1 - k})`; x.globalAlpha = f.c ? 1 - k : 1; x.lineWidth = 2.5; x.shadowColor = f.c || '#ffe066'; x.shadowBlur = 8; x.beginPath(); x.moveTo(sx, sy - 22); for (let i = 1; i < 6; i++) { const t = i / 6; x.lineTo(lerp(sx, ex, t) + rnd(-6, 6), lerp(sy, ey, t) - 22 + rnd(-6, 6)); } x.lineTo(ex, ey - 22); x.stroke(); x.shadowBlur = 0; x.globalAlpha = 1; }
   else if (f.k === 'pop') { x.fillStyle = f.c; x.globalAlpha = 1 - k; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; x.beginPath(); x.arc(sx + Math.cos(a) * k * 14, sy - 20 + Math.sin(a) * k * 9, 2.4 * (1 - k) + .5, 0, TAU); x.fill(); } x.globalAlpha = 1; }
   else if (f.k === 'aura') { x.strokeStyle = f.c; x.globalAlpha = 1 - k; x.lineWidth = 2; for (let i = 0; i < 3; i++) { x.beginPath(); x.ellipse(sx, sy - k * 30 - i * 8, 16 - i * 3, 7 - i, 0, 0, TAU); x.stroke(); } x.globalAlpha = 1; }
   else if (f.k === 'lvl') { x.strokeStyle = '#ffd166'; x.globalAlpha = 1 - k; x.lineWidth = 3; for (let i = 0; i < 3; i++) { x.beginPath(); x.ellipse(sx, sy - k * 50 - i * 12, 20 + i * 4, 9 + i * 2, 0, 0, TAU); x.stroke(); } x.globalAlpha = 1; }
@@ -1202,6 +1403,7 @@ function drawFx(f) {
     const a1 = a0 - 1.1 * sw + 2.2 * sw * Math.min(1, k * 2.4); x.globalAlpha = 1 - k; const gr = x.createLinearGradient(-R, 0, R, 0); x.strokeStyle = 'rgba(255,248,225,.95)'; x.lineCap = 'round';
     for (let i = 0; i < 6; i++) { x.lineWidth = (7 - i) * (1 - k) + .5; x.globalAlpha = (1 - k) * (1 - i * .14); x.beginPath(); x.arc(0, 0, R * (.82 + i * .03), a1 - .12 * sw * (i + 1), a1 - .12 * sw * i, sw < 0); x.stroke(); }
     x.restore(); x.globalAlpha = 1; }
+  else if (drawClsFx(f, k, sx, sy)) return;
   else if (f.k === 'sail') { x.fillStyle = `rgba(240,248,255,${.5 * (1 - k)})`; x.beginPath(); x.ellipse(sx, sy - 18, 16 + k * 10, 8, 0, 0, TAU); x.fill(); }
 }
 function drawParts() {
@@ -1270,14 +1472,14 @@ const SAFE_L = () => 0, SAFE_R = () => 0;
 function bar(X, Y, w, h, f, c1, c2, label, s) { x.fillStyle = 'rgba(0,0,0,.4)'; rr(X, Y, w, h, h / 2); x.fill(); const g = x.createLinearGradient(0, Y, 0, Y + h); g.addColorStop(0, c2); g.addColorStop(1, c1); x.fillStyle = g; if (f > 0) { rr(X, Y, Math.max(h, w * clamp(f, 0, 1)), h, h / 2); x.fill(); } x.font = `700 ${h * .78}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.fillText(label, X + w / 2, Y + h * .8); }
 function btn(k, X, Y, sz, key, label) { x.fillStyle = 'rgba(30,24,18,.55)'; x.beginPath(); x.arc(X + sz / 2, Y + sz / 2, sz / 2, 0, TAU); x.fill(); x.strokeStyle = 'rgba(255,240,210,.5)'; x.lineWidth = 1.5; x.stroke();
   const P = G.P; if (k === 'dodge' && P.dcd > 0) { x.fillStyle = 'rgba(0,0,0,.45)'; x.beginPath(); x.moveTo(X + sz / 2, Y + sz / 2); x.arc(X + sz / 2, Y + sz / 2, sz / 2, -Math.PI / 2, -Math.PI / 2 + TAU * P.dcd / P.sail[1]); x.fill(); }
-  if (k === 'atk') { const ic = CLASSES[P.cls].melee ? 'spear' : 'staff'; if (ICM[ic]) x.drawImage(IM.icons, ...ICM[ic], X + sz * .2, Y + sz * .2, sz * .6, sz * .6); }
+  if (k === 'atk') { const ic = { warden: 'spear', windcaller: 'staff', drifter: 'sword', trapper: 'xbow', ringer: 'hammer' }[P.cls]; if (ICM[ic]) x.drawImage(IM.icons, ...ICM[ic], X + sz * .2, Y + sz * .2, sz * .6, sz * .6); }
   if (k === 'pot' || k === 'wpot') { const m = ICM[k]; if (m) x.drawImage(IM.icons, ...m, X + sz * .22, Y + sz * .12, sz * .56, sz * .56); }
   if (k === 'dodge') { const m = ICM.sail; if (m) x.drawImage(IM.icons, ...m, X + sz * .22, Y + sz * .12, sz * .56, sz * .56); }
   x.font = `700 ${Math.max(9, sz * .2)}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,.6)'; x.lineWidth = 2.5; if (label) { x.strokeText(label, X + sz / 2, Y + sz * .9); x.fillText(label, X + sz / 2, Y + sz * .9); }
   if (key) { x.fillStyle = '#ffd166'; x.fillText(key, X + sz * .18, Y + sz * .26); }
   BTN.push({ k, x: X, y: Y, w: sz, h: sz });
 }
-const SKC = { ult: '#fff3c0',  pierce: '#ffe9c0', sweep: '#ffd59a', bash: '#ffd27a', hold: '#f2c26a', shout: '#ffb48a', flag: '#b6f0a0', gust: '#dff4ff', twister: '#c8ecff', bolt: '#fff3a0', chain: '#ffe066', cloud: '#f4f8ff', mist: '#d8e6f0' };
+const SKC = { ult: '#fff3c0',  pierce: '#ffe9c0', sweep: '#ffd59a', bash: '#ffd27a', hold: '#f2c26a', shout: '#ffb48a', flag: '#b6f0a0', gust: '#dff4ff', twister: '#c8ecff', bolt: '#fff3a0', chain: '#ffe066', cloud: '#f4f8ff', mist: '#d8e6f0', slash3: '#ffe0d6', whirl: '#ffd0c0', dashcut: '#fff0e8', parry: '#ffe8c0', mark: '#ff9a8a', shadow: '#e0c8ff', pshot: '#f4e8c8', rain: '#e8d8b0', trap: '#e8e0d0', net: '#f0e4c0', roll: '#d8f0b0', hawk: '#f0d0a0', toll: '#ffe0a0', wave: '#ffe8b8', echo: '#e0d0ff', resound: '#e8d8ff', clang: '#ffffff', dome: '#ffd890' };
 function skillBtn(i, id, X, Y, sz, key) {
   const P = G.P, ult = id === 'ult'; x.fillStyle = 'rgba(30,24,18,.6)'; rr(X, Y, sz, sz, sz * .22); x.fill(); x.strokeStyle = ult ? '#ffcf7a' : 'rgba(255,240,210,.45)'; x.lineWidth = ult ? 2.5 : 1.5; x.stroke();
   if (id) { const s = skillOf(P.cls, id); drawSkillIcon(x, s, X, Y, sz, P.cls); const cd = P.cds[id] || 0;
@@ -1305,7 +1507,8 @@ function drawSkillIcon(g, s, X, Y, sz, cls) {
     case 'twister': for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(cx + (i % 2 ? 2 : -2), cy - r + i * r * .6, r * (1 - i * .2), r * .28, 0, 0, TAU); g.stroke(); } break;
     case 'bolt': case 'chain': g.beginPath(); g.moveTo(cx + r * .3, cy - r * 1.2); g.lineTo(cx - r * .6, cy + r * .1); g.lineTo(cx, cy + r * .1); g.lineTo(cx - r * .3, cy + r * 1.2); g.lineTo(cx + r * .7, cy - r * .2); g.lineTo(cx + r * .1, cy - r * .2); g.closePath(); g.fill(); if (s.id === 'chain') { g.beginPath(); g.arc(cx + r * .9, cy + r * .8, r * .25, 0, TAU); g.arc(cx - r * .9, cy - r * .8, r * .25, 0, TAU); g.fill(); } break;
     case 'ult': if (cls === 'warden') { L(cx, cy - r * 1.3, cx, cy + r * .5); g.beginPath(); g.moveTo(cx, cy + r * .9); g.lineTo(cx - r * .3, cy + r * .3); g.lineTo(cx + r * .3, cy + r * .3); g.fill(); for (let i = 0; i < 5; i++) { const a = Math.PI * (.1 + i * .2); L(cx + Math.cos(a) * r * .7, cy + r * .9 + Math.sin(a) * r * .1 - r * .15, cx + Math.cos(a) * r * 1.3, cy + r * .9 + Math.sin(a) * r * .35 - r * .15); } }
-      else { for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx, cy, r * (.3 + i * .25), i, i + 4.2); g.stroke(); } } break;
+      else if (cls === 'windcaller') { for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx, cy, r * (.3 + i * .25), i, i + 4.2); g.stroke(); } } else clsIcon(g, s, cx, cy, r, c, L, col, cls); break;
+    default: clsIcon(g, s, cx, cy, r, c, L, col, cls); break;
     case 'cloud': case 'mist': g.beginPath(); g.arc(cx - r * .45, cy + r * .1, r * .45, 0, TAU); g.arc(cx + r * .1, cy - r * .2, r * .58, 0, TAU); g.arc(cx + r * .6, cy + r * .2, r * .4, 0, TAU); g.fill(); if (s.id === 'mist') { g.globalAlpha = .6; g.fillRect(cx - r * 1.1, cy + r * .6, r * 2.2, r * .2); g.globalAlpha = 1; } break;
   }
   g.restore();
@@ -1331,6 +1534,100 @@ function questTracker(R, T, s) {
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
 }
 
+/* ---------- 3단계 직업 그리기: 덫·화살비·그물·메아리 분신·매·하늘 종·표식 ---------- */
+const ELL = (ax, ay, r, k) => { x.beginPath(); x.ellipse(ax, ay, r * TW / 2 * 1.41 * (k || 1), r * TH / 2 * 1.41 * (k || 1), 0, 0, TAU); };
+function drawClsGround() {
+  for (const a of G.areas) {
+    if (a.t < 0) continue; const [ax, ay] = iso(a.x, a.y), al = Math.min(1, a.t * 4, (a.life - a.t) * 3);
+    if (a.k === 'trap') { const armed = a.arm <= 0, p = armed ? .5 + Math.sin(G.t * 5) * .2 : .3;
+      x.fillStyle = `rgba(60,40,24,${.55 * al})`; x.beginPath(); x.ellipse(ax, ay, 15, 7.5, 0, 0, TAU); x.fill();
+      x.strokeStyle = `rgba(200,200,210,${al})`; x.lineWidth = 1.8; x.beginPath(); x.ellipse(ax, ay, 12, 6, 0, 0, TAU); x.stroke();
+      x.beginPath(); for (let i = 0; i < 8; i++) { const an = i / 8 * TAU, c = Math.cos(an), s = Math.sin(an); x.moveTo(ax + c * 12, ay + s * 6); x.lineTo(ax + c * 7, ay + s * 3.5 - 3); } x.stroke();
+      x.fillStyle = `rgba(255,210,120,${p * al})`; x.beginPath(); x.arc(ax, ay, 2.6, 0, TAU); x.fill(); }
+    else if (a.k === 'rain') { x.fillStyle = `rgba(90,70,40,${.16 * al})`; ELL(ax, ay, a.r); x.fill(); x.strokeStyle = `rgba(240,220,160,${.5 * al})`; x.lineWidth = 1.5; x.setLineDash([5, 5]); ELL(ax, ay, a.r); x.stroke(); x.setLineDash([]); }
+    else if (a.k === 'net') { x.save(); ELL(ax, ay, a.r); x.clip(); x.strokeStyle = `rgba(232,220,176,${.75 * al})`; x.lineWidth = 1.4; const R = a.r * TW;
+      x.beginPath(); for (let i = -6; i <= 6; i++) { x.moveTo(ax - R + i * 9, ay - R / 2); x.lineTo(ax + R + i * 9, ay + R / 2); x.moveTo(ax + R + i * 9, ay - R / 2); x.lineTo(ax - R + i * 9, ay + R / 2); } x.stroke(); x.restore();
+      x.strokeStyle = `rgba(160,130,80,${al})`; x.lineWidth = 2; ELL(ax, ay, a.r); x.stroke(); }
+    else if (a.k === 'trail') { const [bx, by] = iso(a.x1, a.y1); x.strokeStyle = `rgba(255,220,210,${.5 * al})`; x.lineWidth = 10; x.lineCap = 'round'; x.beginPath(); x.moveTo(ax, ay - 8); x.lineTo(bx, by - 8); x.stroke(); x.strokeStyle = `rgba(255,255,255,${.7 * al})`; x.lineWidth = 2;
+      for (let i = 0; i < 3; i++) { const o = Math.sin(G.t * 20 + i * 2) * 4; x.beginPath(); x.moveTo(ax, ay - 8 + o - 6 + i * 6); x.lineTo(bx, by - 8 - o - 6 + i * 6); x.stroke(); } }
+    else if (a.k === 'tremor') { x.strokeStyle = `rgba(200,170,255,${(.35 + Math.sin(G.t * 18) * .15) * al})`; x.lineWidth = 2; ELL(ax, ay, a.r * (.9 + Math.sin(G.t * 18) * .05)); x.stroke(); }
+    else if (a.k === 'echo') { x.fillStyle = `rgba(180,140,255,${.22 * al})`; x.beginPath(); x.ellipse(ax, ay, 22, 11, 0, 0, TAU); x.fill(); }
+    else if (a.k === 'hawk') { const sh = Math.max(.08, .3 - a.z / 400); x.fillStyle = `rgba(30,30,20,${sh})`; x.beginPath(); x.ellipse(ax, ay, 9, 4, 0, 0, TAU); x.fill(); }
+    else if (a.k === 'bigbell') { const k = Math.min(1, a.t / .5); x.fillStyle = `rgba(30,20,40,${.35 * k * al})`; x.beginPath(); x.ellipse(ax, ay, 26 + k * 20, (26 + k * 20) / 2, 0, 0, TAU); x.fill(); }
+  }
+}
+function drawEcho(a) { if (a.t < 0) return; const [sx, sy] = iso(a.x, a.y), al = Math.min(1, a.t * 3, (a.life - a.t) * 2), im = IM.ringer; if (!im) return;
+  const fr = a.tick > .75 ? 8 + Math.min(3, Math.floor((1 - a.tick) * 16)) : Math.floor(G.t / .6) % 2;
+  sprite(im, HC[0], HC[1], HC[2], HC[3], fr, a.dir, sx, sy - 4 - Math.sin(G.t * 3) * 3, .5, a.flash > 0 ? .1 : 0, .5 * al);
+  x.globalCompositeOperation = 'lighter'; x.globalAlpha = .25 * al; x.fillStyle = '#9a7aff'; x.beginPath(); x.ellipse(sx, sy - 26, 18, 30, 0, 0, TAU); x.fill(); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; }
+function drawHawk(a) { const [sx, sy] = iso(a.x, a.y), Y = sy - a.z, f = Math.sin(G.t * (a.dv ? 6 : 14) + a.ang) * (a.dv ? 3 : 7), al = Math.min(1, a.t * 4, (a.life - a.t) * 3); x.globalAlpha = al;
+  x.fillStyle = '#7a5434'; x.strokeStyle = '#2a1a10'; x.lineWidth = 1.4;
+  for (const s of [-1, 1]) { x.beginPath(); x.moveTo(sx, Y); x.quadraticCurveTo(sx + s * 9, Y - 6 - f, sx + s * 18, Y - 2 - f * 1.4); x.quadraticCurveTo(sx + s * 10, Y + 2, sx, Y + 3); x.closePath(); x.fill(); x.stroke(); }
+  x.fillStyle = '#9a6a40'; x.beginPath(); x.ellipse(sx, Y + 1, 4, 7, 0, 0, TAU); x.fill(); x.stroke(); x.fillStyle = '#f0e8d8'; x.beginPath(); x.arc(sx, Y - 5, 3, 0, TAU); x.fill(); x.fillStyle = '#ffc23a'; x.beginPath(); x.moveTo(sx - 1.5, Y - 4); x.lineTo(sx + 1.5, Y - 4); x.lineTo(sx, Y - 1); x.fill(); x.globalAlpha = 1; }
+function drawBell(sx, Y, w, al) { x.globalAlpha = al; const gr = x.createLinearGradient(sx - w, 0, sx + w, 0); gr.addColorStop(0, '#8a5a1a'); gr.addColorStop(.35, '#ffd27a'); gr.addColorStop(1, '#7a4a14'); x.fillStyle = gr; x.strokeStyle = '#3a2410'; x.lineWidth = 2.5;
+  x.beginPath(); x.moveTo(sx - w, Y); x.quadraticCurveTo(sx - w * .82, Y - w * .2, sx - w * .62, Y - w * .9); x.quadraticCurveTo(sx - w * .5, Y - w * 1.45, sx, Y - w * 1.5); x.quadraticCurveTo(sx + w * .5, Y - w * 1.45, sx + w * .62, Y - w * .9); x.quadraticCurveTo(sx + w * .82, Y - w * .2, sx + w, Y); x.closePath(); x.fill(); x.stroke();
+  x.fillStyle = '#5a3a14'; x.beginPath(); x.ellipse(sx, Y, w, w * .22, 0, 0, TAU); x.fill(); x.stroke(); x.strokeStyle = 'rgba(255,240,200,.6)'; x.lineWidth = 2; x.beginPath(); x.moveTo(sx - w * .7, Y - w * .5); x.quadraticCurveTo(sx, Y - w * .38, sx + w * .7, Y - w * .5); x.stroke(); x.globalAlpha = 1; }
+function drawClsAir() {
+  for (const a of G.areas) {
+    if (a.t < 0) continue;
+    if (a.k === 'rain') { const [ax, ay] = iso(a.x, a.y); x.strokeStyle = '#6a4a2a'; x.lineWidth = 1.6; const n = a.big ? 14 : 8;
+      for (let i = 0; i < n; i++) { const s = Math.floor(G.t * 12) * 31 + i * 7, rx = (hsh(s, i) - .5) * 2 * a.r, ry = (hsh(i, s) - .5) * 2 * a.r; if (rx * rx + ry * ry > a.r * a.r) continue; const [px, py] = iso(a.x + rx, a.y + ry), h = (G.t * 12 % 1) * 70;
+        x.globalAlpha = .9; x.beginPath(); x.moveTo(px - 4, py - 80 + h); x.lineTo(px, py - 64 + h); x.stroke(); } x.globalAlpha = 1; }
+    else if (a.k === 'hawk') drawHawk(a);
+    else if (a.k === 'bigbell') { const [ax, ay] = iso(a.x, a.y), k = Math.min(1, a.t / .5), al = Math.min(1, (a.life - a.t) * 2); const shake = a.t > .5 && a.t < 2 ? Math.sin(G.t * 40) * 2 : 0; drawBell(ax + shake, ay - (1 - k * k) * 320, 46, al); }
+  }
+  // 표식: 받는 피해가 늘어난 적
+  for (const m of G.mobs) if (m.mark > 0 && !m.dead) { const [sx, sy] = iso(m.x, m.y), Y = sy - (m.D.boss ? 130 : m.D.mini ? 96 : 50) - 6, s = 6 + Math.sin(G.t * 8) * 1;
+    x.globalAlpha = Math.min(1, m.mark * 2); x.fillStyle = '#ff5a4a'; x.strokeStyle = '#fff'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(sx, Y - s); x.lineTo(sx + s * .8, Y); x.lineTo(sx, Y + s); x.lineTo(sx - s * .8, Y); x.closePath(); x.fill(); x.stroke(); x.globalAlpha = 1; }
+}
+function drawClsFx(f, k, sx, sy) {
+  if (f.k === 'ghost') { const im = IM[G.P.cls]; if (im) { x.globalCompositeOperation = 'lighter'; sprite(im, HC[0], HC[1], HC[2], HC[3], f.fr, f.dir, sx, sy, .5, 0, (1 - k) * .45); x.globalCompositeOperation = 'source-over'; } return 1; }
+  if (f.k === 'bellw') { x.strokeStyle = f.c; for (let i = 0; i < 2; i++) { const kk = Math.min(1, k * 1.2 + i * .2); x.globalAlpha = (1 - kk) * .9; x.lineWidth = 3 - i; ELL(sx, sy, f.r, .3 + kk * .75); x.stroke(); } x.globalAlpha = 1; return 1; }
+  if (f.k === 'wave') { const gr = x.createRadialGradient(sx, sy, 0, sx, sy, f.r * TW * .71 * (.2 + k)); gr.addColorStop(0, 'rgba(255,230,160,0)'); gr.addColorStop(.85, `rgba(255,220,140,${.35 * (1 - k)})`); gr.addColorStop(1, 'rgba(255,220,140,0)');
+    x.save(); x.translate(sx, sy); x.scale(1, TH / TW); x.translate(-sx, -sy); x.fillStyle = gr; x.beginPath(); x.arc(sx, sy, f.r * TW * .71 * (.2 + k), 0, TAU); x.fill(); x.restore();
+    x.strokeStyle = `rgba(255,240,200,${1 - k})`; x.lineWidth = 3; ELL(sx, sy, f.r, .2 + k); x.stroke(); return 1; }
+  if (f.k === 'snap') { x.strokeStyle = `rgba(230,230,240,${1 - k})`; x.lineWidth = 3; const o = 10 * (1 - Math.min(1, k * 3)); for (const s of [-1, 1]) { x.beginPath(); x.ellipse(sx, sy - 6 + s * o, 13, 6, 0, s < 0 ? Math.PI : 0, s < 0 ? TAU : Math.PI); x.stroke(); } return 1; }
+  if (f.k === 'clang') { x.strokeStyle = `rgba(255,255,255,${1 - k})`; x.lineWidth = 2.5; x.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .2, r0 = f.r * 12 * k, r1 = f.r * 26 * (.4 + k); x.moveTo(sx + Math.cos(a) * r0, sy - 20 + Math.sin(a) * r0 * .6); x.lineTo(sx + Math.cos(a) * r1, sy - 20 + Math.sin(a) * r1 * .6); } x.stroke(); return 1; }
+  return 0;
+}
+function drawClsHero(P, sx, sy, post) {
+  if (P.buf.whirl > 0) { x.strokeStyle = post ? 'rgba(255,240,230,.85)' : 'rgba(255,200,180,.45)'; x.lineWidth = post ? 3 : 6; x.lineCap = 'round'; const R = (P.whirl ? P.whirl.r : 1.7) * 30;
+    for (let i = 0; i < 2; i++) { const a0 = G.t * 16 + i * Math.PI + (post ? 0 : .5); x.beginPath(); x.ellipse(sx, sy - 16, R, R * .5, 0, a0, a0 + 1.4); x.stroke(); } }
+  if (!post && P.buf.parry > 0) { x.strokeStyle = `rgba(255,216,200,${.6 + Math.sin(G.t * 20) * .3})`; x.lineWidth = 2.5; x.beginPath(); x.ellipse(sx, sy, 20, 10, 0, 0, TAU); x.stroke(); }
+  if (post && P.buf.dome > 0) { const al = Math.min(1, P.buf.dome * 2) * .35; x.globalCompositeOperation = 'lighter'; drawBell(sx, sy + 6, 30, al); x.globalCompositeOperation = 'source-over'; }
+  if (post && P.buf.haste > 0) { x.strokeStyle = 'rgba(255,220,200,.6)'; x.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const yy = sy - 10 - i * 12 + (G.t * 60 % 12); x.beginPath(); x.moveTo(sx - 16, yy); x.lineTo(sx - 26, yy); x.stroke(); } }
+}
+// 새 직업 스킬 그림(코드로 그림)
+function clsIcon(g, s, cx, cy, r, c, L, col, cls) {
+  const tri = (x1, y1, x2, y2, x3, y3) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.lineTo(x3, y3); g.closePath(); g.fill(); };
+  const blade = (x1, y1, x2, y2) => { L(x1, y1, x2, y2); const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy); tri(x2, y2, x2 - dx / l * r * .4 - dy / l * r * .14, y2 - dy / l * r * .4 + dx / l * r * .14, x2 - dx / l * r * .4 + dy / l * r * .14, y2 - dy / l * r * .4 - dx / l * r * .14); };
+  const bell = (bx, by, w) => { g.beginPath(); g.moveTo(bx - w, by); g.quadraticCurveTo(bx - w * .7, by - w * 1.2, bx, by - w * 1.4); g.quadraticCurveTo(bx + w * .7, by - w * 1.2, bx + w, by); g.closePath(); g.fill(); g.beginPath(); g.arc(bx, by + w * .25, w * .2, 0, TAU); g.fill(); };
+  const arrow = (x1, y1, x2, y2) => { blade(x1, y1, x2, y2); L(x1, y1, x1 - r * .25, y1 - r * .05); L(x1, y1, x1 - r * .05, y1 + r * .25); };
+  switch (s.id) {
+    case 'slash3': for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(cx - r * .9 + i * r * .2, cy + r * .9 - i * r * .2, r * (1.1 + i * .1), -1.4, -.2); g.stroke(); } break;
+    case 'whirl': g.beginPath(); g.arc(cx, cy, r * .95, 0, TAU * .8); g.stroke(); blade(cx, cy, cx + r * .9, cy - r * .6); blade(cx, cy, cx - r * .9, cy + r * .6); break;
+    case 'dashcut': blade(cx - r * 1.1, cy + r * .5, cx + r * 1.1, cy - r * .5); g.globalAlpha = .5; L(cx - r * 1.2, cy + r * .1, cx + r * .2, cy - r * .5); L(cx - r * 1.2, cy + r * .9, cx + r * .4, cy + r * .2); g.globalAlpha = 1; break;
+    case 'parry': blade(cx - r, cy + r, cx + r * .8, cy - r * .8); blade(cx + r, cy + r, cx - r * .8, cy - r * .8); g.beginPath(); g.arc(cx, cy, r * .25, 0, TAU); g.fill(); break;
+    case 'mark': g.beginPath(); g.moveTo(cx, cy - r); g.lineTo(cx + r * .8, cy); g.lineTo(cx, cy + r); g.lineTo(cx - r * .8, cy); g.closePath(); g.stroke(); blade(cx - r * 1.2, cy + r * 1.2, cx + r * .1, cy - r * .1); break;
+    case 'shadow': g.globalAlpha = .45; blade(cx - r * 1.1, cy + r * .2, cx + r * .2, cy - r * 1.1); g.globalAlpha = .7; blade(cx - r * .8, cy + r * .6, cx + r * .5, cy - r * .7); g.globalAlpha = 1; blade(cx - r * .4, cy + r, cx + r * .9, cy - r * .3); break;
+    case 'pshot': arrow(cx - r * 1.1, cy + r * .9, cx + r * 1.1, cy - r * .9); g.beginPath(); g.arc(cx, cy, r * .3, 0, TAU); g.stroke(); break;
+    case 'rain': for (let i = 0; i < 4; i++) { const ax = cx - r * .9 + i * r * .6; arrow(ax - r * .2, cy - r * 1.1 + (i % 2) * r * .3, ax + r * .15, cy + r * .2 + (i % 2) * r * .3); } g.fillRect(cx - r * 1.2, cy + r * .9, r * 2.4, r * .15); break;
+    case 'trap': g.beginPath(); g.ellipse(cx, cy + r * .3, r, r * .45, 0, 0, TAU); g.stroke(); for (let i = 0; i < 6; i++) { const a = Math.PI + i / 5 * Math.PI, px = cx + Math.cos(a) * r * .9; tri(px - r * .12, cy + r * .2, px + r * .12, cy + r * .2, px, cy - r * .35); } break;
+    case 'net': g.lineWidth = r * .12; for (let i = -2; i <= 2; i++) { L(cx - r + i * r * .45, cy - r, cx + r + i * r * .45, cy + r); L(cx + r + i * r * .45, cy - r, cx - r + i * r * .45, cy + r); } break;
+    case 'roll': g.beginPath(); g.arc(cx + r * .3, cy, r * .8, -2.4, 1.6); g.stroke(); tri(cx - r * .5, cy - r * .9, cx - r * .1, cy - r * .3, cx - r, cy - r * .3); arrow(cx - r * .1, cy + r * .1, cx + r * 1.2, cy - r * .5); break;
+    case 'hawk': g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx - r * .6, cy - r * .9, cx - r * 1.3, cy - r * .4); g.quadraticCurveTo(cx - r * .6, cy + r * .1, cx, cy + r * .3); g.quadraticCurveTo(cx + r * .6, cy + r * .1, cx + r * 1.3, cy - r * .4); g.quadraticCurveTo(cx + r * .6, cy - r * .9, cx, cy); g.fill(); g.beginPath(); g.ellipse(cx, cy + r * .4, r * .25, r * .6, 0, 0, TAU); g.fill(); break;
+    case 'toll': bell(cx + r * .3, cy + r * .7, r * .7); L(cx - r * 1.1, cy - r * 1.1, cx - r * .1, cy - r * .1); g.fillRect(cx - r * 1.35, cy - r * 1.35, r * .55, r * .45); break;
+    case 'wave': for (let i = 0; i < 3; i++) { g.beginPath(); g.ellipse(cx, cy + r * .2, r * (.4 + i * .38), r * (.2 + i * .2), 0, 0, TAU); g.stroke(); } break;
+    case 'echo': g.globalAlpha = .45; bell(cx - r * .45, cy + r * .6, r * .6); g.globalAlpha = 1; bell(cx + r * .35, cy + r * .8, r * .7); break;
+    case 'resound': bell(cx, cy + r * .5, r * .65); for (const sd of [-1, 1]) for (let i = 0; i < 2; i++) { g.beginPath(); g.arc(cx, cy, r * (.95 + i * .35), sd < 0 ? Math.PI - .5 : -.5, sd < 0 ? Math.PI + .5 : .5); g.stroke(); } break;
+    case 'clang': for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; L(cx + Math.cos(a) * r * .35, cy + Math.sin(a) * r * .35, cx + Math.cos(a) * r * 1.2, cy + Math.sin(a) * r * 1.2); } g.beginPath(); g.arc(cx, cy, r * .3, 0, TAU); g.fill(); break;
+    case 'dome': g.globalAlpha = .5; bell(cx, cy + r * 1, r * 1.1); g.globalAlpha = 1; g.beginPath(); g.arc(cx, cy + r * .1, r * .3, 0, TAU); g.fill(); g.fillRect(cx - r * .2, cy + r * .35, r * .4, r * .6); break;
+    case 'ult': if (cls === 'drifter') { for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .3; blade(cx + Math.cos(a) * r * .3, cy + Math.sin(a) * r * .3, cx + Math.cos(a) * r * 1.2, cy + Math.sin(a) * r * 1.2); } }
+      else if (cls === 'trapper') { g.beginPath(); g.arc(cx, cy, r * 1.05, 0, TAU); g.stroke(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; g.beginPath(); g.arc(cx + Math.cos(a) * r * 1.05, cy + Math.sin(a) * r * 1.05, r * .17, 0, TAU); g.fill(); } arrow(cx - r * .3, cy - r * .6, cx + r * .2, cy + r * .5); }
+      else { bell(cx, cy + r * .9, r * 1.05); g.globalAlpha = .6; for (let i = 0; i < 3; i++) L(cx - r * .6 + i * r * .6, cy - r * 1.4, cx - r * .6 + i * r * .6, cy - r * .9); g.globalAlpha = 1; } break;
+  }
+}
+
 
 /* =================== 화면(DOM)·입력·소리 =================== */
 let panel, raf = 0, last = 0, acc = 0, PANEL = null, SEL = null, SHOP = null;
@@ -1349,7 +1646,7 @@ function css() {
     + '.sk-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #d8c8a8;font-size:13px}.sk-row .f{flex:1}.sk-row small{color:#8a7458}'
     + '.sk-talk{max-width:640px}.sk-talk p{font-size:14.5px;line-height:1.7;margin:6px 0}.sk-talk .who{font-weight:800;color:#7a5a32}'
     + '.sk-title{max-width:760px;text-align:center}.sk-title .t{font-size:34px;font-weight:900;letter-spacing:.06em;color:#3a5a7a;margin:6px 0 0;text-shadow:0 2px 0 #fff}.sk-title .s{color:#7a8aa0;font-size:12px;letter-spacing:.3em;margin-bottom:10px}'
-    + '.sk-cls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.sk-cl{border:2px solid #c8b088;border-radius:14px;background:#fffaf0;padding:8px;cursor:pointer;text-align:center}.sk-cl.on{border-color:#4f9fc8;box-shadow:0 0 0 3px #4f9fc844}.sk-cl canvas{width:120px;height:128px}.sk-cl b{display:block;font-size:16px}.sk-cl small{display:block;font-size:11.5px;color:#7a6a58;line-height:1.5}'
+    + '.sk-cls{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 6px}.sk-cdesc{font-size:12.5px;color:#5a4a36;background:#fffaf0;border:1px dashed #c8b088;border-radius:10px;padding:6px 10px;margin:0 0 8px;line-height:1.6}.sk-cl{border:2px solid #c8b088;border-radius:14px;background:#fffaf0;padding:6px 2px;cursor:pointer;text-align:center}.sk-cl.on{border-color:#4f9fc8;box-shadow:0 0 0 3px #4f9fc844}.sk-cl canvas{width:84px;height:90px}.sk-cl b{display:block;font-size:14px;white-space:nowrap}.sk-cl small{display:block;font-size:11.5px;color:#7a6a58;line-height:1.5}'
     + '.sk-sk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media (max-width:640px){.sk-sk{grid-template-columns:1fr}}.sk-br{background:#fffaf0;border:1.5px solid #c8b088;border-radius:12px;padding:6px}.sk-br h4{margin:2px 0 6px;text-align:center}.sk-s{display:flex;gap:8px;align-items:flex-start;padding:5px;border-radius:9px;cursor:pointer}.sk-s.on{background:#e2f0f8}.sk-s canvas{width:42px;height:42px;flex:none}.sk-s .f{flex:1;font-size:12px;line-height:1.45}.sk-s b{font-size:13px}.sk-s .lk{opacity:.45}'
     + '.sk-doll{display:grid;grid-template-columns:54px minmax(120px,1fr) 54px;gap:6px;align-items:start;background:radial-gradient(circle at 50% 42%,#fffaf0,#e6d8bc);border:1.5px solid #c8b088;border-radius:14px;padding:8px}.sk-doll .cl{display:flex;flex-direction:column;gap:5px}.sk-doll .bd{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%}.sk-doll .bd canvas{width:150px;height:160px;filter:drop-shadow(0 6px 4px rgba(60,40,20,.25))}.sk-doll .bd b{font-size:14px;color:#5a3e22}.sk-doll .bt{grid-column:1/4;display:grid;grid-template-columns:repeat(3,54px);justify-content:center;gap:6px}.sk-doll .sk-c b{font-size:9px}@media (max-height:520px){.sk-doll{grid-template-columns:44px minmax(100px,1fr) 44px;padding:6px}.sk-doll .cl{gap:3px}.sk-doll .bt{grid-template-columns:repeat(3,44px);gap:4px}.sk-doll .bd canvas{width:110px;height:118px}}'
     + '.sk-map canvas{width:100%;border-radius:12px;display:block;background:#bfe0f4}.sk-lg{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:#7a6a58;margin-top:6px}.sk-lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}'
@@ -1462,6 +1759,7 @@ function sfx(k) {
     case 'shout': tone(160, .35, 'sawtooth', .12, 120); break; case 'flag': tone(523, .3, 'triangle', .12, 659); break; case 'twister': case 'gust': noise(.6, .3, 500, .5); break;
     case 'bolt': case 'chain': noise(.12, .35, 3000, 2); tone(1200, .1, 'square', .06, 300); break; case 'mist': noise(.8, .15, 400, .4); break;
     case 'slam': tone(70, .4, 'sine', .4, 40); noise(.3, .3, 300, .7); break; case 'die': tone(330, .8, 'triangle', .15, 110); break; case 'fall': tone(700, .5, 'sine', .12, 120); break;
+    case 'bell': tone(660, .9, 'sine', .12, 640); tone(1320, .6, 'sine', .05, 1300); tone(990, .7, 'triangle', .04); break;
     case 'no': tone(200, .1, 'square', .06); break; case 'drink': tone(520, .15, 'sine', .12, 780); break;
     case 'ench': tone(880, .3, 'triangle', .14, 1320); break; case 'fail': tone(300, .4, 'sawtooth', .1, 120); break;
   }
@@ -1560,7 +1858,7 @@ function respecBtn(kind) { const P = G.P, free = !P.flags[kind], cost = respecCo
   return `<button class="sk-b${CONF === kind ? ' p' : ''}" data-a="respec" data-k="${kind}" ${free || P.gold >= cost ? '' : 'disabled'}>${CONF === kind ? '정말 다시 나눌까요? 한 번 더 누르세요' : what + ' 다시 나누기 (' + (free ? '1장 무료 1번' : cost + 'G') + ')'}</button>`; }
 function doRespec(kind) { const P = G.P, free = !P.flags[kind], cost = respecCost(P); if (!free && P.gold < cost) { toast('골드가 모자라요'); return; } if (free) P.flags[kind] = 1; else P.gold -= cost;
   if (kind === 'rs') { let n = 0; for (const k in P.sp) n += P.sp[k]; P.sp = {}; P.pts += n; toast('능력 점수 ' + n + '점을 돌려받았어요'); }
-  else { const st = P.cls === 'warden' ? 'pierce' : 'gust'; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
+  else { const st = CLS_START[P.cls][2]; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
   calc(P); sfx('ench'); }
 function boardHtml() {
   const P = G.P, B = P.board, I = boardInfo(P), sum = boardSum(P), sel = SEL, w = 62, hh = 54;
@@ -1681,7 +1979,7 @@ function finishQuest(id) {
   const P = G.P, q = P.q[id]; if (!q) return;
   if (id === 'q4') { if (!useGood('hone', 3)) return; addInv(goods('bhone')); }
   q.s = 3; const R = { q1: [150, 80], q2: [120, 50], q3: [500, 200], q4: [80, 30] }[id]; gainXp(R[0]); P.gold += R[1];
-  if (id === 'q1') addInv(makeItem(P.cls === 'warden' ? 'armor1' : 'cloak1', 1, 4, { id: 1, st: 0 }));
+  if (id === 'q1') addInv(makeItem(CLS_START[P.cls][3], 1, 4, { id: 1, st: 0 }));
   if (id === 'q2') addInv(makeItem('ring1', 1, 4, { id: 1, st: 0 }));
   if (id === 'q3') addInv(makeItem('sail1', 2, 9, { id: 1, st: 1 }));
   sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166');
@@ -1691,21 +1989,23 @@ function finishQuest(id) {
 function talk(id, auto) { if (!G) return; if (auto && PANEL) return; openPanel('talk', id); }
 
 /* ---------- 처음 화면 ---------- */
-let TSEL = 'warden';
-function portrait(cls, w) { const c = document.createElement('canvas'), d = 2; c.width = w * d; c.height = w * 1.07 * d; const g = c.getContext('2d'); if (IM[cls]) g.drawImage(IM[cls], 0, 2 * HC[1], HC[0], HC[1], 0, 0, c.width, c.height); return c; }
+let TSEL = 'warden', STARTING = 0;
+const HEADK = ['warden', 'drifter', 'windcaller', 'trapper', 'ringer'];
+function portrait(cls, w) { const c = document.createElement('canvas'), d = 2; c.width = w * d; c.height = w * 1.07 * d; const g = c.getContext('2d'); if (IM[cls]) g.drawImage(IM[cls], 0, 2 * HC[1], HC[0], HC[1], 0, 0, c.width, c.height); else if (IM.heads) g.drawImage(IM.heads, HEADK.indexOf(cls) * HC[0], 0, HC[0], HC[1], 0, 0, c.width, c.height); return c; }
 let PULLED = 0;
 function title() {
   PANEL = 'title'; panel.hidden = false; ov.classList.remove('play');
-  const sv = { warden: loadSave('warden'), windcaller: loadSave('windcaller') }, s = sv[TSEL];
-  panel.innerHTML = `<div class="sk-bx sk-title"><button class="sk-x" data-a="quit" aria-label="나가기">✕</button><div class="t">끊어진 하늘</div><div class="s">맛보기판 · 1장 민들레 섬</div><p style="font-size:13px;line-height:1.7;color:#5a4a36;margin:4px 0">${STORY_INTRO.map(esc).join('<br>')}</p><div class="sk-cls">${Object.keys(CLASSES).map(k => `<div class="sk-cl${TSEL === k ? ' on' : ''}" data-a="pick" data-cls="${k}"><span data-po="${k}"></span><b>${CLASSES[k].name}</b><small>${esc(CLASSES[k].desc)}</small><small style="color:#3a7fa8;margin-top:4px">${sv[k] ? '기록: ' + sv[k].lv + '레벨' : '새 이음꾼'}</small></div>`).join('')}</div>
+  const sv = Object.fromEntries(Object.keys(CLASSES).map(k => [k, loadSave(k)])), s = sv[TSEL];
+  panel.innerHTML = `<div class="sk-bx sk-title"><button class="sk-x" data-a="quit" aria-label="나가기">✕</button><div class="t">끊어진 하늘</div><div class="s">맛보기판 · 1장 민들레 섬</div><p style="font-size:13px;line-height:1.7;color:#5a4a36;margin:4px 0">${STORY_INTRO.map(esc).join('<br>')}</p><div class="sk-cls">${Object.keys(CLASSES).map(k => `<div class="sk-cl${TSEL === k ? ' on' : ''}" data-a="pick" data-cls="${k}"><span data-po="${k}"></span><b>${CLASSES[k].name}</b><small style="color:#3a7fa8;margin-top:2px">${sv[k] ? sv[k].lv + '레벨' : '새 이음꾼'}</small></div>`).join('')}</div><div class="sk-cdesc"><b>${CLASSES[TSEL].name}</b> · ${esc(CLASSES[TSEL].desc)}</div>
     ${s ? `<button class="sk-b p" data-a="start" data-n="0">이어하기 (${s.lv}레벨)</button><button class="sk-b" data-a="start" data-n="1">처음부터 (기록 지움)</button>` : `<button class="sk-b p" data-a="start" data-n="1">이 직업으로 시작</button>`}
     <p style="font-size:11px;color:#8a7458;margin:8px 0 0">${pcode() ? '기록은 이 기기와 5락실 프로필(복구 코드)에 저장돼요. 다른 기기에서도 같은 복구 코드로 이어 할 수 있어요.' : '기록은 이 기기에 저장돼요. 5락실 프로필을 만들면 다른 기기에서도 이어 할 수 있어요.'}${PULLED ? ' · 다른 기기 기록을 불러왔어요' : ''}</p></div>`;
-  panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 120))); bindPanel();
+  panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 84))); bindPanel();
 }
 function startFrom(fresh) {
   if (fresh && loadSave(TSEL) && !panel.querySelector('[data-sure]')) { const b = panel.querySelector('[data-n="1"]'); b.dataset.sure = 1; b.textContent = '정말 지울까요? 한 번 더 누르면 지워져요'; return; }
-  const S = fresh ? newSave(TSEL) : loadSave(TSEL); PANEL = null; panel.hidden = true; panel.innerHTML = ''; ov.classList.add('play'); MINI = null;
-  startGame(S); save(); last = performance.now();
+  const S = fresh ? newSave(TSEL) : loadSave(TSEL); if (STARTING) return; STARTING = 1;
+  const go = () => { STARTING = 0; PANEL = null; panel.hidden = true; panel.innerHTML = ''; ov.classList.add('play'); MINI = null; startGame(S); save(); last = performance.now(); };
+  if (IM[S.cls]) return go(); panel.querySelectorAll('[data-a="start"]').forEach(b => { b.disabled = true; b.textContent = '불러오는 중…'; }); return loadHero(S.cls).then(go);
 }
 
 /* ---------- 반복 ---------- */
@@ -1719,7 +2019,7 @@ function open() { ov.hidden = false; document.documentElement.style.overflow = '
 function close() { save(); cloudFlush(); cancelAnimationFrame(raf); ov.hidden = true; document.documentElement.style.overflow = ''; panel.hidden = true; PANEL = null; if (A.ctx) A.ctx.suspend(); const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} } const P = G && G.P; G = null; opts.onExit && opts.onExit(P ? { lv: P.lv, cls: P.cls } : null); }
 window.SkyGame = {
   boot(o) { opts = o || {}; if (!ov) mkDom(); assets();
-    if (DEBUG) window.__sky = { open, G: () => G, start(cls, fresh) { TSEL = cls || 'warden'; startFrom(fresh !== false); }, step(n) { for (let i = 0; i < n; i++) update(STEP); }, draw, god(b) { G.god = b; }, tp(x2, y2) { G.P.x = x2; G.P.y = y2; G.cam = [x2, y2]; }, panel: openPanel, close: closePanel, give(id, r) { addInv(makeItem(id, r || 0, 5)); }, goods(g, n) { addInv(goods(g, n)); }, lv(n) { gainXp(xpNeed(G.P.lv) * n); }, keys: KEYS, press, talk, layout, hit: hitMob, dbg: { drawParts, drawFx, drawMob, drawDrop, drawHero, hud, view } };
+    if (DEBUG) window.__sky = { open, G: () => G, start(cls, fresh) { TSEL = cls || 'warden'; return startFrom(fresh !== false); }, loadHero, skills() { return SKILLS[G.P.cls].map(s => s.id); }, step(n) { for (let i = 0; i < n; i++) update(STEP); }, draw, god(b) { G.god = b; }, tp(x2, y2) { G.P.x = x2; G.P.y = y2; G.cam = [x2, y2]; }, panel: openPanel, close: closePanel, give(id, r) { addInv(makeItem(id, r || 0, 5)); }, goods(g, n) { addInv(goods(g, n)); }, lv(n) { gainXp(xpNeed(G.P.lv) * n); }, keys: KEYS, press, talk, layout, hit: hitMob, dbg: { drawParts, drawFx, drawMob, drawDrop, drawHero, hud, view } };
     return { open }; },
 };
 })();

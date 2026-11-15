@@ -20,7 +20,7 @@ function rollAfx(b, ilv, n, have) {
 function makeItem(bid, rar, ilv, o) {
   o = o || {}; const b = BASE[bid], it = { uid: UID++, b: bid, r: rar, ilv, en: 0, st: 0, id: rar < 2, af: [], tame: 0 };
   if (rar === 1 || rar === 2) { const [a, c] = RAR[rar].k; it.af = rollAfx(b, ilv, ri(a, c)); it.hid = rollAfx(b, ilv, 1, it.af)[0] || null; }
-  if (rar === 2) it.nm = pick(NM1) + ' ' + pick(b.s === 'weapon' && b.cls === 'windcaller' ? NM2.weaponS : NM2[b.s] || ['물건']);
+  if (rar === 2) it.nm = pick(NM1) + ' ' + pick(b.s === 'weapon' && ({ windcaller: NM2.weaponS, drifter: NM2.weaponD, trapper: NM2.weaponT, ringer: NM2.weaponR })[b.cls] || NM2[b.s] || ['물건']);
   if (o.u) { const U = UNIQ.find(u => u.id === o.u); it.u = o.u; it.af = U.fx.map(x => x.slice()); it.id = false; }
   if (o.set) { it.set = o.set; it.af = []; it.id = false; }
   if (b.s !== 'ring' && b.s !== 'amulet' && b.s !== 'ear' && !o.u && !o.set) { const r = Math.random(); it.st = r < .06 ? 1 : r < .1 ? -1 : 0; }
@@ -92,8 +92,8 @@ function calc(P) {
   P.mwind = Math.round(18 + S.spi * 2 + P.lv * 2 + (m.wind || 0));
   P.ac = (m.ac || 0) + Math.floor(S.agi / 5) + (P.buf.shout ? 6 : 0);
   P.dmg = m.dmg || [1, 2, 1, 3]; if (m.mind) { P.dmg = P.dmg.slice(); P.dmg[0] += m.mind; P.dmg[2] += m.mind; }
-  P.dmgp = (m.dmgp || 0) + (C.melee ? S.str : S.spi) + (P.buf.brave ? 25 : 0);
-  P.aspd = C.aspd * (m.wspd || 1) * (1 + ((m.aspd || 0) + S.agi * .6) / 100);
+  P.dmgp = (m.dmgp || 0) + (C.main ? S[C.main] : C.melee ? S.str : S.spi) + (P.buf.brave ? 25 : 0);
+  P.aspd = C.aspd * (m.wspd || 1) * (1 + ((m.aspd || 0) + S.agi * .6) / 100) * (P.buf && P.buf.haste ? 1.4 : 1);
   P.crit = 3 + S.agi * .25 + (m.crit || 0);
   P.move = 3.6 * (1 + ((m.move || 0) + Math.min(10, S.agi * .2)) / 100);
   P.wreg = (.9 + S.spi * .06) * (1 + (m.wreg || 0) / 100);

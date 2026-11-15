@@ -13,6 +13,21 @@ export const HEROES = {
     tint: { Knight_Cape: '#2a7a96', Knight_Body: '#c9ccd2', Knight_ArmLeft: '#c9ccd2', Knight_ArmRight: '#c9ccd2', Knight_LegLeft: '#7a6a58', Knight_LegRight: '#7a6a58', Round_Shield: '#d9b26a' },
     frames: base('Idle', ['1H_Melee_Attack_Stab', .12, .32, .48, .7], ['Block_Attack', .2, .45, .7]),
   },
+  drifter: { // 떠돌이 검객: 쌍검, 짙은 청록 겉옷 + 붉은 망토
+    model: 'Rogue', show: ['Rogue_Cape'], extra: [['Knight', '1H_Sword', 'handslotr'], ['Knight', '1H_Sword_Offhand', 'handslotl']], height: .98,
+    tint: { Rogue_Body: '#3a4a82', Rogue_Cape: '#b0443a', Rogue_ArmLeft: '#3a4a82', Rogue_ArmRight: '#3a4a82', Rogue_LegLeft: '#3a3640', Rogue_LegRight: '#3a3640', '1H_Sword': '#e8eef4' },
+    frames: base('Idle', ['Dualwield_Melee_Attack_Slice', .08, .28, .46, .68], ['Dualwield_Melee_Attack_Chop', .2, .45, .7]),
+  },
+  trapper: { // 덫사냥꾼: 한손 석궁, 두건, 풀빛 가죽옷
+    model: 'Rogue_Hooded', show: ['1H_Crossbow', 'Rogue_Cape'], height: .98,
+    tint: { Rogue_Body: '#6a7a3a', Rogue_Cape: '#4a5a2a', Rogue_ArmLeft: '#7a6a48', Rogue_ArmRight: '#7a6a48', Rogue_LegLeft: '#4a3a2a', Rogue_LegRight: '#4a3a2a', Rogue_Head_Hooded: '#5a6a30' },
+    frames: base('Idle', ['1H_Ranged_Shoot', .05, .22, .42, .7], ['Throw', .2, .45, .7]),
+  },
+  ringer: { // 종지기: 망치 + 손종, 보랏빛 옷 + 금빛 망토
+    model: 'Barbarian', show: ['Barbarian_Cape'], hammer: 1, handbell: 1, height: 1.02,
+    tint: { Barbarian_Body: '#6a5a96', Barbarian_Cape: '#d8a84a', Barbarian_ArmLeft: '#c8a888', Barbarian_ArmRight: '#c8a888', Barbarian_LegLeft: '#3a3450', Barbarian_LegRight: '#3a3450' },
+    frames: base('Idle', ['1H_Melee_Attack_Chop', .1, .3, .5, .72], ['Spellcast_Long', .2, .5, .8]),
+  },
   windcaller: { // 바람술사: 지팡이, 흰 하늘빛 옷 + 바람 리본, 모자 없음
     model: 'Mage', show: ['2H_Staff', 'Mage_Cape'], ribbon: '#8fd8ff', height: 1.0,
     tint: { Mage_Body: '#a8d4f0', Mage_Cape: '#3a7fb8', Mage_ArmLeft: '#a8d4f0', Mage_ArmRight: '#a8d4f0', Mage_LegLeft: '#5a6a84', Mage_LegRight: '#5a6a84' },

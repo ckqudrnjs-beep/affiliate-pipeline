@@ -8,8 +8,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url)), ROOT = path.resolve(HERE, '..'), OUT = path.resolve(ROOT, '../static/img/sky');
 const args = process.argv.slice(2), png = args.includes('--png'), list = args.filter(a => !a.startsWith('--'));
-const items = list.length ? list : ['warden', 'windcaller', 'fluff', 'fluffking', 'seed', 'bird', 'keeper', 'npc', 'props', 'icons'];
-const ICONS = ['spear', 'spear2', 'staff', 'staff2', 'shield', 'shield2', 'bell', 'feather', 'hood', 'helm', 'hat', 'armor0', 'armor1', 'armor2', 'inner', 'legs0', 'legs1', 'legs2', 'cloak', 'cloak2', 'gloves', 'belt', 'boots0', 'boots', 'amulet', 'amulet2', 'ear', 'ring', 'ring2', 'sail', 'sail2', 'sail3', 'pot', 'wpot', 'hone', 'glue', 'bhone', 'bglue', 'pure', 'look', 'plank'];
+const HEROK = ['warden', 'drifter', 'windcaller', 'trapper', 'ringer'];
+const items = list.length ? list : [...HEROK, 'heads', 'fluff', 'fluffking', 'seed', 'bird', 'keeper', 'npc', 'props', 'icons'];
+const ICONS = ['spear', 'spear2', 'staff', 'staff2', 'sword', 'sword2', 'dagger', 'xbow', 'xbow2', 'trapbox', 'hammer', 'hammer2', 'gong', 'shield', 'shield2', 'bell', 'feather', 'hood', 'helm', 'hat', 'armor0', 'armor1', 'armor2', 'inner', 'legs0', 'legs1', 'legs2', 'cloak', 'cloak2', 'gloves', 'belt', 'boots0', 'boots', 'amulet', 'amulet2', 'ear', 'ring', 'ring2', 'sail', 'sail2', 'sail3', 'pot', 'wpot', 'hone', 'glue', 'bhone', 'bglue', 'pure', 'look', 'plank'];
 const TYPES = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.png': 'image/png', '.bin': 'application/octet-stream' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (!p.startsWith(ROOT) || !fs.existsSync(p)) { s.writeHead(404); return s.end(); }
   s.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
@@ -23,7 +24,8 @@ for (const it of items) {
   if (it === 'props') { const r = await pg.evaluate(() => window.renderProps()); url = r.url; fs.writeFileSync(path.join(OUT, 'props.json'), JSON.stringify(r.meta)); }
   else if (it === 'icons') { const r = await pg.evaluate(k => window.renderIcons(k), ICONS); url = r.url; fs.writeFileSync(path.join(OUT, 'icons.json'), JSON.stringify(r.meta)); }
   else if (it === 'npc') { const r = await pg.evaluate(() => window.renderNPCs()); url = r.url; fs.writeFileSync(path.join(OUT, 'npc.json'), JSON.stringify(r.keys)); }
-  else if (['warden', 'windcaller'].includes(it)) url = await pg.evaluate(k => window.renderHero(k), it);
+  else if (it === 'heads') url = await pg.evaluate(k => window.renderHeads(k), HEROK);
+  else if (HEROK.includes(it)) url = await pg.evaluate(k => window.renderHero(k), it);
   else url = await pg.evaluate(k => window.renderMob(k), it);
   if (png) { const f = path.join(HERE, 'sheet-' + it + '.png'); fs.writeFileSync(f, Buffer.from(url.split(',')[1], 'base64')); console.log('png', f); continue; }
   const webp = await pg.evaluate(async u => { const im = new Image(); im.src = u; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); return c.toDataURL('image/webp', .84); }, url);

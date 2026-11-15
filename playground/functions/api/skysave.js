@@ -1,10 +1,10 @@
 // 끊어진 하늘 기록을 5락실 프로필(복구 코드)에 저장 (2026-11-15 BK "2단계 마무리")
-// POST /api/skysave {a:"get", code}                → {saves:{warden:{data,t}, windcaller:{data,t}}}
+// POST /api/skysave {a:"get", code}                → {saves:{<직업>:{data,t}}} (직업 5개)
 // POST /api/skysave {a:"put", code, cls, data}     → {t}  |  409 {error:"old", data, t} (다른 기기가 더 나중에 저장함)
 // 기록은 게임 진행(레벨·장비·퀘스트)만. 현금 가치 없음(거래·뽑기 없음). 복구 코드가 있는 프로필만 쓸 수 있다.
 import { normCode } from "./profile.js";
 
-const CLS = ["warden", "windcaller"], MAX = 60000;
+const CLS = ["warden", "drifter", "windcaller", "trapper", "ringer"], MAX = 60000;
 const LIMIT = { get: 300, put: 1500, bad: 10 }; // IP당 하루 횟수(put 은 플레이 중 1분마다)
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);

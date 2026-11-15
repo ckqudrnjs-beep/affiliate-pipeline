@@ -16,7 +16,7 @@ function css() {
     + '.sk-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #d8c8a8;font-size:13px}.sk-row .f{flex:1}.sk-row small{color:#8a7458}'
     + '.sk-talk{max-width:640px}.sk-talk p{font-size:14.5px;line-height:1.7;margin:6px 0}.sk-talk .who{font-weight:800;color:#7a5a32}'
     + '.sk-title{max-width:760px;text-align:center}.sk-title .t{font-size:34px;font-weight:900;letter-spacing:.06em;color:#3a5a7a;margin:6px 0 0;text-shadow:0 2px 0 #fff}.sk-title .s{color:#7a8aa0;font-size:12px;letter-spacing:.3em;margin-bottom:10px}'
-    + '.sk-cls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.sk-cl{border:2px solid #c8b088;border-radius:14px;background:#fffaf0;padding:8px;cursor:pointer;text-align:center}.sk-cl.on{border-color:#4f9fc8;box-shadow:0 0 0 3px #4f9fc844}.sk-cl canvas{width:120px;height:128px}.sk-cl b{display:block;font-size:16px}.sk-cl small{display:block;font-size:11.5px;color:#7a6a58;line-height:1.5}'
+    + '.sk-cls{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 6px}.sk-cdesc{font-size:12.5px;color:#5a4a36;background:#fffaf0;border:1px dashed #c8b088;border-radius:10px;padding:6px 10px;margin:0 0 8px;line-height:1.6}.sk-cl{border:2px solid #c8b088;border-radius:14px;background:#fffaf0;padding:6px 2px;cursor:pointer;text-align:center}.sk-cl.on{border-color:#4f9fc8;box-shadow:0 0 0 3px #4f9fc844}.sk-cl canvas{width:84px;height:90px}.sk-cl b{display:block;font-size:14px;white-space:nowrap}.sk-cl small{display:block;font-size:11.5px;color:#7a6a58;line-height:1.5}'
     + '.sk-sk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media (max-width:640px){.sk-sk{grid-template-columns:1fr}}.sk-br{background:#fffaf0;border:1.5px solid #c8b088;border-radius:12px;padding:6px}.sk-br h4{margin:2px 0 6px;text-align:center}.sk-s{display:flex;gap:8px;align-items:flex-start;padding:5px;border-radius:9px;cursor:pointer}.sk-s.on{background:#e2f0f8}.sk-s canvas{width:42px;height:42px;flex:none}.sk-s .f{flex:1;font-size:12px;line-height:1.45}.sk-s b{font-size:13px}.sk-s .lk{opacity:.45}'
     + '.sk-doll{display:grid;grid-template-columns:54px minmax(120px,1fr) 54px;gap:6px;align-items:start;background:radial-gradient(circle at 50% 42%,#fffaf0,#e6d8bc);border:1.5px solid #c8b088;border-radius:14px;padding:8px}.sk-doll .cl{display:flex;flex-direction:column;gap:5px}.sk-doll .bd{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%}.sk-doll .bd canvas{width:150px;height:160px;filter:drop-shadow(0 6px 4px rgba(60,40,20,.25))}.sk-doll .bd b{font-size:14px;color:#5a3e22}.sk-doll .bt{grid-column:1/4;display:grid;grid-template-columns:repeat(3,54px);justify-content:center;gap:6px}.sk-doll .sk-c b{font-size:9px}@media (max-height:520px){.sk-doll{grid-template-columns:44px minmax(100px,1fr) 44px;padding:6px}.sk-doll .cl{gap:3px}.sk-doll .bt{grid-template-columns:repeat(3,44px);gap:4px}.sk-doll .bd canvas{width:110px;height:118px}}'
     + '.sk-map canvas{width:100%;border-radius:12px;display:block;background:#bfe0f4}.sk-lg{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:#7a6a58;margin-top:6px}.sk-lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}'
@@ -129,6 +129,7 @@ function sfx(k) {
     case 'shout': tone(160, .35, 'sawtooth', .12, 120); break; case 'flag': tone(523, .3, 'triangle', .12, 659); break; case 'twister': case 'gust': noise(.6, .3, 500, .5); break;
     case 'bolt': case 'chain': noise(.12, .35, 3000, 2); tone(1200, .1, 'square', .06, 300); break; case 'mist': noise(.8, .15, 400, .4); break;
     case 'slam': tone(70, .4, 'sine', .4, 40); noise(.3, .3, 300, .7); break; case 'die': tone(330, .8, 'triangle', .15, 110); break; case 'fall': tone(700, .5, 'sine', .12, 120); break;
+    case 'bell': tone(660, .9, 'sine', .12, 640); tone(1320, .6, 'sine', .05, 1300); tone(990, .7, 'triangle', .04); break;
     case 'no': tone(200, .1, 'square', .06); break; case 'drink': tone(520, .15, 'sine', .12, 780); break;
     case 'ench': tone(880, .3, 'triangle', .14, 1320); break; case 'fail': tone(300, .4, 'sawtooth', .1, 120); break;
   }
@@ -227,7 +228,7 @@ function respecBtn(kind) { const P = G.P, free = !P.flags[kind], cost = respecCo
   return `<button class="sk-b${CONF === kind ? ' p' : ''}" data-a="respec" data-k="${kind}" ${free || P.gold >= cost ? '' : 'disabled'}>${CONF === kind ? '정말 다시 나눌까요? 한 번 더 누르세요' : what + ' 다시 나누기 (' + (free ? '1장 무료 1번' : cost + 'G') + ')'}</button>`; }
 function doRespec(kind) { const P = G.P, free = !P.flags[kind], cost = respecCost(P); if (!free && P.gold < cost) { toast('골드가 모자라요'); return; } if (free) P.flags[kind] = 1; else P.gold -= cost;
   if (kind === 'rs') { let n = 0; for (const k in P.sp) n += P.sp[k]; P.sp = {}; P.pts += n; toast('능력 점수 ' + n + '점을 돌려받았어요'); }
-  else { const st = P.cls === 'warden' ? 'pierce' : 'gust'; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
+  else { const st = CLS_START[P.cls][2]; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
   calc(P); sfx('ench'); }
 function boardHtml() {
   const P = G.P, B = P.board, I = boardInfo(P), sum = boardSum(P), sel = SEL, w = 62, hh = 54;
@@ -348,7 +349,7 @@ function finishQuest(id) {
   const P = G.P, q = P.q[id]; if (!q) return;
   if (id === 'q4') { if (!useGood('hone', 3)) return; addInv(goods('bhone')); }
   q.s = 3; const R = { q1: [150, 80], q2: [120, 50], q3: [500, 200], q4: [80, 30] }[id]; gainXp(R[0]); P.gold += R[1];
-  if (id === 'q1') addInv(makeItem(P.cls === 'warden' ? 'armor1' : 'cloak1', 1, 4, { id: 1, st: 0 }));
+  if (id === 'q1') addInv(makeItem(CLS_START[P.cls][3], 1, 4, { id: 1, st: 0 }));
   if (id === 'q2') addInv(makeItem('ring1', 1, 4, { id: 1, st: 0 }));
   if (id === 'q3') addInv(makeItem('sail1', 2, 9, { id: 1, st: 1 }));
   sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166');
@@ -358,21 +359,23 @@ function finishQuest(id) {
 function talk(id, auto) { if (!G) return; if (auto && PANEL) return; openPanel('talk', id); }
 
 /* ---------- 처음 화면 ---------- */
-let TSEL = 'warden';
-function portrait(cls, w) { const c = document.createElement('canvas'), d = 2; c.width = w * d; c.height = w * 1.07 * d; const g = c.getContext('2d'); if (IM[cls]) g.drawImage(IM[cls], 0, 2 * HC[1], HC[0], HC[1], 0, 0, c.width, c.height); return c; }
+let TSEL = 'warden', STARTING = 0;
+const HEADK = ['warden', 'drifter', 'windcaller', 'trapper', 'ringer'];
+function portrait(cls, w) { const c = document.createElement('canvas'), d = 2; c.width = w * d; c.height = w * 1.07 * d; const g = c.getContext('2d'); if (IM[cls]) g.drawImage(IM[cls], 0, 2 * HC[1], HC[0], HC[1], 0, 0, c.width, c.height); else if (IM.heads) g.drawImage(IM.heads, HEADK.indexOf(cls) * HC[0], 0, HC[0], HC[1], 0, 0, c.width, c.height); return c; }
 let PULLED = 0;
 function title() {
   PANEL = 'title'; panel.hidden = false; ov.classList.remove('play');
-  const sv = { warden: loadSave('warden'), windcaller: loadSave('windcaller') }, s = sv[TSEL];
-  panel.innerHTML = `<div class="sk-bx sk-title"><button class="sk-x" data-a="quit" aria-label="나가기">✕</button><div class="t">끊어진 하늘</div><div class="s">맛보기판 · 1장 민들레 섬</div><p style="font-size:13px;line-height:1.7;color:#5a4a36;margin:4px 0">${STORY_INTRO.map(esc).join('<br>')}</p><div class="sk-cls">${Object.keys(CLASSES).map(k => `<div class="sk-cl${TSEL === k ? ' on' : ''}" data-a="pick" data-cls="${k}"><span data-po="${k}"></span><b>${CLASSES[k].name}</b><small>${esc(CLASSES[k].desc)}</small><small style="color:#3a7fa8;margin-top:4px">${sv[k] ? '기록: ' + sv[k].lv + '레벨' : '새 이음꾼'}</small></div>`).join('')}</div>
+  const sv = Object.fromEntries(Object.keys(CLASSES).map(k => [k, loadSave(k)])), s = sv[TSEL];
+  panel.innerHTML = `<div class="sk-bx sk-title"><button class="sk-x" data-a="quit" aria-label="나가기">✕</button><div class="t">끊어진 하늘</div><div class="s">맛보기판 · 1장 민들레 섬</div><p style="font-size:13px;line-height:1.7;color:#5a4a36;margin:4px 0">${STORY_INTRO.map(esc).join('<br>')}</p><div class="sk-cls">${Object.keys(CLASSES).map(k => `<div class="sk-cl${TSEL === k ? ' on' : ''}" data-a="pick" data-cls="${k}"><span data-po="${k}"></span><b>${CLASSES[k].name}</b><small style="color:#3a7fa8;margin-top:2px">${sv[k] ? sv[k].lv + '레벨' : '새 이음꾼'}</small></div>`).join('')}</div><div class="sk-cdesc"><b>${CLASSES[TSEL].name}</b> · ${esc(CLASSES[TSEL].desc)}</div>
     ${s ? `<button class="sk-b p" data-a="start" data-n="0">이어하기 (${s.lv}레벨)</button><button class="sk-b" data-a="start" data-n="1">처음부터 (기록 지움)</button>` : `<button class="sk-b p" data-a="start" data-n="1">이 직업으로 시작</button>`}
     <p style="font-size:11px;color:#8a7458;margin:8px 0 0">${pcode() ? '기록은 이 기기와 5락실 프로필(복구 코드)에 저장돼요. 다른 기기에서도 같은 복구 코드로 이어 할 수 있어요.' : '기록은 이 기기에 저장돼요. 5락실 프로필을 만들면 다른 기기에서도 이어 할 수 있어요.'}${PULLED ? ' · 다른 기기 기록을 불러왔어요' : ''}</p></div>`;
-  panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 120))); bindPanel();
+  panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 84))); bindPanel();
 }
 function startFrom(fresh) {
   if (fresh && loadSave(TSEL) && !panel.querySelector('[data-sure]')) { const b = panel.querySelector('[data-n="1"]'); b.dataset.sure = 1; b.textContent = '정말 지울까요? 한 번 더 누르면 지워져요'; return; }
-  const S = fresh ? newSave(TSEL) : loadSave(TSEL); PANEL = null; panel.hidden = true; panel.innerHTML = ''; ov.classList.add('play'); MINI = null;
-  startGame(S); save(); last = performance.now();
+  const S = fresh ? newSave(TSEL) : loadSave(TSEL); if (STARTING) return; STARTING = 1;
+  const go = () => { STARTING = 0; PANEL = null; panel.hidden = true; panel.innerHTML = ''; ov.classList.add('play'); MINI = null; startGame(S); save(); last = performance.now(); };
+  if (IM[S.cls]) return go(); panel.querySelectorAll('[data-a="start"]').forEach(b => { b.disabled = true; b.textContent = '불러오는 중…'; }); return loadHero(S.cls).then(go);
 }
 
 /* ---------- 반복 ---------- */
@@ -386,7 +389,7 @@ function open() { ov.hidden = false; document.documentElement.style.overflow = '
 function close() { save(); cloudFlush(); cancelAnimationFrame(raf); ov.hidden = true; document.documentElement.style.overflow = ''; panel.hidden = true; PANEL = null; if (A.ctx) A.ctx.suspend(); const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} } const P = G && G.P; G = null; opts.onExit && opts.onExit(P ? { lv: P.lv, cls: P.cls } : null); }
 window.SkyGame = {
   boot(o) { opts = o || {}; if (!ov) mkDom(); assets();
-    if (DEBUG) window.__sky = { open, G: () => G, start(cls, fresh) { TSEL = cls || 'warden'; startFrom(fresh !== false); }, step(n) { for (let i = 0; i < n; i++) update(STEP); }, draw, god(b) { G.god = b; }, tp(x2, y2) { G.P.x = x2; G.P.y = y2; G.cam = [x2, y2]; }, panel: openPanel, close: closePanel, give(id, r) { addInv(makeItem(id, r || 0, 5)); }, goods(g, n) { addInv(goods(g, n)); }, lv(n) { gainXp(xpNeed(G.P.lv) * n); }, keys: KEYS, press, talk, layout, hit: hitMob, dbg: { drawParts, drawFx, drawMob, drawDrop, drawHero, hud, view } };
+    if (DEBUG) window.__sky = { open, G: () => G, start(cls, fresh) { TSEL = cls || 'warden'; return startFrom(fresh !== false); }, loadHero, skills() { return SKILLS[G.P.cls].map(s => s.id); }, step(n) { for (let i = 0; i < n; i++) update(STEP); }, draw, god(b) { G.god = b; }, tp(x2, y2) { G.P.x = x2; G.P.y = y2; G.cam = [x2, y2]; }, panel: openPanel, close: closePanel, give(id, r) { addInv(makeItem(id, r || 0, 5)); }, goods(g, n) { addInv(goods(g, n)); }, lv(n) { gainXp(xpNeed(G.P.lv) * n); }, keys: KEYS, press, talk, layout, hit: hitMob, dbg: { drawParts, drawFx, drawMob, drawDrop, drawHero, hud, view } };
     return { open }; },
 };
 })();
