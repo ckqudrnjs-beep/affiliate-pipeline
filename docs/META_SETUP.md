@@ -77,7 +77,7 @@
 5. 멈추고 싶으면 `PUBLISH_ENABLED`를 `false`로 바꾸면 됩니다.
 
 ## 5단계. 토큰 만료 대비 (선택, 5분)
-- 인스타 시스템 사용자 토큰(`EAA…`)은 만료되지 않아 갱신하지 않습니다. 스레드 장기 토큰은 약 60일 뒤 만료됩니다. `refresh-tokens` 워크플로가 매월 1일·15일에 갱신을 요청합니다.
+- 인스타 시스템 사용자 토큰(`EAA…`)은 만료되지 않아 갱신하지 않습니다. 스레드 장기 토큰은 약 60일 뒤 만료됩니다. (갱신 작업 `refresh-tokens` 는 2026-11-15 삭제: Meta 자동 게시 중단.)
 - 갱신 때 새 토큰 문자열이 오면 Secret을 바꿔야 하는데, 이를 자동으로 하려면:
   GitHub → 프로필 → **Settings → Developer settings → Fine-grained tokens → Generate** → 저장소: `affiliate-pipeline`만 → 권한 **Secrets: Read and write** 만 → 만료 1년 → 값을 Secret `SECRETS_PAT`에 저장.
 - 넣지 않으면 갱신이 필요할 때 워크플로가 실패로 표시되고 메일이 옵니다. 그때 2·3단계를 다시 하면 됩니다.

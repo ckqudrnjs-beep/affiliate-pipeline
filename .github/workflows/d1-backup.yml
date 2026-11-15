@@ -1,0 +1,40 @@
+name: d1-backup
+
+# 5락실 데이터(D1 5raksil-db) 주간 백업 (2026-11-15 BK, plan/SECURITY.md C).
+# 매주 일요일 04:20 KST 에 전체를 SQL 로 내보내 이 비공개 저장소의 작업 결과물(Artifacts)로 90일 보관한다.
+# 안에는 별명·복구 코드 해시·게시판 글(비밀글 포함)이 있다. 원본 IP·이메일·전화번호는 없다.
+# 필요: Secret CF_D1_TOKEN (Cloudflare API 토큰, 권한 'D1: Edit' 하나만), Variable CF_ACCOUNT_ID(이미 있음).
+# 복원: Actions > d1-backup > 실행 기록 > Artifacts 에서 받은 뒤 Claude 에게 요청(되돌리기 전에 BK 확인).
+on:
+  schedule:
+    - cron: "20 19 * * 6"   # 일 04:20 KST (접속 적은 시간)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 토큰 확인
+        env: { T: "${{ secrets.CF_D1_TOKEN }}" }
+        run: |
+          if [ -z "$T" ]; then echo "::error::Secret CF_D1_TOKEN 이 없어요. plan/SECURITY.md 의 백업 설정을 따라 넣어 주세요."; exit 1; fi
+      - name: 내보내기
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_D1_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+        run: |
+          d=$(TZ=Asia/Seoul date +%F)
+          npx --yes wrangler@4.20.0 d1 export 5raksil-db --remote --output "5raksil-db-$d.sql"
+          test -s "5raksil-db-$d.sql"
+          gzip -9 "5raksil-db-$d.sql"
+          ls -l *.sql.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d1-5raksil-db
+          path: "*.sql.gz"
+          retention-days: 90
+          if-no-files-found: error
