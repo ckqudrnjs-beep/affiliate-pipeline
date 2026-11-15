@@ -737,6 +737,7 @@ function killMob(m, fell) {
   if (fell) { G.txt.push({ x: m.x, y: m.y, z: 1, t: 0, s: '떨어짐!', c: '#9fe4ff' }); sfx('fall'); }
   else { burst(m.x, m.y, m.t, D.boss ? 3 : D.mini ? 2.2 : m.elite ? 1.6 : 1); killFx(m); }
   if (D.mini && m.pk) cleanse(m.pk);
+  if (D.boss && !fell) setTimeout(() => fbNudge('boss', m.t + (P.diff || 0)), 2500);
   drops(m, fell);
   if (m.pk) { m.pk.dead++; if (m.pk.dead >= m.pk.mobs.length) { m.pk.clear = G.t; } }
 }
@@ -772,7 +773,7 @@ function burst(x2, y2, t, k) {
     G.parts.push({ k: t === 'seed' || t === 'keeper' || t === 'bogpod' || t === 'barnpod' || t === 'barnkeeper' || t === 'rustship' || t === 'crab' ? 'chip' : t === 'bird' || t === 'heronling' || t === 'heron' || t === 'gull' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
-function gainXp(n) { gainXp0(n); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
+function gainXp(n) { const l0 = G.P.lv; gainXp0(n); if (Math.floor(G.P.lv / 10) > Math.floor(l0 / 10)) fbNudge('lv', 'lv' + Math.floor(G.P.lv / 10) * 10); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
 // 3레벨: 나침반판이 열리고 처음 조각 2개
 function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) return; P.flags.board0 = 1; giveShard({ c: 'sky', q: 1 }, 1); giveShard({ c: 'fire', q: 1 }, 1); G.cut = { s: '나침반판이 열렸어요 (B)', c: '#9fe4ff', t: 0 }; say('나침반판이 열렸어요! 기술 창(S)이나 B 키로 바람 조각을 끼워 보세요.', '#9fe4ff'); }
 function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
@@ -794,7 +795,7 @@ function hurtPlayer(d, src) {
   d = Math.max(0, Math.round(d)); if (!d) return;
   P.hp -= d; P.hurt = .25; hurtFx(src, d); G.txt.push({ x: P.x, y: P.y, z: 1.2, t: 0, s: String(d), c: '#ff7a6a' }); G.shake = Math.max(G.shake, 2.5); sfx('hurt');
   if (src && src.t === 'bird') P.wind = Math.max(0, P.wind - 3);
-  if (P.hp <= 0) { P.hp = 0; P.dead = 2.6; P.an = 'die'; P.at = 0; sfx('die'); say('쓰러졌어요… 마을에서 다시 일어나요(골드 10% 잃음).', '#ff9a8a'); }
+  if (P.hp <= 0) { fbNudge('die'); P.hp = 0; P.dead = 2.6; P.an = 'die'; P.at = 0; sfx('die'); say('쓰러졌어요… 마을에서 다시 일어나요(골드 10% 잃음).', '#ff9a8a'); }
 }
 const skLvId = id => { const s = SKILLS[G.P.cls].find(x => x.id === id); return s ? skLv(G.P, s) : 0; };
 
@@ -2532,6 +2533,39 @@ Object.assign(MC, {
 const LAZY = {};
 function lazyImg(k) { if (IM[k] || LAZY[k] || !MC[k]) return; LAZY[k] = 1; const im = new Image(); im.onload = () => { IM[k] = im; }; im.onerror = () => { setTimeout(() => { LAZY[k] = 0; }, 5000); }; im.src = IMG + k + '.webp?v=32ab7d15'; }
 
+/* ---------- 베타 의견: 메뉴 「의견 보내기」 + 장 끝·보스·첫 쓰러짐·레벨 10마다 살짝 묻기 ---------- */
+// 보낼 때 지금 장·섬·레벨·직업·난이도·플레이 시간·폰/PC를 같이 붙인다. 프로필이 있으면 게시판에도 올릴 수 있다.
+const FBT = [['bug', '🐞 버그'], ['hard', '😵 너무 어려움'], ['easy', '😴 너무 쉬움'], ['dull', '🥱 지루함'], ['good', '😍 좋아요'], ['idea', '💡 제안']];
+const FB = { star: 0, tags: [], why: 'menu', busy: 0, chip: null, last: 0 };
+function fbCtx() { const P = G.P, Wd = G.Wd, k = Wd.isl[Wd.id(Math.floor(P.x), Math.floor(P.y))], s = k >= 0 && Wd.islands[k];
+  return { ch: Wd.ch, isle: (s && s.name) || '', lv: P.lv, cls: P.cls, diff: P.diff || 0, play: Math.round(P.play || 0), dev: matchMedia('(pointer: coarse)').matches ? 'phone' : 'pc', why: FB.why, v: '32ab7d15'.slice(0, 8) }; }
+function fbOpen(why) { FB.why = why || 'menu'; FB.star = 0; FB.tags = []; fbChipOff(); openPanel('fb'); }
+const FBWHY = { end: '이 장', boss: '방금 보스 싸움', die: '방금 쓰러진 싸움', lv: '지금까지', menu: '' };
+function fbHtml(X) { const c = fbCtx(), code = pcode();
+  return `<div class="sk-bx" style="max-width:440px">${X}<h3>💬 베타 의견 보내기</h3><p class="m" style="font-size:12.5px;margin:0 0 8px">${FBWHY[FB.why] ? '<b>' + FBWHY[FB.why] + '</b>, 어땠나요? ' : ''}한 줄이라도 큰 도움이 돼요!</p>
+  <div style="font-size:30px;letter-spacing:4px;text-align:center;margin:4px 0">${[1, 2, 3, 4, 5].map(i => `<span data-a="fbs" data-i="${i}" style="cursor:pointer;color:${i <= FB.star ? '#ffb020' : '#cbbfa8'}">★</span>`).join('')}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0">${FBT.map(([k, n]) => `<button class="sk-b${FB.tags.includes(k) ? ' g' : ''}" data-a="fbt" data-k="${k}" style="margin:0;padding:6px 10px;font-size:13px">${n}</button>`).join('')}</div>
+  <textarea id="sk-fbtx" maxlength="500" rows="3" placeholder="예) 2장 사슬 다리 찾기가 헷갈려요 / 보스 줄 공격이 너무 아파요" style="width:100%;box-sizing:border-box;border-radius:10px;border:2px solid #d8c8a8;padding:8px;font:inherit;font-size:14px;resize:vertical">${FB.text || ''}</textarea>
+  <label style="display:block;font-size:12.5px;margin:6px 0;color:${code ? '#5a3e22' : '#a89878'}"><input type="checkbox" id="sk-fbbd" ${code ? '' : 'disabled'}> 5락실 게시판에도 올리기${code ? '' : ' (프로필이 있으면 가능)'}</label>
+  <p class="m" style="font-size:11px;color:#8a7458;margin:2px 0 8px">같이 보내는 정보: ${c.ch === 8 ? '떠도는 섬' : c.ch + '장'} ${c.isle} · ${c.lv}레벨 · ${CLASSES[c.cls].name} · ${c.dev === 'pc' ? 'PC' : '폰'}. 욕설·링크·개인정보는 보낼 수 없어요.</p>
+  <button class="sk-b p" data-a="fbsend" ${FB.busy ? 'disabled' : ''}>보내기</button> <button class="sk-b" data-a="x">다음에</button>${TOAST}</div>`; }
+function fbAct(a, t) { const ta = panel.querySelector('#sk-fbtx'); if (ta) FB.text = ta.value;
+  if (a === 'fbs') { FB.star = +t.dataset.i; render(); return true; }
+  if (a === 'fbt') { const k = t.dataset.k, i = FB.tags.indexOf(k); if (i >= 0) FB.tags.splice(i, 1); else FB.tags.push(k); render(); return true; }
+  if (a === 'fb') { fbOpen(t.dataset.w); return true; }
+  if (a === 'fbsend') { if (FB.busy) return true; const text = (FB.text || '').trim(); if (!FB.star) { toast('별점을 먼저 골라 주세요'); return true; } if (!text && !FB.tags.length) { toast('태그를 고르거나 한 줄 써 주세요'); return true; }
+    const bd = panel.querySelector('#sk-fbbd'); FB.busy = 1; render();
+    fetch('/api/skyfb', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ a: 'send', code: pcode(), star: FB.star, tags: FB.tags, text, ctx: fbCtx(), board: !!(bd && bd.checked) }) })
+      .then(r => r.json().catch(() => ({}))).then(j => { FB.busy = 0; if (j.ok) { FB.text = ''; G.P.flags.fbN = (G.P.flags.fbN || 0) + 1; save(); closePanel(); say(j.board ? '고마워요! 의견을 보냈고 게시판에도 올렸어요.' : j.board === 0 ? '고마워요! 의견을 보냈어요(게시판은 오늘 글 수를 다 써서 못 올렸어요).' : '고마워요! 의견을 잘 받았어요.', '#9fe4ff'); } else { render(); toast(j.msg || '지금은 보낼 수 없어요. 잠시 뒤 다시 해 주세요'); } })
+      .catch(() => { FB.busy = 0; render(); toast('인터넷 연결을 확인해 주세요'); });
+    return true; }
+  return false; }
+// 살짝 묻기: 화면 오른쪽 아래에 작은 단추가 20초 동안. 같은 이유는 한 번만, 10분에 한 번까지.
+function fbNudge(why, key) { const P = G.P; if (!G || DEBUG && !P.flags.fbTest) return; const f = 'fb_' + (key || why); if (P.flags[f] || Date.now() - FB.last < 6e5) return; P.flags[f] = 1; FB.last = Date.now();
+  fbChipOff(); const b = document.createElement('button'); b.className = 'sk-fbchip'; b.textContent = '💬 ' + (FBWHY[why] || '의견') + ' 어땠어요?'; b.style.cssText = 'position:absolute;right:12px;bottom:84px;z-index:5;border:0;border-radius:999px;padding:9px 14px;background:#ffd166;color:#3a2a10;font:800 13px system-ui;box-shadow:0 3px 0 #b8860b;cursor:pointer';
+  b.onclick = e => { e.stopPropagation(); fbOpen(why); }; ov.appendChild(b); FB.chip = b; setTimeout(() => { if (FB.chip === b) fbChipOff(); }, 20000); }
+function fbChipOff() { if (FB.chip) { FB.chip.remove(); FB.chip = null; } }
+
 
 /* =================== 화면(DOM)·입력·소리 =================== */
 let panel, raf = 0, last = 0, acc = 0, PANEL = null, SEL = null, SHOP = null;
@@ -2614,7 +2648,7 @@ function clickWorld(px, py) {
 }
 function input() {
   addEventListener('keydown', e => {
-    if (ov.hidden) return; if (KM[e.code]) { KEYS[KM[e.code]] = 1; e.preventDefault(); }
+    if (ov.hidden) return; if (e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName)) { if (e.code === 'Escape') closePanel(); return; } if (KM[e.code]) { KEYS[KM[e.code]] = 1; e.preventDefault(); }
     if (e.repeat) return; const c = e.code;
     if (c === 'Escape') { if (PANEL) { if (PANEL !== 'title') closePanel(); } else openPanel('menu'); return; }
     if (PANEL) { if (PANEL === 'title') return; if (PKEY[c]) { if (PANEL === PKEY[c]) closePanel(); else { SEL = null; SHOP = null; openPanel(PKEY[c]); } } return; }
@@ -2749,9 +2783,10 @@ function render(arg) {
   else if (k === 'smith') h = smithHtml();
   else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}${chapHtml()}${roamHtml()}</div>`; }
   else if (k === 'quest') { h = `<div class="sk-bx" style="max-width:560px">${X}<h3>할 일</h3>`; for (const id in QUESTS) { const q = P.q[id], Q = QUESTS[id]; if (!q) continue; h += `<div class="sk-row"><div class="f"><b>${Q.n}</b> ${q.s === 3 ? '✔' : q.s === 2 ? '(보고하기)' : ''}<br><small>${esc(Q.goal)} — ${NPCDEF[Q.from].n}</small></div></div>`; } h += '</div>'; }
-  else if (k === 'menu') { h = `<div class="sk-bx" style="max-width:420px;text-align:center">${X}<h3>잠깐 쉬기</h3><button class="sk-b p" data-a="x">계속하기</button><br><button class="sk-b" data-a="quest">할 일 보기</button><br><button class="sk-b" data-a="mute">${A.muted ? '소리 켜기' : '소리 끄기'}</button><br><button class="sk-b" data-a="help">조작법</button><br><button class="sk-b" data-a="title">저장하고 처음 화면으로</button><br><button class="sk-b" data-a="quit">저장하고 나가기</button><p class="m" style="font-size:11.5px;color:#8a7458;margin-top:8px">기록은 10초마다, 그리고 창을 닫을 때 이 기기에 저장돼요.</p></div>`; }
+  else if (k === 'menu') { h = `<div class="sk-bx" style="max-width:420px;text-align:center">${X}<h3>잠깐 쉬기</h3><button class="sk-b p" data-a="x">계속하기</button><br><button class="sk-b" data-a="quest">할 일 보기</button><br><button class="sk-b" data-a="mute">${A.muted ? '소리 켜기' : '소리 끄기'}</button><br><button class="sk-b" data-a="fb" data-w="menu">💬 베타 의견 보내기</button><br><button class="sk-b" data-a="help">조작법</button><br><button class="sk-b" data-a="title">저장하고 처음 화면으로</button><br><button class="sk-b" data-a="quit">저장하고 나가기</button><p class="m" style="font-size:11.5px;color:#8a7458;margin-top:8px">기록은 10초마다, 그리고 창을 닫을 때 이 기기에 저장돼요.</p></div>`; }
   else if (k === 'help') { h = `<div class="sk-bx" style="max-width:600px">${X}<h3>조작법</h3><div class="sk-card"><b>PC</b><br>마우스 왼쪽: 이동 (누르고 있으면 따라가요 · 사람·표지·다리를 누르면 가서 말 걸기)<br>마우스 오른쪽: 공격 (누르고 있으면 계속 · 적을 누르면 다가가서 공격)<br>1~4: 기술 (마우스 쪽으로 · 4번은 궁극 기술) · Q 민들레 차 · R 바람 사탕 · 스페이스 돛 활공(피하기)<br>I 가방 · C 캐릭터 · S 기술 · M 지도 · B 나침반판 · J 할 일 · F 말 걸기 · Esc 쉬기<br><br><b>휴대폰</b> (가로 화면)<br>왼쪽 아무 곳이나 끌어서 이동 · 오른쪽 큰 버튼 공격(누르고 있으면 계속, 가까운 적을 알아서 노려요) · 둘레 버튼 기술 4개(금색 테두리가 궁극 기술) · 돛·차·사탕 버튼 · 사람이나 물건을 톡 누르면 그쪽으로 가요.<br><br><b>요령</b>: 방패지기는 적을 섬 끝으로 밀어 떨어뜨릴 수 있어요(보상은 조금 줄어요). 쉬고 돌아오면 순풍(경험치 2배)이 쌓여 있어요.</div></div>`; }
-  else if (k === 'end') h = endHtml();
+  else if (k === 'end') h = endHtml().replace('<button class="sk-b p" data-a="x">', '<button class="sk-b g" data-a="fb" data-w="end">💬 이 장 어땠어요?</button> <button class="sk-b p" data-a="x">');
+  else if (k === 'fb') h = fbHtml(X);
   panel.innerHTML = h; bindPanel(arg);
   if (k === 'inv') fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 'b' ? SHOP[+c.slice(1)] : null);
   if (k === 'stash') fillIcons(c => c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 's' ? (P.stash || [])[+c.slice(1)] : null);
@@ -2822,6 +2857,7 @@ function bindPanel(arg) {
   panel.onclick = e => {
     const t = e.target.closest('[data-a],[data-c],[data-sk]'); if (!t) { if (e.target === panel && PANEL !== 'title') closePanel(); return; }
     const P = G && G.P, a = t.dataset.a;
+    if (a && a.startsWith('fb') && fbAct(a, t)) return;
     if (t.dataset.c && PANEL === 'stash') { stashMove(t.dataset.c); render(arg); return; }
     if (t.dataset.c) { SEL = t.dataset.c; if (SEL[0] === 'b' && PANEL === 'inv') {} render(arg); return; }
     if (t.dataset.sk) { SEL = t.dataset.sk; render(); return; }
