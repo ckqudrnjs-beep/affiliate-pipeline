@@ -239,6 +239,44 @@ const MODELS = {
       body.position.y = y; body.rotation.x = rx; wings[0].rotation.z = fl; wings[1].rotation.z = -fl;
     } };
   },
+  heron(o) { // 큰 왜가리(1장 보스): 잿빛 깃, 긴 S자 목, 창 같은 부리, 붉은 눈, 너덜한 날개
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const C = 0x56606e, D2 = 0x2e3440, W = 0xd8dce4;
+    const geo = new THREE.SphereGeometry(.26, 26, 18); geo.scale(.85, .8, 1.35); const b = new THREE.Mesh(geo, std(C, { rough: .8 })); body.add(b);
+    const breast = new THREE.Mesh(new THREE.SphereGeometry(.2, 18, 12), std(W, { rough: .9 })); breast.scale.set(.85, 1, .9); breast.position.set(0, .02, .18); body.add(breast);
+    for (let i = 0; i < 7; i++) { const pl = new THREE.Mesh(new THREE.ConeGeometry(.025, .22, 4), std(W)); pl.position.set((i - 3) * .03, -.12, .26); pl.rotation.x = Math.PI + .3; body.add(pl); } // 가슴 장식깃
+    // 목: 마디 6개로 S자
+    const neck = new THREE.Group(); body.add(neck); neck.position.set(0, .14, .26); const segs = []; let par = neck;
+    for (let j = 0; j < 6; j++) { const s2 = new THREE.Group(); s2.position.y = j ? .1 : 0; par.add(s2); const c = new THREE.Mesh(new THREE.CylinderGeometry(.055, .065, .13, 10), std(j < 2 ? W : C)); c.position.y = .05; s2.add(c); const jn = new THREE.Mesh(new THREE.SphereGeometry(.062, 10, 8), std(j < 2 ? W : C)); s2.add(jn); segs.push(s2); par = s2; }
+    const head = new THREE.Group(); head.position.y = .12; par.add(head);
+    const hd = new THREE.Mesh(new THREE.SphereGeometry(.085, 16, 12), std(W)); hd.scale.set(.9, .9, 1.2); head.add(hd);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(.088, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), std(0x1e2228)); cap.rotation.x = -.3; head.add(cap);
+    for (let i = 0; i < 3; i++) { const pl = new THREE.Mesh(new THREE.ConeGeometry(.012, .3 - i * .05, 4), std(0x1e2228)); pl.rotation.x = -Math.PI / 2 - .5 - i * .15; pl.position.set((i - 1) * .02, .03, -.16); head.add(pl); } // 뒷머리 깃
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(.035, .42, 6), std(0xe0a83a, { rough: .4 })); beak.rotation.x = Math.PI / 2; beak.position.set(0, -.01, .28); head.add(beak);
+    const bl = new THREE.Mesh(new THREE.BoxGeometry(.06, .006, .36), std(0x3a2a10)); bl.position.set(0, -.012, .25); head.add(bl);
+    glare(head, .085, .02, .06, .55, 0xff3a2a, .2);
+    // 날개
+    const wings = []; for (const s of [-1, 1]) { const w = new THREE.Group(); for (let j = 0; j < 7; j++) { const fz = new THREE.Mesh(new THREE.ConeGeometry(.07, .5 + j * .05, 4), std(j > 4 ? 0x1e2228 : j % 2 ? C : D2)); fz.rotation.x = -Math.PI / 2 + .2; fz.position.set(s * (.04 + j * .012), .02 - j * .012, -.08 - j * .045); fz.scale.x = .7; w.add(fz); }
+      w.position.set(s * .2, .08, 0); body.add(w); wings.push(w); }
+    for (let i = -2; i <= 2; i++) { const tf = new THREE.Mesh(new THREE.ConeGeometry(.04, .32, 4), std(D2)); tf.rotation.x = -Math.PI / 2 - .5; tf.rotation.z = i * .2; tf.position.set(i * .03, -.02, -.38); tf.scale.x = 1.3; body.add(tf); }
+    // 긴 다리
+    const legs = []; for (const s of [-1, 1]) { const lg = new THREE.Group(); const up = new THREE.Mesh(new THREE.CylinderGeometry(.022, .018, .32, 6), std(0xb08a3a)); up.position.y = -.16; lg.add(up);
+      const kn = new THREE.Group(); kn.position.y = -.32; lg.add(kn); const lo = new THREE.Mesh(new THREE.CylinderGeometry(.018, .015, .34, 6), std(0xb08a3a)); lo.position.y = -.17; kn.add(lo);
+      const ft = new THREE.Group(); ft.position.y = -.34; kn.add(ft); for (let i = -1; i <= 1; i++) { const t2 = new THREE.Mesh(new THREE.CylinderGeometry(.01, .006, .14, 4), std(0x8a6a2a)); t2.rotation.x = Math.PI / 2; t2.rotation.y = i * .45; t2.position.set(i * .03, 0, .06); ft.add(t2); }
+      outlineAll(lg, 1.15); lg.position.set(s * .09, -.1, 0); body.add(lg); legs.push([lg, kn]); }
+    outlineAll(body, 1.05);
+    const by = .78; body.position.y = by;
+    return { g, pose(st, t) {
+      let y = by, rx = 0, wf = 0, nb = [.35, .25, -.35, -.45, -.1, .35], sw = 0, ky = 0;
+      if (st === 'idle') { const k = Math.sin(t * Math.PI * 2); nb = nb.map((v, i) => v + k * .04 * (i % 2 ? 1 : -1)); y = by + k * .01; }
+      if (st === 'move') { sw = Math.sin(t * Math.PI * 2) * .5; y = by + Math.abs(Math.cos(t * Math.PI * 2)) * .03; rx = .12; nb = [.5, .3, -.3, -.5, -.1, .3]; }
+      if (st === 'atk') { const k = Math.round(t * 2); wf = [1.1, .6, .2][k]; rx = [-.25, .35, .55][k]; nb = [[.1, -.2, -.6, -.6, .2, .5], [.6, .3, .1, 0, .1, .2], [.7, .35, .15, .05, 0, .1]][k]; ky = [0, .05, -.05][k]; }
+      if (st === 'hurt') { rx = -.35; wf = .5; nb = [-.1, -.2, -.4, -.3, .2, .4]; }
+      if (st === 'die') { const k = Math.round(t); rx = [.8, 1.4][k]; y = by - [.25, .55][k]; wf = [.8, .2][k]; nb = [1, .5, .3, .2, .1, 0]; }
+      body.position.y = y + ky; body.rotation.x = rx; segs.forEach((s2, i) => s2.rotation.x = nb[i]); head.rotation.x = -nb.reduce((a, v) => a + v, 0) * .5 + (st === 'atk' ? .3 : 0);
+      wings[0].rotation.z = -wf; wings[1].rotation.z = wf; wings[0].rotation.y = wf * .3; wings[1].rotation.y = -wf * .3;
+      legs.forEach(([l, kn], i) => { l.rotation.x = (i ? -sw : sw) - rx; kn.rotation.x = Math.max(0, i ? sw : -sw) * .8 + (st === 'die' ? .6 : 0); l.visible = !(st === 'die' && t > .5); });
+    } };
+  },
 };
 window.renderMob = async function (k) {
   const M = MOBS[k], mdl = MODELS[M.model](M), sc = M.scale || 1; mdl.g.scale.setScalar(sc);

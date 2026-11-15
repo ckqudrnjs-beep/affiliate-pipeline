@@ -50,6 +50,11 @@ export const MOBS = {
   seed: { model: 'seed', cell: [96, 104, 48, 92] },
   bird: { model: 'bird', cell: [104, 132, 52, 120] },
   keeper: { model: 'seed', keeper: 1, scale: 1.9, cell: [196, 212, 98, 192] },
+  // 1장 뒷부분(갈대 늪·둥지섬)
+  mudfluff: { model: 'fluff', col: 0x6a5034, tip: 0x3e2c1c, feet: 0x2a1e14, eye: 0xffa02a, scale: 1.15, cell: [110, 110, 55, 96] },
+  bogpod: { model: 'seed', col: 0x3a5a2a, cell: [96, 104, 48, 92] },
+  heronling: { model: 'bird', col: 0x5a6a7a, eye: 0xff5a3a, cell: [104, 132, 52, 120] },
+  heron: { model: 'heron', scale: 1.9, cell: [260, 300, 130, 282] },
 };
 // 소품: KayKit Medieval Hexagon (CC0). s = 크기 배율, foot = 바닥 차지 반경(칸)
 export const PROPS = [
