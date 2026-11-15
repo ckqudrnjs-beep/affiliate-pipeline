@@ -178,6 +178,20 @@ load();
 """
 
 
+def static_ver(rel: str) -> str:
+    """static/ 안 파일 내용 해시 8자리(없으면 ''). 그림·스크립트 주소 뒤 ?v= 에 붙여 폰이 예전 파일을 계속 쓰지 않게 한다."""
+    f = HERE / "static" / rel.lstrip("/")
+    return __import__("hashlib").md5(f.read_bytes()).hexdigest()[:8] if f.is_file() else ""
+
+
+def bust_imgs(html: str) -> str:
+    """게임 본문의 /img/·/og/ 그림 주소에 내용 해시를 붙인다(BK 11/15: 포스터를 새로 찍어도 옛 그림이 보이지 않게). 예전 수동 ?v=2 같은 것은 바꿔 씀."""
+    def rep(m):
+        v = static_ver(m.group(1))
+        return m.group(1) + (f"?v={v}" if v else "")
+    return re.sub(r"(/(?:img|og)/[\w./-]+\.(?:jpg|jpeg|png|webp))(?:\?v=\w+)?(?=['\"])", rep, html)
+
+
 def load_games() -> list[dict]:
     games = []
     for d in sorted((HERE / "games").iterdir()):
@@ -186,6 +200,7 @@ def load_games() -> list[dict]:
         g = json.loads((d / "meta.json").read_text(encoding="utf-8"))
         g["slug"] = d.name
         g["body"] = (d / "body.html").read_text(encoding="utf-8")
+        g["body"] = bust_imgs(g["body"])
         g["js"] = (d / "game.js").read_text(encoding="utf-8")
         # 게임 스크립트 주소에 내용 해시를 붙여 폰·앱 브라우저가 예전 파일을 계속 쓰지 않게 (BK 11/14: 배포 후에도 예전 네온 레이드가 보임)
         g["js"] = re.sub(r"(/js/([\w-]+)\.js)(?=['\"])", lambda m: m.group(1) + ("?v=" + __import__("hashlib").md5((HERE / "static/js" / (m.group(2) + ".js")).read_bytes()).hexdigest()[:8] if (HERE / "static/js" / (m.group(2) + ".js")).exists() else ""), g["js"])
@@ -1112,7 +1127,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                        "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "All", "inLanguage": "ko", "isAccessibleForFree": True,
                        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}},
                       crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])], noindex=bool(g.get("hidden")),
-              og=g.get("og") if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
+              og=f"{g['og']}?v={static_ver(g['og'])}" if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)

@@ -1,0 +1,68 @@
+name: posters
+
+# 5락실 게임 포스터 자동 갱신 (2026-11-15 BK: 게임을 고치면 시작 전 미리보기 포스터도 새 화면으로).
+# main 에 게임 코드·그림 변경이 들어오면, 바뀐 게임만 실제 화면을 다시 찍어 static/img/<slug>-poster.jpg 와
+# static/og/<slug>.jpg 를 바꾸고 main 에 커밋한다 → Cloudflare Pages 가 다시 배포.
+# 주소 뒤 ?v=<내용 해시> 는 build.py 가 붙이므로 폰 캐시에 옛 포스터가 남지 않는다.
+# 포스터 파일 자체(static/img/*-poster.jpg, posters.json)는 paths 에 없어서 스스로 다시 돌지 않는다.
+# 손으로 실행: Actions > posters > Run workflow (all=true 면 전부 다시 찍기).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "playground/games/**"
+      - "playground/static/js/**"
+      - "playground/static/img/*/**"
+      - "scripts/game_posters.js"
+      - "playground/posters.py"
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "true 면 모든 게임 포스터를 다시 찍기"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  posters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 다시 찍을 게임 확인
+        id: c
+        run: |
+          pip install -q pillow
+          T=$(python playground/posters.py --check)
+          echo "$T"
+          if [ "${{ inputs.all }}" = "true" ] || [ "$T" != "모든 포스터가 최신이에요" ]; then echo "go=1" >> "$GITHUB_OUTPUT"; fi
+      - name: 준비 (한글 글꼴·크로미움)
+        if: steps.c.outputs.go == '1'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk
+          npm i --no-save --silent playwright@1.63.0 && npx playwright install --with-deps chromium >/dev/null
+      - name: 포스터 찍기
+        if: steps.c.outputs.go == '1'
+        run: python playground/posters.py ${{ inputs.all && '--all' || '' }}
+      - name: 검사
+        if: steps.c.outputs.go == '1'
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_posters
+      - name: 커밋
+        if: steps.c.outputs.go == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add playground/static/img/*-poster.jpg playground/static/og/*.jpg playground/static/img/posters.json
+          git diff --cached --quiet && { echo "바뀐 포스터 없음"; exit 0; }
+          git commit -m "5락실 게임 포스터 자동 갱신 ($(TZ=Asia/Seoul date '+%F %H:%M'))"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push origin HEAD:main && exit 0; sleep $((i*5)); done
+          exit 1

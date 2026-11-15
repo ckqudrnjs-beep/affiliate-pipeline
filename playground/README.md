@@ -172,3 +172,10 @@
 - 캐릭터·일반 적 그림과 몸 크기 CS=0.82 (보스는 그대로).
 - 적은 모두 오른쪽에서 등장.
 - 일반 적 공격(raid.js AKS/eAtk): 정비병 휘두르기·렌치 던지기·돌진, 방패 수리공 휘두르기·바닥 충격파·전기탄, 정비반장 휘두르기·연속 지진·부채꼴 탄·돌진. 돌진은 빨간 줄+화살표 경고(위험 'rush'), 협동은 각자 판정.
+
+## 게임 포스터 자동 갱신 (2026-11-15 BK)
+- 전체 화면 게임의 시작 전 포스터 `static/img/<slug>-poster.jpg`(1280x720)와 공유 이미지 `static/og/<slug>.jpg`(1200x630)는 손으로 만들지 않는다. meta.json `"poster"` 조리법(디버그 주소·시작 후 실행할 JS·기다릴 시간)대로 `scripts/game_posters.js` 가 실제 게임 화면을 찍는다.
+- `python playground/posters.py` = 바뀐 게임만(`static/img/posters.json` 해시 비교), `--all` 전부, `--check` 확인만. 필요: Pillow, Node + playwright.
+- main 에 게임 코드·그림이 바뀌면 Actions `posters` 가 자동으로 다시 찍어 커밋한다.
+- build.py 가 게임 본문 그림 주소와 og:image 에 `?v=<내용 해시>` 를 붙여 폰 캐시에 옛 포스터가 남지 않게 한다.
+- 규칙·조리법 예시: docs/GAME_QUALITY.md 2-1.
