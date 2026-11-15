@@ -338,7 +338,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
-<script>{VIDEO_JS}</script>
+<script>{VIDEO_JS};{VISIT_JS}</script>
 </body></html>"""
 
 
@@ -598,8 +598,14 @@ def calc_page(c: dict, products: list[dict], arts: list[dict] | None = None, qs:
                     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}})
 
 
+# 순 방문자 수(2026-11-15 BK): 정적 사이트라 서버가 없어서 5락실 서버(/api/visit)에 브라우저당 하루 1번 빈 신호를 보낸다.
+# 서버는 Origin(don3chon.com)을 보고 돈삼촌 표에 따로 센다. IP는 날짜+비밀값 해시로 하루만, 다음 날 날짜별 숫자만 남김. 숫자는 5락실 /admin 에서 본다.
+VISIT_JS = r"""(function(){try{if(location.hostname!=='don3chon.com'||navigator.webdriver)return;
+var d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);if(localStorage.getItem('d3_vday')===d)return;
+setTimeout(function(){try{if(document.visibilityState==='hidden')return;localStorage.setItem('d3_vday',d);fetch('https://5raksil.com/api/visit',{method:'POST',mode:'no-cors',keepalive:true,credentials:'omit'}).catch(function(){})}catch(e){}},1500)}catch(e){}})();"""
+
 PRIVACY = """<h1>개인정보처리방침</h1>
-<p class="small">시행일: 2026년 11월 11일</p>
+<p class="small">시행일: 2026년 11월 15일</p>
 <h2>1. 수집하는 개인정보</h2>
 <p class="note">돈 줍는 삼촌(don3chon.com, 이하 '사이트')은 회원가입·댓글·결제 기능이 없으며 이름·전화번호 같은 개인정보를 직접 수집하지 않습니다. 계산기에 넣은 값과 '찜하기' 목록은 이용자의 브라우저(localStorage)에만 저장되고 서버로 전송되지 않습니다.</p>
 <h2>2. 쿠키와 광고</h2>
@@ -610,6 +616,7 @@ PRIVACY = """<h1>개인정보처리방침</h1>
 <p class="note">사이트에는 쿠팡 파트너스, 알리익스프레스 어필리에이트, 네이버 쇼핑 커넥트 제휴 링크가 있습니다. 링크를 누르면 해당 쇼핑몰이 쿠키로 구매 여부를 확인하며, 구매가 일어나면 사이트 운영자가 수수료를 받습니다. 이용자가 내는 가격은 같습니다.</p>
 <h2>4. 방문 통계</h2>
 <p class="note">사이트는 Cloudflare Web Analytics로 방문 수를 집계합니다. 이 도구는 쿠키를 쓰지 않고 개인을 식별하지 않는 형태로 페이지 조회 수만 셉니다.</p>
+<p class="note">하루 방문자 수를 알기 위해 브라우저마다 하루 한 번 운영자의 집계 서버(5raksil.com)에 빈 신호를 보냅니다. 서버는 접속 IP 주소를 날짜·비밀값과 함께 되돌릴 수 없는 해시값으로 바꿔 그날 하루만 보관하고, 다음 날에는 날짜별 방문자 숫자만 남기고 해시값을 삭제합니다. 원래 IP 주소는 저장하지 않습니다. 브라우저에는 오늘 이미 집계됐는지 표시하는 날짜만 저장됩니다.</p>
 <h2>5. 문의</h2>
 <p class="note">개인정보 관련 문의는 <a href="contact.html">문의 페이지</a>의 연락처로 보내 주세요. 이 방침이 바뀌면 이 페이지에 시행일과 함께 알립니다.</p>"""
 
@@ -772,7 +779,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_bytes(f.read_bytes())
     today = dt.date.today().isoformat()
-    SITE_PAGES = "2026-11-11"  # 소개·문의·개인정보·계산기 틀을 마지막으로 고친 날 (고치면 같이 바꾼다)
+    SITE_PAGES = "2026-11-15"  # 소개·문의·개인정보·계산기 틀을 마지막으로 고친 날 (고치면 같이 바꾼다)
     adate = {a["slug"]: a.get("updated", a["date"]) for a in arts}
     newest_a = max(adate.values(), default=SITE_PAGES)
     newest_n = max((n["date"] for n in news), default=SITE_PAGES)
