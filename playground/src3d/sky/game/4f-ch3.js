@@ -50,7 +50,7 @@ function talk3(id, offer, finish) {
   if (id === 'chief') {
     if (!q('q13')) offer('q13'); else if (q('q13').s === 2) finish('q13'); else if (q('q13').s === 1) lines = ['소금 보풀이며 닻집게며 선창마다 들끓네. 스무 마리만 부탁하네.'];
     else if (!q('q14')) offer('q14'); else if (q('q14').s === 2) finish('q14'); else if (q('q14').s === 1) lines = ['밧줄 타래는 선창 둥지의 따개비 둥지지기가 품고 있다네. 네 타래 모아 가운데 선창 동쪽 끊긴 줄다리로 가게.'];
-    else if (!q('q17')) offer('q17'); else if (q('q17').s === 2 && P.flags['wp_녹슨 정박장']) finish('q17'); else if (q('q17').s === 2) lines = ['비행선을 떨어뜨렸다고?! 정박장 바람개비 표지에 손을 얹어 주게. 바람이 항구로 돌아오게.'];
+    else if (!q('q17')) offer('q17'); else if (q('q17').s === 2 && P.flags[wpk('녹슨 정박장')]) finish('q17'); else if (q('q17').s === 2) lines = ['비행선을 떨어뜨렸다고?! 정박장 바람개비 표지에 손을 얹어 주게. 바람이 항구로 돌아오게.'];
     else if (q('q17').s === 1) lines = ['녹슨 정박장은 밧줄 나루 너머 따개비 여울 끝일세. 표시가 줄로 뜨면 옆으로, 여러 개 뜨면 틈으로 비켜서게.'];
     else lines = ['비행선들이 다시 뜨기 시작했네. 자네 덕일세, 이음꾼.', '구름 너머로 가는 바람길은… 머지않아 열릴 걸세.']; }
   if (id === 'sage') { if (!q('q15')) offer('q15'); else if (q('q15').s === 2) finish('q15'); else lines = ['비행선은 원래 큰바람을 타고 섬과 섬 사이를 오갔대. 바람이 멎으니 다 묶여 버린 거지.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
@@ -111,5 +111,5 @@ function ch3Area(a, dt) { return 0; }
 function ch3Goals(Wd, P, goals) { const q = P.q, bq = Wd.bridges[Wd.bq];
   if (q.q14 && q.q14.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q17 && q.q17.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
-  if (q.q17 && q.q17.s === 2 && !P.flags['wp_녹슨 정박장']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
+  if (q.q17 && q.q17.s === 2 && !P.flags[wpk('녹슨 정박장')]) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
 function endHtml3() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>3장 「닻 내린 항구」 끝</h3><p>녹슨 비행선이 정박장 위로 천천히 내려앉자, 막혀 있던 바람이 한꺼번에 항구로 쏟아져 들어왔다.</p><p>묶여 있던 비행선들의 돛이 부푼다. 바람은 이제 구름 너머 더 높은 곳으로 흘러간다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 4장 거꾸로 숲으로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }

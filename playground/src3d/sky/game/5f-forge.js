@@ -46,5 +46,5 @@ function forgeFx(it, kind, text, sub) {
 function forgeEnd() { cancelAnimationFrame(FORGE.raf); if (FORGE.el) FORGE.el.style.display = 'none'; if (ov) ov.style.transform = ''; }
 // 강화 결과(enchant 의 r) → 연출 종류
 function forgeEnch(it, r) { if (r.ok === 1) forgeFx(it, r.up > 1 ? 'double' : 'ok', '+' + it.en + ' 강화 성공!', r.up > 1 ? '두 단계나 올랐어요!' : it.en >= 7 ? '빛이 깃들었어요' : '');
-  else if (r.ok === 2) forgeFx(it, 'keep', '실패… 하지만 지켰어요', r.msg.includes('축복이 대신') ? '축복이 대신 사라졌어요' : '축복 덕분에 그대로예요');
+  else if (r.ok === 2) forgeFx(it, 'keep', '실패… 하지만 지켰어요', r.bl ? '축복이 대신 사라졌어요' : '축복 덕분에 그대로예요');
   else if (r.ok === 3) forgeFx(it, 'fail', '강화 실패…', '+' + it.en + '(으)로 내려갔어요'); }

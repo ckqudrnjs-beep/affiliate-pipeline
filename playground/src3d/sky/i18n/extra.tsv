@@ -1,0 +1,24 @@
+⟨0⟩이(가) ⟨1⟩을(를) 불러냈어요!	⟨0⟩ summoned ⟨1⟩!
+한국어	한국어
+천둥	Thunder
+큰바람	Great Wind
+<h4 style="margin:10px 0 4px">난이도</h4><div class="sk-row" style="gap:4px;flex-wrap:wrap">	<h4 style="margin:10px 0 4px">Difficulty</h4><div class="sk-row" style="gap:4px;flex-wrap:wrap">
+ 다음 난이도는 지금 열린 가장 높은 난이도에서 엔딩(7장 보스)을 깨면 열려요.	 The next difficulty unlocks when you beat the ending (Ch. 7 boss) on your highest unlocked difficulty.
+난이도 「⟨0⟩」이(가) 열렸어요!	Difficulty "⟨0⟩" unlocked!
+순위를 불러오지 못했어요	Couldn't load the ranking
+<div class="sk-bx sk-fit" style="max-width:640px">⟨0⟩<h3>🏆 순위 <small style="font-size:12px;color:#8a7458">같은 기록이면 먼저 한 사람이 위</small></h3><div class="sk-two" style="grid-template-columns:1fr"><div>	<div class="sk-bx sk-fit" style="max-width:640px">⟨0⟩<h3>🏆 Ranking <small style="font-size:12px;color:#8a7458">Ties go to whoever got there first</small></h3><div class="sk-two" style="grid-template-columns:1fr"><div>
+최고 레벨	Top Level
+엔딩 시간	Ending Time
+최고 난이도	Top Difficulty
+떠도는 섬 보스	Drifting Isle Bosses
+전체	All
+<p class="m">불러오는 중…</p>	<p class="m">Loading…</p>
+<p class="m">아직 기록이 없어요. 첫 번째가 되어 보세요!</p>	<p class="m">No records yet. Be the first!</p>
+<p class="m" style="font-size:11.5px">내 캐릭터는 서버에 저장될 때(1분쯤마다) 순위에 반영돼요. 엔딩 시간은 보통 난이도 첫 엔딩까지의 플레이 시간이에요.</p>	<p class="m" style="font-size:11.5px">Your characters update in the ranking whenever they're saved to the server (about every minute). Ending time is your play time to your first ending on Normal.</p>
+<h4>순위에 참가하기</h4><p class="m" style="font-size:11.5px">이름을 정하면 5락실 프로필(복구 코드)이 만들어지고, 이 캐릭터가 서버에 저장돼 순위에 올라가요. 이메일·가입 없음.</p><div class="sk-row"><input id="sk-rknm" maxlength="10" placeholder="이름 (한글·영문·숫자 2~10자)" value="⟨0⟩" style="flex:1;min-width:0;border-radius:9px;border:2px solid #d8c8a8;padding:6px 8px;font:inherit"><button class="sk-b p" data-a="rkjoin" ⟨1⟩>참가</button></div>	<h4>Join the Ranking</h4><p class="m" style="font-size:11.5px">Pick a name and we'll create a 5raksil profile (with a recovery code). Your character is then saved to the server and appears in the ranking. No email, no sign-up.</p><div class="sk-row"><input id="sk-rknm" maxlength="10" placeholder="Name (2–10 letters/numbers)" value="⟨0⟩" style="flex:1;min-width:0;border-radius:9px;border:2px solid #d8c8a8;padding:6px 8px;font:inherit"><button class="sk-b p" data-a="rkjoin" ⟨1⟩>Join</button></div>
+<div class="sk-card" style="border-color:#e8b05a;background:#fff6e4">복구 코드: <b style="font-size:16px;letter-spacing:1px">⟨0⟩</b><br><small>다른 기기에서 이어 하려면 이 코드가 필요해요. 꼭 적어 두세요!</small></div>	<div class="sk-card" style="border-color:#e8b05a;background:#fff6e4">Recovery code: <b style="font-size:16px;letter-spacing:1px">⟨0⟩</b><br><small>You need this code to continue on another device. Write it down!</small></div>
+이름은 한글·영문·숫자 2~10자(띄어쓰기·기호 없이)예요	Names are 2–10 letters or numbers (no spaces or symbols)
+참가했어요! 곧 순위에 올라가요	You're in! You'll show up in the ranking shortly
+쓸 수 없는 이름이에요. 다른 이름을 골라 주세요	That name isn't allowed. Please pick another
+오늘은 더 만들 수 없어요. 내일 다시 해 주세요	Can't create more today. Please try again tomorrow
+지금은 참가할 수 없어요. 잠시 뒤 다시 해 주세요	Can't join right now. Please try again shortly

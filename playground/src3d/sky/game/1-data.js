@@ -6,6 +6,9 @@
 'use strict';
 const DEBUG = /skydebug/.test(location.hash);
 const TAU = Math.PI * 2, STEP = 1 / 60;
+// 바람개비 표지 저장 열쇠: 영어판에서도 한글 이름으로 저장(언어를 바꿔도 열린 표지가 그대로). I18N_KO 는 영어판 빌드가 앞에 붙인다.
+const lvT = n => LANG === 'en' ? 'Lv ' + n : n + '레벨';
+const LANG = typeof I18N_KO !== 'undefined' ? 'en' : 'ko', wpk = n => 'wp_' + (LANG === 'en' && I18N_KO[n] || n), tr = s => LANG === 'en' && typeof I18N_EN !== 'undefined' && I18N_EN[s] || s; // tr: 저장된 한글 이름(이름난 장비·오늘의 섬·심부름)을 영어판에서 보여 줄 때
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t, rnd = (a, b) => a + Math.random() * (b - a);
 const ri = (a, b) => Math.floor(a + Math.random() * (b - a + 1)), pick = a => a[Math.floor(Math.random() * a.length)];
 const hyp = Math.hypot;

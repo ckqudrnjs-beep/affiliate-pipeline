@@ -1,0 +1,110 @@
+5660	Sky Chart
+5661	Unfold it at a Pinwheel Beacon to open a Windway to a drifting isle. The isle is different every time
+5662	Drifting Isle
+5663	Drifting Isle Landing
+5664	Drifting 
+5665	Drifting Isle · 
+5666	You unfolded the Sky Chart. A drifting isle resembling "
+5667	".
+5668	Drifting Isle's 
+5669	 defeated! Treasure pours out. You can return from the Pinwheel Beacon.
+5670	<h4 style="margin:10px 0 4px">Difficulty</h4><div class="sk-row" style="gap:6px">
+5671	: enemy life ×
+5672	, damage ×
+5673	 · XP ×
+5674	, gear level +
+5675	Stormcloud and Tempest make enemies tougher, but give better XP and gear.
+5676	 Tempest unlocks after defeating the First Mender on Stormcloud.
+5677	<h4 style="margin:10px 0 4px">Drifting Isles</h4><div class="sk-row"><div class="f"><b>Unfold a Sky Chart</b><br><small>Charts owned: ⟨0⟩ · Nestkeepers, chapter bosses and far errands sometimes give them</small></div><button class="sk-b g" data-a="roam" ⟨1⟩>Unfold</button></div>
+5678	<div class="sk-row"><div class="f"><b>Return to ⟨0⟩</b></div><button class="sk-b p" data-a="chap" data-i="⟨1⟩">Return</button></div>
+5679	Tempest difficulty unlocked!
+5680	Broken Sky
+5681	Raising the islands… 
+5682	Tailwind ×2
+5683	Stat 
+5684	Skill 
+5685	🎒 Heavy bag · walking slowly (weight 
+5686	Attack
+5687	Tea 
+5688	Candy 
+5689	Move
+5690	Left-click to move · Right-click to attack
+5691	Bag
+5692	Character
+5693	Skills
+5694	Map
+5695	Ult
+5696	: report back
+5697	/6 → broken bridge (east)
+5698	Flufflings 
+5699	Wind Whetstones 
+5700	Nest Shells 
+5701	/3 → broken bridge east of the hill
+5702	Marsh murklings 
+5703	🏠 Stash
+5704	💧 Well
+5705	🐞 Bug
+5706	😵 Too hard
+5707	😴 Too easy
+5708	🥱 Boring
+5709	😍 Love it
+5710	💡 Idea
+5711	This chapter
+5712	That boss fight
+5713	The fight you just lost
+5714	So far
+5715	<div class="sk-bx" style="max-width:440px">⟨0⟩<h3>💬 Send Beta Feedback</h3><p class="m" style="font-size:12.5px;margin:0 0 8px">⟨1⟩Even one line helps a lot!</p>\n  <div style="font-size:30px;letter-spacing:4px;text-align:center;margin:4px 0">⟨2⟩</div>\n  <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0">⟨3⟩</div>\n  <textarea id="sk-fbtx" maxlength="500" rows="3" placeholder="e.g. Finding the chain bridge in Ch. 2 was confusing / The boss's line attack hurts too much" style="width:100%;box-sizing:border-box;border-radius:10px;border:2px solid #d8c8a8;padding:8px;font:inherit;font-size:14px;resize:vertical">⟨4⟩</textarea>\n  <label style="display:block;font-size:12.5px;margin:6px 0;color:⟨5⟩"><input type="checkbox" id="sk-fbbd" ⟨6⟩> Also post to the 5raksil board⟨7⟩</label>\n  <p class="m" style="font-size:11px;color:#8a7458;margin:2px 0 8px">Sent along: ⟨8⟩ ⟨9⟩ · Lv ⟨10⟩ · ⟨11⟩ · ⟨12⟩. No profanity, links, or personal info.</p>\n  <button class="sk-b p" data-a="fbsend" ⟨13⟩>Send</button> <button class="sk-b" data-a="x">Later</button>⟨14⟩</div>
+5716	</b> — how was it? 
+5717	 (needs a profile)
+5718	ch.
+5719	phone
+5720	Please pick a star rating first
+5721	Pick a tag or write a line
+5722	Thanks! Feedback sent and posted to the board.
+5723	Thanks! Feedback sent (today's board post limit was reached, so it wasn't posted).
+5724	Thanks! We got your feedback.
+5725	Can't send right now. Please try again shortly
+5726	Please check your internet connection
+5727	Feedback
+5728	 — how was it?
+5729	Hammering…
+5730	 Enchant success!
+5731	Up two steps!
+5732	It's glowing now
+5733	Failed… but it held
+5734	The blessing broke instead
+5735	The blessing kept it safe
+5736	Enchant failed…
+5737	📱↻<br>Please rotate your phone to landscape
+5738	<div class="m">⟨0⟩ · ⟨1⟩⟨2⟩ · Lv ⟨3⟩ · Weight ⟨4⟩⟨5⟩</div>
+5739	 in a stack
+5740	Small foes <b>⟨0⟩–⟨1⟩</b> · Large foes <b>⟨2⟩–⟨3⟩</b> damage
+5741	<div>Defense <b>⟨0⟩</b>⟨1⟩</div>
+5742	 · Block 
+5743	<div>Glide ⟨0⟩ tiles · Cooldown ⟨1⟩s</div>
+5744	<div class="m">Identify to see options (Storyteller Solbaram · Appraisal Note)</div>
+5745	<div class="h">✦ Tamed: <b>⟨0⟩</b></div>
+5746	<div class="h">Taming ⟨0⟩/⟨1⟩ · Hidden option <b>???</b></div><div class="sk-tame"><b style="width:⟨2⟩%"></b></div><div class="m" style="font-size:11px">Defeat ⟨3⟩ more murklings while wearing it to reveal the hidden option.</div>
+5747	<div class="⟨0⟩">⟨1⟩ pieces: ⟨2⟩</div>
+5748	<div class="a">Blessed: base stats +1, blocks one enchant failure</div>
+5749	<div class="bad">Cursed: base stats -1, can't be removed until purified with Clear Spring Water</div>
+5750	<div class="m">Sells for ⟨0⟩G</div>
+5751	<div class="m" style="font-size:11px;margin:6px 0 2px">Currently equipped</div>
+5752	Cursed gear can't be removed until purified
+5753	Bag is full
+5754	<button class="sk-x" data-a="x" aria-label="Close">✕</button>
+5755	<div class="sk-bx sk-fit">⟨0⟩<h3>Bag <small style="font-size:12px;color:#8a7458">⟨1⟩G · ⟨2⟩ slots · ⟨3⟩⟨4⟩</small></h3><div class="sk-two"><div><h4>Equipped</h4><div class="sk-eq">⟨5⟩</div><h4>Bag</h4><div class="sk-grid">⟨6⟩</div></div><div>
+5756	<b style="color:#d0402a">Weight 
+5757	 · too heavy, walking slowly</b>
+5758	Weight 
+5759	 · Shop: tap an item to sell
+5760	<button class="sk-b g" data-a="use">Drink</button>
+5761	<button class="sk-b p" data-a="eq">Equip</button>
+5762	<p class="m" style="font-size:11.5px">Pick unidentified gear, then "Identify with note"</p>
+5763	<button class="sk-b" data-a="lookit">Identify with note</button>
+5764	<button class="sk-b" data-a="sell">Sell ⟨0⟩G</button>
+5765	<button class="sk-b" data-a="drop">Drop</button>
+5766	<button class="sk-b" data-a="uneq">Unequip</button>
+5767	<button class="sk-b g" data-a="purify">Purify with spring water</button>
+5768	<div class="sk-cmp"><div><div class="m">Selected</div>⟨0⟩</div><div><div class="m">Equipped</div>⟨1⟩</div></div>
+5769	<p class="m" style="font-size:12.5px;color:#8a7458">Tap an item for details. It's compared with your gear in the same slot.</p>

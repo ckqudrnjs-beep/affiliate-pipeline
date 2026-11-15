@@ -1,0 +1,110 @@
+110	Triple Counter
+111	Your counter slashes three times.
+112	Wind Footwork
+113	Attack speed +40% for 5s after a parry.
+114	Expose Weakness
+115	A deep stab on one foe: it takes 30% more damage for 6s.
+116	Deep Wound
+117	Marked foes bleed.
+118	Mark Transfer
+119	When a marked foe falls, the mark jumps to a nearby foe.
+120	Shadow Slash
+121	Vanish and reappear like a shadow, slashing five nearby foes in turn. You can't be hit meanwhile.
+122	Seven Slashes
+123	Slashes up to seven.
+124	Finishing Blow
+125	Ends with a big slash all around (250%).
+126	Piercing Arrow
+127	An arrow that flies through foes.
+128	Triple Shot
+129	Fires three ways (70% each).
+130	Heavy Arrow
+131	Damage +30%, knocks hit foes far back.
+132	Arrow Rain
+133	Rains arrows on a crowd for 1.6s.
+134	Wide Arrow Rain
+135	Area +40%.
+136	Long Arrow Rain
+137	Lasts 3s.
+138	Set Trap
+139	Set a trap at your feet (up to 3). Foes who step on it take heavy damage and are rooted for 2s.
+140	Exploding Trap
+141	Explodes, hitting nearby foes too.
+142	Snaring Trap
+143	Roots for 3.5s, and foes stay slowed after.
+144	Throw Net
+145	Throw a net: roots foes there for 1s and slows them for 4s.
+146	Sticky Net
+147	Roots for 2.5s.
+148	Thorn Net
+149	Foes inside keep taking damage for 4s.
+150	Retreat Shot
+151	Roll back and shoot the nearest foe.
+152	Parting Trap
+153	Leaves a trap where you were.
+154	Volley
+155	Fires three arrows while retreating.
+156	Call Hawk
+157	A hawk flies with you for 12s, diving on a foe every second.
+158	Two Hawks
+159	Two hawks come.
+160	Hunting Hawk
+161	Foes the hawk dives on take 20% more damage.
+162	Great Bell Strike
+163	Hammer the ground ahead; the bell's toll hits all around.
+164	Lingering Toll
+165	Tremors stay where it hit for 3s, hitting again and again.
+166	Double Toll
+167	Strikes once more (the second has a smaller area).
+168	Toll Wave
+169	Ring the bell to send out a wave that pushes nearby foes away.
+170	Triple Wave
+171	The wave spreads three times (60% each).
+172	Far Toll
+173	Radius +50%.
+174	Echo Clone
+175	An echo clone appears for 8s and tolls around it every second.
+176	Two Echoes
+177	Two clones appear.
+178	Bursting Echo
+179	Releases a big wave when it fades (200%).
+180	Resound
+181	You and all your echo clones ring at once, hitting everything around.
+182	Deep Resound
+183	Hit foes are stunned for 1s.
+184	Echo Call
+185	Clones stay 3s longer.
+186	Clang
+187	A sharp metal clang stuns nearby foes for 1.5s.
+188	Long Stun
+189	Stuns for 2.5s.
+190	Shattering Clang
+191	Hit foes take 20% more damage for 6s.
+192	Bell Shroud
+193	A huge bell's shadow covers you for 5s; damage taken -50%.
+194	Ringing Shroud
+195	Each hit you take sends out a small wave.
+196	Hardened Shroud
+197	Damage taken -70%.
+198	Earthshaker Stake
+199	Leap high and drive your spear into the ground, hurling nearby foes away and stunning them. Near the edge, they tumble off.
+200	Thousand Wind Cuts
+201	Become the wind, sweeping between foes and slashing twelve times. You can't be hit meanwhile.
+202	Open Hunting Ground
+203	Lay six traps in a ring around you, then rain arrows over a wide area for 3s.
+204	Sky Bell
+205	Drop a giant bell from the sky, hitting nearby foes hard and stunning them for 2s. The bell then tolls three more times.
+206	Great Wind Breath
+207	A huge vortex sucks in nearby foes, keeps hitting them, then flings them all far away.
+208	Spear
+209	Shield
+210	Battle Cry
+211	Blade
+212	Windstep
+213	Shadow
+214	Wind
+215	Lightning
+216	Cloud
+217	Archery
+218	Traps
+219	Hunt

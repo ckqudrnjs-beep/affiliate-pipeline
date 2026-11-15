@@ -1,0 +1,110 @@
+5330	Thank you, Mender. The wind is flowing past the harbor, higher up. Something beyond the clouds seems to be waiting for it.
+5331	The Windway at the Pinwheel Beacon will take you to Chapter 4, the Upside-down Forest.
+5332	Harbormaster Datjul
+5333	Blacksmith Saltiron
+5334	Salt flufflings and anchor crabs are swarming every wharf. Twenty, please.
+5335	Barnacle Nestkeepers in the wharf nests hold the rope coils. Gather four and go to the broken rope bridge east of Central Wharf.
+5336	You brought down the airship?! Touch the dock's Pinwheel Beacon so the wind returns to the harbor.
+5337	Rusty Dock is at the end of Barnacle Shallows, past Rope Ferry. When markers form a line, step aside; when many appear, slip through the gaps.
+5338	The airships are starting to fly again. All thanks to you, Mender.
+5339	The Windway beyond the clouds… will open before long.
+5340	Airships used to ride the great wind between the islands. With the wind gone, they're all tied down.
+5341	Oh, you got all five salt crystals!
+5342	<button class="sk-b g" data-a="finish" data-q="q16">Hand over salt</button>
+5343	Salt flufflings and barnacle pods carry salt crystals. I need five.
+5344	Enchanting or rerolling, leave it to me. Iron quenched in brine rarely breaks.
+5345	We meet again! The harbor's full of goods from faraway islands. I love it.
+5346	Wharf murklings 
+5347	Rope Coils 
+5348	/4 → broken rope bridge east of Central Wharf
+5349	Anchor Crabs 
+5350	Salt Crystals 
+5351	The Rusty Airship over Rusty Dock
+5352	Dropped a Rope Coil!
+5353	The Rusty Airship's balloon tears and it tilts!
+5354	The Rusty Airship summoned a flock of gulls!
+5355	<div class="sk-bx sk-talk" style="text-align:center"><h3>End of Chapter 3: "Anchored Harbor"</h3><p>As the Rusty Airship slowly settled onto the dock, the trapped wind rushed into the harbor all at once.</p><p>The moored airships' sails swell. The wind now flows higher, beyond the clouds.</p><p style="font-size:13px;color:#8a7458">⟨0⟩ Lv ⟨1⟩ · Murklings defeated ⟨2⟩ · Played ⟨3⟩ min<br>Cross to Chapter 4, the Upside-down Forest, from the "Windways" at the Pinwheel Beacon (travel).</p><button class="sk-b p" data-a="x">Keep exploring</button></div>
+5356	Shopping on a nearby isle
+5357	Some tea, candy, whetstones and glue
+5358	Hauling cargo for the next isles
+5359	Gold, whetstones and glue, sometimes a piece of gear
+5360	Fetching goods across the far sky
+5361	Lots of gold, a piece of gear, blessed whetstone or glue
+5362	The airship left on the "
+5363	" errand
+5364	The airship is back! 
+5365	Time 
+5366	 min
+5367	<h4 style="margin:10px 0 4px">Airship Errands</h4>
+5368	<p class="m" style="font-size:12px">From Lv ⟨0⟩, you can send the village airship on errands.</p>
+5369	 until it returns · time passes even with the game closed
+5370	It's back!
+5371	On its way
+5372	Collect cargo
+5373	<div class="sk-row"><div class="f"><b>⟨0⟩</b> <small>⟨1⟩</small><br><small>⟨2⟩</small></div><button class="sk-b p" data-a="errs" data-i="⟨3⟩">Send</button></div>
+5374	Time
+5375	<p class="m" style="font-size:11.5px">One errand at a time. No limit on how many.</p>
+5376	Airship Errand
+5377	It's back! Collect the cargo at the village board
+5378	 
+5379	Stash is full
+5380	Bag is full or too heavy
+5381	<div class="sk-bx">⟨0⟩<h3>Home Stash <small style="font-size:12px;color:#8a7458">Tap to move · same stash in every chapter</small></h3><div class="sk-two"><div><h4>Bag ⟨1⟩ slots · Weight ⟨2⟩/⟨3⟩</h4><div class="sk-grid">⟨4⟩</div></div><div><h4>Stash ⟨5⟩/⟨6⟩</h4><div class="sk-grid">⟨7⟩</div></div></div>⟨8⟩</div>
+5382	Cool well water! Life and wind fully restored, and life slowly regenerates for 2 min
+5383	Open home stash
+5384	Drink well water
+5385	Upside-down Forest
+5386	Rootfall Village
+5387	Forestkeeper Mistletoe
+5388	Blacksmith Knot
+5389	Moss Slope
+5390	Upside-down Thicket
+5391	Hanging Wood
+5392	Firefly Hollow
+5393	Vine Ferry
+5394	Root Cliff
+5395	Old Tree Stump
+5396	Moss Fluffling
+5397	Thorn Pod
+5398	Mothbird
+5399	Root Clod
+5400	Root Nestkeeper
+5401	Overturned Elder Tree
+5402	A fluffling formed from moss clumped beneath the upside-down forest.
+5403	A pod wrapped in thorny vines. Charges straight at you.
+5404	A moth-like bird that swoops in trailing glowing dust.
+5405	A clod of earth uprooted and walking. Swings its arms when you get close (watch the floor marker and dodge).
+5406	A nestkeeper that weaves its nest from roots. Holds tough vines.
+5407	An ancient tree that grew hanging upside down from the island's underside. When the wind stopped, it reached its roots skyward and walked onto the land.
+5408	Tough Vine
+5409	Vine Bridge
+5410	Hardened Sap
+5411	Root
+5412	Elder
+5413	Forestkeeper
+5414	Elder Tree's Ring
+5415	The innermost ring of the Overturned Elder Tree. Hold it to your ear and you hear a thousand years of wind blowing upside down.
+5416	Defeat 20 murklings under the forest
+5417	Reconnect the vine bridge east of Firefly Hollow with 4 Tough Vines from Root Nestkeepers
+5418	Defeat 12 Root Clods
+5419	Bring 5 Hardened Sap
+5420	Defeat the Overturned Elder Tree at Old Tree Stump and touch the Pinwheel Beacon
+5421	Rootfall Village's Request
+5422	Walking Roots
+5423	Sap Quenching
+5424	The Overturned Elder Tree at Old Tree Stump
+5425	You rode the wind from the harbor? This is the Upside-down Forest, grown hanging from the island's underside.
+5426	With the wind gone, the forest grew wild and murklings swarm. Clear out twenty for me.
+5427	The vine bridge east of Firefly Hollow has snapped. Root Nestkeepers hold tough vines. Four and we can weave it again.
+5428	It's Solbaram. Seen the root clods? They're the soil that held up the old trees, but with the wind gone they walk around. Let twelve of them rest.
+5429	I'm Knot, the smith here. Sap from this forest gets tougher than iron when it hardens. Find me five lumps. Moss flufflings and thorn pods carry it here, instead of salt flufflings.
+5430	The Overturned Elder Tree stands at Old Tree Stump. They say it bursts roots from the ground in rows and drops seeds like hail.
+5431	When enraged it shoots thorns in every direction, so watch for the gaps.
+5432	People walk the forest paths again. Thank you.
+5433	The vine bridge is woven again! Beyond it: Vine Ferry, Root Cliff, and Old Tree Stump.
+5434	Thank you. The soil is finding its place again.
+5435	Good, that's a year's worth of quenching. Here's your pay.
+5436	…The forest is breathing! The upside-down trees sway in the wind.
+5437	But there's a rumble at the end of the wind. It's from the Thunder Nest.
+5438	End of Chapter 4: "Upside-down Forest"
+5439	As the Overturned Elder Tree fell, the roots it had stretched to the sky slowly sank back into the earth.

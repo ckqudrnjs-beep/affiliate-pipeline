@@ -77,7 +77,7 @@ function talk2(id, offer, finish) {
   if (id === 'chief') {
     if (!q('q8')) offer('q8'); else if (q('q8').s === 2) finish('q8'); else if (q('q8').s === 1) lines = ['녹 보풀이며 허수아비며 풍차 섬마다 들끓네. 스무 마리만 부탁하네.'];
     else if (!q('q9')) offer('q9'); else if (q('q9').s === 2) finish('q9'); else if (q('q9').s === 1) lines = ['사슬 고리는 풍차 섬 둥지의 톱니 둥지지기가 품고 있다네. 네 개 모아 가운데 풍차섬 동쪽 끊긴 사슬 다리로 가게.'];
-    else if (!q('q12')) offer('q12'); else if (q('q12').s === 2 && P.flags['wp_큰 풍차섬']) finish('q12'); else if (q('q12').s === 2) lines = ['파수꾼을 쓰러뜨렸다고?! 큰 풍차섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.'];
+    else if (!q('q12')) offer('q12'); else if (q('q12').s === 2 && P.flags[wpk('큰 풍차섬')]) finish('q12'); else if (q('q12').s === 2) lines = ['파수꾼을 쓰러뜨렸다고?! 큰 풍차섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.'];
     else if (q('q12').s === 1) lines = ['큰 풍차섬은 사슬 나루 너머 톱니 벌판 끝일세. 녀석이 성나면 바람 칼날이 사방으로 날아와. 칼날 사이 틈을 보게.'];
     else lines = ['군도의 풍차가 다시 돈다네. 자네 덕일세, 이음꾼.', '닻 내린 항구로 가는 바람길이 열렸네. 바람개비 표지에서 건너가 보게.']; }
   if (id === 'sage') { if (!q('q10')) offer('q10'); else if (q('q10').s === 2) finish('q10'); else lines = ['풍차가 멈추면 바람도 고여서 썩어. 그래서 녹이 이렇게 빨리 스는 거래.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];

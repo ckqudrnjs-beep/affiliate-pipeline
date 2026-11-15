@@ -45,18 +45,19 @@ export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error: "nodb" }, 500);
   if (!b || b.a !== "send") return json({ error: "bad" }, 400);
   await ensureFb(env.DB);
+  const en = !!(b.ctx && b.ctx.lang === "en"); // 영어판(/en/sky)은 안내 문구도 영어로
   const ip = request.headers.get("cf-connecting-ip") || "0", ik = await ipKey(env, ip);
   const c = normCode(b.code), ph = c ? await sha(`${c}|${env.VOTE_SALT || ""}`) : null;
   const me = ph ? await env.DB.prepare("SELECT h, nick FROM profiles WHERE h = ?").bind(ph).first() : null;
   const until = await banUntil(env, [me && me.h, ik]);
-  if (until) return json({ error: "ban", msg: `이용 지침 위반으로 ${until.startsWith("9999") ? "의견 남기기가 영구 제한" : until + "까지 의견 남기기가 제한"}됐어요.` }, 403);
+  if (until) return json({ error: "ban", msg: en ? `Feedback is ${until.startsWith("9999") ? "permanently blocked" : "blocked until " + until} for breaking the rules.` : `이용 지침 위반으로 ${until.startsWith("9999") ? "의견 남기기가 영구 제한" : until + "까지 의견 남기기가 제한"}됐어요.` }, 403);
   const star = num(b.star, 1, 5), tags = (Array.isArray(b.tags) ? b.tags : []).filter((t) => FB_TAGS.includes(t)).slice(0, 6), text = clip(b.text, 500);
-  if (!text && !tags.length) return json({ error: "short", msg: "태그를 고르거나 한 줄이라도 써 주세요." }, 400);
+  if (!text && !tags.length) return json({ error: "short", msg: en ? "Pick a tag or write at least one line." : "태그를 고르거나 한 줄이라도 써 주세요." }, 400);
   const why = text && badText(text);
-  if (why) return json({ error: "rule", msg: why }, 400);
-  if (!(await hit(env, `${me ? me.h : ik}|sfb`, 10)) || !(await hit(env, `${ip}|sfb`, 20))) return json({ error: "limit", msg: "오늘은 의견을 충분히 보내 주셨어요. 내일 또 부탁해요!" }, 429);
+  if (why) return json({ error: "rule", msg: en ? "No profanity, links, personal info or spam, please." : why }, 400);
+  if (!(await hit(env, `${me ? me.h : ik}|sfb`, 10)) || !(await hit(env, `${ip}|sfb`, 20))) return json({ error: "limit", msg: en ? "You've sent plenty of feedback today. Thanks, see you tomorrow!" : "오늘은 의견을 충분히 보내 주셨어요. 내일 또 부탁해요!" }, 429);
   const x = b.ctx || {};
-  const ctx = { ch: num(x.ch, 0, 9), isle: clip(x.isle, 20), lv: num(x.lv, 0, 200), cls: clip(x.cls, 12), diff: num(x.diff, 0, 2), play: num(x.play, 0, 1e7), dev: x.dev === "pc" ? "pc" : "phone", why: clip(x.why, 20), v: clip(x.v, 16) };
+  const ctx = { ch: num(x.ch, 0, 9), isle: clip(x.isle, 20), lv: num(x.lv, 0, 200), cls: clip(x.cls, 12), diff: num(x.diff, 0, 2), play: num(x.play, 0, 1e7), dev: x.dev === "pc" ? "pc" : "phone", why: clip(x.why, 20), v: clip(x.v, 16), lang: en ? "en" : "ko" };
   const h = me ? me.h : ik, nick = me ? me.nick : "익명";
   const r = await env.DB.prepare("INSERT INTO sky_fb (h, nick, star, tags, text, ctx, ch, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id").bind(h, nick, star, tags.join(","), text, JSON.stringify(ctx), ctx.ch, now()).first();
   let board = null;

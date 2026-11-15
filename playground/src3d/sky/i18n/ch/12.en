@@ -1,0 +1,107 @@
+5770	<div class="sk-bx sk-fit" style="max-width:820px">⟨0⟩<h3>Character <small style="font-size:12px;color:#8a7458">⟨1⟩ Lv ⟨2⟩ · Defense ⟨3⟩ · Life ⟨4⟩</small></h3><div class="sk-two"><div>\n      <div class="sk-doll"><div class="cl">⟨5⟩</div><div class="bd"><span data-po="⟨6⟩"></span><b>⟨7⟩</b><small style="color:#8a7458;font-size:11px">Mender · Lv ⟨8⟩</small></div><div class="cl">⟨9⟩</div><div class="bt">⟨10⟩</div></div>\n      <p class="m sk-hd" style="font-size:11.5px;color:#8a7458;margin:6px 2px">Tap a slot for details. Change gear in the Bag (I).</p></div><div>
+5771	<button class="sk-b" data-a="nosel">View stats</button>
+5772	<h4 style="margin-top:0">Stats <small style="color:#8a7458">Points left ⟨0⟩</small></h4>
+5773	<div class="sk-row"><div class="f"><b>⟨0⟩</b> ⟨1⟩ <small class="sk-hd">(⟨2⟩ + added ⟨3⟩)</small><br class="sk-hd"><small class="sk-hd">⟨4⟩</small></div><button class="sk-b" data-a="st" data-s="⟨5⟩" ⟨6⟩>+1</button></div>
+5774	</div><h4>Current Stats</h4><div class="sk-card">Life ⟨0⟩ · Wind ⟨1⟩ (+⟨2⟩/s)<br>Damage: small foes ⟨3⟩–⟨4⟩ / large foes ⟨5⟩–⟨6⟩ · Damage +⟨7⟩%<br>Defense ⟨8⟩ (chance to be hit ⟨9⟩%)⟨10⟩<br>Attack speed ⟨11⟩/s · Crit ⟨12⟩% · Move ⟨13⟩<br>Sail: glide ⟨14⟩ tiles / ⟨15⟩s⟨16⟩⟨17⟩<br>Murklings defeated ⟨18⟩ · XP ⟨19⟩/⟨20⟩</div>⟨21⟩
+5775	 · Item find +
+5776	 · XP +
+5777	<div class="sk-bx sk-map" style="max-width:900px">⟨0⟩<h3>Map <small style="font-size:12px;color:#8a7458">⟨1⟩</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>Me</span><span><i style="background:#ffd166"></i>Villagers</span><span><i style="background:#9fe4ff"></i>Pinwheel Beacon</span><span><i style="background:#ff6a4a"></i>Quest goal</span><span><i style="background:#c8a070"></i>Bridge</span></div></div>
+5778	<div class="sk-bx sk-fit">⟨0⟩<h3>Skills <small style="font-size:12px;color:#8a7458">Points left <b style="color:#3a7fa8">⟨1⟩</b> · +6% damage per point in the same branch</small></h3><div class="sk-two sk-skw"><div><div style="margin:-2px -3px 4px"><button class="sk-b p" data-a="board" ⟨2⟩>◆ Compass Board (B)⟨3⟩</button>⟨4⟩</div><div class="sk-sk">
+5779	 key</b>
+5780	<div class="sk-ult"><b style="color:#b0702a">Ultimate · ⟨0⟩</b> ⟨1⟩ <small>· ⟨2⟩s</small><span class="sk-hd"><br>⟨3⟩</span></div>
+5781	<small style="color:#3a7fa8">Learned · key 4</small>
+5782	 (auto)</small>
+5783	<div class="sk-card"><b style="font-size:14px">⟨0⟩</b> ⟨1⟩/10⟨2⟩<br>⟨3⟩<br><small style="color:#8a7458">Wind ⟨4⟩ · Cooldown ⟨5⟩s</small></div><div style="margin:4px -3px 0">
+5784	<button class="sk-b g" data-a="learn" ⟨0⟩>Learn +1</button> 
+5785	<button class="sk-b⟨0⟩" data-a="slot" data-i="⟨1⟩">Key ⟨2⟩</button>
+5786	</div><h4>Choose a branch (skill Lv 5)</h4>
+5787	<p class="m" style="font-size:11px">Branches can only be changed by resetting points.</p>
+5788	<h4>Second branch (skill Lv 10)</h4>
+5789	<p style="font-size:12.5px;color:#8a7458;margin:4px 0">Tap a skill on the left to see its details, learn it, put it on a key, or choose a branch here.</p>
+5790	<div class="sk-bx" style="max-width:420px">⟨0⟩<h3>Pinwheel Beacon</h3>⟨1⟩⟨2⟩⟨3⟩</div>
+5791	Fly
+5792	Locked
+5793	<div class="sk-bx" style="max-width:560px">⟨0⟩<h3>Quests</h3>
+5794	(report back)
+5795	<div class="sk-bx" style="max-width:420px;text-align:center">⟨0⟩<h3>Paused</h3><button class="sk-b p" data-a="x">Resume</button><br><button class="sk-b" data-a="quest">Quests</button><br><button class="sk-b" data-a="rank">🏆 Ranking</button><br><button class="sk-b" data-a="mute">⟨1⟩</button><br><button class="sk-b" data-a="lang">🌐 ⟨2⟩</button><br><button class="sk-b" data-a="fb" data-w="menu">💬 Send beta feedback</button><br><button class="sk-b" data-a="help">Controls</button><br><button class="sk-b" data-a="title">Save & back to title</button><br><button class="sk-b" data-a="quit">Save & quit</button><p class="m" style="font-size:11.5px;color:#8a7458;margin-top:8px">Progress is saved on this device every 10 seconds and when you close the window.</p></div>
+5796	Sound on
+5797	Sound off
+5798	<div class="sk-bx" style="max-width:600px">⟨0⟩<h3>Controls</h3><div class="sk-card"><b>PC</b><br>Left mouse: move (hold to follow · click people, beacons or bridges to walk over and interact)<br>Right mouse: attack (hold to keep attacking · click a foe to approach and attack)<br>1–4: skills (toward the mouse · 4 is your ultimate) · Q Dandelion Tea · R Wind Candy · Space sail glide (dodge)<br>I Bag · C Character · S Skills · M Map · B Compass Board · J Quests · F Talk · Esc Pause<br><br><b>Phone</b> (landscape)<br>Drag anywhere on the left to move · big right button to attack (hold to keep going, auto-targets nearby foes) · the buttons around it are your 4 skills (gold rim = ultimate) · Sail, Tea and Candy buttons · tap a person or object to walk to it.<br><br><b>Tips</b>: Shieldkeepers can shove foes off the island's edge (slightly less reward). Rest and come back to find a tailwind (2× XP) waiting.</div></div>
+5799	<button class="sk-b g" data-a="fb" data-w="end">💬 How was this chapter?</button> <button class="sk-b p" data-a="x">
+5800	Stat points
+5801	Skill points
+5802	Really reset? Tap once more
+5803	 </span>Reset (
+5804	free once
+5805	Not enough gold
+5806	Stat points: 
+5807	 refunded
+5808	Skill points: 
+5809	 refunded. You can choose branches again too
+5810	<small style="position:relative;font-size:10px;color:#a8803a;font-weight:800">Wind Eye</small>
+5811	None yet
+5812	<div class="⟨0⟩"><b style="color:⟨1⟩">⟨2⟩ chain of 3</b>: ⟨3⟩⟨4⟩</div>
+5813	<div class="⟨0⟩"><b>Three Winds</b> (chain all three colors): ⟨1⟩⟨2⟩</div>
+5814	<button class="sk-b" data-a="merge" data-k="⟨0⟩">⟨1⟩ ⟨2⟩ ×3 → ⟨3⟩</button>
+5815	<div class="sk-bx" style="max-width:820px"><button class="sk-x" data-a="x">✕</button><h3>Compass Board <small style="font-size:12px;color:#8a7458">Socket wind shards to gain power · Nestkeepers and chiefs drop shards</small></h3><div class="sk-two"><div><div class="sk-hexw"><div class="sk-hex">⟨0⟩</div></div>\n    <h4>Shard Pouch <small style="color:#8a7458">⟨1⟩/⟨2⟩ · tap one, then tap a board slot to socket it</small></h4><div class="sk-tray">⟨3⟩</div>⟨4⟩</div><div>\n    ⟨5⟩\n    <h4>Current Bonuses</h4><div class="sk-card">⟨6⟩</div><h4>Chain Bonuses</h4><div class="sk-card">⟨7⟩</div>\n    <button class="sk-b" data-a="skillp">← Skills</button></div></div>⟨8⟩</div>
+5816	<small style="color:#8a7458;padding:8px">Empty</small>
+5817	<h4>Merge</h4>
+5818	<div class="sk-card"><div class="n" style="color:⟨0⟩">⟨1⟩</div><div class="m">⟨2⟩</div>⟨3⟩<div class="m" style="font-size:11px">+25% for each same-color neighbor; ×1.5 in the center Wind Eye</div>⟨4⟩</div>
+5819	 (base)</div>
+5820	<button class="sk-b" data-a="unhx">Return to pouch</button>
+5821	<p class="m" style="font-size:12.5px;color:#8a7458">Shards get stronger next to the same color. Chain 3 of one color for a bonus; chain all three colors to activate "Three Winds". Swap them freely anytime.</p>
+5822	<h4>Eolle's Wares <small style="color:#8a7458">(tap to buy · stock changes at midnight)</small></h4>⟨0⟩<div class="sk-grid">⟨1⟩</div>
+5823	<p class="m" style="font-size:11.5px;color:#b0702a">Today only: 
+5824	<button class="sk-b g" data-a="buy">Buy ⟨0⟩G</button>
+5825	<h4>Bulk Sell</h4><button class="sk-b" data-a="selljunk">Sell ⟨0⟩ common gear (+⟨1⟩G)</button>
+5826	<h4>Exchange 5raksil Coins</h4><p class="m" style="font-size:11.5px;color:#8a7458">1 coin = 200G, up to 5 per day (owned ⟨0⟩, today ⟨1⟩/5)</p><button class="sk-b" data-a="coin" ⟨2⟩>🪙 1 → 200G</button>
+5827	<button class="sk-b p" data-a="accept" data-q="⟨0⟩">I'll do it</button>
+5828	<button class="sk-b g" data-a="finish" data-q="⟨0⟩">Claim reward</button>
+5829	You defeated the chief? Touch the Pinwheel Beacon on the hill. That's how the wind returns to the island.
+5830	Nestkeepers in the fields and marsh drop Nest Shells. Gather three and go to the broken bridge east of Pinwheel Hill.
+5831	You defeated the Great Heron?! Touch the Pinwheel Beacon on Nest Isle. Let the wind come back.
+5832	Nest Isle is at the very end of Reed Marsh. When it's enraged, feathers rain from the sky, so avoid the red spots.
+5833	Dandelion Isle isn't sinking anymore. Mender, thank you, truly.
+5834	A Windway to the Rusty Windmill Isles has opened at the Pinwheel Beacon. Cross over when you're ready.
+5835	The field murklings carry off the planks. The bridge is past the fields east of the village, at the edge of the topmost island.
+5836	They say the great wind used to circle the world, breathing life into every island. With it stopped, even the floatstones are falling asleep.
+5837	Oh, you brought three whetstones!
+5838	<button class="sk-b g" data-a="finish" data-q="q4">Hand over whetstones</button>
+5839	Enchanting or rerolling, leave it to me. Weapons are safe up to +6, armor up to +4.
+5840	Welcome. The bridges broke, so I'm stuck on this island too. Need anything?
+5841	<div class="sk-bx sk-talk"><button class="sk-x" data-a="x">✕</button><div class="who">⟨0⟩</div>⟨1⟩<div>⟨2⟩<button class="sk-b" data-a="x">Close</button></div>⟨3⟩</div>
+5842	<div class="sk-bx"><button class="sk-x" data-a="x">✕</button><h3>⟨0⟩'s Forge <small style="font-size:12px;color:#8a7458">Whetstones ⟨1⟩ · Glue ⟨2⟩ · Blessed whetstones ⟨3⟩ · Blessed glue ⟨4⟩ · ⟨5⟩G</small></h3><div class="sk-two"><div><h4>Equipped</h4><div class="sk-eq">⟨6⟩</div><h4>Bag</h4><div class="sk-grid">⟨7⟩</div></div><div>
+5843	Blacksmith 
+5844	<h4>Enchant (+⟨0⟩ → +⟨1⟩) · Success ⟨2⟩%⟨3⟩</h4><button class="sk-b p" data-a="ench" data-m="⟨4⟩" ⟨5⟩>Use ⟨6⟩</button><button class="sk-b g" data-a="ench" data-m="⟨7⟩" ⟨8⟩>Use ⟨9⟩</button>
+5845	 · Safe
+5846	 · Drops one step on failure
+5847	<p class="m" style="font-size:12px">Accessories can't be enchanted.</p>
+5848	<h4>Salvage</h4><p class="m" style="font-size:11.5px">Break this gear into ⟨0⟩ ×⟨1⟩. Can't be undone.</p><button class="sk-b" data-a="salv">Salvage</button>
+5849	<h4>Reroll an Option</h4><p class="m" style="font-size:11.5px">Rerolls one random option. ⟨0⟩G⟨1⟩</p><button class="sk-b" data-a="reroll" ⟨2⟩>Reroll</button>
+5850	<p style="font-size:12.5px;color:#8a7458">Pick gear to enchant or reroll.<br>Weapons up to +6 and armor up to +4 always succeed; past that, failure drops one step. Blessed gear blocks one failure.</p>
+5851	<div class="sk-bx sk-talk" style="text-align:center"><h3>End of Chapter 1: "Dandelion Isle"</h3><p>The wind trapped under the Great Heron's wings broke free and seeped down beneath the island.</p><p>Dandelion Isle sinks no more. But the reason the great wind stopped still lies beyond — in the Rusty Windmill Isles.</p><p style="font-size:13px;color:#8a7458">⟨0⟩ Lv ⟨1⟩ · Murklings defeated ⟨2⟩ · Played ⟨3⟩ min<br>Cross to Chapter 2, the Rusty Windmill Isles, from the "Windways" at the Pinwheel Beacon (travel).</p><button class="sk-b p" data-a="x">Keep exploring</button></div>
+5852	<div class="sk-bx sk-talk" style="text-align:center"><h3>End of Chapter 1, Part 1: "Dandelion Isle"</h3><p>The pinwheel began to turn again. Very faintly, but it's definitely wind.</p><p>But far off, over Nest Isle, the shadow of huge wings cut through the clouds…</p><p style="font-size:13px;color:#8a7458">⟨0⟩ Lv ⟨1⟩ · Murklings defeated ⟨2⟩ · Played ⟨3⟩ min<br>Talk to Chief Deulme again to continue Chapter 1, Part 2 (Reed Marsh and Nest Isle).</p><button class="sk-b p" data-a="x">Keep exploring</button></div>
+5853	G received
+5854	Purified
+5855	Lv 5! You can choose a branch
+5856	Lv 10! You can choose a second branch
+5857	" branch chosen
+5858	" accepted
+5859	 items identified
+5860	Nothing changed
+5861	New option: 
+5862	New option!
+5863	 created
+5864	Broken bridge
+5865	★ Today's island
+5866	Me
+5867	" complete! XP 
+5868	<div class="sk-bx sk-title"><button class="sk-x" data-a="quit" aria-label="Quit">✕</button><div class="t">Broken Sky</div><div class="s">Beta · 7 chapters</div><p style="font-size:13px;line-height:1.7;color:#5a4a36;margin:4px 0">⟨0⟩</p><div class="sk-cls">⟨1⟩</div><div class="sk-cdesc"><b>⟨2⟩</b> · ⟨3⟩</div>\n    ⟨4⟩\n    <p style="font-size:11px;color:#8a7458;margin:8px 0 0">⟨5⟩⟨6⟩</p></div>
+5869	New Mender
+5870	<button class="sk-b p" data-a="start" data-n="0">Continue (Lv ⟨0⟩)</button><button class="sk-b" data-a="start" data-n="1">New game (erases save)</button>
+5871	<button class="sk-b p" data-a="start" data-n="1">Start with this class</button>
+5872	Progress is saved on this device and to your 5raksil profile (recovery code). Use the same recovery code to continue on other devices.
+5873	Progress is saved on this device. Create a 5raksil profile to continue on other devices.
+5874	 · Loaded your save from another device
+5875	Really delete? Tap once more to delete
+5876	Loading…

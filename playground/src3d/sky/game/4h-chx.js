@@ -107,7 +107,7 @@ for (const ch of [4, 5, 6, 7]) { const C = CHX[ch], f = 1 + .22 * (ch - 3), g = 
 const CXM = ch => CHX[ch] && CHX[ch].m;
 function qAvailX(id) { const q = G.P.q, ch = G.Wd.ch, C = CHX[ch]; if (!C || qCh(id) !== ch) return false; const I = C.qid, i = I.indexOf(id); if (i === 0 || i === 2 || i === 3) return true; if (i === 1) return q[I[0]] && q[I[0]].s === 3; if (i === 4) return q[I[1]] && q[I[1]].s === 3; return false; }
 function talkX(id, offer, finish) {
-  const P = G.P, ch = G.Wd.ch, C = CHX[ch], I = C.qid, q = qid => P.q[qid], btns = []; let lines = null; const wp = 'wp_' + C.hill;
+  const P = G.P, ch = G.Wd.ch, C = CHX[ch], I = C.qid, q = qid => P.q[qid], btns = []; let lines = null; const wp = wpk(C.hill);
   if (ch === 8) { lines = { chief: ['떠도는 섬엔 의뢰가 없어. 저 끝 ' + C.hill + '의 우두머리만 쓰러뜨리면 보물이 쏟아지지.'], sage: ['섬들이 다시 떠오르면서 길 잃은 섬도 생겼대. 이런 섬엔 오래 머물지 마.'], smith: ['떠도는 섬에서도 망치는 들고 다니지.'], merchant: ['어디든 따라가는 게 내 장사야!'] }[id];
     if (id === 'smith') btns.push(`<button class="sk-b p" data-a="smith">대장간 열기</button>`); if (id === 'merchant') btns.push(`<button class="sk-b p" data-a="shop">사고팔기</button>`); return { lines, btns }; }
   if (id === 'chief') {
@@ -123,7 +123,7 @@ function talkX(id, offer, finish) {
   return { lines, btns };
 }
 function finishX(id) { const P = G.P, ch = qCh(id), C = CHX[ch], i = C.qid.indexOf(id); if (i === 3 && !useGood(C.sg[0], 5)) return false;
-  const m = Math.pow(1.3, ch - 4), R = [[5000, 1500], [6500, 2000], [6000, 1800], [3500, 1200], [11000, 5000]][i].map(v => Math.round(v * m)); P.q[id].s = 3; gainXp(R[0]); P.gold += R[1];
+  const m = Math.pow(1.3, ch - 4), R = [[5000, 1500], [6500, 2000], [6000, 1800], [3500, 1200], [11000, 5000]][i].map(v => Math.round(v * m)); P.q[id].s = 3; gainXp(R[0]); P.gold += R[1]; if (id === 'q37') skyRankEnd(P.diff || 0);
   const L = C.lv[3][1] + 2, c = 'c' + ch;
   if (i === 0) addInv(makeItem(c + 'amu2', 2, L, { id: 1, st: 0 })); if (i === 1) addInv(makeItem(c + 'boots2', 2, L + 1, { id: 1, st: 1 })); if (i === 2) addInv(makeItem(c + 'ring4', 2, L + 1, { id: 1, st: 0 }));
   if (i === 3) { addInv(goods('bhone')); addInv(goods('bglue')); } if (i === 4) { if (ch === 7) addInv(goods('chart', 2)); addInv(makeItem(c + 'sail4', 2, C.blv, { id: 1, st: 1 })); addInv(goods('bhone', 2)); addInv(goods('bglue', 2)); }
@@ -152,7 +152,7 @@ function chXBossAI(m, dt, d, dx, dy) { const ch = m.D.chboss, C = CHX[ch], B = C
   const pat = Object.assign({}, B.pat, rage ? B.rage : {}), T = m.T || (m.T = {}); for (const k in pat) if (pat[k]) T[k] = (T[k] ?? pat[k] * .5) - dt * sp2;
   const go = k => pat[k] && T[k] <= 0 && (T[k] = pat[k] * rnd(.85, 1.15), 1);
   if (go('summon')) { const ng = G.mobs.filter(o => o.t === B.sum && !o.dead && hyp(o.x - m.x, o.y - m.y) < 9).length; if (ng < 5) for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, x2 = m.x + Math.cos(a) * 2.2, y2 = m.y + Math.sin(a) * 2.2; if (walk(G.Wd, x2, y2)) { const n = mkMob(B.sum, x2, y2, C.hlv[1]); n.st = 'chase'; G.mobs.push(n); } }
-    G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 2.4, t: 0, life: .5, c: B.col }); say(C.mn.boss + '이(가) ' + MOBDEF[B.sum].n + '을(를) 불러냈어요!', B.col, 1); }
+    G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 2.4, t: 0, life: .5, c: B.col }); say(`${C.mn.boss}이(가) ${MOBDEF[B.sum].n}을(를) 불러냈어요!`, B.col, 1); }
   if (d < 10 && go('cage')) { m.an = 'atk'; m.at = 0; m.hitDone = 1; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; shipBlast(m, P.x + Math.cos(a) * 2.3, P.y + Math.sin(a) * 2.3, 1.05, 1.1, .8, B.col); } say('둘레가 막혀요! 한가운데에 서 있어요', B.col, 1); return; }
   if (go('blades')) { m.ang = (m.ang || 0) + .4; for (let i = 0; i < 8; i++) { const a = m.ang + i / 8 * TAU; G.areas.push({ k: 'blade', x: m.x, y: m.y, vx: Math.cos(a) * 4.4, vy: Math.sin(a) * 4.4, t: 0, life: 2.3, dmg: rnd(m.dmg[0], m.dmg[1]) * .5, src: m }); } sfx('gust'); }
   if (d < 9 && go('volley')) { m.an = 'atk'; m.at = 0; m.hitDone = 1; sfx('cone'); const n = rage ? 7 : 5; for (let i = 0; i < n; i++) { const a = Math.random() * TAU, r = i === 0 ? 0 : rnd(1.2, 3); shipBlast(m, P.x + Math.cos(a) * r, P.y + Math.sin(a) * r, .95, 1 + i * .08, .6, B.col); } return; }
@@ -166,7 +166,7 @@ function chXBossAI(m, dt, d, dx, dy) { const ch = m.D.chboss, C = CHX[ch], B = C
 function chXGoals(Wd, P, goals) { if (Wd.ch === 8) { if (!P.roam.boss) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); } return; } const C = CHX[Wd.ch], I = C.qid, q = P.q, bq = Wd.bridges[Wd.bq];
   if (q[I[1]] && q[I[1]].s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q[I[4]] && q[I[4]].s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
-  if (q[I[4]] && q[I[4]].s === 2 && !P.flags['wp_' + C.hill]) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
+  if (q[I[4]] && q[I[4]].s === 2 && !P.flags[wpk(C.hill)]) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
 function endHtmlX() { const P = G.P, C = CHX[G.Wd.ch], last = G.Wd.ch === 7;
   return `<div class="sk-bx sk-talk" style="text-align:center"><h3>${C.end[0]}</h3><p>${C.end[1]}</p><p>${C.end[2]}</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>${last ? '끝까지 함께해 줘서 고마워요! 이제 바람개비 표지에서 난이도 「먹구름」과 떠도는 섬(항로 지도 2장을 드렸어요)을 열 수 있어요.' : '바람개비 표지(이동)의 「바람길」에서 ' + (G.Wd.ch + 1) + '장 ' + CHX[G.Wd.ch + 1].n + '(으)로 건너갈 수 있어요.'}</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
 // 바람길 줄: 앞 장 보스 의뢰를 끝내면 다음 장이 열림

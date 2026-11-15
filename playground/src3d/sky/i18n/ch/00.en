@@ -1,0 +1,110 @@
+0	Shieldkeeper
+1	A front-line fighter who blocks with spear and shield, then strikes back. Great at shoving foes off the island's edge.
+2	Wandering Blade
+3	Slashes fast with twin blades, slips past attacks, then counters.
+4	Windcaller
+5	A caster of wind and lightning. Strikes from afar and shields with clouds.
+6	Trapper
+7	Fights at range with crossbow and traps. Trapped foes can't move.
+8	Bellringer
+9	Rings bells with a hammer to spread shockwaves. Calls echo clones to fight alongside.
+10	STR
+11	Melee damage +1%, needed for heavy gear
+12	AGI
+13	Attack speed, crit, evasion (Trapper: damage +1%)
+14	VIT
+15	Life +4, status resistance
+16	BRE
+17	Wind +2 and regen, magic damage +1%
+18	Pierce
+19	A long thrust that pierces every foe in a line.
+20	Rapid Thrust
+21	Thrusts three times fast (70% each).
+22	Far Thrust
+23	Range +50%, knocks hit foes far back.
+24	Sweep
+25	Swings the spear wide, hitting every foe around you.
+26	Whirling Spear
+27	Spins for 1.5s, hitting many times.
+28	Sweeping Shove
+29	Knocks hit foes far away. Near the island's edge…
+30	Shield Bash
+31	Bashes foes in front with your shield and stuns them briefly.
+32	Shield Charge
+33	Charges three tiles, shoving foes you hit.
+34	Ringing Shield
+35	Stun 2s, wider area.
+36	Stand Firm
+37	Take 30% less damage for 6s (+2% per level).
+38	Retaliate
+39	Returns 40% of damage taken while standing firm.
+40	Solid Ground
+41	Can't be knocked back, and life regenerates.
+42	War Cry
+43	Draws nearby foes' attention and raises your defense.
+44	Intimidate
+45	Foes flee for 2s.
+46	Courage
+47	Attack +25% for 8s.
+48	Wind Banner
+49	Plant a banner; wind and life regenerate there for 8s.
+50	Gust Banner
+51	Pushes nearby foes away every 2s.
+52	Haven Banner
+53	Double healing.
+54	Gust
+55	A gust that blows foes back.
+56	Cutting Wind
+57	Damage +40%, hit foes bleed for 3s.
+58	Great Gust
+59	Much larger area and knockback.
+60	Whirlwind
+61	A slow whirlwind that pulls foes in and keeps hitting them.
+62	Twin Whirlwind
+63	Splits into two.
+64	Lingering Whirlwind
+65	Stays in place for 3s.
+66	Lightning Bolt
+67	A fast bolt of lightning.
+68	Forked Lightning
+69	Splits three ways (70% each).
+70	Piercing Lightning
+71	Passes through foes.
+72	Chain Lightning
+73	Lightning that jumps between nearby foes (4 times).
+74	Long Chain
+75	Jumps up to 7 times.
+76	Numbing Lightning
+77	30% chance to stun hit foes.
+78	Cloud Shield
+79	Wraps you in cloud that absorbs damage (scales with BRE).
+80	Frost Cloud
+81	Foes that hit you are slowed.
+82	Rain Cloud
+83	Life regenerates while it lasts.
+84	Fog Veil
+85	Spreads fog; foes inside slow down and often miss.
+86	Thick Fog
+87	Lasts 10s.
+88	Storm Cloud
+89	Strikes foes inside with lightning every second.
+90	Rapid Slash
+91	Slashes ahead three times fast (70% each).
+92	Fourth Slash
+93	One more big slash at the end (200%).
+94	Rending Slash
+95	Wider area, hit foes bleed for 3s.
+96	Blade Wind Spin
+97	Spin for 1.2s, slashing all around. You can move while spinning.
+98	Long Spin
+99	Spins for 2s.
+100	Pulling Blade Wind
+101	Pulls nearby foes inward.
+102	Wind Cutter
+103	Dash forward, slashing every foe in your path. You can't be hit while dashing.
+104	Return Cut
+105	Shortly after, dash back to where you started and slash again.
+106	Afterimage
+107	Blade wind lingers on your path for 2s.
+108	Parry
+109	Take a stance for 1.2s. If hit, deflect the damage and counter all around (250%).

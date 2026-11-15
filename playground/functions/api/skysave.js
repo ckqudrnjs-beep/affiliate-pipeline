@@ -4,6 +4,7 @@
 // 기록은 게임 진행(레벨·장비·퀘스트)만. 현금 가치 없음(거래·뽑기 없음). 복구 코드가 있는 프로필만 쓸 수 있다.
 import { normCode } from "./profile.js";
 import { banUntil } from "./skyfb.js";
+import { rankUpsert } from "./skyrank.js";
 
 const CLS = ["warden", "drifter", "windcaller", "trapper", "ringer"], MAX = 60000;
 const LIMIT = { get: 300, put: 1500, bad: 10 }; // IP당 하루 횟수(put 은 플레이 중 1분마다)
@@ -58,5 +59,6 @@ export async function onRequestPost({ request, env }) {
   if (row && row.t > t) return json({ error: "old", data: JSON.parse(row.data), t: row.t }, 409);
   if (row && row.data === s) return json({ t });
   await env.DB.prepare("INSERT INTO sky_saves (h, cls, data, t, updated) VALUES (?, ?, ?, ?, ?) ON CONFLICT(h, cls) DO UPDATE SET data = excluded.data, t = excluded.t, updated = excluded.updated").bind(h, cls, s, t, kst()).run();
+  await rankUpsert(env, h, d);
   return json({ t });
 }
