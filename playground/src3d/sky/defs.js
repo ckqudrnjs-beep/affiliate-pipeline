@@ -31,9 +31,10 @@ export const NPCS = { // 마을 사람: 정면(아래쪽) 1방향, 대기 2장
 export const MFRAMES = [['idle', 0], ['idle', .5], ['move', 0], ['move', .25], ['move', .5], ['move', .75], ['atk', 0], ['atk', .5], ['atk', 1], ['hurt', 0], ['die', 0], ['die', 1]];
 export const MOBS = {
   fluff: { model: 'fluff', cell: [96, 96, 48, 84] },
-  fluffking: { model: 'fluff', crown: 1, col: 0xd9cfe8, feet: 0x7a6a98, scale: 2.4, cell: [224, 224, 112, 200] },
+  fluffking: { model: 'fluff', crown: 1, col: 0x4e4460, tip: 0x2e2638, feet: 0x1e1820, eye: 0xff3a2a, scale: 2.4, cell: [240, 260, 120, 236] },
   seed: { model: 'seed', cell: [96, 104, 48, 92] },
   bird: { model: 'bird', cell: [104, 132, 52, 120] },
+  keeper: { model: 'seed', keeper: 1, scale: 1.9, cell: [196, 212, 98, 192] },
 };
 // 소품: KayKit Medieval Hexagon (CC0). s = 크기 배율, foot = 바닥 차지 반경(칸)
 export const PROPS = [

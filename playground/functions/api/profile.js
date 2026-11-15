@@ -111,7 +111,7 @@ export async function onRequestPost({ request, env }) {
   if (a === "tester") { // 테스터 전용 체험판 입장 확인(관리자 페이지에서 테스터로 지정한 프로필만)
     try { const t = await env.DB.prepare("SELECT 1 AS ok FROM testers WHERE h = ?").bind(h).first(); return json({ tester: !!t }); } catch { return json({ tester: false }); }
   }
-  if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); try { await env.DB.prepare("DELETE FROM pscores WHERE h = ?").bind(h).run(); } catch { /* 표 없음 */ } return json({ ok: true }); }
+  if (a === "del") { await env.DB.prepare("DELETE FROM profiles WHERE h = ?").bind(h).run(); try { await env.DB.prepare("DELETE FROM pscores WHERE h = ?").bind(h).run(); } catch { /* 표 없음 */ } try { await env.DB.prepare("DELETE FROM sky_saves WHERE h = ?").bind(h).run(); } catch { /* 표 없음 */ } return json({ ok: true }); }
   // put
   if (!profileNickOk(b.nick)) return json({ error: "nick" }, 400);
   const data = clean(b.data); if (!data) return json({ error: "bad" }, 400);

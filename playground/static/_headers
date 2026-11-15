@@ -9,3 +9,7 @@
 /admin*
   X-Robots-Tag: noindex, nofollow
   Cache-Control: no-store
+
+# 끊어진 하늘 그림: 주소에 내용 해시(?v=)가 붙어 바뀌면 주소도 바뀜 → 오래 캐시해 폰 재방문 로딩을 줄인다
+/img/sky/*
+  Cache-Control: public, max-age=31536000, immutable

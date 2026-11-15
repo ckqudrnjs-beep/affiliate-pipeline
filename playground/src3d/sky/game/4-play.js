@@ -10,23 +10,38 @@ const dirW = d => scr2w(DIRV[d][0] * TW, DIRV[d][1] * TH * 2); // 방향 d 의 �
 function newSave(cls) {
   const seed = (Math.random() * 1e9) | 0, it = id => makeItem(id, 0, 1, { id: 1, st: 0 });
   const eq = cls === 'warden' ? { weapon: it('spear0'), off: it('shield0'), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') } : { weapon: it('staff0'), off: it('bell0'), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
-  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [cls === 'warden' ? 'pierce' : 'gust']: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
+  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [cls === 'warden' ? 'pierce' : 'gust']: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
 }
 function startGame(S) {
   const Wd = makeWorld(S.seed); Wd.props = placeProps(Wd, PM);
   if (S.flags.bridge) repairBridge(Wd, Wd.bq);
   for (const w of Wd.wps) if (S.flags['wp_' + w.n]) w.on = 1;
+  if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = [];
   const T = Wd.islands[Wd.town];
   const P = { ...S, x: T.cx + 1.5, y: T.cy + 2.5, r: .28, dir: 2, an: 'idle', at: 0, atkT: 0, cds: {}, buf: {}, hp: null, wind: null, dodge: 0, dcd: 0, inv0: 0, tgt: null, path: null, dead: 0, combo: 0 };
   // 순풍: 쉬는 동안 쌓이는 경험치 2배 몫(최대 다음 레벨 필요량의 절반)
   const away = Math.max(0, Date.now() - (S.t || Date.now())) / 36e5; P.rested = Math.min(xpNeed(P.lv) * .5, (S.rested || 0) + away * xpNeed(P.lv) * .06);
   G = { Wd, P, mobs: [], proj: [], fx: [], txt: [], drops: [], areas: [], parts: [], t: 0, cam: [P.x, P.y], shake: 0, packs: [], msg: [], hitstop: 0, flash: 0, cut: null };
   calc(P); P.hp = P.mhp; P.wind = P.mwind; autoSlots(P);
-  spawnAll(); if (!S.q.q1) setTimeout(() => talk('chief', true), 600);
+  spawnAll(); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'kills', 'rested', 'play', 'codex']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
-  try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} }
+function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
+  try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
+/* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
+const pcode = () => { try { return localStorage.getItem('nr_pcode') || ''; } catch (e) { return ''; } };
+let CLOUD = { last: 0, pend: null, busy: 0, ok: null };
+function cloudPut(S, keep) { const code = pcode(); if (!code) return; CLOUD.busy = 1; CLOUD.last = Date.now();
+  return fetch('/api/skysave', { method: 'POST', keepalive: !!keep, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ a: 'put', code, cls: S.cls, data: S }) })
+    .then(r => r.json().then(j => { CLOUD.ok = r.ok || r.status === 409; if (r.status === 409 && j.data) { try { localStorage.setItem('sky_' + S.cls, JSON.stringify(j.data)); } catch (e) {} } })).catch(() => { CLOUD.ok = false; }).finally(() => { CLOUD.busy = 0; }); }
+function cloudQueue(S, now) { if (!pcode()) return; CLOUD.pend = S; if (now || Date.now() - CLOUD.last > 60000) { CLOUD.pend = null; cloudPut(S, now); } }
+setInterval(() => { if (CLOUD.pend && !CLOUD.busy && Date.now() - CLOUD.last > 60000) { const S = CLOUD.pend; CLOUD.pend = null; cloudPut(S); } }, 15000);
+function cloudFlush() { if (CLOUD.pend) { const S = CLOUD.pend; CLOUD.pend = null; cloudPut(S, 1); } }
+// 처음 화면: 서버 기록이 이 기기 것보다 나중이면 가져온다
+function cloudPull() { const code = pcode(); if (!code) return Promise.resolve(null);
+  return fetch('/api/skysave', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ a: 'get', code }) }).then(r => r.ok ? r.json() : null).then(j => { if (!j || !j.saves) return null; let n = 0;
+    for (const cls in j.saves) { const loc = loadSave(cls), sv = j.saves[cls].data; if (sv && sv.v === 1 && (!loc || (sv.t || 0) > (loc.t || 0) + 1000)) { try { localStorage.setItem('sky_' + cls, JSON.stringify(sv)); n++; } catch (e) {} } }
+    CLOUD.ok = true; return n; }).catch(() => null); }
 function loadSave(cls) { try { const s = JSON.parse(localStorage.getItem('sky_' + cls) || 'null'); if (s && s.v === 1) { UID = Math.max(UID, s.uid || 1); return s; } } catch (e) {} return null; }
 
 /* ---------- 몹 ---------- */
@@ -41,19 +56,22 @@ function spawnPack(pk) {
   for (let tries = 0; tries < 30 && pk.mobs.length < pk.n; tries++) {
     const a = R() * TAU, d = R() * 1.8, x = pk.x + Math.cos(a) * d, y = pk.y + Math.sin(a) * d;
     if (!walk(G.Wd, x, y)) continue; const elite = pk.elite && pk.mobs.length === 0 ? pk.elite : 0;
-    const m = mkMob(pk.kinds[pk.mobs.length % pk.kinds.length], x, y, ri(pk.lv[0], pk.lv[1]), elite); m.pk = pk; pk.mobs.push(m); G.mobs.push(m);
+    const i = pk.mobs.length, lead = pk.lead && i === 0, m = lead ? mkMob(pk.lead, pk.x, pk.y, pk.lv[1] + 1, 0) : mkMob(pk.kinds[(i - (pk.lead ? 1 : 0)) % pk.kinds.length], x, y, ri(pk.lv[0], pk.lv[1]), elite && !pk.lead ? elite : (pk.lead && i === 1 ? pk.elite : 0)); m.pk = pk; pk.mobs.push(m); G.mobs.push(m);
   }
-  pk.dead = 0; pk.clear = 0;
+  pk.dead = 0; pk.clear = 0; pk.bl = pk.bl || 0;
 }
 function spawnAll() {
   const Wd = G.Wd; G.mobs = []; G.packs = [];
   Wd.fi.forEach((k, i) => { const s = Wd.islands[k], n = 3 + (i >= 2 ? 1 : 0);
     for (let j = 0; j < n; j++) { const a = j / n * TAU + i, d = s.r * .5; let x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d; if (!walk(Wd, x, y)) { x = s.cx; y = s.cy; }
       const kind = pick([['fluff'], ['fluff'], ['seed', 'fluff'], ['bird'], ['seed']]);
-      const pk = { isl: k, x, y, lv: ISL_LV[i], kinds: kind, n: kind[0] === 'fluff' ? ri(4, 6) : kind[0] === 'bird' ? 3 : ri(2, 4), elite: Math.random() < .22 ? ri(1, ELITE.length) : 0 };
+      // 섬마다 한 무리는 둥지: 둥지지기 + 무리, 땅이 시들고 어두워짐(마을 옆 첫 섬은 빼고)
+      const nest = j === 0 && i >= 1;
+      const pk = nest ? { isl: k, x, y, lv: ISL_LV[i], kinds: ['fluff', 'seed', 'fluff'], n: 6, lead: 'keeper', nest: 1, elite: ri(1, ELITE.length) }
+        : { isl: k, x, y, lv: ISL_LV[i], kinds: kind, n: kind[0] === 'fluff' ? ri(4, 6) : kind[0] === 'bird' ? 3 : ri(2, 4), elite: Math.random() < .22 ? ri(1, ELITE.length) : 0 };
       G.packs.push(pk); spawnPack(pk); } });
   const H = Wd.islands[Wd.hill];
-  if (!G.P.flags.boss) { const pk = { isl: Wd.hill, x: H.cx + .5, y: H.cy - .5, lv: [9, 9], kinds: ['fluffking'], n: 1, boss: 1 }; G.packs.push(pk); spawnPack(pk); }
+  if (!G.P.flags.boss) { const pk = { isl: Wd.hill, x: H.cx + .5, y: H.cy - .5, lv: [9, 9], kinds: ['fluffking'], n: 1, boss: 1, nest: 1 }; G.packs.push(pk); spawnPack(pk); }
   const pk2 = { isl: Wd.hill, x: H.cx - 3, y: H.cy + 3, lv: [7, 8], kinds: ['fluff', 'seed'], n: 4 }; G.packs.push(pk2); spawnPack(pk2);
 }
 
@@ -62,7 +80,7 @@ function canAt(e, x, y) { if (e.D && e.D.fly) { const X = Math.floor(x), Y = Mat
 function move(e, dx, dy) { let moved = 0; if (dx && canAt(e, e.x + dx, e.y)) { e.x += dx; moved = 1; } if (dy && canAt(e, e.x, e.y + dy)) { e.y += dy; moved = 1; } return moved; }
 // 밀려남: 빈 하늘로 밀리면 떨어진다
 function knock(m, dx, dy, f) {
-  if (m.D.boss || m.kbimm || m.fl) return; const l = hyp(dx, dy) || 1; m.kx += dx / l * f; m.ky += dy / l * f;
+  if (m.D.big || m.kbimm || m.fl) return; const l = hyp(dx, dy) || 1; m.kx += dx / l * f; m.ky += dy / l * f;
 }
 function physKnock(m, dt) {
   if (!m.kx && !m.ky) return; const nx = m.x + m.kx * dt, ny = m.y + m.ky * dt;
@@ -82,9 +100,9 @@ function hitMob(m, dmg, crit, o) {
   if (o.kb) knock(m, m.x - (o.fx ?? G.P.x), m.y - (o.fy ?? G.P.y), o.kb * G.P.kbm);
   if (o.stun) m.stun = Math.max(m.stun, o.stun); if (o.slow) m.slow = Math.max(m.slow, o.slow); if (o.bleed) m.bleed = { t: 3, d: o.bleed };
   if (m.st === 'idle') m.st = 'chase';
-  if (!m.D.boss && m.stun <= 0 && Math.random() < .5) { m.an = 'hurt'; m.at = 0; }
+  if (!m.D.big && m.stun <= 0 && Math.random() < .5) { m.an = 'hurt'; m.at = 0; }
   // 맞는 느낌: 불꽃 튐 + 고리 + 아주 짧은 멈춤
-  const col = o.col || (CLASSES[G.P.cls].melee ? '#fff1c8' : '#dff4ff'), hx = m.x - .15, hy = m.y - .15, hz = (m.D.boss ? 60 : 22);
+  const col = o.col || (CLASSES[G.P.cls].melee ? '#fff1c8' : '#dff4ff'), hx = m.x - .15, hy = m.y - .15, hz = (m.D.boss ? 60 : m.D.mini ? 44 : 22);
   if (!o.tick) { const n = crit ? 18 : 10, dx = m.x - (o.fx ?? G.P.x), dy = m.y - (o.fy ?? G.P.y), dl = hyp(dx, dy) || 1;
     for (let i = 0; i < n; i++) { const a = Math.atan2(dy, dx) + rnd(-1.2, 1.2), sp = rnd(2.5, crit ? 8 : 5.5); G.parts.push({ k: 'spark', x: hx, y: hy, z: hz + rnd(-6, 6), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(40, 220), t: 0, life: rnd(.18, .38), c: i % 3 ? col : '#ffffff', s: crit ? 3.2 : 2.4 }); }
     G.fx.push({ k: 'hit', x: hx, y: hy, z: hz, t: 0, life: crit ? .32 : .2, c: crit ? '#ffd166' : col, big: crit });
@@ -102,30 +120,44 @@ function killMob(m, fell) {
   if (m.t === 'fluff') qAdd('q2', 1);
   if (D.boss) { P.flags.boss = 1; qSet('q3', 2); G.shake = 10; say('우두머리 보풀이 흩어졌어요! 언덕의 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
   if (fell) { G.txt.push({ x: m.x, y: m.y, z: 1, t: 0, s: '떨어짐!', c: '#9fe4ff' }); sfx('fall'); }
-  else burst(m.x, m.y, m.t, D.boss ? 3 : m.elite ? 1.6 : 1);
+  else burst(m.x, m.y, m.t, D.boss ? 3 : D.mini ? 2.2 : m.elite ? 1.6 : 1);
+  if (D.mini && m.pk) cleanse(m.pk);
   drops(m, fell);
   if (m.pk) { m.pk.dead++; if (m.pk.dead >= m.pk.mobs.length) { m.pk.clear = G.t; } }
 }
 function drops(m, fell) {
   const P = G.P, D = m.D, put = it => { const a = Math.random() * TAU, d = .3 + Math.random() * .6; let x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d; if (!walk(G.Wd, x, y)) { x = P.x; y = P.y; } if (it.gold) G.drops.push({ x, y, gold: it.gold, t: 0 }); else G.drops.push({ x, y, it, t: 0 }); };
   if (fell) { if (Math.random() < .5) G.drops.push({ x: P.x + rnd(-.5, .5), y: P.y + rnd(-.5, .5), gold: ri(m.lv, m.lv * 3), t: 0 }); return; }
-  const ilv = m.lv + (m.elite ? 1 : 0) + (D.boss ? 2 : 0);
-  if (Math.random() < .55 || m.elite) put({ gold: ri(m.lv * 2, m.lv * 5) * (m.elite ? 3 : 1) });
-  const nItem = D.boss ? 3 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
-  for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : 0), P.cls));
+  const ilv = m.lv + (m.elite ? 1 : 0) + (D.boss ? 2 : D.mini ? 1 : 0);
+  if (Math.random() < .55 || m.elite || D.mini) put({ gold: ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) });
+  const nItem = D.boss ? 3 : D.mini ? 2 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
+  for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
   if (D.boss) { const u = P.cls === 'warden' ? 'u_late' : 'u_cloudfan'; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
+  // 바람 조각: 둥지지기 1개, 우두머리 2개, 정예는 가끔
+  const col = () => pick(Object.keys(SHARD));
+  if (P.lv >= BOARD_LV || D.big) { if (D.mini) giveShard({ c: col(), q: Math.random() < .3 ? 2 : 1 }); else if (D.boss) { giveShard({ c: col(), q: 3 }); giveShard({ c: col(), q: 2 }); } else if (m.elite && Math.random() < .1) giveShard({ c: col(), q: 1 }); }
   const R = Math.random();
   if (R < .08) put(goods('pot')); else if (R < .14) put(goods('wpot')); else if (R < .2) put(goods('hone')); else if (R < .26) put(goods('glue')); else if (R < .265) put(goods('bhone')); else if (R < .27) put(goods('bglue'));
   if (P.q.q1 && P.q.q1.s === 1 && count('plank') + G.drops.filter(d => d.it && d.it.g === 'plank').length < 6 && Math.random() < .35) put(goods('plank'));
 }
 // 쓰러질 때 흩어지는 조각(솜털·씨앗 껍질·깃털)
+function blightR(pk) { return pk.boss ? 5 : pk.nest ? 4.4 : 2.6; }
+function cleanse(pk) { // 둥지지기 쓰러짐: 둥지 걷힘
+  G.fx.push({ k: 'ring', x: pk.x, y: pk.y, r: blightR(pk), t: 0, life: .7, c: '#fff1b0' }); G.flash = Math.max(G.flash, .18);
+  for (let i = 0; i < 26; i++) { const a = Math.random() * TAU, r = Math.random() * blightR(pk); G.parts.push({ k: 'puff', x: pk.x + Math.cos(a) * r, y: pk.y + Math.sin(a) * r, z: 2, vx: 0, vy: 0, vz: rnd(80, 200), t: 0, life: rnd(.6, 1.2), c: pick(['#fff1b0', '#bff0a0', '#ffffff']), s: rnd(1.6, 2.6) }); }
+  say('둥지지기를 쓰러뜨렸어요! 둥지가 걷혀요.', '#fff1b0', 1);
+}
 function burst(x2, y2, t, k) {
-  const C = { fluff: ['#ffffff', '#f2f0ea', '#e6e2da'], fluffking: ['#ffffff', '#f2f0ea', '#e8e0f4'], seed: ['#8a6a3a', '#b08a4a', '#6aa244'], bird: ['#f4f4f8', '#9fc8e8', '#ffd166'] }[t] || ['#fff'];
+  const C = { fluff: ['#6e6578', '#4a4252', '#8a8098', '#ff6a3a'], fluffking: ['#4e4460', '#2e2638', '#b04aff', '#ff4a2a'], seed: ['#4a3e2a', '#9a3a2a', '#d8c8a0'], bird: ['#2c2834', '#1e1a24', '#ffc23a'], keeper: ['#2e261c', '#cfc0a0', '#b04aff', '#9a3a2a'] }[t] || ['#fff'];
   const n = Math.round(14 * k); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, sp = rnd(1, 4.5) * Math.sqrt(k);
-    G.parts.push({ k: t === 'seed' ? 'chip' : t === 'bird' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
+    G.parts.push({ k: t === 'seed' || t === 'keeper' ? 'chip' : t === 'bird' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
-function gainXp(n) {
+function gainXp(n) { gainXp0(n); boardCheck(); }
+// 3레벨: 나침반판이 열리고 처음 조각 2개
+function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) return; P.flags.board0 = 1; giveShard({ c: 'sky', q: 1 }, 1); giveShard({ c: 'fire', q: 1 }, 1); G.cut = { s: '나침반판이 열렸어요 (B)', c: '#9fe4ff', t: 0 }; say('나침반판이 열렸어요! 기술 창(S)이나 B 키로 바람 조각을 끼워 보세요.', '#9fe4ff'); }
+function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
+function gainXp0(n) {
   const P = G.P; P.xp += n; G.txt.push({ x: P.x, y: P.y, z: 2.2, t: 0, s: '+' + n + ' 경험', c: '#b6f0a0', small: 1 });
   while (P.xp >= xpNeed(P.lv)) { P.xp -= xpNeed(P.lv); P.lv++; P.pts += 5; P.skp++; calc(P); P.hp = P.mhp; P.wind = P.mwind; G.fx.push({ k: 'lvl', x: P.x, y: P.y, t: 0, life: 1.4 }); sfx('lvl'); say(P.lv + '레벨! 스탯 5점, 스킬 1점이 생겼어요.', '#ffd166'); if (P.lv === ULT[P.cls].req) { autoSlots(P); say('궁극 기술 「' + ULT[P.cls].name + '」을 익혔어요! 4번으로 써 보세요.', '#ffcf7a'); } }
 }
@@ -243,7 +275,11 @@ function update(dt) {
   for (const m of G.mobs) mobUpdate(m, dt);
   G.mobs = G.mobs.filter(m => !(m.dead && m.at > 1.2));
   // 다시 생기기: 정리된 무리는 2분 뒤, 플레이어가 멀리 있을 때
-  for (const pk of G.packs) if (pk.clear && !pk.boss && G.t - pk.clear > 120 && hyp(P.x - pk.x, P.y - pk.y) > 14) spawnPack(pk);
+  for (const pk of G.packs) if (pk.clear && !pk.boss && G.t - pk.clear > (pk.nest ? 300 : 120) && hyp(P.x - pk.x, P.y - pk.y) > 14) spawnPack(pk);
+  // 밑것이 모인 곳: 땅이 시들고 어두워짐. 무리가 다 쓰러지면 천천히 걷힘. 플레이어가 들어서면 화면도 어두워짐.
+  let gl = 0; for (const pk of G.packs) { const alive = pk.mobs.some(m => !m.dead) ? 1 : 0; pk.bl = (pk.bl || 0) + (alive - (pk.bl || 0)) * Math.min(1, dt * (alive ? .5 : .7));
+    const R = blightR(pk), d = hyp(P.x - pk.x, P.y - pk.y); if (d < R + 1.5) gl = Math.max(gl, pk.bl * (pk.nest ? 1 : .4) * clamp((R + 1.5 - d) / 2.5, 0, 1)); }
+  G.gloom = (G.gloom || 0) + (gl - (G.gloom || 0)) * Math.min(1, dt * 2);
   // 투사체
   for (const p of G.proj) projUpdate(p, dt); G.proj = G.proj.filter(p => p.life > 0);
   // 지역 효과
@@ -294,13 +330,13 @@ function mobUpdate(m, dt) {
   const P = G.P, dx = P.x - m.x, dy = P.y - m.y, d = hyp(dx, dy), sp = m.spd * (m.slow > 0 ? .55 : 1) * (G.areas.some(a => a.k === 'mist' && hyp(a.x - m.x, a.y - m.y) < a.r) ? .6 : 1);
   m.miss = G.areas.some(a => a.k === 'mist' && hyp(a.x - m.x, a.y - m.y) < a.r);
   if (m.an === 'atk') { // 공격 동작 중
-    const wind = m.D.boss ? .8 : .35;
-    if (!m.hitDone && m.at > wind) { m.hitDone = 1; if (m.D.boss) bossHit(m); else if (hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .55) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); }
+    const wind = m.D.big ? .8 : .35;
+    if (!m.hitDone && m.at > wind) { m.hitDone = 1; if (m.D.big) bossHit(m); else if (hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .55) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); }
     if (m.at > wind + .3) { m.an = 'idle'; m.at = 0; } return;
   }
   if (m.an === 'hurt' && m.at < .2) return;
   if (P.dead) { m.st = 'idle'; }
-  const aggro = m.D.boss ? 9 : m.D.fly ? 8 : 6.5;
+  const aggro = m.D.boss ? 9 : m.D.mini ? 7.5 : m.D.fly ? 8 : 6.5;
   if (m.st === 'idle') { if (d < aggro && !P.dead) m.st = 'chase'; else { m.wan -= dt; if (m.wan < 0) { m.wan = rnd(2, 5); m.wx = m.hx + rnd(-1.5, 1.5); m.wy = m.hy + rnd(-1.5, 1.5); }
       if (m.wx != null) { const ex = m.wx - m.x, ey = m.wy - m.y, el = hyp(ex, ey); if (el > .2) { move(m, ex / el * sp * .4 * dt, ey / el * sp * .4 * dt); m.dir = w2dir(ex, ey); m.an = 'move'; } else m.an = 'idle'; } } return; }
   // 집에서 너무 멀면 돌아감
@@ -310,7 +346,7 @@ function mobUpdate(m, dt) {
   if (m.D.ai === 'charge' && m.cd <= 0 && d > 2.2 && d < 5) { m.charge = .55; m.cvx = dx / d * 6.5; m.cvy = dy / d * 6.5; m.cd = 3.5; m.hitC = 0; }
   if (m.charge > 0) { m.charge -= dt; move(m, m.cvx * dt, m.cvy * dt); m.an = 'atk'; m.at = .1; m.hitDone = 1; if (!m.hitC && hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .2) { m.hitC = 1; hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * 1.3, m); } if (m.charge <= 0) { m.an = 'idle'; m.at = 0; } return; }
   if (m.D.ai === 'dive' && m.back > 0) { m.back -= dt; move(m, -dx / d * sp * dt, -dy / d * sp * dt); m.an = 'move'; return; }
-  if (m.D.boss) return bossAI(m, dt, d, dx, dy);
+  if (m.D.big) return bossAI(m, dt, d, dx, dy);
   const reach = m.r + P.r + .35;
   if (d > reach) { move(m, dx / d * sp * dt, dy / d * sp * dt); m.an = 'move'; separate(m); }
   else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = m.D.atk * rnd(.9, 1.3); if (m.D.ai === 'dive') m.back = .8; }
@@ -318,6 +354,14 @@ function mobUpdate(m, dt) {
 }
 function separate(m) { for (const o of G.mobs) { if (o === m || o.dead) continue; const dx = m.x - o.x, dy = m.y - o.y, d = hyp(dx, dy), rr = m.r + o.r; if (d < rr && d > 0) { move(m, dx / d * (rr - d) * .3, dy / d * (rr - d) * .3); } } }
 function bossAI(m, dt, d, dx, dy) {
+  if (m.D.mini) { // 둥지지기: 가시 돌진 + 내려찍기, 피가 반 아래면 더 자주
+    const rage = m.hp < m.mhp * .5 ? .65 : 1; m.gust = (m.gust ?? 3) - dt;
+    if (m.gust <= 0 && d > 2 && d < 6.5) { m.gust = 6 * rage; m.warnC = .55; m.cvx = dx / d * 7.5; m.cvy = dy / d * 7.5; m.an = 'idle'; G.areas.push({ k: 'warn', x: m.x + dx / d * 2, y: m.y + dy / d * 2, r: 1.4, t: 0, life: .55 }); return; }
+    if (m.warnC > 0) { m.warnC -= dt; m.an = 'hurt'; if (m.warnC <= 0) { m.charge = .55; m.hitC = 0; } return; }
+    if (d > m.r + .8) { move(m, dx / d * m.spd * dt, dy / d * m.spd * dt); m.an = 'move'; separate(m); }
+    else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = 2.4 * rage; m.kind = 'slam'; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 1.9, t: 0, life: .8 }); }
+    else m.an = 'idle'; return;
+  }
   m.sum = (m.sum || 8) - dt; m.gust = (m.gust || 5) - dt;
   if (m.sum <= 0) { m.sum = 13; for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, x = m.x + Math.cos(a) * 1.6, y = m.y + Math.sin(a) * 1.6; if (walk(G.Wd, x, y)) { const n = mkMob('fluff', x, y, 7); n.st = 'chase'; G.mobs.push(n); } } G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 2, t: 0, life: .5, c: '#e8e0f4' }); say('우두머리 보풀이 보풀이를 불러냈어요!', '#e8e0f4', 1); }
   if (m.gust <= 0 && d < 6) { m.gust = 7; m.an = 'atk'; m.at = 0; m.hitDone = 0; m.kind = 'gust'; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 3.4, t: 0, life: .8, cone: [dx / d, dy / d] }); return; }
@@ -327,14 +371,14 @@ function bossAI(m, dt, d, dx, dy) {
 }
 function bossHit(m) {
   const P = G.P, d = hyp(P.x - m.x, P.y - m.y);
-  if (m.kind === 'slam') { G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 2.4, t: 0, life: .4, c: '#fff' }); G.shake = 8; sfx('slam'); if (d < 2.4 + P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); }
+  if (m.kind === 'slam') { const R = m.D.mini ? 1.9 : 2.4; G.fx.push({ k: 'ring', x: m.x, y: m.y, r: R, t: 0, life: .4, c: m.D.mini ? '#d9a8ff' : '#fff' }); G.fx.push({ k: 'crack', x: m.x, y: m.y, t: 0, life: 1.2 }); G.shake = m.D.mini ? 6 : 8; sfx('slam'); if (d < R + P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); }
   else { G.fx.push({ k: 'gust', x: m.x, y: m.y, dx: (P.x - m.x) / d, dy: (P.y - m.y) / d, r: 3.4, arc: 1.2, t: 0, life: .4 }); sfx('gust'); if (d < 3.4) { hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * .7, m); const kx = (P.x - m.x) / d * 3.2; const ky = (P.y - m.y) / d * 3.2; for (let i = 0; i < 10; i++) move(P, kx / 10, ky / 10); } }
 }
 function projUpdate(p, dt) {
   p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
   if (p.k !== 'twister' && !ground(G.Wd, p.x, p.y) && !G.Wd.inb(Math.floor(p.x), Math.floor(p.y))) p.life = 0;
   const P = G.P;
-  if (p.k === 'twister') { p.tick -= dt; for (const m of mobsIn(m => hyp(m.x - p.x, m.y - p.y) < p.r + m.r)) { if (!m.D.boss) move(m, (p.x - m.x) * dt * 2.5, (p.y - m.y) * dt * 2.5); } if (p.tick <= 0) { p.tick = .3; for (const m of mobsIn(m => hyp(m.x - p.x, m.y - p.y) < p.r * .8 + m.r)) { const [d, c] = rollDmg(P, m, p.mult); hitMob(m, d, c); } } return; }
+  if (p.k === 'twister') { p.tick -= dt; for (const m of mobsIn(m => hyp(m.x - p.x, m.y - p.y) < p.r + m.r)) { if (!m.D.big) move(m, (p.x - m.x) * dt * 2.5, (p.y - m.y) * dt * 2.5); } if (p.tick <= 0) { p.tick = .3; for (const m of mobsIn(m => hyp(m.x - p.x, m.y - p.y) < p.r * .8 + m.r)) { const [d, c] = rollDmg(P, m, p.mult); hitMob(m, d, c); } } return; }
   for (const m of G.mobs) { if (m.dead || p.hit.has(m)) continue; if (hyp(m.x - p.x, m.y - p.y) < m.r + .25) { p.hit.add(m); const [d, c] = rollDmg(P, m, p.mult); hitMob(m, d, c, { kb: p.k === 'wind' ? 1.5 : 0, fx: p.x - p.vx, fy: p.y - p.vy }); G.fx.push({ k: 'pop', x: p.x, y: p.y, t: 0, life: .25, c: p.k === 'bolt' ? '#fff3a0' : '#dff4ff' }); if (!p.pierce) { p.life = 0; break; } } }
 }
 function areaUpdate(a, dt) {
@@ -342,7 +386,7 @@ function areaUpdate(a, dt) {
   a.t += dt; const P = G.P;
   if (a.k === 'flag') { a.tick -= dt; if (hyp(P.x - a.x, P.y - a.y) < a.r) { const k = a.fk === 1 ? 2 : 1; P.hp = Math.min(P.mhp, P.hp + P.mhp * .025 * k * dt); P.wind = Math.min(P.mwind, P.wind + 3 * k * dt); }
     if (a.fk === 0 && a.tick <= 0) { a.tick = 2; G.fx.push({ k: 'ring', x: a.x, y: a.y, r: a.r, t: 0, life: .4, c: '#bfe8ff' }); for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { kb: 5, fx: a.x, fy: a.y }); } } }
-  if (a.k === 'vortex') { a.tick -= dt; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + 1)) { if (m.D.boss) continue; const dx = a.x - m.x, dy = a.y - m.y, d = hyp(dx, dy) || 1; move(m, dx / d * Math.min(d, 3.2 * dt), dy / d * Math.min(d, 3.2 * dt)); }
+  if (a.k === 'vortex') { a.tick -= dt; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + 1)) { if (m.D.big) continue; const dx = a.x - m.x, dy = a.y - m.y, d = hyp(dx, dy) || 1; move(m, dx / d * Math.min(d, 3.2 * dt), dy / d * Math.min(d, 3.2 * dt)); }
     if (Math.random() < .7) { const an = Math.random() * TAU, rr2 = a.r * rnd(.4, 1); G.parts.push({ k: 'leaf', x: a.x + Math.cos(an) * rr2, y: a.y + Math.sin(an) * rr2, z: rnd(5, 50), vx: -Math.sin(an) * 5, vy: Math.cos(an) * 5, vz: 80, t: 0, life: .6, c: pick(['#9ad86a', '#dff4ff', '#ffffff']), s: 3, rot: an }); }
     if (a.tick <= 0) { a.tick = .3; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult * .14); hitMob(m, d, c, { tick: 1 }); } }
     if (a.t + dt >= a.life && !a.boom) { a.boom = 1; G.shake = 12; G.hitstop = .1; G.flash = .25; sfx('twister'); G.fx.push({ k: 'ring', x: a.x, y: a.y, r: a.r + 1, t: 0, life: .5, c: '#e8f6ff' }, { k: 'ring', x: a.x, y: a.y, r: a.r * .6, t: 0, life: .35, c: '#9fe4ff' });
