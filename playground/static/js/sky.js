@@ -158,6 +158,19 @@ const MOBDEF = {
 };
 const ELITE = [['빠른', '#9fe4ff', { spd: 1.4 }], ['단단한', '#ffd27a', { hp: 2.2 }], ['바람 두른', '#c9a8ff', { kbimm: 1, hp: 1.5 }], ['성난', '#ff8f7a', { dmg: 1.5 }]];
 
+/* ---------- 나침반판(모든 직업 공통 육각 판 19칸) ---------- */
+// 바람 조각: 색(하늘·들불·새싹) × 품질 1~3. 둘레의 같은 색 조각 1개마다 +25%, 가운데 '바람눈' 칸은 1.5배.
+// 같은 색이 3개 이상 이어지면 그 색 보너스, 세 색 보너스가 다 켜지면 '세 바람' 보너스.
+const SHARD = {
+  sky: { n: '하늘', c: '#5fb4f0', fx: [['wreg', 4], ['wind', 2]], set: [['wind', 8], ['wreg', 8]], d: '바람 회복·최대 바람' },
+  fire: { n: '들불', c: '#f0784a', fx: [['dmgp', 2]], set: [['crit', 3], ['dmgp', 4]], d: '피해' },
+  leaf: { n: '새싹', c: '#74c45a', fx: [['hp', 5]], set: [['ac', 4], ['hp', 12]], d: '생명력 (잇기: 방어력)' },
+};
+const SHQ = ['', '조각', '맑은 조각', '빛나는 조각'], TRIO = [['xp', 8], ['find', 10]], BOARD_LV = 3, SHD_MAX = 30;
+const HEX = []; for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.abs(q + r) <= 2) HEX.push([q, r]);
+const HEXN = HEX.map(([q, r]) => HEX.map(([a, b], j) => Math.abs(a - q) + Math.abs(b - r) + Math.abs(a + b - q - r) === 2 ? j : -1).filter(j => j >= 0));
+const HEXC = HEX.findIndex(([q, r]) => !q && !r);
+
 /* ---------- 이야기·퀘스트 ---------- */
 const NPCDEF = {
   chief: { n: '촌장 들메', row: 0 }, smith: { n: '대장장이 무쇠', row: 1 }, merchant: { n: '떠돌이 상인 얼레', row: 2 }, sage: { n: '이야기꾼 솔바람', row: 3 },
@@ -415,6 +428,7 @@ function calc(P) {
   const C = CLASSES[P.cls], m = { ac: 0 };
   for (const s in P.eq) if (P.eq[s]) itemMods(P.eq[s], m);
   const sc = setCount(P); for (const k in sc) for (const [n, fx] of SETS[k].bonus) if (sc[k] >= n) for (const [a, v] of fx) m[a] = (m[a] || 0) + v;
+  boardMods(P, m);
   const st = {}; for (const [k] of STATS) st[k] = C.stat[k] + (P.sp[k] || 0) + (m[k] || 0);
   const S = P.st = st;
   P.mhp = Math.round(30 + S.vit * 4 + P.lv * 6 + (m.hp || 0));
@@ -436,6 +450,28 @@ const xpNeed = L => Math.round(40 * Math.pow(L, 1.45));
 function skLv(P, s) { const base = P.sk[s.id] || 0; return base ? base + P.skb[s.br] : 0; }
 function synergy(P, s) { let n = 0; for (const o of SKILLS[P.cls]) if (o.br === s.br && o.id !== s.id) n += P.sk[o.id] || 0; return 1 + n * .06; }
 
+/* ---------- 나침반판 계산 ---------- */
+function boardGroups(B) { // 같은 색으로 이어진 묶음들 [{c, cells}]
+  const seen = new Set(), out = [];
+  B.forEach((sh, i) => { if (!sh || seen.has(i)) return; const st = [i], cells = []; seen.add(i);
+    while (st.length) { const j = st.pop(); cells.push(j); for (const n of HEXN[j]) if (!seen.has(n) && B[n] && B[n].c === sh.c) { seen.add(n); st.push(n); } }
+    out.push({ c: sh.c, cells }); });
+  return out;
+}
+function boardInfo(P) { // 칸마다 실제 효과 배율 + 켜진 묶음 보너스
+  const B = P.board || [], mul = B.map((sh, i) => sh ? sh.q * (1 + .25 * HEXN[i].filter(n => B[n] && B[n].c === sh.c).length) * (i === HEXC ? 1.5 : 1) : 0);
+  const sets = {}; for (const g of boardGroups(B)) if (g.cells.length >= 3) sets[g.c] = 1;
+  return { mul, sets, trio: Object.keys(SHARD).every(c => sets[c]) };
+}
+function boardMods(P, m) {
+  if (!P.board) return; const I = boardInfo(P), add = (k, v) => { m[k] = (m[k] || 0) + v; };
+  P.board.forEach((sh, i) => { if (sh) for (const [k, v] of SHARD[sh.c].fx) add(k, Math.round(v * I.mul[i])); });
+  for (const c in I.sets) for (const [k, v] of SHARD[c].set) add(k, v);
+  if (I.trio) for (const [k, v] of TRIO) add(k, v);
+}
+function boardSum(P) { const m = {}; boardMods(P, m); return m; }
+const shardName = sh => SHARD[sh.c].n + ' ' + SHQ[sh.q];
+
 
 /* =================== 게임 진행 =================== */
 let G = null, opts = {}, PM = {}; // PM: 소품 아틀라스 자리
@@ -448,23 +484,38 @@ const dirW = d => scr2w(DIRV[d][0] * TW, DIRV[d][1] * TH * 2); // 방향 d 의 �
 function newSave(cls) {
   const seed = (Math.random() * 1e9) | 0, it = id => makeItem(id, 0, 1, { id: 1, st: 0 });
   const eq = cls === 'warden' ? { weapon: it('spear0'), off: it('shield0'), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') } : { weapon: it('staff0'), off: it('bell0'), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
-  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [cls === 'warden' ? 'pierce' : 'gust']: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
+  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [cls === 'warden' ? 'pierce' : 'gust']: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
 }
 function startGame(S) {
   const Wd = makeWorld(S.seed); Wd.props = placeProps(Wd, PM);
   if (S.flags.bridge) repairBridge(Wd, Wd.bq);
   for (const w of Wd.wps) if (S.flags['wp_' + w.n]) w.on = 1;
+  if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = [];
   const T = Wd.islands[Wd.town];
   const P = { ...S, x: T.cx + 1.5, y: T.cy + 2.5, r: .28, dir: 2, an: 'idle', at: 0, atkT: 0, cds: {}, buf: {}, hp: null, wind: null, dodge: 0, dcd: 0, inv0: 0, tgt: null, path: null, dead: 0, combo: 0 };
   // 순풍: 쉬는 동안 쌓이는 경험치 2배 몫(최대 다음 레벨 필요량의 절반)
   const away = Math.max(0, Date.now() - (S.t || Date.now())) / 36e5; P.rested = Math.min(xpNeed(P.lv) * .5, (S.rested || 0) + away * xpNeed(P.lv) * .06);
   G = { Wd, P, mobs: [], proj: [], fx: [], txt: [], drops: [], areas: [], parts: [], t: 0, cam: [P.x, P.y], shake: 0, packs: [], msg: [], hitstop: 0, flash: 0, cut: null };
   calc(P); P.hp = P.mhp; P.wind = P.mwind; autoSlots(P);
-  spawnAll(); if (!S.q.q1) setTimeout(() => talk('chief', true), 600);
+  spawnAll(); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'kills', 'rested', 'play', 'codex']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
-  try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} }
+function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
+  try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
+/* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
+const pcode = () => { try { return localStorage.getItem('nr_pcode') || ''; } catch (e) { return ''; } };
+let CLOUD = { last: 0, pend: null, busy: 0, ok: null };
+function cloudPut(S, keep) { const code = pcode(); if (!code) return; CLOUD.busy = 1; CLOUD.last = Date.now();
+  return fetch('/api/skysave', { method: 'POST', keepalive: !!keep, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ a: 'put', code, cls: S.cls, data: S }) })
+    .then(r => r.json().then(j => { CLOUD.ok = r.ok || r.status === 409; if (r.status === 409 && j.data) { try { localStorage.setItem('sky_' + S.cls, JSON.stringify(j.data)); } catch (e) {} } })).catch(() => { CLOUD.ok = false; }).finally(() => { CLOUD.busy = 0; }); }
+function cloudQueue(S, now) { if (!pcode()) return; CLOUD.pend = S; if (now || Date.now() - CLOUD.last > 60000) { CLOUD.pend = null; cloudPut(S, now); } }
+setInterval(() => { if (CLOUD.pend && !CLOUD.busy && Date.now() - CLOUD.last > 60000) { const S = CLOUD.pend; CLOUD.pend = null; cloudPut(S); } }, 15000);
+function cloudFlush() { if (CLOUD.pend) { const S = CLOUD.pend; CLOUD.pend = null; cloudPut(S, 1); } }
+// 처음 화면: 서버 기록이 이 기기 것보다 나중이면 가져온다
+function cloudPull() { const code = pcode(); if (!code) return Promise.resolve(null);
+  return fetch('/api/skysave', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ a: 'get', code }) }).then(r => r.ok ? r.json() : null).then(j => { if (!j || !j.saves) return null; let n = 0;
+    for (const cls in j.saves) { const loc = loadSave(cls), sv = j.saves[cls].data; if (sv && sv.v === 1 && (!loc || (sv.t || 0) > (loc.t || 0) + 1000)) { try { localStorage.setItem('sky_' + cls, JSON.stringify(sv)); n++; } catch (e) {} } }
+    CLOUD.ok = true; return n; }).catch(() => null); }
 function loadSave(cls) { try { const s = JSON.parse(localStorage.getItem('sky_' + cls) || 'null'); if (s && s.v === 1) { UID = Math.max(UID, s.uid || 1); return s; } } catch (e) {} return null; }
 
 /* ---------- 몹 ---------- */
@@ -556,6 +607,9 @@ function drops(m, fell) {
   const nItem = D.boss ? 3 : D.mini ? 2 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
   for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
   if (D.boss) { const u = P.cls === 'warden' ? 'u_late' : 'u_cloudfan'; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
+  // 바람 조각: 둥지지기 1개, 우두머리 2개, 정예는 가끔
+  const col = () => pick(Object.keys(SHARD));
+  if (P.lv >= BOARD_LV || D.big) { if (D.mini) giveShard({ c: col(), q: Math.random() < .3 ? 2 : 1 }); else if (D.boss) { giveShard({ c: col(), q: 3 }); giveShard({ c: col(), q: 2 }); } else if (m.elite && Math.random() < .1) giveShard({ c: col(), q: 1 }); }
   const R = Math.random();
   if (R < .08) put(goods('pot')); else if (R < .14) put(goods('wpot')); else if (R < .2) put(goods('hone')); else if (R < .26) put(goods('glue')); else if (R < .265) put(goods('bhone')); else if (R < .27) put(goods('bglue'));
   if (P.q.q1 && P.q.q1.s === 1 && count('plank') + G.drops.filter(d => d.it && d.it.g === 'plank').length < 6 && Math.random() < .35) put(goods('plank'));
@@ -573,7 +627,11 @@ function burst(x2, y2, t, k) {
     G.parts.push({ k: t === 'seed' || t === 'keeper' ? 'chip' : t === 'bird' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
-function gainXp(n) {
+function gainXp(n) { gainXp0(n); boardCheck(); }
+// 3레벨: 나침반판이 열리고 처음 조각 2개
+function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) return; P.flags.board0 = 1; giveShard({ c: 'sky', q: 1 }, 1); giveShard({ c: 'fire', q: 1 }, 1); G.cut = { s: '나침반판이 열렸어요 (B)', c: '#9fe4ff', t: 0 }; say('나침반판이 열렸어요! 기술 창(S)이나 B 키로 바람 조각을 끼워 보세요.', '#9fe4ff'); }
+function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
+function gainXp0(n) {
   const P = G.P; P.xp += n; G.txt.push({ x: P.x, y: P.y, z: 2.2, t: 0, s: '+' + n + ' 경험', c: '#b6f0a0', small: 1 });
   while (P.xp >= xpNeed(P.lv)) { P.xp -= xpNeed(P.lv); P.lv++; P.pts += 5; P.skp++; calc(P); P.hp = P.mhp; P.wind = P.mwind; G.fx.push({ k: 'lvl', x: P.x, y: P.y, t: 0, life: 1.4 }); sfx('lvl'); say(P.lv + '레벨! 스탯 5점, 스킬 1점이 생겼어요.', '#ffd166'); if (P.lv === ULT[P.cls].req) { autoSlots(P); say('궁극 기술 「' + ULT[P.cls].name + '」을 익혔어요! 4번으로 써 보세요.', '#ffcf7a'); } }
 }
@@ -846,12 +904,16 @@ function interact() {
 let ov, cv, x, lay = { Z: 1, dpr: 1, cw: 800, ch: 450 }, IM = {}, NPCK = [];
 const HC = [112, 120, 56, 100], HF = ['idle0', 'idle1', 'run0', 'run1', 'run2', 'run3', 'run4', 'run5', 'atk0', 'atk1', 'atk2', 'atk3', 'cast0', 'cast1', 'cast2', 'hurt', 'dodge', 'die0', 'die1'];
 const MC = { fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
-function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; ok(); }; im.onerror = () => ok(); im.src = src; }); }
+function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; LOADP.n++; ok(); }; im.onerror = () => { LOADP.n++; ok(); }; im.src = src; }); }
+// 폰 로딩: 처음엔 꼭 필요한 그림만(약 1.4MB) 받고, 큰 보스 그림(둥지지기·우두머리)은 시작한 뒤 뒤에서 받는다
+const LOADP = { n: 0, N: 11 }, LATE = ['keeper', 'fluffking'];
 let assetsP = null;
 function assets() {
   if (assetsP) return assetsP; const v = '?v=cb937429';
-  assetsP = Promise.all([...['warden', 'windcaller', 'fluff', 'fluffking', 'seed', 'bird', 'keeper', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
-    fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; }), fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; }), fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {})]);
+  const J = p => p.then(() => { LOADP.n++; });
+  assetsP = Promise.all([...['warden', 'windcaller', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
+    J(fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; })), J(fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; })), J(fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {}))])
+    .then(() => { LATE.reduce((p, k) => p.then(() => loadImg(k, IMG + k + '.webp' + v)), Promise.resolve()); });
   return assetsP;
 }
 let ICM = {}; const DIRT = [];
@@ -889,7 +951,10 @@ function drawSky(cw, ch) {
 function view() { const { Z, cw, ch } = lay, [cx, cy] = iso(G.cam[0], G.cam[1]), sh = G.shake; return { ox: cw / 2 - cx * Z + (sh ? rnd(-sh, sh) : 0), oy: ch / 2 - cy * Z + (sh ? rnd(-sh, sh) : 0) - 30 * Z, Z }; }
 function draw() {
   const { cw, ch, dpr } = lay; x.setTransform(dpr, 0, 0, dpr, 0, 0); drawSky(cw, ch);
-  if (!G) return; const Wd = G.Wd, P = G.P, V = view(), Z = V.Z;
+  if (!G) { if (LOADP.n < LOADP.N) { const w = Math.min(320, cw * .6), k = LOADP.n / LOADP.N; x.fillStyle = 'rgba(30,40,60,.35)'; rr(cw / 2 - w / 2, ch / 2 + 10, w, 10, 5); x.fill(); x.fillStyle = '#fff'; rr(cw / 2 - w / 2, ch / 2 + 10, Math.max(10, w * k), 10, 5); x.fill();
+      x.font = '800 22px system-ui'; x.textAlign = 'center'; x.fillStyle = '#3a5a7a'; x.fillText('끊어진 하늘', cw / 2, ch / 2 - 14); x.font = '600 12px system-ui'; x.fillStyle = '#5a6a80'; x.fillText('섬을 띄우는 중… ' + Math.round(k * 100) + '%', cw / 2, ch / 2 + 40); }
+    return; }
+  const Wd = G.Wd, P = G.P, V = view(), Z = V.Z;
   x.setTransform(dpr * Z, 0, 0, dpr * Z, dpr * V.ox, dpr * V.oy);
   // 화면에 보이는 칸 범위
   const corners = [[0, 0], [cw, 0], [0, ch + 200], [cw, ch + 200]].map(([sx, sy]) => unIso((sx - V.ox) / Z, (sy - V.oy) / Z));
@@ -1056,6 +1121,7 @@ function drawHero(P) {
   sprite(IM[P.cls], HC[0], HC[1], HC[2], HC[3], heroFrame(P), P.dir, sx, sy - jz, .5, P.hurt > .15 ? .1 : 0, a);
 }
 function drawMob(m) {
+  if (!IM[m.D.spr]) { const [sx, sy] = iso(m.x, m.y); shadow(sx, sy, m.D.boss ? 36 : 24); return; } // 큰 그림 받는 중
   const D = m.D, c = MC[D.spr], [sx, sy0] = iso(m.x, m.y), sy = sy0 + (m.fy || 0) * 30;
   const a = m.dead ? Math.max(0, 1 - Math.max(0, m.at - .5) * 1.6) * (m.fl ? Math.max(0, 1 - m.fy * .4) : 1) : 1;
   if (!m.fl) shadow(sx, sy0, D.boss ? 36 : D.mini ? 26 : D.fly ? 9 : m.elite ? 14 : 11);
@@ -1194,8 +1260,8 @@ function hud() {
   }
   // 메뉴 버튼(위 오른쪽, 지도 왼쪽)
   const mb = (touch ? 40 : 32) * s, mw = mb * (touch ? 1.35 : 1.6), my = 8, MN = [['inv', '가방', 'I'], ['char', '캐릭터', 'C'], ['skill', '기술', 'S'], ['map', '지도', 'M'], ['menu', '≡', '']], mx = cw - SAFE_R() - 10 - 112 * s - 8 - (mw + 4) * 4 - mb - 4;
-  let X = mx; MN.forEach(([k, l, key]) => { const w = k === 'menu' ? mb : mw; x.fillStyle = 'rgba(30,24,18,.62)'; rr(X, my, w, mb, 8); x.fill(); x.fillStyle = (k === 'char' && P.pts) || (k === 'skill' && P.skp) ? '#ffd166' : '#fff'; x.font = `700 ${(l.length > 1 ? (touch ? 11.5 : 10.5) : 16) * s}px system-ui`; x.textAlign = 'center'; x.fillText(l, X + w / 2, my + mb / 2 + (key && !touch ? 1 : 4) * s);
-    if (key && !touch) { x.font = `700 ${8 * s}px system-ui`; x.fillStyle = '#ffd166'; x.fillText(key, X + w / 2, my + mb - 4 * s); } if ((k === 'char' && P.pts) || (k === 'skill' && P.skp)) { x.fillStyle = '#ff6a5a'; x.beginPath(); x.arc(X + w - 3, my + 3, 4, 0, TAU); x.fill(); }
+  let X = mx; MN.forEach(([k, l, key]) => { const w = k === 'menu' ? mb : mw; x.fillStyle = 'rgba(30,24,18,.62)'; rr(X, my, w, mb, 8); x.fill(); x.fillStyle = (k === 'char' && P.pts) || (k === 'skill' && (P.skp || P.shd && P.shd.length && P.board.includes(null) && P.lv >= BOARD_LV)) ? '#ffd166' : '#fff'; x.font = `700 ${(l.length > 1 ? (touch ? 11.5 : 10.5) : 16) * s}px system-ui`; x.textAlign = 'center'; x.fillText(l, X + w / 2, my + mb / 2 + (key && !touch ? 1 : 4) * s);
+    if (key && !touch) { x.font = `700 ${8 * s}px system-ui`; x.fillStyle = '#ffd166'; x.fillText(key, X + w / 2, my + mb - 4 * s); } if ((k === 'char' && P.pts) || (k === 'skill' && (P.skp || P.shd && P.shd.length && P.board.includes(null) && P.lv >= BOARD_LV))) { x.fillStyle = '#ff6a5a'; x.beginPath(); x.arc(X + w - 3, my + 3, 4, 0, TAU); x.fill(); }
     BTN.push({ k, x: X, y: my, w, h: mb }); X += w + 4; });
   // 상호작용
   if (G.near) { x.font = `800 ${(touch ? 14 : 12.5) * s}px system-ui`; const t = (touch ? '👆 ' : 'F  ') + G.near.label, hh = (touch ? 38 : 28) * s, w = x.measureText(t).width + 30, X2 = cw / 2 - w / 2, Y = ch - (touch ? 64 : 116) * s - hh / 2; x.fillStyle = 'rgba(255,240,200,.95)'; rr(X2, Y, w, hh, hh / 2); x.fill(); x.strokeStyle = '#c8a06a'; x.lineWidth = 2; x.stroke(); x.fillStyle = '#3a2a10'; x.textAlign = 'center'; x.fillText(t, cw / 2, Y + hh * .66); BTN.push({ k: 'use', x: X2, y: Y, w, h: hh }); }
@@ -1288,6 +1354,11 @@ function css() {
     + '.sk-doll{display:grid;grid-template-columns:54px minmax(120px,1fr) 54px;gap:6px;align-items:start;background:radial-gradient(circle at 50% 42%,#fffaf0,#e6d8bc);border:1.5px solid #c8b088;border-radius:14px;padding:8px}.sk-doll .cl{display:flex;flex-direction:column;gap:5px}.sk-doll .bd{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%}.sk-doll .bd canvas{width:150px;height:160px;filter:drop-shadow(0 6px 4px rgba(60,40,20,.25))}.sk-doll .bd b{font-size:14px;color:#5a3e22}.sk-doll .bt{grid-column:1/4;display:grid;grid-template-columns:repeat(3,54px);justify-content:center;gap:6px}.sk-doll .sk-c b{font-size:9px}@media (max-height:520px){.sk-doll{grid-template-columns:44px minmax(100px,1fr) 44px;padding:6px}.sk-doll .cl{gap:3px}.sk-doll .bt{grid-template-columns:repeat(3,44px);gap:4px}.sk-doll .bd canvas{width:110px;height:118px}}'
     + '.sk-map canvas{width:100%;border-radius:12px;display:block;background:#bfe0f4}.sk-lg{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:#7a6a58;margin-top:6px}.sk-lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}'
     + '.sk-rot{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;text-align:center;color:#fff;font-size:20px;font-weight:800;background:#3a5a7af2;padding:20px}@media (orientation:portrait) and (pointer:coarse){.sk-ov.play .sk-rot{display:flex}}';
+  st.textContent += '.sk-hexw{display:flex;justify-content:center}.sk-hex{position:relative;width:300px;height:300px;margin:4px auto;flex:none}.sk-hx{position:absolute;width:62px;height:54px;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:#d8c8a8;cursor:pointer;display:flex;align-items:center;justify-content:center}.sk-hx::before{content:"";position:absolute;inset:3px;clip-path:inherit;background:#efe4cc}.sk-hx.ctr::before{background:radial-gradient(#fff6d8,#ead6a8)}.sk-hx.ctr{background:#d8a84a}.sk-hx.on{background:#3a7fa8}.sk-hx.lk{background:#fff3c0}'
+    + '.sk-gem{position:relative;width:30px;height:30px;transform:rotate(45deg);border-radius:6px;box-shadow:inset -4px -4px 0 rgba(0,0,0,.18),inset 3px 3px 0 rgba(255,255,255,.45),0 0 10px var(--g)}.sk-gem i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(-45deg);font-style:normal;font-size:11px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0008}'
+    + '.sk-tray{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;padding:6px;border:1.5px dashed #c8b088;border-radius:12px;background:#f6eedc}.sk-tr{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid transparent}.sk-tr.on{border-color:#3a7fa8;background:#dff0fb}'
+    + '.sk-c u{position:absolute;left:4px;right:4px;bottom:3px;height:3px;border-radius:2px;background:#d8c8e8;overflow:hidden;text-decoration:none}.sk-c u b{display:block;height:100%;background:#9a6ae8}.sk-c em{position:absolute;right:2px;top:0;font-style:normal;font-size:11px;color:#9a6ae8;text-shadow:0 0 3px #fff}'
+    + '.sk-tame{height:7px;border-radius:4px;background:#e6dcf4;overflow:hidden;margin:3px 0}.sk-tame b{display:block;height:100%;background:linear-gradient(90deg,#b49aff,#7a4ae8)}';
   document.head.appendChild(st);
 }
 function mkDom() {
@@ -1297,7 +1368,7 @@ function mkDom() {
   const rot = document.createElement('div'); rot.className = 'sk-rot'; rot.innerHTML = '📱↻<br>휴대폰을 가로로 돌려 주세요'; ov.appendChild(rot);
   document.body.appendChild(ov);
   addEventListener('resize', () => { if (!ov.hidden) layout(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && G && !PANEL) openPanel('menu'); if (document.hidden) save(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G && !PANEL) openPanel('menu'); if (document.hidden) { save(); cloudFlush(); } });
   input();
 }
 function layout() {
@@ -1319,7 +1390,7 @@ const inputHeld = k => !!TOUCH.held[k] || (k === 'atk' && MOUSE.atk);
 const MOUSE = { x: 0, y: 0, down: 0, atk: 0 };
 function mouseWorld() { const V = view(); return unIso((MOUSE.x - V.ox) / V.Z, (MOUSE.y - V.oy) / V.Z); }
 function hitBtn(px, py) { for (const b of BTN) if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return b; return null; }
-const PKEY = { KeyI: 'inv', KeyC: 'char', KeyS: 'skill', KeyM: 'map', KeyJ: 'quest' };
+const PKEY = { KeyI: 'inv', KeyC: 'char', KeyS: 'skill', KeyM: 'map', KeyJ: 'quest', KeyB: 'board' };
 function press(k, down) {
   if (!G) return; const P = G.P;
   if (k === 'atk') { TOUCH.held.atk = down; if (down) { P.tgt = null; basicAttack(); } return; }
@@ -1406,7 +1477,8 @@ function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '
 function closePanel() { PANEL = null; SEL = null; SHOP = null; panel.hidden = true; panel.innerHTML = ''; last = performance.now(); if (G) { calc(G.P); save(); } }
 function openPanel(k, arg) { PANEL = k; panel.hidden = false; SEL = arg != null && k !== 'talk' ? SEL : SEL; render(arg); }
 function iconCanvas(it, s) { const c = document.createElement('canvas'), d = Math.min(2, window.devicePixelRatio || 1); c.width = c.height = s * d; const g = c.getContext('2d'); g.scale(d, d); drawIcon(it, 0, 0, s, g); return c; }
-function cell(it, k, extra) { const r = it && !it.g ? ' r' + it.r : ''; return `<div class="sk-c${r}${it && it.st === -1 && it.id ? ' cu' : ''}${SEL === k ? ' on' : ''}" data-c="${k}">${extra || ''}${it ? '<span data-ic="' + k + '"></span>' : ''}${it && it.g && it.n > 1 ? '<i>' + it.n + '</i>' : it && it.en ? '<i>+' + it.en + '</i>' : ''}</div>`; }
+function tameBar(it) { if (!it || it.g || !it.hid || !it.id) return ''; return it.tame >= TAME_N ? '<em>✦</em>' : `<u><b style="width:${Math.round((it.tame || 0) / TAME_N * 100)}%"></b></u>`; }
+function cell(it, k, extra) { const r = it && !it.g ? ' r' + it.r : ''; return `<div class="sk-c${r}${it && it.st === -1 && it.id ? ' cu' : ''}${SEL === k ? ' on' : ''}" data-c="${k}">${extra || ''}${it ? '<span data-ic="' + k + '"></span>' : ''}${tameBar(it)}${it && it.g && it.n > 1 ? '<i>' + it.n + '</i>' : it && it.en ? '<i>+' + it.en + '</i>' : ''}</div>`; }
 function fillIcons(map) { panel.querySelectorAll('[data-ic]').forEach(el => { const it = map(el.dataset.ic); if (it) el.replaceWith(iconCanvas(it, 40)); }); }
 function itemCard(it, P, cmp) {
   if (!it) return ''; const b = it.g ? null : BASE[it.b], L = [];
@@ -1419,7 +1491,7 @@ function itemCard(it, P, cmp) {
   if (b.sail) L.push(`<div>활공 ${b.sail[0]}칸 · 다시 쓰기 ${b.sail[1]}초</div>`);
   for (const k in b.fix || {}) L.push(`<div class="a">${afxText(k, b.fix[k], P.cls)}</div>`);
   if (!it.id) L.push('<div class="m">감정하면 옵션이 보여요 (이야기꾼 솔바람 · 살펴보기 쪽지)</div>');
-  else { for (const [k, v] of it.af) L.push(`<div class="a">${afxText(k, v, P.cls)}</div>`); if (it.hid) L.push(it.tame >= TAME_N ? `<div class="h">길들임: ${afxText(it.hid[0], it.hid[1], P.cls)}</div>` : `<div class="h">길들이기 ${it.tame || 0}/${TAME_N} — 숨은 옵션 1개</div>`); }
+  else { for (const [k, v] of it.af) L.push(`<div class="a">${afxText(k, v, P.cls)}</div>`); if (it.hid) L.push(it.tame >= TAME_N ? `<div class="h">✦ 길들임 완료: <b>${afxText(it.hid[0], it.hid[1], P.cls)}</b></div>` : `<div class="h">길들이기 ${it.tame || 0}/${TAME_N} · 숨은 옵션 <b>???</b></div><div class="sk-tame"><b style="width:${Math.round((it.tame || 0) / TAME_N * 100)}%"></b></div><div class="m" style="font-size:11px">입고 밑것을 ${TAME_N - (it.tame || 0)}마리 더 쓰러뜨리면 숨은 옵션이 열려요.</div>`); }
   if (it.set && it.id) { const S = SETS[it.set], n = setCount(P)[it.set] || 0; L.push(`<div class="h">「${S.n}」 ${n}/${S.parts.length}</div>`); for (const [c, fx] of S.bonus) L.push(`<div class="${n >= c ? 'a' : 'm'}">${c}벌: ${fx.map(([k, v]) => afxText(k, v, P.cls)).join(', ')}</div>`); }
   if (it.u && it.id) L.push(`<div class="st">${esc(UNIQ.find(u => u.id === it.u).story)}</div>`);
   if (it.st === 1) L.push('<div class="a">축복: 기본 수치 +1, 강화 실패 1번 막아 줌</div>'); if (it.st === -1 && it.id) L.push('<div class="bad">저주: 기본 수치 -1, 맑은 샘물로 정화하기 전엔 벗을 수 없음</div>');
@@ -1452,12 +1524,12 @@ function render(arg) {
     if (it) h += itemCard(it, P) + `<button class="sk-b" data-a="uneq">벗기</button>` + (it.st === -1 && count('pure') ? `<button class="sk-b g" data-a="purify">샘물로 정화</button>` : '') + `<button class="sk-b" data-a="nosel">능력 보기</button>`;
     else { h += `<h4 style="margin-top:0">능력 <small style="color:#8a7458">남은 점수 ${P.pts}</small></h4>`;
       for (const [s2, n, d] of STATS) h += `<div class="sk-row"><div class="f"><b>${n}</b> ${P.st[s2]} <small>(${CLASSES[P.cls].stat[s2]} + 올림 ${P.sp[s2] || 0})</small><br><small>${d}</small></div><button class="sk-b" data-a="st" data-s="${s2}" ${P.pts ? '' : 'disabled'}>+1</button></div>`;
-      const big = P.dmg; h += `<h4>지금 수치</h4><div class="sk-card">생명력 ${P.mhp} · 바람 ${P.mwind} (초당 +${P.wreg.toFixed(1)})<br>피해: 작은 적 ${big[0]}~${big[1]} / 큰 적 ${big[2]}~${big[3]} · 피해 +${Math.round(P.dmgp)}%<br>방어력 ${P.ac} (맞을 확률 ${Math.round(clamp(.92 - P.ac * .008, .55, .95) * 100)}%)${P.blk ? ' · 막기 ' + Math.round(P.blk) + '%' : ''}<br>공격 속도 초당 ${P.aspd.toFixed(2)}번 · 치명타 ${P.crit.toFixed(1)}% · 이동 ${P.move.toFixed(1)}<br>돛: 활공 ${P.sail[0]}칸 / ${P.sail[1]}초${P.find ? ' · 좋은 물건 +' + P.find + '%' : ''}${P.xpm > 1 ? ' · 경험치 +' + Math.round((P.xpm - 1) * 100) + '%' : ''}<br>쓰러뜨린 밑것들 ${P.kills}마리 · 경험 ${P.xp}/${xpNeed(P.lv)}</div><p class="m" style="font-size:11px;color:#8a7458">점수 다시 나누기는 1장 뒷부분에서 열려요.</p>`; }
+      const big = P.dmg; h += `<h4>지금 수치</h4><div class="sk-card">생명력 ${P.mhp} · 바람 ${P.mwind} (초당 +${P.wreg.toFixed(1)})<br>피해: 작은 적 ${big[0]}~${big[1]} / 큰 적 ${big[2]}~${big[3]} · 피해 +${Math.round(P.dmgp)}%<br>방어력 ${P.ac} (맞을 확률 ${Math.round(clamp(.92 - P.ac * .008, .55, .95) * 100)}%)${P.blk ? ' · 막기 ' + Math.round(P.blk) + '%' : ''}<br>공격 속도 초당 ${P.aspd.toFixed(2)}번 · 치명타 ${P.crit.toFixed(1)}% · 이동 ${P.move.toFixed(1)}<br>돛: 활공 ${P.sail[0]}칸 / ${P.sail[1]}초${P.find ? ' · 좋은 물건 +' + P.find + '%' : ''}${P.xpm > 1 ? ' · 경험치 +' + Math.round((P.xpm - 1) * 100) + '%' : ''}<br>쓰러뜨린 밑것들 ${P.kills}마리 · 경험 ${P.xp}/${xpNeed(P.lv)}</div>${respecBtn('rs')}`; }
     h += '</div></div>' + TOAST + '</div>';
   } else if (k === 'map') {
     h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">1장 민들레 섬</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
   } else if (k === 'skill') {
-    const sel = SEL; h = `<div class="sk-bx">${X}<h3>스킬 <small style="font-size:12px;color:#8a7458">남은 점수 ${P.skp} · 같은 갈래 스킬끼리 점수당 피해 +6%(잇기)</small></h3><div class="sk-sk">`;
+    const sel = SEL; h = `<div class="sk-bx">${X}<h3>스킬 <small style="font-size:12px;color:#8a7458">남은 점수 ${P.skp} · 같은 갈래 스킬끼리 점수당 피해 +6%(잇기)</small></h3><div style="margin:-2px 0 6px"><button class="sk-b p" data-a="board" ${P.lv >= BOARD_LV ? '' : 'disabled'}>◆ 나침반판 (B)${P.lv >= BOARD_LV ? '' : ' · ' + BOARD_LV + '레벨'}</button>${respecBtn('rk')}</div><div class="sk-sk">`;
     BRANCH[P.cls].forEach((bn, bi) => { h += `<div class="sk-br"><h4>${bn}</h4>`; for (const s of SKILLS[P.cls].filter(q => q.br === bi)) { const lv = P.sk[s.id] || 0, lk = P.lv < s.req; h += `<div class="sk-s${sel === s.id ? ' on' : ''}" data-sk="${s.id}"><span data-si="${s.id}"></span><div class="f ${lk ? 'lk' : ''}"><b>${s.name}</b> ${lv}/10${P.skb[bi] && lv ? ' (+' + P.skb[bi] + ')' : ''}${lk ? ' · ' + s.req + '레벨' : ''}<br>${esc(s.desc)}<br><small>바람 ${s.cost} · ${s.cd}초${lv >= 5 && P.fork[s.id] != null ? ' · 갈래: ' + s.fork[P.fork[s.id]][0] : ''}</small></div></div>`; } h += '</div>'; });
     h += '</div>'; { const U = ULT[P.cls], on = P.lv >= U.req; h += `<div class="sk-card" style="margin-top:8px;border-color:#e8b05a;background:#fff6e4"><b style="color:#b0702a">궁극 기술 · ${U.name}</b> ${on ? '<small style="color:#3a7fa8">익힘 · 4번 칸</small>' : '<small style="color:#a88a5a">' + U.req + '레벨에 저절로 익혀요</small>'}<br>${esc(U.desc)}<br><small>다시 쓰기 ${U.cd}초 · 바람 안 씀</small></div>`; }
     const s = sel && SKILLS[P.cls].find(q => q.id === sel);
@@ -1466,19 +1538,46 @@ function render(arg) {
       h += `<h4>갈래 고르기 (스킬 5레벨)</h4>` + s.fork.map((f, i) => `<button class="sk-b${P.fork[s.id] === i ? ' p' : ''}" data-a="fork" data-i="${i}" ${lv >= 5 && P.fork[s.id] == null ? '' : 'disabled'}><b>${f[0]}</b> — ${esc(f[1])}</button>`).join('<br>') + (P.fork[s.id] != null ? '<p class="m" style="font-size:11px">갈래는 정하면 바꿀 수 없어요(맛보기판).</p>' : '') + '</div>'; }
     else h += '<p style="font-size:12.5px;color:#8a7458">스킬을 누르면 배우기·칸 놓기·갈래 고르기를 할 수 있어요.</p>';
     h += TOAST + '</div>';
-  } else if (k === 'talk') h = talkHtml(arg);
+  } else if (k === 'board') h = boardHtml();
+  else if (k === 'talk') h = talkHtml(arg);
   else if (k === 'smith') h = smithHtml();
   else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}</div>`; }
   else if (k === 'quest') { h = `<div class="sk-bx" style="max-width:560px">${X}<h3>할 일</h3>`; for (const id in QUESTS) { const q = P.q[id], Q = QUESTS[id]; if (!q) continue; h += `<div class="sk-row"><div class="f"><b>${Q.n}</b> ${q.s === 3 ? '✔' : q.s === 2 ? '(보고하기)' : ''}<br><small>${esc(Q.goal)} — ${NPCDEF[Q.from].n}</small></div></div>`; } h += '</div>'; }
   else if (k === 'menu') { h = `<div class="sk-bx" style="max-width:420px;text-align:center">${X}<h3>잠깐 쉬기</h3><button class="sk-b p" data-a="x">계속하기</button><br><button class="sk-b" data-a="quest">할 일 보기</button><br><button class="sk-b" data-a="mute">${A.muted ? '소리 켜기' : '소리 끄기'}</button><br><button class="sk-b" data-a="help">조작법</button><br><button class="sk-b" data-a="title">저장하고 처음 화면으로</button><br><button class="sk-b" data-a="quit">저장하고 나가기</button><p class="m" style="font-size:11.5px;color:#8a7458;margin-top:8px">기록은 10초마다, 그리고 창을 닫을 때 이 기기에 저장돼요.</p></div>`; }
-  else if (k === 'help') { h = `<div class="sk-bx" style="max-width:600px">${X}<h3>조작법</h3><div class="sk-card"><b>PC</b><br>마우스 왼쪽: 이동 (누르고 있으면 따라가요 · 사람·표지·다리를 누르면 가서 말 걸기)<br>마우스 오른쪽: 공격 (누르고 있으면 계속 · 적을 누르면 다가가서 공격)<br>1~4: 기술 (마우스 쪽으로 · 4번은 궁극 기술) · Q 민들레 차 · R 바람 사탕 · 스페이스 돛 활공(피하기)<br>I 가방 · C 캐릭터 · S 기술 · M 지도 · J 할 일 · F 말 걸기 · Esc 쉬기<br><br><b>휴대폰</b> (가로 화면)<br>왼쪽 아무 곳이나 끌어서 이동 · 오른쪽 큰 버튼 공격(누르고 있으면 계속, 가까운 적을 알아서 노려요) · 둘레 버튼 기술 4개(금색 테두리가 궁극 기술) · 돛·차·사탕 버튼 · 사람이나 물건을 톡 누르면 그쪽으로 가요.<br><br><b>요령</b>: 방패지기는 적을 섬 끝으로 밀어 떨어뜨릴 수 있어요(보상은 조금 줄어요). 쉬고 돌아오면 순풍(경험치 2배)이 쌓여 있어요.</div></div>`; }
+  else if (k === 'help') { h = `<div class="sk-bx" style="max-width:600px">${X}<h3>조작법</h3><div class="sk-card"><b>PC</b><br>마우스 왼쪽: 이동 (누르고 있으면 따라가요 · 사람·표지·다리를 누르면 가서 말 걸기)<br>마우스 오른쪽: 공격 (누르고 있으면 계속 · 적을 누르면 다가가서 공격)<br>1~4: 기술 (마우스 쪽으로 · 4번은 궁극 기술) · Q 민들레 차 · R 바람 사탕 · 스페이스 돛 활공(피하기)<br>I 가방 · C 캐릭터 · S 기술 · M 지도 · B 나침반판 · J 할 일 · F 말 걸기 · Esc 쉬기<br><br><b>휴대폰</b> (가로 화면)<br>왼쪽 아무 곳이나 끌어서 이동 · 오른쪽 큰 버튼 공격(누르고 있으면 계속, 가까운 적을 알아서 노려요) · 둘레 버튼 기술 4개(금색 테두리가 궁극 기술) · 돛·차·사탕 버튼 · 사람이나 물건을 톡 누르면 그쪽으로 가요.<br><br><b>요령</b>: 방패지기는 적을 섬 끝으로 밀어 떨어뜨릴 수 있어요(보상은 조금 줄어요). 쉬고 돌아오면 순풍(경험치 2배)이 쌓여 있어요.</div></div>`; }
   else if (k === 'end') h = endHtml();
   panel.innerHTML = h; bindPanel(arg);
   if (k === 'inv') fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 'b' ? SHOP[+c.slice(1)] : null);
   if (k === 'char') { fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : null); panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 150))); }
   if (k === 'map') drawMap(panel.querySelector('[data-map]'));
+  if (k === 'board') CONF = null;
   if (k === 'smith') fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : P.inv[+c.slice(1)]);
   if (k === 'skill') panel.querySelectorAll('[data-si]').forEach(el => { const s = SKILLS[P.cls].find(q => q.id === el.dataset.si), c = document.createElement('canvas'), d = 2; c.width = c.height = 42 * d; const g = c.getContext('2d'); g.scale(d, d); drawSkillIcon(g, s, 0, 0, 42, P.cls); el.replaceWith(c); });
+}
+let CONF = null; // 한 번 더 눌러 확인
+const respecCost = P => 30 * P.lv;
+function respecBtn(kind) { const P = G.P, free = !P.flags[kind], cost = respecCost(P), what = kind === 'rs' ? '능력 점수' : '스킬 점수';
+  return `<button class="sk-b${CONF === kind ? ' p' : ''}" data-a="respec" data-k="${kind}" ${free || P.gold >= cost ? '' : 'disabled'}>${CONF === kind ? '정말 다시 나눌까요? 한 번 더 누르세요' : what + ' 다시 나누기 (' + (free ? '1장 무료 1번' : cost + 'G') + ')'}</button>`; }
+function doRespec(kind) { const P = G.P, free = !P.flags[kind], cost = respecCost(P); if (!free && P.gold < cost) { toast('골드가 모자라요'); return; } if (free) P.flags[kind] = 1; else P.gold -= cost;
+  if (kind === 'rs') { let n = 0; for (const k in P.sp) n += P.sp[k]; P.sp = {}; P.pts += n; toast('능력 점수 ' + n + '점을 돌려받았어요'); }
+  else { const st = P.cls === 'warden' ? 'pierce' : 'gust'; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
+  calc(P); sfx('ench'); }
+function boardHtml() {
+  const P = G.P, B = P.board, I = boardInfo(P), sum = boardSum(P), sel = SEL, w = 62, hh = 54;
+  const gem = (sh, sz) => `<div class="sk-gem" style="--g:${SHARD[sh.c].c};background:${SHARD[sh.c].c};width:${sz}px;height:${sz}px${sh.q === 3 ? ';outline:2px solid #fff6c0' : ''}"><i>${'◆'.repeat(sh.q)}</i></div>`;
+  let cells = ''; HEX.forEach(([q, r], i) => { const x2 = 150 - w / 2 + q * w * .75, y2 = 150 - hh / 2 + (r + q / 2) * hh, sh = B[i], lk = sh && HEXN[i].some(n => B[n] && B[n].c === sh.c);
+    cells += `<div class="sk-hx${i === HEXC ? ' ctr' : ''}${sel === 'b' + i ? ' on' : ''}${lk ? ' lk' : ''}" data-a="hx" data-i="${i}" style="left:${x2}px;top:${y2}px">${sh ? gem(sh, 26) : i === HEXC ? '<small style="position:relative;font-size:10px;color:#a8803a;font-weight:800">바람눈</small>' : ''}</div>`; });
+  const fxs = Object.entries(sum).filter(([, v]) => v).map(([k, v]) => afxText(k, Math.round(v * 10) / 10, P.cls)).join(' · ') || '아직 없어요';
+  const sets = Object.keys(SHARD).map(c => `<div class="${I.sets[c] ? 'a' : 'm'}"><b style="color:${SHARD[c].c}">${SHARD[c].n} 3개 잇기</b>: ${SHARD[c].set.map(([k, v]) => afxText(k, v, P.cls)).join(', ')}${I.sets[c] ? ' ✓' : ''}</div>`).join('') + `<div class="${I.trio ? 'a' : 'm'}"><b>세 바람</b>(세 색 모두 잇기): ${TRIO.map(([k, v]) => afxText(k, v, P.cls)).join(', ')}${I.trio ? ' ✓' : ''}</div>`;
+  // 합치기: 같은 색·품질 3개 → 한 단계 위
+  const groups = {}; P.shd.forEach(sh => { if (sh.q < 3) { const k = sh.c + sh.q; groups[k] = (groups[k] || 0) + 1; } });
+  const merges = Object.entries(groups).filter(([, n]) => n >= 3).map(([k]) => `<button class="sk-b" data-a="merge" data-k="${k}">${SHARD[k.slice(0, -1)].n} ${SHQ[+k.slice(-1)]} 3개 → ${SHQ[+k.slice(-1) + 1]}</button>`).join('');
+  const ts = sel && sel[0] === 't' ? P.shd[+sel.slice(1)] : sel && sel[0] === 'b' ? B[+sel.slice(1)] : null;
+  return `<div class="sk-bx" style="max-width:820px"><button class="sk-x" data-a="x">✕</button><h3>나침반판 <small style="font-size:12px;color:#8a7458">바람 조각을 끼워 힘을 얻어요 · 둥지지기·우두머리가 조각을 줘요</small></h3><div class="sk-two"><div><div class="sk-hexw"><div class="sk-hex">${cells}</div></div>
+    <h4>조각 주머니 <small style="color:#8a7458">${P.shd.length}/${SHD_MAX} · 누르고 판의 칸을 누르면 끼워요</small></h4><div class="sk-tray">${P.shd.map((sh, i) => `<div class="sk-tr${sel === 't' + i ? ' on' : ''}" data-a="tr" data-i="${i}">${gem(sh, 24)}</div>`).join('') || '<small style="color:#8a7458;padding:8px">비어 있어요</small>'}</div>${merges ? '<h4>합치기</h4>' + merges : ''}</div><div>
+    ${ts ? `<div class="sk-card"><div class="n" style="color:${shade(SHARD[ts.c].c)}">${shardName(ts)}</div><div class="m">${SHARD[ts.c].d}</div>${SHARD[ts.c].fx.map(([k, v]) => '<div class="a">' + afxText(k, v * ts.q, P.cls) + ' (기본)</div>').join('')}<div class="m" style="font-size:11px">둘레에 같은 색이 있으면 1개마다 +25%, 가운데 바람눈은 1.5배</div>${sel[0] === 'b' ? '<button class="sk-b" data-a="unhx">주머니로 빼기</button>' : ''}</div>` : '<p class="m" style="font-size:12.5px;color:#8a7458">같은 색 조각을 붙여 놓을수록 세져요. 같은 색 3개를 이으면 보너스, 세 색을 다 이으면 「세 바람」이 켜져요. 언제든 무료로 바꿔 끼울 수 있어요.</p>'}
+    <h4>지금 얻는 힘</h4><div class="sk-card">${fxs}</div><h4>잇기 보너스</h4><div class="sk-card">${sets}</div>
+    <button class="sk-b" data-a="skillp">← 스킬로</button></div></div>${TOAST}</div>`;
 }
 function shopHtml() { return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기)</small></h4><div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + coinHtml(); }
 function coinHtml() { const B = opts.bonus; if (!B) return ''; const day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), used = G.P.flags.coinDay === day ? G.P.flags.coinN || 0 : 0; return `<h4>5락실 코인 바꾸기</h4><p class="m" style="font-size:11.5px;color:#8a7458">코인 1개 = 200G, 하루 5개까지 (보유 ${B.coins()}개, 오늘 ${used}/5)</p><button class="sk-b" data-a="coin" ${B.coins() > 0 && used < 5 ? '' : 'disabled'}>🪙 1개 → 200G</button>`; }
@@ -1537,6 +1636,14 @@ function bindPanel(arg) {
     else if (a === 'shop') { PANEL = 'inv'; SHOP = G.shop || (G.shop = makeShop()); SEL = null; render(); }
     else if (a === 'ench') { const it = SEL[0] === 'e' ? P.eq[SEL.slice(1)] : P.inv[+SEL.slice(1)], m = t.dataset.m; if (!count(m)) return; const r = enchant(it, m); if (r.ok || r.msg.includes('실패')) useGood(m); if (!r.ok && !r.msg.includes('실패')) { toast(r.msg); return; } sfx(r.ok === 1 ? 'ench' : 'fail'); calc(P); render(); toast(r.msg); }
     else if (a === 'reroll') { const it = SEL[0] === 'e' ? P.eq[SEL.slice(1)] : P.inv[+SEL.slice(1)], kind = encKind(BASE[it.b]), cost = 40 + it.ilv * 15; if (P.gold < cost) return; if (kind && !useGood(kind === 'weapon' ? 'hone' : 'glue')) return; P.gold -= cost; const i = reroll(it); calc(P); sfx('ench'); render(); toast(i === false ? '바뀌지 않았어요' : '새 옵션: ' + afxText(it.af[i][0], it.af[i][1], P.cls)); }
+    else if (a === 'respec') { const kd = t.dataset.k; if (CONF === kd) { CONF = null; doRespec(kd); } else CONF = kd; render(); }
+    else if (a === 'board') { PANEL = 'board'; SEL = null; render(); }
+    else if (a === 'skillp') { PANEL = 'skill'; SEL = null; render(); }
+    else if (a === 'tr') { const k2 = 't' + t.dataset.i; if (SEL && SEL[0] === 'b') { const bi = +SEL.slice(1), ti = +t.dataset.i, o = P.board[bi]; P.board[bi] = P.shd[ti]; P.shd.splice(ti, 1); if (o) P.shd.push(o); SEL = null; calc(P); sfx('pick'); } else SEL = SEL === k2 ? null : k2; render(); }
+    else if (a === 'hx') { const i = +t.dataset.i, B = P.board; if (SEL && SEL[0] === 't') { const ti = +SEL.slice(1), o = B[i]; B[i] = P.shd[ti]; P.shd.splice(ti, 1); if (o) P.shd.push(o); SEL = null; calc(P); sfx('pick'); }
+      else if (SEL && SEL[0] === 'b' && SEL !== 'b' + i) { const j = +SEL.slice(1); [B[i], B[j]] = [B[j], B[i]]; SEL = null; calc(P); sfx('pick'); } else SEL = B[i] || SEL === 'b' + i ? (SEL === 'b' + i ? null : 'b' + i) : null; render(); }
+    else if (a === 'unhx') { const i = +SEL.slice(1); if (P.board[i] && P.shd.length < SHD_MAX) { P.shd.push(P.board[i]); P.board[i] = null; calc(P); } SEL = null; render(); }
+    else if (a === 'merge') { const c = t.dataset.k.slice(0, -1), q = +t.dataset.k.slice(-1); let n = 0; P.shd = P.shd.filter(sh => { if (n < 3 && sh.c === c && sh.q === q) { n++; return false; } return true; }); if (n === 3) { P.shd.push({ c, q: q + 1 }); sfx('ench'); toast(SHARD[c].n + ' ' + SHQ[q + 1] + '을 만들었어요'); } SEL = null; render(); }
     else if (a === 'quest') { PANEL = 'quest'; render(); } else if (a === 'help') { PANEL = 'help'; render(); }
     else if (a === 'mute') { A.muted = !A.muted; try { localStorage.setItem('sky_mute', A.muted ? '1' : '0'); } catch (er) {} if (A.master) A.master.gain.value = A.muted ? 0 : .45; render(); }
     else if (a === 'title') { save(); G = null; title(); }
@@ -1586,12 +1693,13 @@ function talk(id, auto) { if (!G) return; if (auto && PANEL) return; openPanel('
 /* ---------- 처음 화면 ---------- */
 let TSEL = 'warden';
 function portrait(cls, w) { const c = document.createElement('canvas'), d = 2; c.width = w * d; c.height = w * 1.07 * d; const g = c.getContext('2d'); if (IM[cls]) g.drawImage(IM[cls], 0, 2 * HC[1], HC[0], HC[1], 0, 0, c.width, c.height); return c; }
+let PULLED = 0;
 function title() {
   PANEL = 'title'; panel.hidden = false; ov.classList.remove('play');
   const sv = { warden: loadSave('warden'), windcaller: loadSave('windcaller') }, s = sv[TSEL];
   panel.innerHTML = `<div class="sk-bx sk-title"><button class="sk-x" data-a="quit" aria-label="나가기">✕</button><div class="t">끊어진 하늘</div><div class="s">맛보기판 · 1장 민들레 섬</div><p style="font-size:13px;line-height:1.7;color:#5a4a36;margin:4px 0">${STORY_INTRO.map(esc).join('<br>')}</p><div class="sk-cls">${Object.keys(CLASSES).map(k => `<div class="sk-cl${TSEL === k ? ' on' : ''}" data-a="pick" data-cls="${k}"><span data-po="${k}"></span><b>${CLASSES[k].name}</b><small>${esc(CLASSES[k].desc)}</small><small style="color:#3a7fa8;margin-top:4px">${sv[k] ? '기록: ' + sv[k].lv + '레벨' : '새 이음꾼'}</small></div>`).join('')}</div>
     ${s ? `<button class="sk-b p" data-a="start" data-n="0">이어하기 (${s.lv}레벨)</button><button class="sk-b" data-a="start" data-n="1">처음부터 (기록 지움)</button>` : `<button class="sk-b p" data-a="start" data-n="1">이 직업으로 시작</button>`}
-    <p style="font-size:11px;color:#8a7458;margin:8px 0 0">기록은 이 기기에 저장돼요. 직업마다 따로 저장돼요.</p></div>`;
+    <p style="font-size:11px;color:#8a7458;margin:8px 0 0">${pcode() ? '기록은 이 기기와 5락실 프로필(복구 코드)에 저장돼요. 다른 기기에서도 같은 복구 코드로 이어 할 수 있어요.' : '기록은 이 기기에 저장돼요. 5락실 프로필을 만들면 다른 기기에서도 이어 할 수 있어요.'}${PULLED ? ' · 다른 기기 기록을 불러왔어요' : ''}</p></div>`;
   panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 120))); bindPanel();
 }
 function startFrom(fresh) {
@@ -1607,8 +1715,8 @@ function loop(t) {
   draw();
 }
 function fs() { const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) return; const r = ov.requestFullscreen || ov.webkitRequestFullscreen; if (!r) return; try { const p = r.call(ov, { navigationUI: 'hide' }); if (p && p.then) p.then(() => layout()).catch(() => {}); } catch (e) {} }
-function open() { ov.hidden = false; document.documentElement.style.overflow = 'hidden'; layout(); audioInit(); if (TOUCH.on) fs(); G = null; assets().then(() => { layout(); title(); }); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
-function close() { save(); cancelAnimationFrame(raf); ov.hidden = true; document.documentElement.style.overflow = ''; panel.hidden = true; PANEL = null; if (A.ctx) A.ctx.suspend(); const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} } const P = G && G.P; G = null; opts.onExit && opts.onExit(P ? { lv: P.lv, cls: P.cls } : null); }
+function open() { ov.hidden = false; document.documentElement.style.overflow = 'hidden'; layout(); audioInit(); if (TOUCH.on) fs(); G = null; Promise.all([assets(), cloudPull().then(n => { PULLED = n || 0; })]).then(() => { layout(); title(); }); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
+function close() { save(); cloudFlush(); cancelAnimationFrame(raf); ov.hidden = true; document.documentElement.style.overflow = ''; panel.hidden = true; PANEL = null; if (A.ctx) A.ctx.suspend(); const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) { try { (d.exitFullscreen || d.webkitExitFullscreen).call(d); } catch (e) {} } const P = G && G.P; G = null; opts.onExit && opts.onExit(P ? { lv: P.lv, cls: P.cls } : null); }
 window.SkyGame = {
   boot(o) { opts = o || {}; if (!ov) mkDom(); assets();
     if (DEBUG) window.__sky = { open, G: () => G, start(cls, fresh) { TSEL = cls || 'warden'; startFrom(fresh !== false); }, step(n) { for (let i = 0; i < n; i++) update(STEP); }, draw, god(b) { G.god = b; }, tp(x2, y2) { G.P.x = x2; G.P.y = y2; G.cam = [x2, y2]; }, panel: openPanel, close: closePanel, give(id, r) { addInv(makeItem(id, r || 0, 5)); }, goods(g, n) { addInv(goods(g, n)); }, lv(n) { gainXp(xpNeed(G.P.lv) * n); }, keys: KEYS, press, talk, layout, hit: hitMob, dbg: { drawParts, drawFx, drawMob, drawDrop, drawHero, hud, view } };

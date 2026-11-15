@@ -158,6 +158,19 @@ const MOBDEF = {
 };
 const ELITE = [['빠른', '#9fe4ff', { spd: 1.4 }], ['단단한', '#ffd27a', { hp: 2.2 }], ['바람 두른', '#c9a8ff', { kbimm: 1, hp: 1.5 }], ['성난', '#ff8f7a', { dmg: 1.5 }]];
 
+/* ---------- 나침반판(모든 직업 공통 육각 판 19칸) ---------- */
+// 바람 조각: 색(하늘·들불·새싹) × 품질 1~3. 둘레의 같은 색 조각 1개마다 +25%, 가운데 '바람눈' 칸은 1.5배.
+// 같은 색이 3개 이상 이어지면 그 색 보너스, 세 색 보너스가 다 켜지면 '세 바람' 보너스.
+const SHARD = {
+  sky: { n: '하늘', c: '#5fb4f0', fx: [['wreg', 4], ['wind', 2]], set: [['wind', 8], ['wreg', 8]], d: '바람 회복·최대 바람' },
+  fire: { n: '들불', c: '#f0784a', fx: [['dmgp', 2]], set: [['crit', 3], ['dmgp', 4]], d: '피해' },
+  leaf: { n: '새싹', c: '#74c45a', fx: [['hp', 5]], set: [['ac', 4], ['hp', 12]], d: '생명력 (잇기: 방어력)' },
+};
+const SHQ = ['', '조각', '맑은 조각', '빛나는 조각'], TRIO = [['xp', 8], ['find', 10]], BOARD_LV = 3, SHD_MAX = 30;
+const HEX = []; for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.abs(q + r) <= 2) HEX.push([q, r]);
+const HEXN = HEX.map(([q, r]) => HEX.map(([a, b], j) => Math.abs(a - q) + Math.abs(b - r) + Math.abs(a + b - q - r) === 2 ? j : -1).filter(j => j >= 0));
+const HEXC = HEX.findIndex(([q, r]) => !q && !r);
+
 /* ---------- 이야기·퀘스트 ---------- */
 const NPCDEF = {
   chief: { n: '촌장 들메', row: 0 }, smith: { n: '대장장이 무쇠', row: 1 }, merchant: { n: '떠돌이 상인 얼레', row: 2 }, sage: { n: '이야기꾼 솔바람', row: 3 },

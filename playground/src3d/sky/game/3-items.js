@@ -85,6 +85,7 @@ function calc(P) {
   const C = CLASSES[P.cls], m = { ac: 0 };
   for (const s in P.eq) if (P.eq[s]) itemMods(P.eq[s], m);
   const sc = setCount(P); for (const k in sc) for (const [n, fx] of SETS[k].bonus) if (sc[k] >= n) for (const [a, v] of fx) m[a] = (m[a] || 0) + v;
+  boardMods(P, m);
   const st = {}; for (const [k] of STATS) st[k] = C.stat[k] + (P.sp[k] || 0) + (m[k] || 0);
   const S = P.st = st;
   P.mhp = Math.round(30 + S.vit * 4 + P.lv * 6 + (m.hp || 0));
@@ -105,3 +106,25 @@ function calc(P) {
 const xpNeed = L => Math.round(40 * Math.pow(L, 1.45));
 function skLv(P, s) { const base = P.sk[s.id] || 0; return base ? base + P.skb[s.br] : 0; }
 function synergy(P, s) { let n = 0; for (const o of SKILLS[P.cls]) if (o.br === s.br && o.id !== s.id) n += P.sk[o.id] || 0; return 1 + n * .06; }
+
+/* ---------- 나침반판 계산 ---------- */
+function boardGroups(B) { // 같은 색으로 이어진 묶음들 [{c, cells}]
+  const seen = new Set(), out = [];
+  B.forEach((sh, i) => { if (!sh || seen.has(i)) return; const st = [i], cells = []; seen.add(i);
+    while (st.length) { const j = st.pop(); cells.push(j); for (const n of HEXN[j]) if (!seen.has(n) && B[n] && B[n].c === sh.c) { seen.add(n); st.push(n); } }
+    out.push({ c: sh.c, cells }); });
+  return out;
+}
+function boardInfo(P) { // 칸마다 실제 효과 배율 + 켜진 묶음 보너스
+  const B = P.board || [], mul = B.map((sh, i) => sh ? sh.q * (1 + .25 * HEXN[i].filter(n => B[n] && B[n].c === sh.c).length) * (i === HEXC ? 1.5 : 1) : 0);
+  const sets = {}; for (const g of boardGroups(B)) if (g.cells.length >= 3) sets[g.c] = 1;
+  return { mul, sets, trio: Object.keys(SHARD).every(c => sets[c]) };
+}
+function boardMods(P, m) {
+  if (!P.board) return; const I = boardInfo(P), add = (k, v) => { m[k] = (m[k] || 0) + v; };
+  P.board.forEach((sh, i) => { if (sh) for (const [k, v] of SHARD[sh.c].fx) add(k, Math.round(v * I.mul[i])); });
+  for (const c in I.sets) for (const [k, v] of SHARD[c].set) add(k, v);
+  if (I.trio) for (const [k, v] of TRIO) add(k, v);
+}
+function boardSum(P) { const m = {}; boardMods(P, m); return m; }
+const shardName = sh => SHARD[sh.c].n + ' ' + SHQ[sh.q];
