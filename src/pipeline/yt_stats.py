@@ -20,6 +20,7 @@ import urllib.request
 from .youtube import KST, LOG, access_token
 
 STATS = pathlib.Path("data/youtube/stats.json")
+RAKSIL = pathlib.Path("data/youtube/raksil_uploaded.json")  # 5락실 쇼츠
 EP_DIR = pathlib.Path("data/episodes")
 WEEKLY = pathlib.Path("docs/SHORTS_WEEKLY.md")
 API = "https://www.googleapis.com/youtube/v3/videos"
@@ -62,6 +63,8 @@ def fetch_stats(ids: list[str]) -> dict[str, dict]:
 def fetch() -> int:
     log = json.loads(LOG.read_text(encoding="utf-8")) if LOG.exists() else {}
     ids = {v["video_id"]: k for k, v in log.items() if v.get("video_id")}
+    raksil = json.loads(RAKSIL.read_text(encoding="utf-8")) if RAKSIL.exists() else {}
+    ids.update({v["id"]: "5raksil-" + k for k, v in raksil.items() if isinstance(v, dict) and v.get("id")})
     got = fetch_stats(list(ids))
     if not got:
         return 0
@@ -95,7 +98,8 @@ def weekly() -> int:
     meta = episode_meta()
     rows = []
     for slug, v in snap.items():
-        m = meta.get(slug, {"format": "예전", "title": slug, "date": v.get("published", "")[:10]})
+        m = meta.get(slug, {"format": "5락실" if slug.startswith("5raksil-") else "예전", "title": slug,
+                            "date": v.get("published", "")[:10]})
         rows.append((v["views"], slug, m["format"], m["title"], m["date"], v["likes"], v["comments"]))
     rows.sort(reverse=True)
     by = {}
