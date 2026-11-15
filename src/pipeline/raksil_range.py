@@ -60,7 +60,8 @@ def description_of(stage: int, score: int, n_heads: int, voiced: bool) -> str:
     ls = [f"5락실 무료 웹게임 '네온 사격장' STAGE {stage} 자동 플레이 하이라이트",
           f"이번 판: {score:,}점 · 헤드샷 {n_heads}발", "",
           "▶ 설치 없이 바로 하기: https://5raksil.com/games/range",
-          "▶ 매일 새 밸런스게임·틀린그림찾기: https://5raksil.com", "",
+          "▶ 매일 새 밸런스게임·틀린그림찾기: https://5raksil.com",
+          "▶ 새 게임·매일 밸런스게임 소식은 구독으로", "",
           "게임 속 총기·사격장·좀비는 모두 5락실이 만든 가상의 디자인입니다."]
     if voiced:
         ls.append("내레이션: AI 음성")
@@ -87,7 +88,7 @@ def cta_card(t: float):
     blink = rs.PINK if int(t * 3) % 2 == 0 else rs.YEL
     rs.glow_text(img, (W / 2, 1000), ["5raksil.com"], rs.font(130), 130, blink, glow=20)
     rs.glow_text(img, (W / 2, 1260), ["설치 없이 바로 플레이"], rs.font(72), 72, rs.CYAN, glow=12)
-    rs.glow_text(img, (W / 2, 1480), ["오늘의 순위 도전"], rs.font(56), 56, rs.YEL, glow=8)
+    rs.glow_text(img, (W / 2, 1480), ["구독하면 새 게임 소식"], rs.font(56), 56, rs.YEL, glow=8)
     return img
 
 

@@ -120,7 +120,8 @@ def description_of(g: dict, kind: str, voiced: bool) -> str:
     head = f"5락실 신작 '{g['name']}' 공개!" if kind == "new" else f"5락실 무료 웹게임 '{g['name']}'"
     ls = [head, g["short"], "",
           f"▶ 설치 없이 바로 하기: {rs.SITE}/games/{g['slug']}",
-          f"▶ 다른 무료 게임·매일 밸런스게임: {rs.SITE}", "",
+          f"▶ 다른 무료 게임·매일 밸런스게임: {rs.SITE}",
+          "▶ 새 게임 소식은 구독으로", "",
           "영상 속 플레이는 자동 플레이(테스트 모드) 화면입니다. 게임 속 그래픽·캐릭터는 모두 5락실이 만든 디자인입니다."]
     if voiced:
         ls.append("내레이션: AI 음성")
@@ -174,6 +175,7 @@ def cta_card(g: dict, t: float):
     rs.glow_text(img, (W / 2, 900), ["5raksil.com"], rs.font(130), 130, blink, glow=20)
     rs.glow_text(img, (W / 2, 1140), ["프로필 링크에서 바로 플레이"], rs.font(64), 64, rs.CYAN, glow=12)
     rs.glow_text(img, (W / 2, 1300), ["설치 없음, 무료"], rs.font(56), 56, rs.YEL, glow=8)
+    rs.glow_text(img, (W / 2, 1460), ["구독하면 매일 새 게임 소식"], rs.font(56), 56, rs.PINK, glow=8)
     return img
 
 
