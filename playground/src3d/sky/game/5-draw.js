@@ -12,13 +12,13 @@ function assets() {
   const J = p => p.then(() => { LOADP.n++; });
   assetsP = Promise.all([...['heads', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
     J(fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; })), J(fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; })), J(fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {}))])
-    .then(() => { LATE.reduce((p, k) => p.then(() => loadImg(k, IMG + k + '.webp' + v)), Promise.resolve()); });
+    .then(() => { fetch(IMG + 'items.json' + v).then(r => r.json()).then(j => { ITM = j; const im = new Image(); im.onload = () => { IM.items = im; }; im.src = IMG + 'items.webp' + v; }).catch(() => {}); LATE.reduce((p, k) => p.then(() => loadImg(k, IMG + k + '.webp' + v)), Promise.resolve()); });
   return assetsP;
 }
 // 영웅 그림은 고른 직업 것만 받는다(직업 5개 → 처음 화면은 얼굴 한 장)
 const HEROP = {};
 function loadHero(cls) { return HEROP[cls] || (HEROP[cls] = IM[cls] ? Promise.resolve() : new Promise(ok => { const im = new Image(); im.onload = () => { IM[cls] = im; ok(); }; im.onerror = () => { delete HEROP[cls]; ok(); }; im.src = IMG + cls + '.webp?v=__ASSETV__'; })); }
-let ICM = {}; const DIRT = [];
+let ICM = {}, ITM = {}; const DIRT = [];
 function sprite(im, cw, ch, ax, ay, fr, row, X, Y, sc, flash, alpha) {
   if (!im) return; const w = cw * sc, h = ch * sc; if (alpha != null) x.globalAlpha = alpha;
   x.drawImage(im, fr * cw, row * ch, cw, ch, X - ax * sc, Y - ay * sc, w, h);
@@ -301,14 +301,16 @@ function emblem(g, kind, cx, cy, r, col) {
   else { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, rr2 = i % 2 ? q * .45 : q; g.lineTo(cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2); } g.closePath(); g.fill(); }
   g.restore();
 }
-function drawIcon(it, X, Y, s, g) { g = g || x; const k = it.g ? GOODS[it.g].ic : BASE[it.b].ic, m = ICM[k];
-  if (!m || !IM.icons) { g.fillStyle = itemColor(it); g.beginPath(); g.arc(X + s / 2, Y + s / 2, s * .32, 0, TAU); g.fill(); return; }
+// 물건마다 따로 그린 그림(items.webp: 장비 종류·고유 장비·새 재료) → 없으면 예전 공용 그림
+function itemPic(it) { if (!IM.items) return null; return ITM[it.g ? 'g_' + it.g : it.u && it.id && ITM['u_' + it.u] ? 'u_' + it.u : it.b] || null; }
+function drawIcon(it, X, Y, s, g) { g = g || x; const k = it.g ? GOODS[it.g].ic : BASE[it.b].ic, m = ICM[k], pic = itemPic(it);
+  if (!pic && (!m || !IM.icons)) { g.fillStyle = itemColor(it); g.beginPath(); g.arc(X + s / 2, Y + s / 2, s * .32, 0, TAU); g.fill(); return; }
   const live = g === x && G, cx = X + s / 2, cy = Y + s / 2;
   if (!it.g) { // 뒤쪽 빛: 축복 금빛, 저주 보랏빛, 강화 +4 하늘빛 / +7 금빛, 이름난 이상 등급 빛
     const glow = it.st === -1 && it.id ? '#8a4ac8' : it.st === 1 ? '#ffe08a' : it.en >= 7 ? '#ffd166' : it.en >= 4 ? '#9fe4ff' : it.r >= 2 ? RAR[it.r].c : null;
     if (glow) { const p = live ? .75 + Math.sin(G.t * 4) * .25 : 1, gr = g.createRadialGradient(cx, cy, s * .1, cx, cy, s * .55); gr.addColorStop(0, glow); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.globalAlpha = .55 * p; g.fillStyle = gr; g.fillRect(X - s * .05, Y - s * .05, s * 1.1, s * 1.1); g.globalAlpha = 1; } }
   const ma = mainAfx(it), v = ma && AFXV[ma], tc = v ? tinted(k, v[0], it.u ? .45 : it.r >= 2 ? .38 : .28) : null;
-  if (tc) g.drawImage(tc, X, Y, s, s); else g.drawImage(IM.icons, m[0], m[1], m[2], m[3], X, Y, s, s);
+  if (pic) g.drawImage(IM.items, pic[0], pic[1], pic[2], pic[3], X, Y, s, s); else if (tc) g.drawImage(tc, X, Y, s, s); else g.drawImage(IM.icons, m[0], m[1], m[2], m[3], X, Y, s, s);
   if (it.g) return;
   if (v && s >= 20) emblem(g, v[1], X + s * .2, Y + s * .8, s * .21, v[0]);
   if (it.u && it.id) { g.fillStyle = '#ffe9b0'; for (let i = 0; i < 3; i++) { const a = (live ? G.t * 2 : 0) + i * 2.1; g.globalAlpha = .9; g.beginPath(); g.arc(cx + Math.cos(a) * s * .38, cy + Math.sin(a) * s * .38, s * .035, 0, TAU); g.fill(); } g.globalAlpha = 1; }
