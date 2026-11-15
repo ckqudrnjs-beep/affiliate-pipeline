@@ -617,7 +617,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
@@ -1279,7 +1279,7 @@ function dailyHtml(X) { const P = G.P, D = P.daily;
   const r = dReward(P); let h = `<div class="sk-bx" style="max-width:460px">${X}<h3>마을 게시판 <small style="font-size:12px;color:#8a7458">${D.d.slice(5).replace('-', '월 ')}일 · 자정에 바뀌어요</small></h3>`;
   h += `<div class="sk-card" style="border-color:#e8b05a;background:#fff6e4"><b style="color:#b0702a">오늘의 섬 · ${isleName(D.isle)}</b><br><small>정예가 더 나오고 금화를 1.5배 떨궈요. 밑것 ${ISLE_N}마리를 쓰러뜨리면 상자가 나타나요.</small><br><small>${D.chest ? '상자를 열었어요 ✓' : G.chest ? '상자가 나와 있어요!' : '진행 ' + D.isleN + '/' + ISLE_N}</small></div>`;
   h += '<h4 style="margin:8px 0 4px">하루 의뢰</h4>' + D.tasks.map((q, i) => { const [n, need] = DTASK[q.k](q.t, q.n); return `<div class="sk-row"><div class="f"><b>${n}</b><br><small>${Math.min(q.c, need)}/${need} · 보상 ${r.gold}G, 경험치 ${r.xp}, ${i === 0 ? '민들레 차' : '바람 사탕'} 2</small></div><button class="sk-b ${q.got ? '' : 'g'}" data-a="dclaim" data-i="${i}" ${q.c >= q.n && !q.got ? '' : 'disabled'}>${q.got ? '받음' : q.c >= q.n ? '받기' : '진행 중'}</button></div>`; }).join('');
-  h += `<p class="m" style="font-size:11.5px">셋을 다 하면 덤으로 축복 숫돌을 줘요. 못 한 날도 손해는 없어요.${P.rested > 1 ? ' · 지금 순풍: 경험치 2배 ' + Math.round(P.rested) + ' 남음' : ''}</p>` + TOAST + '</div>'; return h; }
+  h += `${errandHtml()}<p class="m" style="font-size:11.5px">셋을 다 하면 덤으로 축복 숫돌을 줘요. 못 한 날도 손해는 없어요.${P.rested > 1 ? ' · 지금 순풍: 경험치 2배 ' + Math.round(P.rested) + ' 남음' : ''}</p>` + TOAST + '</div>'; return h; }
 function dailyTrack() { const P = G.P, D = P.daily; if (!D) return null; const left = D.tasks.filter(q => !q.got).length; if (!left) return null; const ready = D.tasks.filter(q => q.c >= q.n && !q.got).length;
   const q = D.tasks.find(q => q.c < q.n);
   return ['하루 의뢰 ' + (3 - left) + '/3', ready ? '마을 게시판에서 보상 받기' : G.chest ? '오늘의 섬 상자 열기' : !D.chest ? '오늘의 섬 ' + isleName(D.isle) + ' ' + D.isleN + '/' + ISLE_N : q ? DTASK[q.k](q.t, q.n)[0] + ' ' + q.c + '/' + q.n : '마을 게시판']; }
@@ -1562,6 +1562,49 @@ function ch3Goals(Wd, P, goals) { const q = P.q, bq = Wd.bridges[Wd.bq];
   if (q.q17 && q.q17.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
   if (q.q17 && q.q17.s === 2 && !P.flags['wp_녹슨 정박장']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
 function endHtml3() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>3장 「닻 내린 항구」 끝</h3><p>녹슨 비행선이 정박장 위로 천천히 내려앉자, 막혀 있던 바람이 한꺼번에 항구로 쏟아져 들어왔다.</p><p>묶여 있던 비행선들의 돛이 부푼다. 바람은 이제 구름 너머 더 높은 곳으로 흘러간다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>4장은 다음에 열려요. 그동안 오늘의 섬과 하루 의뢰로 장비를 모아 보세요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
+
+/* ---------- 4-3 매일 오는 재미: 날마다 바뀌는 떠돌이 상인 · 비행선 심부름 · 대장간 분해 ---------- */
+const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+// 떠돌이 상인: 같은 날(KST)에는 같은 물건, 자정에 바뀜. 산 물건은 그날 다시 안 나옴. 골드로만 사요.
+function makeShop() {
+  const P = G.P, d = dayKey(); if (!P.shopD || P.shopD.d !== d) P.shopD = { d, got: [] };
+  const R = srand(hashS(d) ^ P.seed ^ (G.Wd.ch * 7919)), keep = Math.random; Math.random = R;
+  const L = [goods('pot'), goods('wpot'), goods('pure'), goods('look')], lv = Math.max(2, P.lv);
+  try {
+    const roll = (l, f) => { let it; for (let k = 0; k < 6; k++) { it = rollDrop(l, f, P.cls); if (!it.u && !it.set) break; } delete it.u; delete it.set; return it; };
+    for (let i = 0; i < 8; i++) { const it = roll(lv, 30); it.id = true; if (it.r > 1) it.r = 1; if (it.st === -1) it.st = 0; it.sk = 'n' + i; L.push(it); }
+    // 오늘의 귀한 물건 1개(파란 테 이상, 감정된 채로) · 오늘의 재료 1개
+    let sp = roll(lv + 2, 260); for (let k = 0; k < 30 && sp.r !== 2; k++) sp = roll(lv + 2, 260); sp.id = true; if (sp.st === -1) sp.st = 0; sp.sk = 'sp'; sp.today = 1; L.push(sp);
+    const m = goods(R() < .5 ? 'bhone' : 'bglue'); m.pr = 300 + lv * 25; m.sk = 'mat'; m.today = 1; L.push(m);
+  } finally { Math.random = keep; }
+  return L.filter(it => !it.sk || !P.shopD.got.includes(it.sk)); }
+function shopBought(it) { const P = G.P; if (it.sk && P.shopD) P.shopD.got.push(it.sk); }
+function shopFresh() { return G.shop && G.shopDay === dayKey() ? G.shop : (G.shopDay = dayKey(), G.shop = makeShop()); }
+// 비행선 심부름: 보내 두면 접속을 안 해도 시간이 흘러 재료를 가져와요. 하루 횟수 제한 없음.
+const ERRAND_LV = 5;
+const ERRANDS = [
+  { k: 'near', n: '가까운 섬 장보기', m: 30, d: '차·사탕과 숫돌·아교 조금' },
+  { k: 'mid', n: '이웃 군도 짐 나르기', m: 120, d: '골드, 숫돌·아교, 가끔 장비 하나' },
+  { k: 'far', n: '먼 하늘 건너 물건 찾기', m: 480, d: '골드 듬뿍, 장비 하나, 축복 숫돌·아교 반반' },
+];
+const errandLeft = E => Math.max(0, E.t0 + E.m * 6e4 - Date.now());
+function errandSend(i) { const P = G.P, E = ERRANDS[i]; if (!E || P.errand || P.lv < ERRAND_LV) return; P.errand = { k: E.k, n: E.n, m: E.m, t0: Date.now(), lv: P.lv }; sfx('gust'); say('비행선이 「' + E.n + '」 심부름을 떠났어요', '#9fe4ff'); save(); }
+function errandClaim() { const P = G.P, E = P.errand; if (!E || errandLeft(E) > 0) return; const lv = E.lv, got = [];
+  const add = it => { if (!addInv(it)) G.drops.push({ x: P.x + rnd(-.6, .6), y: P.y + rnd(-.6, .6), it, t: 0 }); got.push(it.g ? GOODS[it.g].n + (it.n > 1 ? ' ' + it.n : '') : itemName(it)); };
+  const gold = Math.round(lv * (E.k === 'far' ? 160 : E.k === 'mid' ? 55 : 18)); P.gold += gold;
+  if (E.k === 'near') { add(goods('pot', 2)); add(goods('wpot', 2)); add(goods(Math.random() < .5 ? 'hone' : 'glue')); }
+  if (E.k === 'mid') { add(goods('hone', 2)); add(goods('glue', 2)); if (Math.random() < .5) add(rollDrop(lv, P.find + 80, P.cls)); }
+  if (E.k === 'far') { add(goods('hone', 3)); add(goods('glue', 3)); add(goods(Math.random() < .5 ? 'bhone' : 'bglue')); add(rollDrop(lv + 1, P.find + 180, P.cls)); if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: Math.random() < .3 ? 2 : 1 }); }
+  P.errand = null; sfx('coin'); toast('비행선이 돌아왔어요! ' + gold + 'G · ' + got.join(', ')); save(); }
+const fmtLeft = ms => { const m = Math.ceil(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + '시간 ' + (m % 60 ? m % 60 + '분' : '') : m + '분'; };
+function errandHtml() { const P = G.P, E = P.errand; let h = '<h4 style="margin:10px 0 4px">비행선 심부름</h4>';
+  if (P.lv < ERRAND_LV) return h + `<p class="m" style="font-size:12px">${ERRAND_LV}레벨이 되면 마을 비행선을 심부름 보낼 수 있어요.</p>`;
+  if (E) { const left = errandLeft(E); return h + `<div class="sk-row"><div class="f"><b>${E.n}</b><br><small>${left > 0 ? fmtLeft(left) + ' 뒤에 돌아와요 · 게임을 꺼 둬도 시간은 흘러요' : '돌아왔어요!'}</small></div><button class="sk-b ${left > 0 ? '' : 'g'}" data-a="errc" ${left > 0 ? 'disabled' : ''}>${left > 0 ? '다녀오는 중' : '짐 받기'}</button></div>`; }
+  return h + ERRANDS.map((e, i) => `<div class="sk-row"><div class="f"><b>${e.n}</b> <small>${e.m >= 60 ? e.m / 60 + '시간' : e.m + '분'}</small><br><small>${e.d}</small></div><button class="sk-b p" data-a="errs" data-i="${i}">보내기</button></div>`).join('') + '<p class="m" style="font-size:11.5px">한 번에 하나씩 보낼 수 있어요. 횟수 제한은 없어요.</p>'; }
+function errandTrack() { const E = G.P.errand; if (!E) return null; const left = errandLeft(E); return ['비행선 심부름', left > 0 ? E.n + ' · ' + fmtLeft(left) + ' 남음' : '돌아왔어요! 마을 게시판에서 짐 받기']; }
+// 대장간 분해: 안 쓰는 장비를 숫돌·아교로 바꿔요(무기 → 숫돌, 나머지 → 아교)
+function salvageOf(it) { const b = BASE[it.b]; if (!b || it.g) return null; const n = [1, 1, 2, 3, 3][it.r] + (b.lv >= 18 ? 1 : 0) + (it.en >= 4 ? 1 : 0); return [b.s === 'weapon' ? 'hone' : 'glue', n]; }
+function salvage(i) { const P = G.P, it = P.inv[i], s = salvageOf(it); if (!s) return; P.inv.splice(i, 1); addInv(goods(s[0], s[1])); sfx('ench'); toast(itemName(it) + ' → ' + GOODS[s[0]].n + ' ' + s[1] + '개'); save(); }
 
 
 /* =================== 그리기 =================== */
@@ -2016,7 +2059,7 @@ function minimap(R, T, s) {
 }
 function questTracker(R, T, s) {
   const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; else t = track2(id, q) || track3(id, q) || t; L.push([Q.n, t]); }
-  const dt2 = dailyTrack(); if (dt2) L.push(dt2);
+  const dt2 = dailyTrack(); if (dt2) L.push(dt2); const et = errandTrack(); if (et) L.push(et);
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
 }
@@ -2370,10 +2413,9 @@ function boardHtml() {
     <h4>지금 얻는 힘</h4><div class="sk-card">${fxs}</div><h4>잇기 보너스</h4><div class="sk-card">${sets}</div>
     <button class="sk-b" data-a="skillp">← 스킬로</button></div></div>${TOAST}</div>`;
 }
-function shopHtml() { return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기)</small></h4><div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + coinHtml(); }
+function shopHtml() { const td = SHOP.filter(it => it.today); return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기 · 자정에 물건이 바뀌어요)</small></h4>${td.length ? '<p class="m" style="font-size:11.5px;color:#b0702a">오늘만: ' + td.map(it => it.g ? GOODS[it.g].n : itemName(it)).join(', ') + '</p>' : ''}<div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + coinHtml(); }
 function coinHtml() { const B = opts.bonus; if (!B) return ''; const day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), used = G.P.flags.coinDay === day ? G.P.flags.coinN || 0 : 0; return `<h4>5락실 코인 바꾸기</h4><p class="m" style="font-size:11.5px;color:#8a7458">코인 1개 = 200G, 하루 5개까지 (보유 ${B.coins()}개, 오늘 ${used}/5)</p><button class="sk-b" data-a="coin" ${B.coins() > 0 && used < 5 ? '' : 'disabled'}>🪙 1개 → 200G</button>`; }
-const buyPrice = it => it.g ? GOODS[it.g].price : priceOf(it) * 4;
-function makeShop() { const P = G.P, L = [goods('pot'), goods('wpot'), goods('pure'), goods('look')]; const lv = Math.max(2, P.lv); for (let i = 0; i < 8; i++) { const it = rollDrop(lv, 30, P.cls); it.id = true; if (it.r > 1) it.r = 1; if (it.st === -1) it.st = 0; L.push(it); } return L; }
+const buyPrice = it => it.pr ? it.pr : it.g ? GOODS[it.g].price : priceOf(it) * 4;
 function talkHtml(id) {
   const P = G.P, N = NPCDEF[id]; let lines = [], btns = [];
   const q = qid => P.q[qid];
@@ -2391,11 +2433,12 @@ function talkHtml(id) {
 }
 function smithHtml() {
   const P = G.P, sel = SEL, it = sel ? (sel[0] === 'e' ? P.eq[sel.slice(1)] : P.inv[+sel.slice(1)]) : null;
-  let h = `<div class="sk-bx"><button class="sk-x" data-a="x">✕</button><h3>무쇠의 대장간 <small style="font-size:12px;color:#8a7458">숫돌 ${count('hone')} · 아교 ${count('glue')} · 축복 숫돌 ${count('bhone')} · 축복 아교 ${count('bglue')} · ${P.gold}G</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${P.inv.map((x2, i) => x2.g ? '' : cell(x2, 'i' + i)).join('')}</div></div><div>`;
+  let h = `<div class="sk-bx"><button class="sk-x" data-a="x">✕</button><h3>${NPCDEF.smith.n.replace('대장장이 ', '')}의 대장간 <small style="font-size:12px;color:#8a7458">숫돌 ${count('hone')} · 아교 ${count('glue')} · 축복 숫돌 ${count('bhone')} · 축복 아교 ${count('bglue')} · ${P.gold}G</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${P.inv.map((x2, i) => x2.g ? '' : cell(x2, 'i' + i)).join('')}</div></div><div>`;
   if (it && !it.g) { const kind = encKind(BASE[it.b]); h += itemCard(it, P);
     if (kind) { const next = it.en + 1, safe = next <= SAFE[kind], rate = safe ? 1 : (ENCH_RATE[kind][next] || 0); const mat = kind === 'weapon' ? ['hone', 'bhone'] : ['glue', 'bglue'];
       h += `<h4>강화 (+${it.en} → +${next}) · 성공 ${Math.round(rate * 100)}%${safe ? ' · 안전' : ' · 실패하면 한 단계 내려감'}</h4><button class="sk-b p" data-a="ench" data-m="${mat[0]}" ${count(mat[0]) && it.en < MAXENCH ? '' : 'disabled'}>${GOODS[mat[0]].n}로 강화</button><button class="sk-b g" data-a="ench" data-m="${mat[1]}" ${count(mat[1]) && it.en < MAXENCH ? '' : 'disabled'}>${GOODS[mat[1]].n}로 강화</button>`; }
     else h += '<p class="m" style="font-size:12px">장신구는 강화할 수 없어요.</p>';
+    { const sv = sel[0] === 'i' && salvageOf(it); if (sv) h += `<h4>분해하기</h4><p class="m" style="font-size:11.5px">이 장비를 부숴서 ${GOODS[sv[0]].n} ${sv[1]}개로 바꿔요. 되돌릴 수 없어요.</p><button class="sk-b" data-a="salv">분해하기</button>`; }
     if ((it.r === 1 || it.r === 2) && it.id) { const cost = 40 + it.ilv * 15, mat = kind === 'weapon' ? 'hone' : 'glue'; h += `<h4>옵션 다시 굴리기</h4><p class="m" style="font-size:11.5px">무작위 옵션 하나를 새로 굴려요. ${cost}G${kind ? ' + ' + GOODS[mat].n + ' 1' : ''}</p><button class="sk-b" data-a="reroll" ${P.gold >= cost && (!kind || count(mat)) ? '' : 'disabled'}>다시 굴리기</button>`; }
   } else h += '<p style="font-size:12.5px;color:#8a7458">강화하거나 옵션을 다시 굴릴 장비를 고르세요.<br>무기 +6 · 방어구 +4까지는 100% 성공, 그 위는 실패하면 한 단계 내려가요. 축복 받은 장비는 실패를 한 번 막아 줘요.</p>';
   return h + '</div></div>' + TOAST + '</div>';
@@ -2415,7 +2458,7 @@ function bindPanel(arg) {
     else if (a === 'use') { const it = P.inv[+SEL.slice(1)]; drink(it.g); if (!P.inv.includes(it)) SEL = null; render(); }
     else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
-    else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g) { SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
+    else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
     else if (a === 'coin') { const B = opts.bonus, day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10); if (P.flags.coinDay !== day) { P.flags.coinDay = day; P.flags.coinN = 0; } if (P.flags.coinN >= 5 || !B.spend(1)) return; P.flags.coinN++; P.gold += 200; sfx('coin'); render(); }
     else if (a === 'lookit') { const it = P.inv[+SEL.slice(1)]; if (useGood('look')) { it.id = true; sfx('ench'); SEL = 'i' + P.inv.indexOf(it); } render(); }
     else if (a === 'purify') { const it = P.eq[SEL.slice(1)]; if (useGood('pure')) { it.st = 0; calc(P); sfx('ench'); toast('정화했어요'); } render(); }
@@ -2423,6 +2466,9 @@ function bindPanel(arg) {
     else if (a === 'learn') { const s = SKILLS[P.cls].find(q => q.id === SEL); if (P.skp > 0 && P.lv >= s.req && (P.sk[s.id] || 0) < 10) { P.skp--; P.sk[s.id] = (P.sk[s.id] || 0) + 1; autoSlots(P); if (P.sk[s.id] === 5) toast('5레벨! 갈래를 고를 수 있어요'); if (P.sk[s.id] === 10) toast('10레벨! 두 번째 갈래를 고를 수 있어요'); } render(); }
     else if (a === 'fork2') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 10 && P.fork2[s.id] == null) { P.fork2[s.id] = +t.dataset.i; toast('「' + fork2Of(s)[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
     else if (a === 'dclaim') { claimTask(+t.dataset.i); render(); }
+    else if (a === 'errs') { errandSend(+t.dataset.i); render(); }
+    else if (a === 'errc') { errandClaim(); render(); }
+    else if (a === 'salv') { if (SEL && SEL[0] === 'i') { salvage(+SEL.slice(1)); SEL = null; render(); } }
     else if (a === 'slot') { const i = +t.dataset.i, o = P.slots.indexOf(SEL); if (o >= 0) P.slots[o] = P.slots[i]; P.slots[i] = SEL; render(); }
     else if (a === 'fork') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 5 && P.fork[s.id] == null) { P.fork[s.id] = +t.dataset.i; toast('「' + s.fork[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
     else if (a === 'chap') { goChapter(+t.dataset.i); return; }
@@ -2431,7 +2477,7 @@ function bindPanel(arg) {
     else if (a === 'finish') finishQuest(t.dataset.q);
     else if (a === 'ident') { let n = 0; for (const it of P.inv) if (!it.g && !it.id && P.gold >= 15) { P.gold -= 15; it.id = true; n++; } toast(n + '개 감정했어요'); sfx('ench'); render(arg); }
     else if (a === 'smith') { PANEL = 'smith'; SEL = null; render(); }
-    else if (a === 'shop') { PANEL = 'inv'; SHOP = G.shop || (G.shop = makeShop()); SEL = null; render(); }
+    else if (a === 'shop') { PANEL = 'inv'; SHOP = shopFresh(); SEL = null; render(); }
     else if (a === 'ench') { const it = SEL[0] === 'e' ? P.eq[SEL.slice(1)] : P.inv[+SEL.slice(1)], m = t.dataset.m; if (!count(m)) return; const r = enchant(it, m); if (r.ok || r.msg.includes('실패')) useGood(m); if (!r.ok && !r.msg.includes('실패')) { toast(r.msg); return; } sfx(r.ok === 1 ? 'ench' : 'fail'); calc(P); render(); toast(r.msg); }
     else if (a === 'reroll') { const it = SEL[0] === 'e' ? P.eq[SEL.slice(1)] : P.inv[+SEL.slice(1)], kind = encKind(BASE[it.b]), cost = 40 + it.ilv * 15; if (P.gold < cost) return; if (kind && !useGood(kind === 'weapon' ? 'hone' : 'glue')) return; P.gold -= cost; const i = reroll(it); calc(P); sfx('ench'); render(); toast(i === false ? '바뀌지 않았어요' : '새 옵션: ' + afxText(it.af[i][0], it.af[i][1], P.cls)); }
     else if (a === 'respec') { const kd = t.dataset.k; if (CONF === kd) { CONF = null; doRespec(kd); } else CONF = kd; render(); }

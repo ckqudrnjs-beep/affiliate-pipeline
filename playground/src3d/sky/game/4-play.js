@@ -28,7 +28,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
