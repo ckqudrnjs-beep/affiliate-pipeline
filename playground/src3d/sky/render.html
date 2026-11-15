@@ -70,6 +70,21 @@ function windRibbon(col) {
     const rb = new THREE.Mesh(geo, m); rb.position.set(s * .18, -.45, -.25); rb.rotation.x = .5; g.add(rb); }
   return g;
 }
+function hammer() { // 종지기 망치: 짧은 자루 + 쇠머리, 금띠
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.04, .045, 1.1, 10), std(0x6a4224, { rough: .8 })); shaft.position.y = .3; g.add(shaft);
+  const head = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .5, 14), std(0xb8bec8, { metal: .35, rough: .35 })); head.rotation.z = Math.PI / 2; head.position.y = .9; g.add(head);
+  for (const s of [-1, 1]) { const b = new THREE.Mesh(new THREE.TorusGeometry(.17, .03, 8, 20), std(0xd8b04a, { metal: .7, rough: .3 })); b.rotation.y = Math.PI / 2; b.position.set(s * .17, .9, 0); g.add(b); }
+  return g;
+}
+function handBell() { // 종지기 손종: 청동 종 + 손잡이 + 보랏빛 끈
+  const g = new THREE.Group();
+  const b = lathe([[0, 0], [.3, 0], [.29, .03], [.2, .16], [.16, .38], [.1, .46], [0, .46]], std(0xc8963a, { metal: .7, rough: .3, glow: 0xffd27a, gi: .15 })); b.rotation.x = Math.PI; b.position.y = .1; g.add(b);
+  const h = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .3, 10), std(0x6a4224)); h.position.y = .25; g.add(h);
+  const c = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), std(0x5a4a3a, { metal: .5 })); c.position.y = -.4; g.add(c);
+  const rb = new THREE.Mesh(new THREE.PlaneGeometry(.08, .5), new THREE.MeshStandardMaterial({ color: 0xb08ae0, side: THREE.DoubleSide })); rb.position.set(.08, .1, 0); rb.rotation.z = .3; g.add(rb);
+  return g;
+}
 async function buildHero(key) {
   const H = HEROES[key] || NPCS[key], gl = await load(H.model), root = skClone(gl.scene);
   root.traverse(n => { if (WEAP.includes(n.name)) n.visible = (H.show || []).includes(n.name); });
@@ -82,6 +97,8 @@ async function buildHero(key) {
     m.material = softRim(m.material, { tint: key2 && H.tint[key2], glow: gk && H.glow[gk], gi: .5 }); outline(m, 1.035);
   }
   if (H.spear) { const s = spear(); outlineAll(s, 1.06); s.rotation.x = Math.PI; s.position.y = .35; slot('handslotr').add(s); }
+  if (H.hammer) { const s = hammer(); outlineAll(s, 1.06); s.rotation.x = Math.PI; s.position.y = .22; slot('handslotr').add(s); }
+  if (H.handbell) { const s = handBell(); outlineAll(s, 1.06); s.rotation.x = Math.PI; s.position.set(0, .1, 0); s.scale.setScalar(.9); slot('handslotl').add(s); }
   if (H.ribbon) { let chest; root.traverse(n => { if (n.name === 'chest') chest = n; }); const rb = windRibbon(H.ribbon); chest.add(rb); }
   return { root, clips: gl.animations, H };
 }
@@ -107,6 +124,11 @@ async function renderAnimated(build, frames, FR, cell, dirs) {
 }
 const HCELL = [112, 120, 56, 100]; // 칸 w,h, 발 x,y (2배 px)
 window.renderHero = async k => (await renderAnimated(buildHero(k), HEROES[k].frames, HFRAMES, HCELL)).toDataURL('image/png');
+window.renderHeads = async keys => { // 처음 화면용 정면 한 장씩(가벼움)
+  const o = document.createElement('canvas'); o.width = keys.length * HCELL[0]; o.height = HCELL[1]; const g = o.getContext('2d');
+  for (let i = 0; i < keys.length; i++) { const c = await renderAnimated(buildHero(keys[i]), HEROES[keys[i]].frames, ['idle0'], HCELL, 1); g.drawImage(c, i * HCELL[0], 0); }
+  return o.toDataURL('image/png');
+};
 window.renderNPCs = async () => {
   const keys = Object.keys(NPCS), out = document.createElement('canvas'); out.width = 2 * HCELL[0]; out.height = keys.length * HCELL[1]; const o = out.getContext('2d');
   for (let i = 0; i < keys.length; i++) { const c = await renderAnimated(buildHero(keys[i]), NPCS[keys[i]].frames, ['idle0', 'idle1'], HCELL, 1); o.drawImage(c, 0, i * HCELL[1]); }
@@ -295,6 +317,14 @@ function ICON(k) {
     case 'spear': case 'spear2': { o = spear(); if (k === 'spear2') o.children[1].scale.set(1.4, 1.3, 1.4); o.rotation.z = -.8; g.add(o); break; }
     case 'staff': return fromModel('Mage', '2H_Staff', '#c8a070').then(m => { m.rotation.z = -.75; g.add(m); return g; });
     case 'staff2': return fromModel('Mage', '2H_Staff', '#8fd0f0').then(m => { m.rotation.z = -.75; g.add(m); return g; });
+    case 'sword': return fromModel('Knight', '1H_Sword').then(m => { const m2 = m.clone(); m.rotation.z = -.6; m2.rotation.z = .6; m2.position.x = .5; g.add(m, m2); return g; });
+    case 'sword2': return fromModel('Knight', '1H_Sword', '#9fe4ff').then(m => { const m2 = m.clone(); m.rotation.z = -.6; m2.rotation.z = .6; m2.position.x = .5; g.add(m, m2); return g; });
+    case 'dagger': return fromModel('Rogue', 'Knife_Offhand').then(m => { m.rotation.z = -.7; g.add(m); return g; });
+    case 'xbow': case 'xbow2': return fromModel('Rogue', '1H_Crossbow', k === 'xbow2' ? '#8fd0f0' : null).then(m => { m.traverse(q => { if (q.isMesh) { q.geometry = q.geometry.clone(); q.geometry.center(); } }); m.scale.setScalar(1); m.rotation.set(1.2, 0, -.5); g.add(m); return g; });
+    case 'trapbox': { const b = new THREE.Mesh(new THREE.BoxGeometry(.8, .4, .5), std(0x8a5a32, { rough: .85 })); g.add(b); const l = new THREE.Mesh(new THREE.BoxGeometry(.84, .08, .54), std(0x5a3a22)); l.position.y = .24; g.add(l);
+      for (let i = 0; i < 6; i++) { const t = new THREE.Mesh(new THREE.ConeGeometry(.05, .2, 4), std(0xc8ccd4, { metal: .7, rough: .3 })); t.position.set(-.3 + i * .12, .36, .2); g.add(t); } const st = new THREE.Mesh(new THREE.TorusGeometry(.4, .025, 6, 30), std(0xc8a24a, { metal: .6 })); st.position.y = .05; st.rotation.y = Math.PI / 2; st.scale.y = .55; g.add(st); g.rotation.set(.2, .5, 0); break; }
+    case 'hammer': case 'hammer2': { o = hammer(); if (k === 'hammer2') o.children[1].material = std(0x9fd0f0, { metal: .7, rough: .25, glow: 0x9fe4ff, gi: .25 }); o.rotation.z = -.7; g.add(o); break; }
+    case 'gong': { o = handBell(); o.rotation.z = Math.PI + .3; g.add(o); break; }
     case 'shield': return fromModel('Knight', 'Round_Shield').then(m => { m.rotation.y = -Math.PI / 2 + .45; g.add(m); return g; });
     case 'shield2': return fromModel('Knight', 'Badge_Shield').then(m => { m.rotation.y = -Math.PI / 2 + .45; g.add(m); return g; });
     case 'helm': return fromModel('Knight', 'Knight_Helmet').then(m => { m.rotation.y = .5; g.add(m); return g; });

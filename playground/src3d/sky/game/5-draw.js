@@ -5,16 +5,19 @@ const HC = [112, 120, 56, 100], HF = ['idle0', 'idle1', 'run0', 'run1', 'run2', 
 const MC = { fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
 function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; LOADP.n++; ok(); }; im.onerror = () => { LOADP.n++; ok(); }; im.src = src; }); }
 // 폰 로딩: 처음엔 꼭 필요한 그림만(약 1.4MB) 받고, 큰 보스 그림(둥지지기·우두머리)은 시작한 뒤 뒤에서 받는다
-const LOADP = { n: 0, N: 11 }, LATE = ['keeper', 'fluffking'];
+const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking'];
 let assetsP = null;
 function assets() {
   if (assetsP) return assetsP; const v = '?v=__ASSETV__';
   const J = p => p.then(() => { LOADP.n++; });
-  assetsP = Promise.all([...['warden', 'windcaller', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
+  assetsP = Promise.all([...['heads', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
     J(fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; })), J(fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; })), J(fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {}))])
     .then(() => { LATE.reduce((p, k) => p.then(() => loadImg(k, IMG + k + '.webp' + v)), Promise.resolve()); });
   return assetsP;
 }
+// 영웅 그림은 고른 직업 것만 받는다(직업 5개 → 처음 화면은 얼굴 한 장)
+const HEROP = {};
+function loadHero(cls) { return HEROP[cls] || (HEROP[cls] = IM[cls] ? Promise.resolve() : new Promise(ok => { const im = new Image(); im.onload = () => { IM[cls] = im; ok(); }; im.onerror = () => { delete HEROP[cls]; ok(); }; im.src = IMG + cls + '.webp?v=__ASSETV__'; })); }
 let ICM = {}; const DIRT = [];
 function sprite(im, cw, ch, ax, ay, fr, row, X, Y, sc, flash, alpha) {
   if (!im) return; const w = cw * sc, h = ch * sc; if (alpha != null) x.globalAlpha = alpha;
@@ -73,6 +76,7 @@ function draw() {
     if (a.k === 'flag') { const [ax, ay] = iso(a.x, a.y); x.strokeStyle = 'rgba(160,220,255,.6)'; x.lineWidth = 2; x.setLineDash([6, 6]); x.beginPath(); x.ellipse(ax, ay, a.r * TW / 2 * 1.41, a.r * TH / 2 * 1.41, 0, 0, TAU); x.stroke(); x.setLineDash([]); }
     if (a.k === 'warn') { const [ax, ay] = iso(a.x, a.y), k = a.t / a.life; x.fillStyle = `rgba(255,90,70,${.15 + k * .25})`; x.beginPath(); x.ellipse(ax, ay, a.r * TW / 2 * 1.41 * k, a.r * TH / 2 * 1.41 * k, 0, 0, TAU); x.fill(); x.strokeStyle = 'rgba(255,120,90,.8)'; x.lineWidth = 2; x.beginPath(); x.ellipse(ax, ay, a.r * TW / 2 * 1.41, a.r * TH / 2 * 1.41, 0, 0, TAU); x.stroke(); }
   }
+  drawClsGround();
   for (const f of G.fx) if (f.k === 'crack') { const [ax, ay] = iso(f.x, f.y), al = Math.min(1, (f.life - f.t) * 1.5); x.strokeStyle = `rgba(70,46,24,${.7 * al})`; x.lineWidth = 2.2; x.beginPath(); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + .3, l = 30 + hsh(i, 4) * 40; x.moveTo(ax, ay); x.lineTo(ax + Math.cos(a) * l * .5, ay + Math.sin(a) * l * .25 + 3); x.lineTo(ax + Math.cos(a + .2) * l, ay + Math.sin(a + .2) * l * .5); } x.stroke(); x.fillStyle = `rgba(60,40,20,${.35 * al})`; x.beginPath(); x.ellipse(ax, ay, 26, 13, 0, 0, TAU); x.fill(); }
   for (const w of Wd.wps) { const [ax, ay] = iso(w.x, w.y); x.fillStyle = w.on ? 'rgba(160,230,255,.35)' : 'rgba(255,255,255,.12)'; x.beginPath(); x.ellipse(ax, ay, 26, 13, 0, 0, TAU); x.fill(); x.strokeStyle = w.on ? '#9fe4ff' : '#d8d2c4'; x.lineWidth = 2; x.beginPath(); x.ellipse(ax, ay, 26 + (w.on ? Math.sin(G.t * 3) * 2 : 0), 13, 0, 0, TAU); x.stroke(); }
   // 정렬해서 그리기
@@ -82,6 +86,7 @@ function draw() {
   for (const k in Wd.npcAt) { const [nx, ny] = Wd.npcAt[k]; if (vis(nx, ny)) L.push([nx + ny, 2, k]); }
   for (const d of G.drops) if (vis(d.x, d.y)) L.push([d.x + d.y - .3, 3, d]);
   for (const w of Wd.wps) L.push([w.x + w.y, 5, w]);
+  for (const a of G.areas) if (a.k === 'echo' && vis(a.x, a.y)) L.push([a.x + a.y, 6, a]);
   L.push([P.x + P.y, 4, P]); L.sort((a, b) => a[0] - b[0]);
   const hs = .5; // 2배 아틀라스 → 1배
   for (const [, k, o] of L) {
@@ -91,11 +96,12 @@ function draw() {
     else if (k === 3) drawDrop(o);
     else if (k === 4) drawHero(o);
     else if (k === 5) { const [sx, sy] = iso(o.x, o.y); drawVane(sx, sy, o.on); }
+    else if (k === 6) drawEcho(o);
   }
   drawBlightAir();
   // 투사체·효과
   for (const a of G.areas) if (a.k === 'vortex') drawVortex(a);
-  for (const p of G.proj) drawProj(p); for (const f of G.fx) drawFx(f); drawParts();
+  for (const p of G.proj) drawProj(p); for (const f of G.fx) drawFx(f); drawParts(); drawClsAir();
   for (const a of G.areas) if (a.k === 'flag') { const [ax, ay] = iso(a.x, a.y); x.strokeStyle = '#6a4a2a'; x.lineWidth = 2.5; x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax, ay - 46); x.stroke(); x.fillStyle = a.fk === 0 ? '#9fe4ff' : '#b6f0a0'; x.beginPath(); x.moveTo(ax, ay - 46); x.quadraticCurveTo(ax + 14, ay - 46 + Math.sin(G.t * 6) * 3, ax + 26, ay - 40); x.lineTo(ax, ay - 32); x.fill(); }
   // 이름표
   x.textAlign = 'center';
@@ -214,10 +220,12 @@ function drawVane(sx, sy, on) { // 바람개비 표지: 나무 기둥 + 네 날�
 function drawHero(P) {
   const [sx, sy] = iso(P.x, P.y); shadow(sx, sy, 13);
   if (P.buf.cloud) { x.fillStyle = 'rgba(240,248,255,.35)'; x.beginPath(); x.ellipse(sx, sy - 20, 22, 28, 0, 0, TAU); x.fill(); }
+  drawClsHero(P, sx, sy);
   if (P.buf.hold) { x.strokeStyle = 'rgba(255,210,120,.7)'; x.lineWidth = 2; x.beginPath(); x.ellipse(sx, sy, 18, 9, 0, 0, TAU); x.stroke(); }
   const a = P.dodge > 0 ? .75 : P.inv0 > 0 ? .6 + Math.sin(G.t * 30) * .3 : 1;
   const jz = P.jump > 0 ? Math.sin((1 - P.jump / .48) * Math.PI) * 46 : 0;
   sprite(IM[P.cls], HC[0], HC[1], HC[2], HC[3], heroFrame(P), P.dir, sx, sy - jz, .5, P.hurt > .15 ? .1 : 0, a);
+  drawClsHero(P, sx, sy - jz, 1);
 }
 function drawMob(m) {
   if (!IM[m.D.spr]) { const [sx, sy] = iso(m.x, m.y); shadow(sx, sy, m.D.boss ? 36 : 24); return; } // 큰 그림 받는 중
@@ -283,6 +291,7 @@ function drawProj(p) {
   const [sx, sy] = iso(p.x, p.y), Y = sy - 22;
   if (p.k === 'wind') { x.strokeStyle = 'rgba(230,248,255,.9)'; x.lineWidth = 2.2; for (let i = 0; i < 3; i++) { x.beginPath(); x.arc(sx, Y, 4 + i * 3, G.t * 12 + i, G.t * 12 + i + 2.2); x.stroke(); } }
   else if (p.k === 'bolt') { const [ex, ey] = iso(p.x - p.vx * .04, p.y - p.vy * .04); x.strokeStyle = '#fff6b0'; x.lineWidth = 3; x.shadowColor = '#ffe066'; x.shadowBlur = 10; x.beginPath(); x.moveTo(ex, ey - 22); x.lineTo(sx, Y); x.stroke(); x.shadowBlur = 0; }
+  else if (p.k === 'arrow') { const [ex, ey] = iso(p.x - p.vx * .035, p.y - p.vy * .035); x.strokeStyle = '#6a4a2a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(ex, ey - 22); x.lineTo(sx, Y); x.stroke(); x.fillStyle = '#e8eef4'; x.beginPath(); x.arc(sx, Y, 2.4, 0, TAU); x.fill(); x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 1; x.beginPath(); x.moveTo(ex, ey - 22); x.lineTo(lerp(ex, sx, -1), lerp(ey, sy, -1) - 22); x.stroke(); }
   else if (p.k === 'twister') { for (let i = 0; i < 7; i++) { const r = 6 + i * 3.2, yy = sy - i * 7; x.strokeStyle = `rgba(225,242,252,${.85 - i * .08})`; x.lineWidth = 2.4; x.beginPath(); x.ellipse(sx + Math.sin(G.t * 9 + i) * 3, yy, r, r * .38, 0, G.t * 14 + i, G.t * 14 + i + 4.4); x.stroke(); } }
 }
 function drawFx(f) {
@@ -291,7 +300,7 @@ function drawFx(f) {
   else if (f.k === 'thrust') { const [ex, ey] = iso(f.x + f.dx * f.len, f.y + f.dy * f.len); x.strokeStyle = `rgba(255,250,235,${1 - k})`; x.lineWidth = 4 * (1 - k) + 1; x.beginPath(); x.moveTo(sx, sy - 20); x.lineTo(ex, ey - 20); x.stroke(); }
   else if (f.k === 'gust' || f.k === 'bash') { const a0 = Math.atan2(...(() => { const [ax, ay] = iso(f.dx, f.dy); return [ay, ax]; })()); x.strokeStyle = f.k === 'gust' ? `rgba(230,246,255,${.9 - k})` : `rgba(255,220,150,${.9 - k})`; x.lineWidth = 2.5;
     for (let i = 0; i < 6; i++) { const a = a0 + (i / 5 - .5) * f.arc, r = f.r * 32 * (.4 + k * .7); x.beginPath(); x.ellipse(sx, sy - 14, r, r * .5, 0, a - .15, a + .15); x.stroke(); } }
-  else if (f.k === 'zap') { const [ex, ey] = iso(f.x2, f.y2); x.strokeStyle = `rgba(255,246,170,${1 - k})`; x.lineWidth = 2.5; x.shadowColor = '#ffe066'; x.shadowBlur = 8; x.beginPath(); x.moveTo(sx, sy - 22); for (let i = 1; i < 6; i++) { const t = i / 6; x.lineTo(lerp(sx, ex, t) + rnd(-6, 6), lerp(sy, ey, t) - 22 + rnd(-6, 6)); } x.lineTo(ex, ey - 22); x.stroke(); x.shadowBlur = 0; }
+  else if (f.k === 'zap') { const [ex, ey] = iso(f.x2, f.y2); x.strokeStyle = f.c || `rgba(255,246,170,${1 - k})`; x.globalAlpha = f.c ? 1 - k : 1; x.lineWidth = 2.5; x.shadowColor = f.c || '#ffe066'; x.shadowBlur = 8; x.beginPath(); x.moveTo(sx, sy - 22); for (let i = 1; i < 6; i++) { const t = i / 6; x.lineTo(lerp(sx, ex, t) + rnd(-6, 6), lerp(sy, ey, t) - 22 + rnd(-6, 6)); } x.lineTo(ex, ey - 22); x.stroke(); x.shadowBlur = 0; x.globalAlpha = 1; }
   else if (f.k === 'pop') { x.fillStyle = f.c; x.globalAlpha = 1 - k; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; x.beginPath(); x.arc(sx + Math.cos(a) * k * 14, sy - 20 + Math.sin(a) * k * 9, 2.4 * (1 - k) + .5, 0, TAU); x.fill(); } x.globalAlpha = 1; }
   else if (f.k === 'aura') { x.strokeStyle = f.c; x.globalAlpha = 1 - k; x.lineWidth = 2; for (let i = 0; i < 3; i++) { x.beginPath(); x.ellipse(sx, sy - k * 30 - i * 8, 16 - i * 3, 7 - i, 0, 0, TAU); x.stroke(); } x.globalAlpha = 1; }
   else if (f.k === 'lvl') { x.strokeStyle = '#ffd166'; x.globalAlpha = 1 - k; x.lineWidth = 3; for (let i = 0; i < 3; i++) { x.beginPath(); x.ellipse(sx, sy - k * 50 - i * 12, 20 + i * 4, 9 + i * 2, 0, 0, TAU); x.stroke(); } x.globalAlpha = 1; }
@@ -301,6 +310,7 @@ function drawFx(f) {
     const a1 = a0 - 1.1 * sw + 2.2 * sw * Math.min(1, k * 2.4); x.globalAlpha = 1 - k; const gr = x.createLinearGradient(-R, 0, R, 0); x.strokeStyle = 'rgba(255,248,225,.95)'; x.lineCap = 'round';
     for (let i = 0; i < 6; i++) { x.lineWidth = (7 - i) * (1 - k) + .5; x.globalAlpha = (1 - k) * (1 - i * .14); x.beginPath(); x.arc(0, 0, R * (.82 + i * .03), a1 - .12 * sw * (i + 1), a1 - .12 * sw * i, sw < 0); x.stroke(); }
     x.restore(); x.globalAlpha = 1; }
+  else if (drawClsFx(f, k, sx, sy)) return;
   else if (f.k === 'sail') { x.fillStyle = `rgba(240,248,255,${.5 * (1 - k)})`; x.beginPath(); x.ellipse(sx, sy - 18, 16 + k * 10, 8, 0, 0, TAU); x.fill(); }
 }
 function drawParts() {
@@ -369,14 +379,14 @@ const SAFE_L = () => 0, SAFE_R = () => 0;
 function bar(X, Y, w, h, f, c1, c2, label, s) { x.fillStyle = 'rgba(0,0,0,.4)'; rr(X, Y, w, h, h / 2); x.fill(); const g = x.createLinearGradient(0, Y, 0, Y + h); g.addColorStop(0, c2); g.addColorStop(1, c1); x.fillStyle = g; if (f > 0) { rr(X, Y, Math.max(h, w * clamp(f, 0, 1)), h, h / 2); x.fill(); } x.font = `700 ${h * .78}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.fillText(label, X + w / 2, Y + h * .8); }
 function btn(k, X, Y, sz, key, label) { x.fillStyle = 'rgba(30,24,18,.55)'; x.beginPath(); x.arc(X + sz / 2, Y + sz / 2, sz / 2, 0, TAU); x.fill(); x.strokeStyle = 'rgba(255,240,210,.5)'; x.lineWidth = 1.5; x.stroke();
   const P = G.P; if (k === 'dodge' && P.dcd > 0) { x.fillStyle = 'rgba(0,0,0,.45)'; x.beginPath(); x.moveTo(X + sz / 2, Y + sz / 2); x.arc(X + sz / 2, Y + sz / 2, sz / 2, -Math.PI / 2, -Math.PI / 2 + TAU * P.dcd / P.sail[1]); x.fill(); }
-  if (k === 'atk') { const ic = CLASSES[P.cls].melee ? 'spear' : 'staff'; if (ICM[ic]) x.drawImage(IM.icons, ...ICM[ic], X + sz * .2, Y + sz * .2, sz * .6, sz * .6); }
+  if (k === 'atk') { const ic = { warden: 'spear', windcaller: 'staff', drifter: 'sword', trapper: 'xbow', ringer: 'hammer' }[P.cls]; if (ICM[ic]) x.drawImage(IM.icons, ...ICM[ic], X + sz * .2, Y + sz * .2, sz * .6, sz * .6); }
   if (k === 'pot' || k === 'wpot') { const m = ICM[k]; if (m) x.drawImage(IM.icons, ...m, X + sz * .22, Y + sz * .12, sz * .56, sz * .56); }
   if (k === 'dodge') { const m = ICM.sail; if (m) x.drawImage(IM.icons, ...m, X + sz * .22, Y + sz * .12, sz * .56, sz * .56); }
   x.font = `700 ${Math.max(9, sz * .2)}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,.6)'; x.lineWidth = 2.5; if (label) { x.strokeText(label, X + sz / 2, Y + sz * .9); x.fillText(label, X + sz / 2, Y + sz * .9); }
   if (key) { x.fillStyle = '#ffd166'; x.fillText(key, X + sz * .18, Y + sz * .26); }
   BTN.push({ k, x: X, y: Y, w: sz, h: sz });
 }
-const SKC = { ult: '#fff3c0',  pierce: '#ffe9c0', sweep: '#ffd59a', bash: '#ffd27a', hold: '#f2c26a', shout: '#ffb48a', flag: '#b6f0a0', gust: '#dff4ff', twister: '#c8ecff', bolt: '#fff3a0', chain: '#ffe066', cloud: '#f4f8ff', mist: '#d8e6f0' };
+const SKC = { ult: '#fff3c0',  pierce: '#ffe9c0', sweep: '#ffd59a', bash: '#ffd27a', hold: '#f2c26a', shout: '#ffb48a', flag: '#b6f0a0', gust: '#dff4ff', twister: '#c8ecff', bolt: '#fff3a0', chain: '#ffe066', cloud: '#f4f8ff', mist: '#d8e6f0', slash3: '#ffe0d6', whirl: '#ffd0c0', dashcut: '#fff0e8', parry: '#ffe8c0', mark: '#ff9a8a', shadow: '#e0c8ff', pshot: '#f4e8c8', rain: '#e8d8b0', trap: '#e8e0d0', net: '#f0e4c0', roll: '#d8f0b0', hawk: '#f0d0a0', toll: '#ffe0a0', wave: '#ffe8b8', echo: '#e0d0ff', resound: '#e8d8ff', clang: '#ffffff', dome: '#ffd890' };
 function skillBtn(i, id, X, Y, sz, key) {
   const P = G.P, ult = id === 'ult'; x.fillStyle = 'rgba(30,24,18,.6)'; rr(X, Y, sz, sz, sz * .22); x.fill(); x.strokeStyle = ult ? '#ffcf7a' : 'rgba(255,240,210,.45)'; x.lineWidth = ult ? 2.5 : 1.5; x.stroke();
   if (id) { const s = skillOf(P.cls, id); drawSkillIcon(x, s, X, Y, sz, P.cls); const cd = P.cds[id] || 0;
@@ -404,7 +414,8 @@ function drawSkillIcon(g, s, X, Y, sz, cls) {
     case 'twister': for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(cx + (i % 2 ? 2 : -2), cy - r + i * r * .6, r * (1 - i * .2), r * .28, 0, 0, TAU); g.stroke(); } break;
     case 'bolt': case 'chain': g.beginPath(); g.moveTo(cx + r * .3, cy - r * 1.2); g.lineTo(cx - r * .6, cy + r * .1); g.lineTo(cx, cy + r * .1); g.lineTo(cx - r * .3, cy + r * 1.2); g.lineTo(cx + r * .7, cy - r * .2); g.lineTo(cx + r * .1, cy - r * .2); g.closePath(); g.fill(); if (s.id === 'chain') { g.beginPath(); g.arc(cx + r * .9, cy + r * .8, r * .25, 0, TAU); g.arc(cx - r * .9, cy - r * .8, r * .25, 0, TAU); g.fill(); } break;
     case 'ult': if (cls === 'warden') { L(cx, cy - r * 1.3, cx, cy + r * .5); g.beginPath(); g.moveTo(cx, cy + r * .9); g.lineTo(cx - r * .3, cy + r * .3); g.lineTo(cx + r * .3, cy + r * .3); g.fill(); for (let i = 0; i < 5; i++) { const a = Math.PI * (.1 + i * .2); L(cx + Math.cos(a) * r * .7, cy + r * .9 + Math.sin(a) * r * .1 - r * .15, cx + Math.cos(a) * r * 1.3, cy + r * .9 + Math.sin(a) * r * .35 - r * .15); } }
-      else { for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx, cy, r * (.3 + i * .25), i, i + 4.2); g.stroke(); } } break;
+      else if (cls === 'windcaller') { for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx, cy, r * (.3 + i * .25), i, i + 4.2); g.stroke(); } } else clsIcon(g, s, cx, cy, r, c, L, col, cls); break;
+    default: clsIcon(g, s, cx, cy, r, c, L, col, cls); break;
     case 'cloud': case 'mist': g.beginPath(); g.arc(cx - r * .45, cy + r * .1, r * .45, 0, TAU); g.arc(cx + r * .1, cy - r * .2, r * .58, 0, TAU); g.arc(cx + r * .6, cy + r * .2, r * .4, 0, TAU); g.fill(); if (s.id === 'mist') { g.globalAlpha = .6; g.fillRect(cx - r * 1.1, cy + r * .6, r * 2.2, r * .2); g.globalAlpha = 1; } break;
   }
   g.restore();
