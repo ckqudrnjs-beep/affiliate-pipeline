@@ -2,10 +2,10 @@
 /* =================== 그리기 =================== */
 let ov, cv, x, lay = { Z: 1, dpr: 1, cw: 800, ch: 450 }, IM = {}, NPCK = [];
 const HC = [112, 120, 56, 100], HF = ['idle0', 'idle1', 'run0', 'run1', 'run2', 'run3', 'run4', 'run5', 'atk0', 'atk1', 'atk2', 'atk3', 'cast0', 'cast1', 'cast2', 'hurt', 'dodge', 'die0', 'die1'];
-const MC = { rustfluff: [106, 106, 53, 92], boltpod: [96, 104, 48, 92], rustcrow: [104, 132, 52, 120], scarecrow: [156, 156, 78, 138], cogkeeper: [196, 212, 98, 192], creaker: [270, 300, 135, 270], mudfluff: [110, 110, 55, 96], bogpod: [96, 104, 48, 92], heronling: [104, 132, 52, 120], heron: [260, 300, 130, 282], fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
+const MC = { saltfluff: [110, 110, 55, 96], barnpod: [96, 104, 48, 92], gull: [104, 132, 52, 120], crab: [150, 120, 75, 104], barnkeeper: [196, 212, 98, 192], rustship: [320, 400, 160, 372], rustfluff: [106, 106, 53, 92], boltpod: [96, 104, 48, 92], rustcrow: [104, 132, 52, 120], scarecrow: [156, 156, 78, 138], cogkeeper: [196, 212, 98, 192], creaker: [270, 300, 135, 270], mudfluff: [110, 110, 55, 96], bogpod: [96, 104, 48, 92], heronling: [104, 132, 52, 120], heron: [260, 300, 130, 282], fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
 function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; LOADP.n++; ok(); }; im.onerror = () => { LOADP.n++; ok(); }; im.src = src; }); }
 // 폰 로딩: 처음엔 꼭 필요한 그림만(약 1.4MB) 받고, 큰 보스 그림(둥지지기·우두머리)은 시작한 뒤 뒤에서 받는다
-const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking', 'mudfluff', 'bogpod', 'heronling', 'heron', 'rustfluff', 'boltpod', 'rustcrow', 'scarecrow', 'cogkeeper', 'creaker'];
+const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking', 'mudfluff', 'bogpod', 'heronling', 'heron', 'rustfluff', 'boltpod', 'rustcrow', 'scarecrow', 'cogkeeper', 'creaker', 'saltfluff', 'barnpod', 'gull', 'crab', 'barnkeeper', 'rustship'];
 let assetsP = null;
 function assets() {
   if (assetsP) return assetsP; const v = '?v=__ASSETV__';
@@ -208,6 +208,11 @@ function islandTop(Wd, s, g, T) {
   if (s.kind === 'marsh' || s.kind === 'heron') { // 늪: 탁한 풀빛 + 물웅덩이
     x.fillStyle = s.kind === 'heron' ? 'rgba(60,60,70,.22)' : 'rgba(50,80,50,.2)'; x.fill(g.top);
     for (const [xx, yy, t, own] of g.cells) { if (!own || hsh(xx + 11, yy) > .1) continue; const [sx, sy] = iso(xx, yy), r = 10 + hsh(xx, yy + 5) * 14; x.fillStyle = 'rgba(70,110,120,.55)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .45, 0, 0, TAU); x.fill(); x.fillStyle = 'rgba(200,230,240,.35)'; x.beginPath(); x.ellipse(sx - r * .25, sy + TH / 2 - 2, r * .4, r * .12, 0, 0, TAU); x.fill(); } }
+  if (s.kind === 'dock' || s.kind === 'wreck' || s.kind === 'town' && Wd.ch === 3) { // 닻 내린 항구: 바랜 모래빛 + 소금 얼룩·널판
+    x.fillStyle = s.kind === 'wreck' ? 'rgba(70,80,95,.42)' : 'rgba(205,195,150,.48)'; x.fill(g.top);
+    for (const [xx, yy, t, own] of g.cells) { if (!own) continue; const h2 = hsh(xx + 5, yy + 1); if (h2 > .16) continue; const [sx, sy] = iso(xx, yy);
+      if (h2 < .07) { x.fillStyle = 'rgba(110,80,50,.45)'; x.beginPath(); x.moveTo(sx - 20, sy + TH / 2); x.lineTo(sx, sy + TH / 2 - 10); x.lineTo(sx + 20, sy + TH / 2); x.lineTo(sx, sy + TH / 2 + 10); x.closePath(); x.fill(); }
+      else { const r = 7 + hsh(xx, yy + 4) * 10; x.fillStyle = 'rgba(245,248,250,.5)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } } }
   if (s.kind === 'mill' || s.kind === 'gear' || s.kind === 'town' && Wd.ch === 2) { // 녹슨 풍차 군도: 늦가을 들판 + 녹 얼룩
     x.fillStyle = s.kind === 'gear' ? 'rgba(120,70,40,.32)' : 'rgba(200,135,40,.3)'; x.fill(g.top);
     for (const [xx, yy, t, own] of g.cells) { if (!own || hsh(xx + 3, yy + 9) > .07) continue; const [sx, sy] = iso(xx, yy), r = 8 + hsh(xx, yy + 2) * 12; x.fillStyle = 'rgba(140,70,30,.28)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } }
@@ -333,7 +338,7 @@ function drawVortex(a) { const [ax, ay] = iso(a.x, a.y), k = a.t / a.life, al = 
   for (let i = 0; i < 9; i++) { const rr2 = a.r * (1 - i / 10) * 45, y2 = ay - i * 9; x.globalAlpha = al * (.85 - i * .05); x.strokeStyle = i % 2 ? '#ffffff' : '#9fe4ff'; x.lineWidth = 3.2 - i * .2; x.beginPath(); x.ellipse(ax + Math.sin(G.t * 6 + i) * 4, y2, rr2 * (.35 + i * .02 + .65 * (1 - k * .3)), rr2 * .42, 0, G.t * (9 + i) + i, G.t * (9 + i) + i + 3.6); x.stroke(); }
   x.globalAlpha = 1; }
 function questMark(k) { const P = G.P; for (const id in QUESTS) { const Q = QUESTS[id]; if (Q.from !== k || qCh(id) !== G.Wd.ch) continue; const q = P.q[id]; if (q && q.s === 2) return '?'; if (!q && qAvail(id)) return '!'; } return ''; }
-function qAvail(id) { const q = G.P.q; if (qCh(id) === 2) return qAvail2(id); if (G.Wd.ch !== 1) return false; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
+function qAvail(id) { const q = G.P.q; if (qCh(id) === 2) return qAvail2(id); if (qCh(id) === 3) return qAvail3(id); if (G.Wd.ch !== 1) return false; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
 
 /* ---------- 화면 위 정보(HUD) ---------- */
 let BTN = [];
@@ -445,7 +450,7 @@ function minimap(R, T, s) {
   x.fillStyle = '#fff'; x.beginPath(); x.arc(P.x * 2, P.y * 2, 3, 0, TAU); x.fill(); x.restore();
 }
 function questTracker(R, T, s) {
-  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; else t = track2(id, q) || t; L.push([Q.n, t]); }
+  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; else t = track2(id, q) || track3(id, q) || t; L.push([Q.n, t]); }
   const dt2 = dailyTrack(); if (dt2) L.push(dt2);
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }

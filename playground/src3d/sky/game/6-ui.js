@@ -196,7 +196,7 @@ function render(arg) {
       const big = P.dmg; h += `<h4>지금 수치</h4><div class="sk-card">생명력 ${P.mhp} · 바람 ${P.mwind} (초당 +${P.wreg.toFixed(1)})<br>피해: 작은 적 ${big[0]}~${big[1]} / 큰 적 ${big[2]}~${big[3]} · 피해 +${Math.round(P.dmgp)}%<br>방어력 ${P.ac} (맞을 확률 ${Math.round(clamp(.92 - P.ac * .008, .55, .95) * 100)}%)${P.blk ? ' · 막기 ' + Math.round(P.blk) + '%' : ''}<br>공격 속도 초당 ${P.aspd.toFixed(2)}번 · 치명타 ${P.crit.toFixed(1)}% · 이동 ${P.move.toFixed(1)}<br>돛: 활공 ${P.sail[0]}칸 / ${P.sail[1]}초${P.find ? ' · 좋은 물건 +' + P.find + '%' : ''}${P.xpm > 1 ? ' · 경험치 +' + Math.round((P.xpm - 1) * 100) + '%' : ''}<br>쓰러뜨린 밑것들 ${P.kills}마리 · 경험 ${P.xp}/${xpNeed(P.lv)}</div>${respecBtn('rs')}`; }
     h += '</div></div>' + TOAST + '</div>';
   } else if (k === 'map') {
-    h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">${G.Wd.ch === 2 ? '2장 녹슨 풍차 군도' : '1장 민들레 섬'}</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
+    h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">${CHAPS[G.Wd.ch][0].replace(' · ', ' ')}</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
   } else if (k === 'skill') {
     const sel = SEL; h = `<div class="sk-bx">${X}<h3>스킬 <small style="font-size:12px;color:#8a7458">남은 점수 ${P.skp} · 같은 갈래 스킬끼리 점수당 피해 +6%(잇기)</small></h3><div style="margin:-2px 0 6px"><button class="sk-b p" data-a="board" ${P.lv >= BOARD_LV ? '' : 'disabled'}>◆ 나침반판 (B)${P.lv >= BOARD_LV ? '' : ' · ' + BOARD_LV + '레벨'}</button>${respecBtn('rk')}</div><div class="sk-sk">`;
     BRANCH[P.cls].forEach((bn, bi) => { h += `<div class="sk-br"><h4>${bn}</h4>`; for (const s of SKILLS[P.cls].filter(q => q.br === bi)) { const lv = P.sk[s.id] || 0, lk = P.lv < s.req; h += `<div class="sk-s${sel === s.id ? ' on' : ''}" data-sk="${s.id}"><span data-si="${s.id}"></span><div class="f ${lk ? 'lk' : ''}"><b>${s.name}</b> ${lv}/10${P.skb[bi] && lv ? ' (+' + P.skb[bi] + ')' : ''}${lk ? ' · ' + s.req + '레벨' : ''}<br>${esc(s.desc)}<br><small>바람 ${s.cost} · ${s.cd}초${lv >= 5 && P.fork[s.id] != null ? ' · 갈래: ' + s.fork[P.fork[s.id]][0] : ''}${lv >= 10 && P.fork2[s.id] != null ? ' · ' + fork2Of(s)[P.fork2[s.id]][0] : ''}</small></div></div>`; } h += '</div>'; });
@@ -259,7 +259,7 @@ function talkHtml(id) {
   const q = qid => P.q[qid];
   const offer = qid => { const Q = QUESTS[qid]; lines = Q.talk; btns.push(`<button class="sk-b p" data-a="accept" data-q="${qid}">맡을게요</button>`); };
   const finish = qid => { lines = QUESTS[qid].done; btns.push(`<button class="sk-b g" data-a="finish" data-q="${qid}">보상 받기</button>`); };
-  if (G.Wd.ch === 2) { const r = talk2(id, offer, finish); if (r.lines) lines = r.lines; btns.push(...r.btns); }
+  if (G.Wd.ch >= 2) { const r = (G.Wd.ch === 3 ? talk3 : talk2)(id, offer, finish); if (r.lines) lines = r.lines; btns.push(...r.btns); }
   else {
   if (id === 'chief') { if (!q('q1')) offer('q1'); else if (q('q1').s === 2) finish('q1'); else if (q('q1').s === 3 && !q('q3')) offer('q3'); else if (q('q3') && q('q3').s === 2 && P.flags['wp_바람개비 언덕']) finish('q3'); else if (q('q3') && q('q3').s === 2) lines = ['우두머리를 쓰러뜨렸다고? 언덕의 바람개비 표지에 손을 얹어 주게. 그래야 바람이 섬에 돌아오네.']; else if (q('q3') && q('q3').s === 3 && !q('q5')) offer('q5'); else if (q('q5') && q('q5').s === 2) finish('q5'); else if (q('q5') && q('q5').s === 1) lines = ['둥지 껍질은 들판과 늪의 둥지지기가 떨군다네. 세 개 모아 바람개비 언덕 동쪽 끊긴 다리로 가게.']; else if (q('q5') && q('q5').s === 3 && !q('q7')) offer('q7'); else if (q('q7') && q('q7').s === 2 && P.flags['wp_둥지섬']) finish('q7'); else if (q('q7') && q('q7').s === 2) lines = ['큰 왜가리를 쓰러뜨렸다고?! 둥지섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.']; else if (q('q7') && q('q7').s === 1) lines = ['둥지섬은 갈대 늪 맨 끝일세. 녀석이 성나면 하늘에서 깃털이 쏟아진다니 붉은 자리를 피하게.']; else if (q('q7') && q('q7').s === 3) lines = ['민들레 섬이 더는 가라앉지 않네. 이음꾼, 정말 고맙네.', '바람개비 표지에 녹슨 풍차 군도로 가는 바람길이 열렸네. 준비되면 건너가 보게.']; else lines = ['널빤지는 들판 밑것들이 물고 다닌다네. 다리는 마을 동쪽 들판 너머, 맨 위쪽 섬 끝에 있지.']; }
   if (id === 'sage') { if (!q('q2')) offer('q2'); else if (q('q2').s === 2) finish('q2'); else if (P.flags.bridge2 && q('q2').s === 3 && !q('q6')) offer('q6'); else if (q('q6') && q('q6').s === 2) finish('q6'); else lines = ['큰바람은 원래 세상을 한 바퀴 돌면서 섬마다 숨을 불어넣었대. 그게 멎었으니 뜸돌도 잠들어 가는 거야.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
@@ -280,7 +280,7 @@ function smithHtml() {
   } else h += '<p style="font-size:12.5px;color:#8a7458">강화하거나 옵션을 다시 굴릴 장비를 고르세요.<br>무기 +6 · 방어구 +4까지는 100% 성공, 그 위는 실패하면 한 단계 내려가요. 축복 받은 장비는 실패를 한 번 막아 줘요.</p>';
   return h + '</div></div>' + TOAST + '</div>';
 }
-function endHtml() { const P = G.P; if (G.Wd.ch === 2) return endHtml2(); if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 2장 녹슨 풍차 군도로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
+function endHtml() { const P = G.P; if (G.Wd.ch === 3) return endHtml3(); if (G.Wd.ch === 2) return endHtml2(); if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 2장 녹슨 풍차 군도로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
   return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 앞부분 끝</h3><p>바람개비가 다시 돌기 시작했다. 아주 약하지만, 분명히 바람이다.</p><p>그런데 저 멀리 둥지섬 쪽 하늘에서 커다란 날개 그림자가 구름을 가르고 지나갔다…</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>촌장 들메에게 다시 말을 걸면 1장 뒷부분(갈대 늪·둥지섬)이 이어져요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
 function bindPanel(arg) {
   panel.onclick = e => {
@@ -351,7 +351,8 @@ function drawMap(c) {
   for (const wp of Wd.wps) { const [a, b] = M(wp.x, wp.y); g.fillStyle = wp.on ? '#9fe4ff' : '#c8c0b0'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a, b - 7); g.lineTo(a + 5, b); g.lineTo(a, b + 7); g.lineTo(a - 5, b); g.closePath(); g.fill(); g.stroke(); }
   // 할 일 목표
   const goals = []; const q = P.q; const bq = Wd.bridges[Wd.bq];
-  if (Wd.ch === 2) { if (q.q9 && q.q9.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
+  if (Wd.ch === 3) ch3Goals(Wd, P, goals);
+  else if (Wd.ch === 2) { if (q.q9 && q.q9.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
     if (q.q12 && q.q12.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
     if (q.q12 && q.q12.s === 2 && !P.flags['wp_큰 풍차섬']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
   else {
@@ -361,12 +362,13 @@ function drawMap(c) {
   if (q.q5 && q.q5.s === 1) { const b2 = Wd.bridges[Wd.bq2], i = b2.cells[b2.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q7 && q.q7.s === 1) { const N2 = Wd.islands[Wd.nestI]; goals.push([N2.cx, N2.cy]); }
   if (q.q7 && q.q7.s === 2 && !P.flags['wp_둥지섬']) goals.push([Wd.wps[3].x, Wd.wps[3].y]); }
-  for (const id in q) if (q[id].s === 2 && qCh(id) === Wd.ch && !(id === 'q7' && !P.flags['wp_둥지섬']) && !(id === 'q3' && !P.flags['wp_바람개비 언덕']) && !(id === 'q12' && !P.flags['wp_큰 풍차섬'])) goals.push(Wd.npcAt[QUESTS[id].from]);
+  for (const id in q) if (q[id].s === 2 && qCh(id) === Wd.ch && !(id === 'q7' && !P.flags['wp_둥지섬']) && !(id === 'q3' && !P.flags['wp_바람개비 언덕']) && !(id === 'q12' && !P.flags['wp_큰 풍차섬']) && !(id === 'q17' && !P.flags['wp_녹슨 정박장'])) goals.push(Wd.npcAt[QUESTS[id].from]);
   for (const [gx, gy] of goals) { const [a, b] = M(gx, gy); g.strokeStyle = '#ff6a4a'; g.lineWidth = 2.5; g.beginPath(); g.arc(a, b, 9, 0, TAU); g.stroke(); g.fillStyle = '#ff6a4a'; g.font = '900 13px system-ui'; g.fillText('!', a, b - 12); }
   { const [a, b] = M(P.x, P.y); g.fillStyle = '#fff'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 2.5; g.beginPath(); g.arc(a, b, 6, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#3a5a7a'; g.font = '800 11px system-ui'; g.fillText('나', a, b - 10); }
 }
 function finishQuest(id) {
   const P = G.P, q = P.q[id]; if (!q) return;
+  if (qCh(id) === 3) { const R = finish3(id); if (!R) return; sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166'); if (id === 'q13' || id === 'q14') setTimeout(() => talk('chief'), 300); if (id === 'q17') setTimeout(() => openPanel('end'), 400); return; }
   if (qCh(id) === 2) { const R = finish2(id); if (!R) return; sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166'); if (id === 'q8' || id === 'q9') setTimeout(() => talk('chief'), 300); if (id === 'q12') setTimeout(() => openPanel('end'), 400); return; }
   if (id === 'q4') { if (!useGood('hone', 3)) return; addInv(goods('bhone')); }
   q.s = 3; const R = { q1: [150, 80], q2: [120, 50], q3: [500, 200], q4: [80, 30], q5: [700, 250], q6: [900, 300], q7: [2500, 800] }[id]; gainXp(R[0]); P.gold += R[1];

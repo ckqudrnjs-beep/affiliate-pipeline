@@ -69,7 +69,7 @@ Object.assign(QUESTS, {
     done: ['…풍차가 돈다! 군도의 풍차가 하나둘 다시 돌기 시작했어!', '고맙네, 이음꾼. 그런데 바람이 흘러가는 쪽을 보니… 닻 내린 항구 쪽 하늘이 이상하게 잠잠하구먼.'] },
 });
 const C2NPC = { chief: '풍차지기 대들보', smith: '대장장이 풀무', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' }, C1NPC = { chief: '촌장 들메', smith: '대장장이 무쇠', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' };
-function setNpcNames(ch) { const N = ch === 2 ? C2NPC : C1NPC; for (const k in N) NPCDEF[k].n = N[k]; }
+function setNpcNames(ch) { const N = ch === 3 ? C3NPC : ch === 2 ? C2NPC : C1NPC; for (const k in N) NPCDEF[k].n = N[k]; }
 const qCh = id => QUESTS[id].ch || 1;
 function qAvail2(id) { const q = G.P.q; if (G.Wd.ch !== 2) return false; if (id === 'q8' || id === 'q10' || id === 'q11') return true; if (id === 'q9') return q.q8 && q.q8.s === 3; if (id === 'q12') return q.q9 && q.q9.s === 3; return false; }
 function talk2(id, offer, finish) {
@@ -79,7 +79,7 @@ function talk2(id, offer, finish) {
     else if (!q('q9')) offer('q9'); else if (q('q9').s === 2) finish('q9'); else if (q('q9').s === 1) lines = ['사슬 고리는 풍차 섬 둥지의 톱니 둥지지기가 품고 있다네. 네 개 모아 가운데 풍차섬 동쪽 끊긴 사슬 다리로 가게.'];
     else if (!q('q12')) offer('q12'); else if (q('q12').s === 2 && P.flags['wp_큰 풍차섬']) finish('q12'); else if (q('q12').s === 2) lines = ['파수꾼을 쓰러뜨렸다고?! 큰 풍차섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.'];
     else if (q('q12').s === 1) lines = ['큰 풍차섬은 사슬 나루 너머 톱니 벌판 끝일세. 녀석이 성나면 바람 칼날이 사방으로 날아와. 칼날 사이 틈을 보게.'];
-    else lines = ['군도의 풍차가 다시 돈다네. 자네 덕일세, 이음꾼.', '닻 내린 항구로 가는 바람길은… 머지않아 열릴 걸세.']; }
+    else lines = ['군도의 풍차가 다시 돈다네. 자네 덕일세, 이음꾼.', '닻 내린 항구로 가는 바람길이 열렸네. 바람개비 표지에서 건너가 보게.']; }
   if (id === 'sage') { if (!q('q10')) offer('q10'); else if (q('q10').s === 2) finish('q10'); else lines = ['풍차가 멈추면 바람도 고여서 썩어. 그래서 녹이 이렇게 빨리 스는 거래.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
     const n = P.inv.filter(it => !it.g && !it.id).length; btns.push(`<button class="sk-b" data-a="ident" ${n && P.gold >= 15 ? '' : 'disabled'}>감정하기 (${n}개 · 개당 15G)</button>`); }
   if (id === 'smith') { if (!q('q11')) offer('q11'); else if (q('q11').s === 1 && count('cog') >= 5) { lines = ['오, 톱니 다섯 개 다 모았구나!']; btns.push(`<button class="sk-b g" data-a="finish" data-q="q11">톱니 건네기</button>`); } else if (q('q11').s === 1) lines = ['녹슨 톱니는 녹 보풀이랑 쇠못 꼬투리가 물고 다녀. 다섯 개야.']; else lines = ['강화든 옵션 다시 굴리기든 맡겨. 여기 쇠는 단단해서 무쇠네보다 잘 붙지.']; btns.push(`<button class="sk-b p" data-a="smith">대장간 열기</button>`); }
@@ -138,7 +138,7 @@ function creakerAI(m, dt, d, dx, dy) {
 function creakerSweep(m) { const P = G.P, d = hyp(P.x - m.x, P.y - m.y) || 1; G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 3.1, t: 0, life: .4, c: '#f0d8a8' }, { k: 'ring', x: m.x, y: m.y, r: 2.2, t: 0, life: .3, c: '#ffffff' }); G.shake = 7; sfx('gust');
   if (d < 3.1 + P.r) { hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * .9, m); const kx = (P.x - m.x) / d * 2.6, ky = (P.y - m.y) / d * 2.6; for (let i = 0; i < 10; i++) move(P, kx / 10, ky / 10); } }
 function ch2Area(a, dt) {
-  if (a.k !== 'blade') return 0; const P = G.P; a.x += a.vx * dt; a.y += a.vy * dt; a.rot = (a.rot || 0) + dt * 14;
+  if (a.k !== 'blade') return ch3Area(a, dt); const P = G.P; a.x += a.vx * dt; a.y += a.vy * dt; a.rot = (a.rot || 0) + dt * 14;
   if (!G.Wd.inb(Math.floor(a.x), Math.floor(a.y))) { a.t = a.life; return 1; }
   if (!P.dead && hyp(P.x - a.x, P.y - a.y) < .5 + P.r && !a.hit) { a.hit = 1; a.t = a.life; G.fx.push({ k: 'pop', x: a.x, y: a.y, t: 0, life: .3, c: '#f0d8a8' }); hurtPlayer(a.dmg, a.src); }
   return 1;
@@ -147,9 +147,9 @@ function drawBlade(a) { const [ax, ay] = iso(a.x, a.y), Y = ay - 22; x.save(); x
   x.fillStyle = 'rgba(30,30,20,.22)'; x.beginPath(); x.ellipse(ax, ay, 9, 4, 0, 0, TAU); x.fill();
   x.save(); x.translate(ax, Y); x.rotate(a.rot || 0); for (let i = 0; i < 4; i++) { x.rotate(Math.PI / 2); x.fillStyle = i % 2 ? '#e8d8b0' : '#c8a878'; x.beginPath(); x.moveTo(0, 0); x.lineTo(14, -3); x.lineTo(15, 3); x.closePath(); x.fill(); x.strokeStyle = '#5a3e24'; x.lineWidth = 1.2; x.stroke(); } x.fillStyle = '#5a4e48'; x.beginPath(); x.arc(0, 0, 3, 0, TAU); x.fill(); x.restore(); }
 // 장 넘나들기(바람개비 표지)
-function goChapter(n) { const P = G.P; P.ch = n; const S = snap(); PANEL = null; panel.hidden = true; panel.innerHTML = ''; MINI = null; startGame(S); G.cut = { s: n === 2 ? '2장 · 녹슨 풍차 군도' : '1장 · 민들레 섬', c: '#ffd166', t: 0 }; save(); last = performance.now(); }
+const CHAPS = { 1: ['1장 · 민들레 섬', '민들레 마을로 돌아가요', () => 1], 2: ['2장 · 녹슨 풍차 군도', '바람길을 타고 건너가요 (15~25레벨)', P => P.q.q7 && P.q.q7.s === 3], 3: ['3장 · 닻 내린 항구', '바람길을 타고 건너가요 (25~34레벨)', P => P.q.q12 && P.q.q12.s === 3] };
+function goChapter(n) { const P = G.P; P.ch = n; const S = snap(); PANEL = null; panel.hidden = true; panel.innerHTML = ''; MINI = null; startGame(S); G.cut = { s: CHAPS[n][0], c: '#ffd166', t: 0 }; save(); last = performance.now(); }
 function chapHtml() { const P = G.P, ch = G.Wd.ch; let h = '';
-  if (ch === 1 && P.q.q7 && P.q.q7.s === 3) h += `<div class="sk-row"><div class="f"><b>2장 · 녹슨 풍차 군도</b><br><small>바람길을 타고 건너가요 (15~25레벨)</small></div><button class="sk-b g" data-a="chap" data-i="2">건너가기</button></div>`;
-  if (ch === 2) h += `<div class="sk-row"><div class="f"><b>1장 · 민들레 섬</b><br><small>민들레 마을로 돌아가요</small></div><button class="sk-b" data-a="chap" data-i="1">건너가기</button></div>`;
+  for (const n in CHAPS) { const [t, d, ok] = CHAPS[n]; if (+n === ch || !ok(P)) continue; h += `<div class="sk-row"><div class="f"><b>${t}</b><br><small>${+n < ch ? '다시 건너가요' : d}</small></div><button class="sk-b${+n > ch ? ' g' : ''}" data-a="chap" data-i="${n}">건너가기</button></div>`; }
   return h ? '<h4 style="margin:10px 0 4px">바람길</h4>' + h : ''; }
-function endHtml2() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>2장 「녹슨 풍차 군도」 끝</h3><p>삐걱 파수꾼이 쓰러지자 거꾸로 돌던 큰 풍차가 멈칫하더니, 천천히 제 방향으로 돌기 시작했다.</p><p>군도의 풍차들이 하나둘 따라 돈다. 바람은 이제 닻 내린 항구 쪽으로 흘러간다 — 거기엔 묶인 비행선들이 있다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>3장 닻 내린 항구는 다음에 열려요. 그동안 오늘의 섬과 하루 의뢰로 장비를 모아 보세요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
+function endHtml2() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>2장 「녹슨 풍차 군도」 끝</h3><p>삐걱 파수꾼이 쓰러지자 거꾸로 돌던 큰 풍차가 멈칫하더니, 천천히 제 방향으로 돌기 시작했다.</p><p>군도의 풍차들이 하나둘 따라 돈다. 바람은 이제 닻 내린 항구 쪽으로 흘러간다 — 거기엔 묶인 비행선들이 있다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 3장 닻 내린 항구로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }

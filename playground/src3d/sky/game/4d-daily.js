@@ -11,7 +11,7 @@ const dayNum = k => Math.floor(Date.parse(k + 'T00:00:00Z') / 864e5);
 const DAILY_LV = 3, ISLE_N = 15;
 function isleName(k) { const D = G.P.daily; if (D && k === D.isle && D.ich && D.ich !== G.Wd.ch) return D.iname + '(' + D.ich + '장)'; const s = G.Wd.islands[k]; return s && s.name || '섬'; }
 // 갈 수 있는 사냥 섬 중 내 레벨에 맞는 곳 몇 개에서 날마다 하나
-function isleCands(P) { const Wd = G.Wd, L = (Wd.ch === 2 ? [...Wd.fi, ...(P.flags.c2bridge ? Wd.ci : [])] : [...Wd.fi, ...(P.flags.bridge ? [Wd.hill] : []), ...(P.flags.bridge2 ? Wd.mi : [])]).map(k => [k, Wd.islands[k].lv[1]]);
+function isleCands(P) { const Wd = G.Wd, L = (Wd.ch === 3 ? [...Wd.fi, ...(P.flags.c3bridge ? Wd.ci : [])] : Wd.ch === 2 ? [...Wd.fi, ...(P.flags.c2bridge ? Wd.ci : [])] : [...Wd.fi, ...(P.flags.bridge ? [Wd.hill] : []), ...(P.flags.bridge2 ? Wd.mi : [])]).map(k => [k, Wd.islands[k].lv[1]]);
   const fit = L.filter(([, lv]) => lv >= P.lv - 4 && lv <= P.lv + 3); return (fit.length ? fit : L.sort((a, b) => b[1] - a[1]).slice(0, 2)).map(a => a[0]); }
 const DTASK = {
   kill: (t, n) => ['밑것 ' + n + '마리 쓰러뜨리기', n],
@@ -23,7 +23,7 @@ const DTASK = {
 };
 function newDaily(P, d) {
   const R = srand(dayNum(d) * 7919 + P.seed % 997), pk = a => a[Math.floor(R() * a.length)], C = isleCands(P);
-  const mobs = G.Wd.ch === 2 ? ['rustfluff', 'boltpod', 'scarecrow'] : P.flags.bridge2 ? ['mudfluff', 'bogpod', 'heronling'] : ['fluff', 'seed', 'bird'];
+  const mobs = G.Wd.ch === 3 ? ['saltfluff', 'barnpod', 'crab'] : G.Wd.ch === 2 ? ['rustfluff', 'boltpod', 'scarecrow'] : P.flags.bridge2 ? ['mudfluff', 'bogpod', 'heronling'] : ['fluff', 'seed', 'bird'];
   const pool = [['mob', pk(mobs), 15], ['kill', '', 40], ['elite', '', 3], ['fell', '', 6], ['nest', '', 2]];
   const tasks = [['isle', '', 1]]; while (tasks.length < 3) { const t = pool.splice(Math.floor(R() * pool.length), 1)[0]; tasks.push(t); }
   const isle = C[Math.floor(R() * C.length)]; P.daily = { d, isle, ich: G.Wd.ch, iname: G.Wd.islands[isle].name, isleN: 0, chest: 0, all: 0, tasks: tasks.map(([k, t, n]) => ({ k, t, n, c: 0, got: 0 })) };
