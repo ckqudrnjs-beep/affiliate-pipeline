@@ -788,7 +788,7 @@ ADMIN_BODY = """<h1>🔧 관리자</h1><p class="lead">프로필을 찾아 코�
 <div class="card adm"><label>관리자 비밀번호 <input type="password" id="ak" autocomplete="off"></label> <button class="share" type="button" id="aout">🔒 이 탭에서 비밀번호 지우기</button>
 <div id="ast" class="ast"></div>
 <form id="af"><input id="aq" placeholder="별명 일부 또는 복구 코드" maxlength="20"> <button class="share" type="submit">찾기</button> <button class="share" type="button" id="atst">🧪 테스터 모두 보기</button></form><p id="am" class="muted"></p><div id="al"></div></div>
-<div class="card"><h2>📈 순 방문자 수</h2><p class="muted">같은 IP는 하루 1명으로 세요(봇 제외, 원본 IP 저장 안 함). 7일·30일은 날마다 센 순 방문자를 더한 값이에요(이틀 온 사람은 2명).</p><div id="avs" class="ast"></div><div id="avd" class="avd"></div></div>
+<div class="card"><h2>📈 순 방문자 수</h2><p class="muted">같은 IP는 하루 1명으로 세요(봇 제외, 원본 IP 저장 안 함). 7일·30일은 날마다 센 순 방문자를 더한 값이에요(이틀 온 사람은 2명).</p><h3>🎮 5락실</h3><div id="avs" class="ast"></div><div id="avd" class="avd"></div><h3>💰 돈 줍는 삼촌 (don3chon.com)</h3><div id="avs-d3" class="ast"></div><div id="avd-d3" class="avd"></div></div>
 <div class="card"><h2>👥 별명 목록</h2><p class="muted">최근 사용 순. 별명을 누르면 위에서 바로 관리할 수 있어요. 복구 코드 원본은 보안상 저장하지 않아요. 잃어버린 사람에게는 '새 복구 코드 발급'을 눌러 새 코드를 주세요.</p><button class="share" type="button" id="alst">불러오기</button> <span id="atot" class="muted"></span><ol id="aplist" class="list"></ol><button class="share" type="button" id="amore" hidden>더 보기</button></div>
 <div class="card"><h2>최근 관리자 작업</h2><button class="share" type="button" id="alog">불러오기</button><ol id="alist" class="list"></ol></div>"""
 ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:inline-block;margin-bottom:10px}.adm input{font:inherit;padding:8px 10px;border-radius:9px;border:2px solid #ffffff33;background:#0b0620;color:#fff;max-width:100%}
@@ -806,10 +806,11 @@ const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 async function stats(){if(!ak.value)return;const j=await api({a:'stats'});if(!j)return;visits();api({a:'devtoken'}).then(d=>{if(d&&d.t)try{localStorage.setItem('nr_dev',d.t);localStorage.removeItem('nr_tester')}catch(e){}});const w=(n,t)=>`<span${n?' class="warn"':''}>${t} <b>${n}</b></span>`;
  $('ast').innerHTML=`<span>프로필 <b>${j.profiles}</b>명</span><span>오늘 저장 <b>${j.today}</b>명</span><span>테스터 <b>${j.testers}</b></span>`+w(j.autohid,'🚨 신고로 숨겨진 글')+w(j.secret,'🔒 답변 안 한 비밀글')+w(j.qprops,'💡 대기 중 질문 제안')+`<span>글쓰기 제한 <b>${j.bans}</b>명</span>`}
 ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}stats()};
-async function visits(){if(!ak.value)return;const j=await api({a:'visits'});if(!j)return;const f=n=>Number(n).toLocaleString('ko-KR');
- $('avs').innerHTML=`<span>오늘 <b>${f(j.today)}</b>명</span><span>어제 <b>${f(j.yday)}</b>명</span><span>최근 7일 <b>${f(j.d7)}</b>명 <small class="muted">(하루 평균 ${f(Math.round(j.d7/7))})</small></span><span>최근 30일 <b>${f(j.d30)}</b>명</span><span class="muted">집계 시작 ${esc(j.since)}</span>`;
+async function visits(){if(!ak.value)return;visit1('','');visit1('d3','-d3')}
+async function visit1(site,sf){const j=await api(site?{a:'visits',site}:{a:'visits'});if(!j)return;const f=n=>Number(n).toLocaleString('ko-KR');
+ $('avs'+sf).innerHTML=`<span>오늘 <b>${f(j.today)}</b>명</span><span>어제 <b>${f(j.yday)}</b>명</span><span>최근 7일 <b>${f(j.d7)}</b>명 <small class="muted">(하루 평균 ${f(Math.round(j.d7/7))})</small></span><span>최근 30일 <b>${f(j.d30)}</b>명</span><span class="muted">집계 시작 ${esc(j.since)}</span>`;
  const mx=Math.max(1,...j.days.map(r=>r.n)),m=new Map(j.days.map(r=>[r.day,r.n])),ds=[];for(let i=29;i>=0;i--){const d=new Date(Date.now()+9*3600e3-i*864e5).toISOString().slice(0,10);ds.push([d,m.get(d)||0])}
- $('avd').innerHTML=ds.map(([d,n])=>`<i style="height:${Math.round(n/mx*100)}%" title="${d.slice(5)} ${n}명"></i>`).join('')}
+ $('avd'+sf).innerHTML=ds.map(([d,n])=>`<i style="height:${Math.round(n/mx*100)}%" title="${d.slice(5)} ${n}명"></i>`).join('')}
 $('aout').onclick=()=>{ak.value='';try{sessionStorage.removeItem('nr_admk');localStorage.removeItem('nr_dev');localStorage.removeItem('nr_tester')}catch(e){}$('al').innerHTML='';$('ast').innerHTML='';$('am').textContent='이 탭에서 비밀번호를 지웠어요.'};
 // 상점 구조: 사이트 공통(출석·코인 상점) + 게임마다 그 게임 상점. eq = 장착 칸 [저장 필드, 키, 기본값 이름]
 const AGN=window.AGN||{},gname=g=>AGN[g]?AGN[g][1]+' '+AGN[g][0]:g;

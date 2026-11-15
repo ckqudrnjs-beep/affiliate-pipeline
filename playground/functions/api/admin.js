@@ -12,7 +12,7 @@
 // 게시판: {a:"posts", page} 전체 글(숨김·비밀 포함) / {a:"phide", id, on} / {a:"pdel", id} / {a:"reply", id, text} / {a:"ban", id, days(0=해제, 7, 9999=영구)}
 // 질문 제안: {a:"qprops"} 대기 목록 / {a:"qadopt", id} 채택(칭호 「출제자」 + 🪙10 돌려줌, rev+1) / {a:"qreject", id} 반려
 // POST /api/admin {a:"devtoken"}                   → {t} 개발자 토큰(이 기기에서 테스터 전용 체험판을 열 수 있게)
-// POST /api/admin {a:"visits"}                    → 순 방문자 수(오늘·어제·7일·30일 + 날짜별, visit.js 2026-11-15)
+// POST /api/admin {a:"visits", site?:"d3"}        → 순 방문자 수(site d3 = 돈삼촌)(오늘·어제·7일·30일 + 날짜별, visit.js 2026-11-15)
 // POST /api/admin {a:"log"}                          → 최근 관리자 작업 30개
 // 틀린 키는 IP당 하루 5번까지만. 모든 변경은 admin_log 에 남긴다.
 // Pages 변수 ACCESS_TEAM·ACCESS_AUD 가 있으면 Cloudflare Access 로그인 증표도 확인(lib/access.js, 2026-11-15)
@@ -47,20 +47,31 @@ async function ensure(db) {
 }
 const log = (env, act, nick, detail) => env.DB.prepare("INSERT INTO admin_log (t, act, nick, detail) VALUES (?, ?, ?, ?)").bind(now(), act, nick || "", JSON.stringify(detail || {}).slice(0, 500)).run();
 
+// 비밀번호 확인 + 틀린 횟수 제한(IP당 하루 5번). 통과하면 null, 아니면 돌려줄 응답. vstats.js(돈삼촌 관리자)도 같이 쓴다.
+export async function gate(request, env, hdr = {}) {
+  const j = (o, st) => { const r = json(o, st); for (const k in hdr) r.headers.set(k, hdr[k]); return r; };
+  if (!env.ADMIN_KEY || String(env.ADMIN_KEY).length < 10) return j({ error: "off", msg: "관리자 비밀번호(ADMIN_KEY)가 아직 설정되지 않았어요." }, 503);
+  if (!env.DB) return j({ error: "nodb" }, 500);
+  await ensure(env.DB);
+  const ip = request.headers.get("cf-connecting-ip") || "0", day = kst();
+  const th = (await sha(`${ip}|adm|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
+  const tr = await env.DB.prepare("SELECT n FROM ptries WHERE h = ?").bind(th).first();
+  if (tr && tr.n >= 5) return j({ error: "limit", msg: "비밀번호를 너무 많이 틀렸어요. 내일 다시 해 주세요." }, 429);
+  if (!same(request.headers.get("x-admin-key") || "", String(env.ADMIN_KEY))) {
+    await env.DB.prepare("INSERT INTO ptries (h, day, n) VALUES (?, ?, 1) ON CONFLICT(h) DO UPDATE SET n = n + 1").bind(th, day).run();
+    return j({ error: "key", msg: "관리자 비밀번호가 틀렸어요." }, 401);
+  }
+  return null;
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.ADMIN_KEY || String(env.ADMIN_KEY).length < 10) return json({ error: "off", msg: "관리자 비밀번호(ADMIN_KEY)가 아직 설정되지 않았어요." }, 503);
   if (!env.DB) return json({ error: "nodb" }, 500);
   // Cloudflare Access 를 켰으면(ACCESS_TEAM·ACCESS_AUD) BK 메일 인증 없이는 비밀번호 확인까지 가지도 않는다
   if (accessOn(env) && !(await accessOk(request, env))) return json({ error: "access", msg: "관리자 로그인(Cloudflare Access)이 필요해요. 페이지를 새로 고쳐 메일 인증을 해 주세요." }, 403);
-  await ensure(env.DB);
-  const ip = request.headers.get("cf-connecting-ip") || "0", day = kst();
-  const th = (await sha(`${ip}|adm|${day}|${env.VOTE_SALT || ""}`)).slice(0, 32);
-  const tr = await env.DB.prepare("SELECT n FROM ptries WHERE h = ?").bind(th).first();
-  if (tr && tr.n >= 5) return json({ error: "limit", msg: "비밀번호를 너무 많이 틀렸어요. 내일 다시 해 주세요." }, 429);
-  if (!same(request.headers.get("x-admin-key") || "", String(env.ADMIN_KEY))) {
-    await env.DB.prepare("INSERT INTO ptries (h, day, n) VALUES (?, ?, 1) ON CONFLICT(h) DO UPDATE SET n = n + 1").bind(th, day).run();
-    return json({ error: "key", msg: "관리자 비밀번호가 틀렸어요." }, 401);
-  }
+  const g = await gate(request, env);
+  if (g) return g;
+  const day = kst();
   let b;
   try { b = await request.json(); } catch { return json({ error: "bad" }, 400); }
   const a = b && b.a;
@@ -127,7 +138,7 @@ export async function onRequestPost({ request, env }) {
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM profiles").first();
     return json({ total: n ? n.n : 0, more: (results || []).length > 50, list: (results || []).slice(0, 50).map((r) => { let d = {}; try { d = JSON.parse(r.data); } catch {} return { h: r.h, nick: r.nick, updated: r.updated, coins: d.coins || 0, days: d.days || 0, tester: !!r.th, hide: !!r.hide }; }) });
   }
-  if (a === "visits") return json(await visitStats(env.DB));
+  if (a === "visits") return json(await visitStats(env.DB, b.site === "d3" ? "d3" : "raksil"));
   if (a === "devtoken") return json({ t: await devToken(String(env.ADMIN_KEY)) });
   if (a === "stats") {
     await ensureBoard(env.DB); await ensureQ(env.DB);

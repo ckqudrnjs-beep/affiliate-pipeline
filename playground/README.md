@@ -185,3 +185,5 @@
 - 서버 `functions/api/visit.js`: IP를 (날짜+VOTE_SALT)로 해시해 하루 1명만 셈(원본 IP 저장 안 함), UA 봇 제외. 지난날은 `visit_daily` 날짜별 숫자로 접고 해시 삭제.
 - 보기: /admin 의 '📈 순 방문자 수'(오늘·어제·최근 7일·30일 + 30일 막대). 7일·30일은 하루 순방문의 합(날짜를 넘는 같은 사람 구분은 개인정보 때문에 하지 않음).
 - D1 부담: 새 방문자 1명당 쓰기 1행 + 하루 1번 정리. 하루 수천 명이어도 무료 한도(쓰기 10만 행/일) 안.
+- 돈삼촌(don3chon.com)도 같은 /api/visit 로 보낸다(2026-11-15, src/pipeline/site.py `VISIT_JS`). Origin 이 don3chon.com 이면 `d3_visits`/`d3_visit_daily` 에 따로 세고, /admin 에 두 사이트가 나란히 보인다. Origin 이 두 사이트가 아니면 세지 않는다.
+- 돈삼촌 관리자(don3chon.com/admin)는 /api/vstats 로 d3 숫자만 읽음(admin.js gate 공유, CORS don3chon.com 만).
