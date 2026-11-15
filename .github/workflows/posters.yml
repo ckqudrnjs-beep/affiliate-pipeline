@@ -35,6 +35,8 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main   # 앞선 실행이 방금 올린 포스터까지 받기(push 시점 커밋이 아니라 지금의 main)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -64,5 +66,21 @@ jobs:
           git add playground/static/img/*-poster.jpg playground/static/og/*.jpg playground/static/img/posters.json
           git diff --cached --quiet && { echo "바뀐 포스터 없음"; exit 0; }
           git commit -m "5락실 게임 포스터 자동 갱신 ($(TZ=Asia/Seoul date '+%F %H:%M'))"
-          for i in 1 2 3; do git pull --rebase -q origin main && git push origin HEAD:main && exit 0; sleep $((i*5)); done
+          # 거의 동시에 머지된 PR 두 개면 앞선 실행이 같은 포스터를 먼저 올릴 수 있다(11/15 #179·#180).
+          # 그림 파일은 합칠 수 없으니 충돌하면 내 커밋을 버리고 최신 main 기준으로 다시 확인한다.
+          for i in 1 2 3; do
+            if git pull --rebase -q origin main; then
+              git push origin HEAD:main && exit 0
+            else
+              git rebase --abort || true
+              git fetch -q origin main && git reset -q --hard origin/main
+              T=$(python playground/posters.py --check); echo "$T"
+              [ "$T" = "모든 포스터가 최신이에요" ] && { echo "다른 실행이 이미 최신 포스터를 올림"; exit 0; }
+              python playground/posters.py
+              git add playground/static/img/*-poster.jpg playground/static/og/*.jpg playground/static/img/posters.json
+              git diff --cached --quiet && exit 0
+              git commit -m "5락실 게임 포스터 자동 갱신 ($(TZ=Asia/Seoul date '+%F %H:%M'))"
+            fi
+            sleep $((i*5))
+          done
           exit 1
