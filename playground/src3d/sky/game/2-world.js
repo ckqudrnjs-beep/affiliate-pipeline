@@ -10,7 +10,7 @@ function noise2(seed) { // 값 잡음(부드러운 0~1)
   return (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = sm(x - x0), fy = sm(y - y0); return lerp(lerp(at(x0, y0), at(x0 + 1, y0), fx), lerp(at(x0, y0 + 1), at(x0 + 1, y0 + 1), fx), fy); };
 }
 function makeWorld(seed) {
-  const W = 100, H = 84, R = srand(seed), nz = noise2(seed + 7), nz2 = noise2(seed + 13);
+  const W = 152, H = 84, R = srand(seed), nz = noise2(seed + 7), nz2 = noise2(seed + 13);
   const g = new Uint8Array(W * H), isl = new Int16Array(W * H).fill(-1), depth = new Float32Array(W * H);
   const id = (x, y) => y * W + x, inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const islands = [];
@@ -29,8 +29,11 @@ function makeWorld(seed) {
   const F = [[34, 30, 8], [37, 54, 8.5], [53, 40, 9], [62, 22, 7.5], [66, 60, 7.5]].map(([x, y, r]) => [x + R() * 3 - 1.5, y + R() * 3 - 1.5, r + R() * 1.2]);
   const fi = F.map(([x, y, r]) => blob(x, y, r, 'field'));
   const hill = blob(86, 30, 8.5, 'hill');
+  // 1장 뒷부분: 언덕 너머 갈대 늪 섬 3개 → 둥지섬(큰 왜가리)
+  const mi = [[105, 20, 7.5], [109, 47, 8.2], [126, 31, 8]].map(([x, y, r]) => blob(x, y, r, 'marsh'));
+  const nestI = blob(143, 54, 9, 'heron');
   // 작은 떠돌이 바위섬(장식)
-  for (let i = 0; i < 7; i++) { const x = 10 + R() * 80, y = 6 + R() * 74; let ok = true; for (const s of islands) if (Math.hypot(s.cx - x, s.cy - y) < s.r + 5) ok = false; if (ok) blob(x, y, 1.6 + R() * 1.4, 'rock'); }
+  for (let i = 0; i < 11; i++) { const x = 10 + R() * 135, y = 6 + R() * 74; let ok = true; for (const s of islands) if (Math.hypot(s.cx - x, s.cy - y) < s.r + 5) ok = false; if (ok) blob(x, y, 1.6 + R() * 1.4, 'rock'); }
   // 다리: 두 섬 사이를 x축 → y축 순서로 잇는 2칸 너비 길. 빈칸만 다리로 바꾼다.
   const bridges = [];
   function bridge(a, b, broken) {
@@ -46,13 +49,14 @@ function makeWorld(seed) {
   }
   bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]); bridge(fi[2], fi[4]);
   const bq = bridge(fi[3], hill, true);
+  const bq2 = bridge(hill, mi[0], true); bridge(mi[0], mi[1]); bridge(mi[1], mi[2]); bridge(mi[2], nestI);
   // 길(흙): 마을 광장, 다리 입구 쪽 흙길
   const tI = islands[town];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = id(x, y); if (g[i] !== 1) continue;
     const dT = Math.hypot(x - tI.cx, y - tI.cy); if (isl[i] === town && dT < 3.2) g[i] = 5;
-    else if (nz2(x * .22, y * .22) > .7 && isl[i] !== town) { let ok = 1; for (let yy = y - 2; yy <= y + 2; yy++) for (let xx = x - 2; xx <= x + 2; xx++) if (!inb(xx, yy) || !g[id(xx, yy)]) ok = 0; if (ok) g[i] = 2; } }
+    else if (nz2(x * .22, y * .22) > (islands[isl[i]] && islands[isl[i]].kind === 'marsh' ? .58 : .7) && isl[i] !== town) { let ok = 1; for (let yy = y - 2; yy <= y + 2; yy++) for (let xx = x - 2; xx <= x + 2; xx++) if (!inb(xx, yy) || !g[id(xx, yy)]) ok = 0; if (ok) g[i] = 2; } }
   const bm = new Uint8Array(W * H); for (const b of bridges) { for (const i of b.cells) bm[i] = 1; for (const i of b.ends) bm[i] = 2; }
-  const Wd = { W, H, g, isl, depth, islands, bridges, bq, town, fi, hill, id, inb, nz, seed, bm, shape };
+  const Wd = { W, H, g, isl, depth, islands, bridges, bq, bq2, mi, nestI, town, fi, hill, id, inb, nz, seed, bm, shape };
   for (const s2 of islands) s2.poly = contour(Wd, s2);
   return Wd;
 }
@@ -92,21 +96,23 @@ function placeProps(Wd, PM) {
   Wd.npcAt = { chief: [T.cx - 1.6, T.cy + 1.8], smith: [T.cx + 3.6, T.cy - 3.6], merchant: [T.cx + 3.8, T.cy + 2.2], sage: [T.cx - 3.4, T.cy - 1.2] };
   Wd.wps = [{ n: '민들레 마을', x: T.cx + 1.6, y: T.cy + .2, on: 1 }];
   const Hh = Wd.islands[Wd.hill]; Wd.wps.push({ n: '바람개비 언덕', x: Hh.cx - 1, y: Hh.cy + 1.5, on: 0 });
+  const M1 = Wd.islands[Wd.mi[1]], NI = Wd.islands[Wd.nestI]; Wd.wps.push({ n: '갈대 나루', x: M1.cx - 1.5, y: M1.cy + 2, on: 0 }, { n: '둥지섬', x: NI.cx - 3, y: NI.cy + 3.5, on: 0 });
+  add('ruin', NI.cx + 3.5, NI.cy - 4); add('rock4', NI.cx - 4.5, NI.cy - 3); add('lumber', NI.cx + 4.5, NI.cy + 2.5);
   add('windmill', Hh.cx + 1.5, Hh.cy - 2.5); add('ruin', Hh.cx - 4, Hh.cy - 2.5); add('rock3', Hh.cx + 4, Hh.cy + 2);
   // 들판·언덕: 나무 무리·바위·통나무 더미
   const TREES = ['treesL', 'treesM', 'treesBL', 'treesBM', 'treesS', 'treesBS', 'tree1', 'tree2'], ROCK = ['rock1', 'rock2', 'rock3', 'rock4', 'rock5'];
   for (const s of Wd.islands) {
     if (s.kind === 'rock') { if (s.r > 2.2) add(ROCK[Math.floor(R() * 5)], s.cx, s.cy, true); continue; }
     if (s.kind === 'town') { for (let i = 0; i < 6; i++) { const a = R() * TAU, d = s.r * (.72 + R() * .2), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, k = TREES[4 + Math.floor(R() * 4)], f = PM[k][6]; if (free(x, y, f)) add(k, x, y); } continue; }
-    const n = s.kind === 'hill' ? 5 : 9;
+    const n = s.kind === 'hill' ? 5 : s.kind === 'marsh' ? 5 : s.kind === 'heron' ? 3 : 9;
     for (let i = 0; i < n * 3 && n > 0; i++) { const a = R() * TAU, d = s.r * (.35 + R() * .6), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d;
       const r = R(), k = r < .55 ? TREES[Math.floor(R() * TREES.length)] : r < .85 ? ROCK[Math.floor(R() * ROCK.length)] : ['lumber', 'stone', 'crateO', 'barrel'][Math.floor(R() * 4)]; const f = PM[k][6];
       if (free(x, y, f)) add(k, x, y); }
   }
   // 작은 장식(덤불·버섯·그루터기·민들레 솜털): 길을 막지 않는 것은 통과 가능
   const DECO = [['bush1', 1], ['bush2', 1], ['bush1', 1], ['mush', 0], ['stump', 1], ['log', 1], ['reeds', 0], ['puffs', 0], ['puffs', 0], ['reeds', 0]];
-  for (const s of Wd.islands) { if (s.kind === 'rock') continue; const n = s.kind === 'town' ? 6 : s.kind === 'hill' ? 8 : 12;
-    for (let i = 0; i < n * 3 && n; i++) { const a = R() * TAU, d = s.r * (.25 + R() * .68), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, [k, sol] = DECO[Math.floor(R() * DECO.length)];
+  for (const s of Wd.islands) { if (s.kind === 'rock') continue; const n = s.kind === 'town' ? 6 : s.kind === 'hill' ? 8 : s.kind === 'marsh' ? 18 : 12;
+    for (let i = 0; i < n * 3 && n; i++) { const a = R() * TAU, d = s.r * (.25 + R() * .68), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, [k, sol] = s.kind === 'marsh' || s.kind === 'heron' ? (R() < .6 ? ['reeds', 0] : DECO[Math.floor(R() * DECO.length)]) : DECO[Math.floor(R() * DECO.length)];
       if (s.kind === 'town' && k === 'log') continue; const f = PM[k] ? PM[k][6] : .3; if (free(x, y, f + .2) && onLand(Wd, x, y)) add(k, x, y, !!sol); } }
   if (PM.sign) { const T2 = Wd.islands[Wd.town]; add('sign', T2.cx + 5.5, T2.cy + 5.2); }
   for (let i = 0; i < block.length; i++) if (block[i] === 2) block[i] = 0;

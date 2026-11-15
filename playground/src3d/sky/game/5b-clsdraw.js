@@ -38,6 +38,7 @@ function drawClsAir() {
       for (let i = 0; i < n; i++) { const s = Math.floor(G.t * 12) * 31 + i * 7, rx = (hsh(s, i) - .5) * 2 * a.r, ry = (hsh(i, s) - .5) * 2 * a.r; if (rx * rx + ry * ry > a.r * a.r) continue; const [px, py] = iso(a.x + rx, a.y + ry), h = (G.t * 12 % 1) * 70;
         x.globalAlpha = .9; x.beginPath(); x.moveTo(px - 4, py - 80 + h); x.lineTo(px, py - 64 + h); x.stroke(); } x.globalAlpha = 1; }
     else if (a.k === 'hawk') drawHawk(a);
+    else if (a.k === 'mud') { const [ax, ay] = iso(a.x, a.y), Y = ay - 18 - Math.sin(a.t / .8 * Math.PI) * 14; x.fillStyle = 'rgba(30,30,20,.25)'; x.beginPath(); x.ellipse(ax, ay, 6, 3, 0, 0, TAU); x.fill(); x.fillStyle = '#5a4026'; x.strokeStyle = '#2a1e10'; x.lineWidth = 1.5; x.beginPath(); x.arc(ax, Y, 6, 0, TAU); x.fill(); x.stroke(); x.fillStyle = '#8a6a44'; x.beginPath(); x.arc(ax - 2, Y - 2, 2, 0, TAU); x.fill(); }
     else if (a.k === 'bigbell') { const [ax, ay] = iso(a.x, a.y), k = Math.min(1, a.t / .5), al = Math.min(1, (a.life - a.t) * 2); const shake = a.t > .5 && a.t < 2 ? Math.sin(G.t * 40) * 2 : 0; drawBell(ax + shake, ay - (1 - k * k) * 320, 46, al); }
   }
   // 표식: 받는 피해가 늘어난 적
@@ -50,6 +51,7 @@ function drawClsFx(f, k, sx, sy) {
   if (f.k === 'wave') { const gr = x.createRadialGradient(sx, sy, 0, sx, sy, f.r * TW * .71 * (.2 + k)); gr.addColorStop(0, 'rgba(255,230,160,0)'); gr.addColorStop(.85, `rgba(255,220,140,${.35 * (1 - k)})`); gr.addColorStop(1, 'rgba(255,220,140,0)');
     x.save(); x.translate(sx, sy); x.scale(1, TH / TW); x.translate(-sx, -sy); x.fillStyle = gr; x.beginPath(); x.arc(sx, sy, f.r * TW * .71 * (.2 + k), 0, TAU); x.fill(); x.restore();
     x.strokeStyle = `rgba(255,240,200,${1 - k})`; x.lineWidth = 3; ELL(sx, sy, f.r, .2 + k); x.stroke(); return 1; }
+  if (f.k === 'feather') { for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + f.x, r = 6 + k * 16; x.save(); x.translate(sx + Math.cos(a) * r, sy - 4 + Math.sin(a) * r * .5 - (1 - k) * 30); x.rotate(a); x.globalAlpha = 1 - k; x.fillStyle = i % 2 ? '#d8dce4' : '#56606e'; x.beginPath(); x.ellipse(0, 0, 8, 2.4, 0, 0, TAU); x.fill(); x.restore(); } x.globalAlpha = 1; return 1; }
   if (f.k === 'snap') { x.strokeStyle = `rgba(230,230,240,${1 - k})`; x.lineWidth = 3; const o = 10 * (1 - Math.min(1, k * 3)); for (const s of [-1, 1]) { x.beginPath(); x.ellipse(sx, sy - 6 + s * o, 13, 6, 0, s < 0 ? Math.PI : 0, s < 0 ? TAU : Math.PI); x.stroke(); } return 1; }
   if (f.k === 'clang') { x.strokeStyle = `rgba(255,255,255,${1 - k})`; x.lineWidth = 2.5; x.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .2, r0 = f.r * 12 * k, r1 = f.r * 26 * (.4 + k); x.moveTo(sx + Math.cos(a) * r0, sy - 20 + Math.sin(a) * r0 * .6); x.lineTo(sx + Math.cos(a) * r1, sy - 20 + Math.sin(a) * r1 * .6); } x.stroke(); return 1; }
   return 0;

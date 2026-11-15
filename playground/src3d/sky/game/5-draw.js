@@ -2,10 +2,10 @@
 /* =================== 그리기 =================== */
 let ov, cv, x, lay = { Z: 1, dpr: 1, cw: 800, ch: 450 }, IM = {}, NPCK = [];
 const HC = [112, 120, 56, 100], HF = ['idle0', 'idle1', 'run0', 'run1', 'run2', 'run3', 'run4', 'run5', 'atk0', 'atk1', 'atk2', 'atk3', 'cast0', 'cast1', 'cast2', 'hurt', 'dodge', 'die0', 'die1'];
-const MC = { fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
+const MC = { mudfluff: [110, 110, 55, 96], bogpod: [96, 104, 48, 92], heronling: [104, 132, 52, 120], heron: [260, 300, 130, 282], fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
 function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; LOADP.n++; ok(); }; im.onerror = () => { LOADP.n++; ok(); }; im.src = src; }); }
 // 폰 로딩: 처음엔 꼭 필요한 그림만(약 1.4MB) 받고, 큰 보스 그림(둥지지기·우두머리)은 시작한 뒤 뒤에서 받는다
-const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking'];
+const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking', 'mudfluff', 'bogpod', 'heronling', 'heron'];
 let assetsP = null;
 function assets() {
   if (assetsP) return assetsP; const v = '?v=__ASSETV__';
@@ -203,6 +203,9 @@ function islandTop(Wd, s, g, T) {
   for (const [xx, yy, t] of g.cells) if (t === 2) { const [sx, sy] = iso(xx, yy); x.drawImage(T.dirt[Math.floor(hsh(xx, yy) * 3)], sx - TW * .8, sy + TH / 2 - TH * .8, TW * 1.6, TH * 1.6); }
   for (const [xx, yy, t, own] of g.cells) { if (t !== 1 || !own) continue; const [sx, sy] = iso(xx, yy), hh = hsh(xx, yy);
     if (hh < .22) x.drawImage(T.tuft[Math.floor(hh * 18) % 4], sx - 8 + (hsh(yy, xx) - .5) * 30, sy + 8 + hsh(xx + 7, yy) * 12, 16, 12); else if (hh > .93 && s.k !== Wd.town) x.drawImage(T.flower[Math.floor(hh * 100) % 3], sx - 7 + (hsh(yy, xx) - .5) * 26, sy + 6 + hsh(xx + 3, yy) * 12, 14, 14); }
+  if (s.kind === 'marsh' || s.kind === 'heron') { // 늪: 탁한 풀빛 + 물웅덩이
+    x.fillStyle = s.kind === 'heron' ? 'rgba(60,60,70,.22)' : 'rgba(50,80,50,.2)'; x.fill(g.top);
+    for (const [xx, yy, t, own] of g.cells) { if (!own || hsh(xx + 11, yy) > .1) continue; const [sx, sy] = iso(xx, yy), r = 10 + hsh(xx, yy + 5) * 14; x.fillStyle = 'rgba(70,110,120,.55)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .45, 0, 0, TAU); x.fill(); x.fillStyle = 'rgba(200,230,240,.35)'; x.beginPath(); x.ellipse(sx - r * .25, sy + TH / 2 - 2, r * .4, r * .12, 0, 0, TAU); x.fill(); } }
   x.strokeStyle = 'rgba(255,255,220,.22)'; x.lineWidth = 3; x.stroke(g.top);
   x.restore();
   // 풀 테두리(낭떠러지 위로 살짝 늘어짐)
@@ -325,7 +328,7 @@ function drawVortex(a) { const [ax, ay] = iso(a.x, a.y), k = a.t / a.life, al = 
   for (let i = 0; i < 9; i++) { const rr2 = a.r * (1 - i / 10) * 45, y2 = ay - i * 9; x.globalAlpha = al * (.85 - i * .05); x.strokeStyle = i % 2 ? '#ffffff' : '#9fe4ff'; x.lineWidth = 3.2 - i * .2; x.beginPath(); x.ellipse(ax + Math.sin(G.t * 6 + i) * 4, y2, rr2 * (.35 + i * .02 + .65 * (1 - k * .3)), rr2 * .42, 0, G.t * (9 + i) + i, G.t * (9 + i) + i + 3.6); x.stroke(); }
   x.globalAlpha = 1; }
 function questMark(k) { const P = G.P; for (const id in QUESTS) { const Q = QUESTS[id]; if (Q.from !== k) continue; const q = P.q[id]; if (q && q.s === 2) return '?'; if (!q && qAvail(id)) return '!'; } return ''; }
-function qAvail(id) { const q = G.P.q; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; return false; }
+function qAvail(id) { const q = G.P.q; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
 
 /* ---------- 화면 위 정보(HUD) ---------- */
 let BTN = [];
@@ -424,9 +427,9 @@ function rrp(g, X, Y, w, h, r) { g.moveTo(X + r, Y); g.arcTo(X + w, Y, X + w, Y 
 let MINI = null;
 function minimap(R, T, s) {
   const Wd = G.Wd, w = 112 * s, h = 112 * s, X = R - w;
-  if (!MINI || MINI.v !== (Wd.bridges[Wd.bq].broken ? 0 : 1)) { const c = document.createElement('canvas'); c.width = Wd.W * 2; c.height = Wd.H * 2; const g = c.getContext('2d');
+  if (!MINI || MINI.v !== (Wd.bridges[Wd.bq].broken ? 0 : 1) + (Wd.bridges[Wd.bq2].broken ? 0 : 2)) { const c = document.createElement('canvas'); c.width = Wd.W * 2; c.height = Wd.H * 2; const g = c.getContext('2d');
     for (let y = 0; y < Wd.H; y++) for (let xx = 0; xx < Wd.W; xx++) { const t = Wd.g[Wd.id(xx, y)]; if (!t) continue; g.fillStyle = t === 3 ? '#c8a070' : t === 4 ? '#8a6a50' : t === 5 ? '#d8d0c0' : t === 2 ? '#d8c08a' : Wd.block[Wd.id(xx, y)] ? '#5a8a4a' : '#9ccc7a'; g.fillRect(xx * 2, y * 2, 2, 2); }
-    MINI = { c, v: Wd.bridges[Wd.bq].broken ? 0 : 1 }; }
+    MINI = { c, v: (Wd.bridges[Wd.bq].broken ? 0 : 1) + (Wd.bridges[Wd.bq2].broken ? 0 : 2) }; }
   x.save(); x.fillStyle = 'rgba(30,24,18,.55)'; rr(X, T, w, h, 10); x.fill(); x.beginPath(); rr(X + 3, T + 3, w - 6, h - 6, 8); x.clip();
   const sc = 1.6 * s, P = G.P; x.translate(X + w / 2, T + h / 2); x.rotate(Math.PI / 4); x.scale(sc * .72, sc * .72 * .5 / .5); x.scale(1, 1);
   x.translate(-P.x * 2, -P.y * 2); x.drawImage(MINI.c, 0, 0);
@@ -436,7 +439,7 @@ function minimap(R, T, s) {
   x.fillStyle = '#fff'; x.beginPath(); x.arc(P.x * 2, P.y * 2, 3, 0, TAU); x.fill(); x.restore();
 }
 function questTracker(R, T, s) {
-  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; L.push([Q.n, t]); }
+  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; L.push([Q.n, t]); }
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
 }
