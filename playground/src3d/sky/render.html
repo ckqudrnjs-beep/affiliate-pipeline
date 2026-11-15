@@ -200,11 +200,39 @@ window.renderMob = async function (k) {
 };
 
 // ---------------- 소품(건물·나무·바위): 쿼터뷰 45도 ----------------
+// 손으로 만든 작은 소품(덤불·버섯·그루터기…): 섬을 덜 휑하게
+function rnd3(seed) { let t = seed; return () => { t = (t * 16807) % 2147483647; return (t - 1) / 2147483646; }; }
+const PROC = {
+  bush(R, flowers) { const g = new THREE.Group(); const cols = [0x5a9a3a, 0x4f8c34, 0x67a844, 0x72b44c];
+    for (let i = 0; i < 9; i++) { const a = R() * Math.PI * 2, d = R() * .22, r = .16 + R() * .12; const geo = new THREE.IcosahedronGeometry(r, 1).toNonIndexed(); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, std(cols[i % 4], { rough: .9 })); m.position.set(Math.cos(a) * d, r * .8 + R() * .12, Math.sin(a) * d); g.add(m); }
+    if (flowers) for (let i = 0; i < 9; i++) { const a = R() * Math.PI * 2, d = .1 + R() * .2; const f = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), std([0xffd23a, 0xffffff, 0xf08ab0][i % 3], { glow: 0x402810, gi: .2 })); f.position.set(Math.cos(a) * d, .28 + R() * .16, Math.sin(a) * d); g.add(f); }
+    return g; },
+  mush(R) { const g = new THREE.Group(); for (let i = 0; i < 3; i++) { const s = [1, .7, .5][i], x = [0, .14, -.12][i], z = [0, .08, .1][i];
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(.03 * s, .045 * s, .16 * s, 10), std(0xf0e6d0)); st.position.set(x, .08 * s, z); g.add(st);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(.1 * s, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xd8503a, { rough: .5 })); cap.position.set(x, .15 * s, z); cap.scale.y = .8; g.add(cap);
+    for (let j = 0; j < 4; j++) { const a = j * 1.7 + i, sp = new THREE.Mesh(new THREE.SphereGeometry(.016 * s, 6, 4), std(0xffffff)); sp.position.set(x + Math.cos(a) * .06 * s, .2 * s, z + Math.sin(a) * .06 * s); g.add(sp); } } return g; },
+  stump(R) { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(.2, .26, .26, 14), std(0x7a5232, { rough: .95 })); b.position.y = .13; g.add(b);
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(.19, .19, .01, 14), std(0xd8b080)); t.position.y = .265; g.add(t); for (let i = 1; i < 3; i++) { const r2 = new THREE.Mesh(new THREE.TorusGeometry(.06 * i, .006, 4, 20), std(0x9a7048)); r2.rotation.x = Math.PI / 2; r2.position.y = .272; g.add(r2); }
+    for (let i = 0; i < 4; i++) { const a = i * 1.6 + .3, rt = new THREE.Mesh(new THREE.ConeGeometry(.06, .3, 6), std(0x6a4628)); rt.position.set(Math.cos(a) * .24, .04, Math.sin(a) * .24); rt.rotation.set(Math.sin(a) * 1.3, 0, -Math.cos(a) * 1.3); g.add(rt); }
+    const moss = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), std(0x6aa244)); moss.position.set(.15, .2, .1); moss.scale.set(1, .5, 1); g.add(moss); return g; },
+  log(R) { const g = new THREE.Group(); const l = new THREE.Mesh(new THREE.CylinderGeometry(.13, .14, .9, 14), std(0x7a5232, { rough: .95 })); l.rotation.z = Math.PI / 2; l.position.y = .13; g.add(l);
+    for (const sd of [-1, 1]) { const e = new THREE.Mesh(new THREE.CylinderGeometry(.125, .125, .01, 14), std(0xd8b080)); e.rotation.z = Math.PI / 2; e.position.set(sd * .455, .13, 0); g.add(e); }
+    for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.09, 8, 6), std(0x6aa244)); m.position.set(-.25 + i * .22, .24, .02); m.scale.set(1.4, .4, 1); g.add(m); }
+    const mu = PROC.mush(R); mu.scale.setScalar(.6); mu.position.set(.3, .2, .08); g.add(mu); g.rotation.y = .5; return g; },
+  reeds(R) { const g = new THREE.Group(); for (let i = 0; i < 16; i++) { const a = R() * Math.PI * 2, d = R() * .16, h = .25 + R() * .3; const c = new THREE.Mesh(new THREE.ConeGeometry(.018, h, 5), std([0x6aa244, 0x7ab84c, 0x5a9a3a][i % 3])); c.position.set(Math.cos(a) * d, h / 2, Math.sin(a) * d); c.rotation.set((R() - .5) * .5, 0, (R() - .5) * .5); g.add(c); } return g; },
+  puffs(R) { const g = new THREE.Group(); for (let i = 0; i < 5; i++) { const a = R() * Math.PI * 2, d = R() * .16, h = .2 + R() * .16;
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(.008, .01, h, 5), std(0x6aa244)); st.position.set(Math.cos(a) * d, h / 2, Math.sin(a) * d); g.add(st);
+    const p2 = new THREE.Mesh(new THREE.IcosahedronGeometry(.06, 2), std(0xffffff, { glow: 0xffffff, gi: .15, rough: 1 })); p2.position.set(Math.cos(a) * d, h + .04, Math.sin(a) * d); g.add(p2); }
+    for (let i = 0; i < 6; i++) { const l = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 4), std(0x5a9a3a)); const a = i; l.position.set(Math.cos(a) * .1, .02, Math.sin(a) * .1); l.scale.set(1.6, .25, .6); l.rotation.y = a; g.add(l); } return g; },
+  sign(R) { const g = new THREE.Group(); const p2 = new THREE.Mesh(new THREE.CylinderGeometry(.03, .035, .7, 8), std(0x7a5232)); p2.position.y = .35; g.add(p2);
+    for (const [y, r2] of [[.6, .25], [.45, -.3]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(.4, .1, .03), std(0xc89a62)); b.position.set(.1 * Math.sign(r2), y, .03); b.rotation.y = r2; g.add(b); const tip = new THREE.Mesh(new THREE.ConeGeometry(.05, .08, 3), std(0xc89a62)); tip.rotation.z = -Math.PI / 2 * Math.sign(r2); tip.position.set(.32 * Math.sign(r2), y, .03); g.add(tip); } return g; },
+};
 window.renderProps = async function () {
   const items = [];
   for (const P of PROPS) {
-    const src = (await hex(P.file)).scene.clone(true), w = new THREE.Group(), y = new THREE.Group(); y.add(src); w.add(y);
-    const ms = []; src.traverse(m => { if (m.isMesh) ms.push(m); }); for (const m of ms) { m.material = softRim(m.material, { tint: P.tint, ta: P.ta }); outline(m, 1.025); }
+    let src; if (P.file.startsWith('proc:')) { const [f, arg] = P.file.slice(5).split('+'); src = PROC[f](rnd3(P.key.length * 977 + 13), arg); } else src = (await hex(P.file)).scene.clone(true);
+    const w = new THREE.Group(), y = new THREE.Group(); y.add(src); w.add(y);
+    const ms = []; src.traverse(m => { if (m.isMesh) ms.push(m); }); for (const m of ms) { if (!P.file.startsWith('proc:')) m.material = softRim(m.material, { tint: P.tint, ta: P.ta }); outline(m, P.file.startsWith('proc:') ? 1.06 : 1.025); }
     y.rotation.y = Math.PI / 4 + (P.rot || 0); w.scale.setScalar(P.s || 1.6); scene.add(w); w.updateMatrixWorld(true);
     { const b0 = new THREE.Box3().setFromObject(w), c0 = b0.getCenter(new THREE.Vector3()); w.position.set(-c0.x, -b0.min.y, -c0.z); w.updateMatrixWorld(true); } // 바닥 가운데 = 원점
     const bb = new THREE.Box3().setFromObject(w); // 화면 경계 = 8개 꼭짓점 투영
@@ -251,6 +279,14 @@ function ICON(k) {
       for (const s of [-1, 1]) { const sh = new THREE.Mesh(new THREE.SphereGeometry(.2, 16, 12), m); sh.position.set(s * .48, .76, 0); sh.scale.set(1, .7, .8); g.add(sh); if (k !== 'armor2') { const sl = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, .36, 12), m); sl.position.set(s * .58, .55, 0); sl.rotation.z = s * .35; g.add(sl); } }
       if (k === 'armor2') for (let i = 0; i < 4; i++) { const sc = new THREE.Mesh(new THREE.TorusGeometry(.44 - i * .02, .025, 6, 30, Math.PI), std(0x6a7480, { metal: .6 })); sc.rotation.y = Math.PI / 2 * 0; sc.position.y = .2 + i * .16; sc.scale.z = .62; sc.rotation.x = Math.PI / 2; g.add(sc); }
       if (k === 'armor1') { const b = new THREE.Mesh(new THREE.TorusGeometry(.46, .04, 8, 30), std(0x4a3a2a)); b.rotation.x = Math.PI / 2; b.position.y = .25; b.scale.y = .62; g.add(b); }
+      g.rotation.y = .35; break; }
+    case 'legs0': case 'legs1': case 'legs2': {
+      const col = { legs0: 0xd8cca8, legs1: 0x8a5a32, legs2: 0x9aa4b0 }[k], m = std(col, { metal: k === 'legs2' ? .6 : .05, rough: k === 'legs2' ? .35 : .85 });
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(.36, .34, .22, 20), m); w.scale.z = .62; w.position.y = .82; g.add(w);
+      const bnd = new THREE.Mesh(new THREE.TorusGeometry(.36, .04, 8, 30), std(k === 'legs1' ? 0x4a3020 : 0x6a5a40)); bnd.rotation.x = Math.PI / 2; bnd.scale.y = .62; bnd.position.y = .9; g.add(bnd);
+      for (const sd of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(.17, .13, .78, 14), m); l.position.set(sd * .17, .36, 0); l.rotation.z = sd * .06; g.add(l);
+        if (k === 'legs2') for (let i = 0; i < 3; i++) { const r2 = new THREE.Mesh(new THREE.TorusGeometry(.16 - i * .01, .02, 6, 20), std(0x6a7480, { metal: .6 })); r2.rotation.x = Math.PI / 2; r2.position.set(sd * .17, .14 + i * .22, 0); g.add(r2); }
+        if (k === 'legs1') { const kn = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 8), std(0x5a3a22)); kn.position.set(sd * .17, .4, .13); kn.scale.z = .5; g.add(kn); } }
       g.rotation.y = .35; break; }
     case 'gloves': { const m = std(0x8a5a32, { rough: .8 }); for (const s of [-1, 1]) { const h = new THREE.Group(); const p = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 12), m); p.scale.set(1, 1.25, .6); h.add(p); const c = new THREE.Mesh(new THREE.CylinderGeometry(.2, .22, .22, 14), std(0x6a4224)); c.position.y = -.3; h.add(c); for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .16, 4, 8), m); f.position.set(-.13 + i * .087, .32, 0); h.add(f); } const t = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .12, 4, 8), m); t.position.set(.24 * s, .05, 0); t.rotation.z = -s * .9; h.add(t); h.position.x = s * .3; h.rotation.z = -s * .25; g.add(h); } break; }
     case 'belt': { const b = new THREE.Mesh(new THREE.TorusGeometry(.45, .07, 10, 40), std(0x7a4a2a)); b.scale.set(1, .55, 1); b.rotation.x = .45; g.add(b); const bk = new THREE.Mesh(new THREE.TorusGeometry(.11, .03, 8, 4), std(0xd8b04a, { metal: .7 })); bk.rotation.set(.45, 0, Math.PI / 4); bk.position.set(0, -.22, .12); g.add(bk); break; }

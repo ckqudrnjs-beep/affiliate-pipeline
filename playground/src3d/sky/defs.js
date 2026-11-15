@@ -43,4 +43,6 @@ export const PROPS = [
   ['windmill', 'building_windmill_blue', 1.8, 1.3], ['home1', 'building_home_A_blue', 1.8, 1.3], ['home2', 'building_home_B_blue', 1.8, 1.3], ['well', 'building_well_blue', 1.8, .6], ['smithy', 'building_blacksmith_blue', 1.8, 1.4], ['market', 'building_market_blue', 1.8, 1.4], ['tavern', 'building_tavern_blue', 1.8, 1.4], ['ruin', 'building_destroyed', 1.8, 1.2], ['grain', 'building_grain', 1.8, 1.2],
   ['fence', 'fence_wood_straight', 2.6, .3], ['gate', 'fence_wood_straight_gate', 2.6, .3],
   ['barrel', 'barrel', 3.4, .25], ['crateB', 'crate_A_big', 3.4, .3], ['crateS', 'crate_A_small', 3.4, .2], ['crate2', 'crate_B_big', 3.4, .3], ['sack', 'sack', 3.4, .2], ['barrow', 'wheelbarrow', 3.4, .3], ['bucket', 'bucket_water', 3.4, .15], ['flag', 'flag_blue', 3.4, .15], ['lumber', 'resource_lumber', 3, .45], ['stone', 'resource_stone', 3, .45], ['crateO', 'crate_open', 3.4, .3],
+  ['bush1', 'proc:bush', 1.6, .3], ['bush2', 'proc:bush+1', 1.6, .3], ['mush', 'proc:mush', 2, .1], ['stump', 'proc:stump', 1.6, .25], ['log', 'proc:log', 1.6, .3], ['reeds', 'proc:reeds', 1.6, .1], ['puffs', 'proc:puffs', 2, .1], ['sign', 'proc:sign', 1.6, .12],
+  ['rack', 'weaponrack', 2.6, .3], ['target', 'target', 2.6, .3], ['pallet', 'pallet', 3, .3],
 ].map(([key, file, s, foot]) => ({ key, file, s, foot }));
