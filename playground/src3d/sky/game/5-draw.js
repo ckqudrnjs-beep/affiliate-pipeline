@@ -87,6 +87,7 @@ function draw() {
   for (const d of G.drops) if (vis(d.x, d.y)) L.push([d.x + d.y - .3, 3, d]);
   for (const w of Wd.wps) L.push([w.x + w.y, 5, w]);
   for (const a of G.areas) if (a.k === 'echo' && vis(a.x, a.y)) L.push([a.x + a.y, 6, a]);
+  if (G.chest && vis(G.chest.x, G.chest.y)) L.push([G.chest.x + G.chest.y, 7, G.chest]);
   L.push([P.x + P.y, 4, P]); L.sort((a, b) => a[0] - b[0]);
   const hs = .5; // 2배 아틀라스 → 1배
   for (const [, k, o] of L) {
@@ -97,6 +98,7 @@ function draw() {
     else if (k === 4) drawHero(o);
     else if (k === 5) { const [sx, sy] = iso(o.x, o.y); drawVane(sx, sy, o.on); }
     else if (k === 6) drawEcho(o);
+    else if (k === 7) { const [sx, sy] = iso(o.x, o.y); drawChest(o, sx, sy); }
   }
   drawBlightAir();
   // 투사체·효과
@@ -393,7 +395,7 @@ const SKC = { ult: '#fff3c0',  pierce: '#ffe9c0', sweep: '#ffd59a', bash: '#ffd2
 function skillBtn(i, id, X, Y, sz, key) {
   const P = G.P, ult = id === 'ult'; x.fillStyle = 'rgba(30,24,18,.6)'; rr(X, Y, sz, sz, sz * .22); x.fill(); x.strokeStyle = ult ? '#ffcf7a' : 'rgba(255,240,210,.45)'; x.lineWidth = ult ? 2.5 : 1.5; x.stroke();
   if (id) { const s = skillOf(P.cls, id); drawSkillIcon(x, s, X, Y, sz, P.cls); const cd = P.cds[id] || 0;
-    if (cd > 0) { x.fillStyle = 'rgba(0,0,0,.55)'; rr(X, Y + sz * (1 - cd / s.cd), sz, sz * cd / s.cd, sz * .2); x.fill(); if (cd > .9) { x.font = `800 ${sz * .32}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,.7)'; x.lineWidth = 3; x.strokeText(Math.ceil(cd), X + sz / 2, Y + sz * .62); x.fillText(Math.ceil(cd), X + sz / 2, Y + sz * .62); } }
+    const CDF = (G.P.cdx && G.P.cdx[s.id]) || s.cd; if (cd > 0) { x.fillStyle = 'rgba(0,0,0,.55)'; rr(X, Y + sz * (1 - cd / CDF), sz, sz * cd / CDF, sz * .2); x.fill(); if (cd > .9) { x.font = `800 ${sz * .32}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,.7)'; x.lineWidth = 3; x.strokeText(Math.ceil(cd), X + sz / 2, Y + sz * .62); x.fillText(Math.ceil(cd), X + sz / 2, Y + sz * .62); } }
     else if (ult) { x.globalAlpha = .4 + Math.sin(G.t * 5) * .3; x.strokeStyle = '#fff3c0'; x.lineWidth = 2; rr(X - 2, Y - 2, sz + 4, sz + 4, sz * .24); x.stroke(); x.globalAlpha = 1; }
     if (P.wind < s.cost) { x.fillStyle = 'rgba(20,60,120,.4)'; rr(X, Y, sz, sz, sz * .22); x.fill(); } }
   else if (i === 3 && P.lv < ULT[P.cls].req) { x.font = `700 ${sz * .2}px system-ui`; x.textAlign = 'center'; x.fillStyle = 'rgba(255,220,160,.7)'; x.fillText('궁극', X + sz / 2, Y + sz * .5); x.fillText(ULT[P.cls].req + '레벨', X + sz / 2, Y + sz * .74); }
@@ -436,10 +438,12 @@ function minimap(R, T, s) {
   for (const m of G.mobs) if (!m.dead) { x.fillStyle = m.D.boss ? '#ff4a3a' : m.D.mini ? '#c06aff' : m.elite ? m.E[1] : '#e85a4a'; x.fillRect(m.x * 2 - 1.5, m.y * 2 - 1.5, 3, 3); }
   for (const k in Wd.npcAt) { x.fillStyle = '#ffd166'; x.fillRect(Wd.npcAt[k][0] * 2 - 1.5, Wd.npcAt[k][1] * 2 - 1.5, 3, 3); }
   for (const wp of Wd.wps) { x.fillStyle = wp.on ? '#9fe4ff' : '#888'; x.beginPath(); x.arc(wp.x * 2, wp.y * 2, 2.6, 0, TAU); x.fill(); }
+  if (G.chest) { x.fillStyle = '#ffd166'; x.strokeStyle = '#7a5a20'; x.lineWidth = 1; x.beginPath(); x.arc(G.chest.x * 2, G.chest.y * 2, 3.4, 0, TAU); x.fill(); x.stroke(); }
   x.fillStyle = '#fff'; x.beginPath(); x.arc(P.x * 2, P.y * 2, 3, 0, TAU); x.fill(); x.restore();
 }
 function questTracker(R, T, s) {
   const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; L.push([Q.n, t]); }
+  const dt2 = dailyTrack(); if (dt2) L.push(dt2);
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
 }

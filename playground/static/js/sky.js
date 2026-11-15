@@ -389,7 +389,7 @@ function placeProps(Wd, PM) {
   for (const s of Wd.islands) { if (s.kind === 'rock') continue; const n = s.kind === 'town' ? 6 : s.kind === 'hill' ? 8 : s.kind === 'marsh' ? 18 : 12;
     for (let i = 0; i < n * 3 && n; i++) { const a = R() * TAU, d = s.r * (.25 + R() * .68), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, [k, sol] = s.kind === 'marsh' || s.kind === 'heron' ? (R() < .6 ? ['reeds', 0] : DECO[Math.floor(R() * DECO.length)]) : DECO[Math.floor(R() * DECO.length)];
       if (s.kind === 'town' && k === 'log') continue; const f = PM[k] ? PM[k][6] : .3; if (free(x, y, f + .2) && onLand(Wd, x, y)) add(k, x, y, !!sol); } }
-  if (PM.sign) { const T2 = Wd.islands[Wd.town]; add('sign', T2.cx + 5.5, T2.cy + 5.2); }
+  { const T2 = Wd.islands[Wd.town]; Wd.signAt = [T2.cx + 5.5, T2.cy + 5.2]; if (PM.sign) add('sign', T2.cx + 5.5, T2.cy + 5.2); }
   for (let i = 0; i < block.length; i++) if (block[i] === 2) block[i] = 0;
   return props;
 }
@@ -572,24 +572,24 @@ const dirW = d => scr2w(DIRV[d][0] * TW, DIRV[d][1] * TH * 2); // 방향 d 의 �
 function newSave(cls) {
   const seed = (Math.random() * 1e9) | 0, it = id => makeItem(id, 0, 1, { id: 1, st: 0 });
   const CS = CLS_START[cls], eq = { weapon: it(CS[0]), off: it(CS[1]), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
-  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
+  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, fork2: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
 }
 function startGame(S) {
   const Wd = makeWorld(S.seed); Wd.props = placeProps(Wd, PM);
   if (S.flags.bridge) repairBridge(Wd, Wd.bq);
   if (S.flags.bridge2) repairBridge(Wd, Wd.bq2);
   for (const w of Wd.wps) if (S.flags['wp_' + w.n]) w.on = 1;
-  if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = [];
+  if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = []; if (!S.fork2) S.fork2 = {};
   const T = Wd.islands[Wd.town];
   const P = { ...S, x: T.cx + 1.5, y: T.cy + 2.5, r: .28, dir: 2, an: 'idle', at: 0, atkT: 0, cds: {}, buf: {}, hp: null, wind: null, dodge: 0, dcd: 0, inv0: 0, tgt: null, path: null, dead: 0, combo: 0 };
   // 순풍: 쉬는 동안 쌓이는 경험치 2배 몫(최대 다음 레벨 필요량의 절반)
   const away = Math.max(0, Date.now() - (S.t || Date.now())) / 36e5; P.rested = Math.min(xpNeed(P.lv) * .5, (S.rested || 0) + away * xpNeed(P.lv) * .06);
   G = { Wd, P, mobs: [], proj: [], fx: [], txt: [], drops: [], areas: [], parts: [], t: 0, cam: [P.x, P.y], shake: 0, packs: [], msg: [], hitstop: 0, flash: 0, cut: null };
   calc(P); P.hp = P.mhp; P.wind = P.mwind; autoSlots(P);
-  spawnAll(); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
+  dailyStart(); spawnAll(); restNote(S); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
+function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
 const pcode = () => { try { return localStorage.getItem('nr_pcode') || ''; } catch (e) { return ''; } };
@@ -615,7 +615,7 @@ function mkMob(t, x, y, lv, elite) {
   return { t, D, x, y, hx: x, hy: y, lv, hp, mhp: hp, dmg: [(D.dmg[0] + D.dmg[2] * lv) * (m.dmg || 1), (D.dmg[1] + D.dmg[2] * lv * 1.3) * (m.dmg || 1)], spd: D.spd * (m.spd || 1), r: D.r, dir: ri(0, 7), an: 'idle', at: Math.random(), cd: 1, st: 'idle', kx: 0, ky: 0, stun: 0, slow: 0, elite, E, kbimm: m.kbimm, wan: rnd(1, 4), fl: 0, fear: 0, taunt: 0, miss: 0, bleed: 0, id: Math.random() };
 }
 function spawnPack(pk) {
-  const s = G.Wd.islands[pk.isl], R = Math.random; pk.mobs = [];
+  const s = G.Wd.islands[pk.isl], R = Math.random; pk.mobs = []; if (G.today === pk.isl && !pk.boss && !pk.elite) pk.elite = ri(1, ELITE.length);
   for (let tries = 0; tries < 30 && pk.mobs.length < pk.n; tries++) {
     const a = R() * TAU, d = R() * 1.8, x = pk.x + Math.cos(a) * d, y = pk.y + Math.sin(a) * d;
     if (!walk(G.Wd, x, y)) continue; const elite = pk.elite && pk.mobs.length === 0 ? pk.elite : 0;
@@ -686,7 +686,7 @@ function killMob(m, fell) {
   if (m.t === 'fluff') qAdd('q2', 1);
   if (D.heron) { P.flags.heron = 1; if (P.q.q7 && P.q.q7.s === 1) qSet('q7', 2); G.shake = 14; G.flash = .4; say('큰 왜가리가 쓰러졌어요! 둥지섬 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
   else if (D.boss) { P.flags.boss = 1; qSet('q3', 2); G.shake = 10; say('우두머리 보풀이 흩어졌어요! 언덕의 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
-  ch1Kill(m);
+  ch1Kill(m); dailyKill(m, fell);
   if (fell) { G.txt.push({ x: m.x, y: m.y, z: 1, t: 0, s: '떨어짐!', c: '#9fe4ff' }); sfx('fall'); }
   else burst(m.x, m.y, m.t, D.boss ? 3 : D.mini ? 2.2 : m.elite ? 1.6 : 1);
   if (D.mini && m.pk) cleanse(m.pk);
@@ -697,7 +697,7 @@ function drops(m, fell) {
   const P = G.P, D = m.D, put = it => { const a = Math.random() * TAU, d = .3 + Math.random() * .6; let x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d; if (!walk(G.Wd, x, y)) { x = P.x; y = P.y; } if (it.gold) G.drops.push({ x, y, gold: it.gold, t: 0 }); else G.drops.push({ x, y, it, t: 0 }); };
   if (fell) { if (Math.random() < .5) G.drops.push({ x: P.x + rnd(-.5, .5), y: P.y + rnd(-.5, .5), gold: ri(m.lv, m.lv * 3), t: 0 }); return; }
   const ilv = m.lv + (m.elite ? 1 : 0) + (D.boss ? 2 : D.mini ? 1 : 0);
-  if (Math.random() < .55 || m.elite || D.mini) put({ gold: ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) });
+  if (Math.random() < .55 || m.elite || D.mini) put({ gold: Math.round(ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) * (m.pk && m.pk.isl === G.today ? 1.5 : 1)) });
   const nItem = D.boss ? 3 : D.mini ? 2 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
   for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
   if (D.boss) { const u = CLS_START[P.cls][4]; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
@@ -721,7 +721,7 @@ function burst(x2, y2, t, k) {
     G.parts.push({ k: t === 'seed' || t === 'keeper' || t === 'bogpod' ? 'chip' : t === 'bird' || t === 'heronling' || t === 'heron' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
-function gainXp(n) { gainXp0(n); boardCheck(); }
+function gainXp(n) { gainXp0(n); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
 // 3레벨: 나침반판이 열리고 처음 조각 2개
 function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) return; P.flags.board0 = 1; giveShard({ c: 'sky', q: 1 }, 1); giveShard({ c: 'fire', q: 1 }, 1); G.cut = { s: '나침반판이 열렸어요 (B)', c: '#9fe4ff', t: 0 }; say('나침반판이 열렸어요! 기술 창(S)이나 B 키로 바람 조각을 끼워 보세요.', '#9fe4ff'); }
 function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
@@ -756,10 +756,12 @@ function aimAt(P, m) { if (!m) return; const dx = m.x - P.x, dy = m.y - P.y, l =
 function castSkill(i) {
   const P = G.P, id = P.slots[i]; if (!id || P.dead) return; if (id === 'ult') return castUlt();
   const s = SKILLS[P.cls].find(x => x.id === id), lv = skLv(P, s); if (!lv) return;
-  if ((P.cds[id] || 0) > 0) return; if (P.wind < s.cost) { say('바람이 모자라요', '#9fe4ff', 1); sfx('no'); return; }
-  P.wind -= s.cost; P.cds[id] = s.cd; const fk = lv >= 5 ? P.fork[id] : null;
+  const f2 = f2Of(P, id), cost = s.cost * (f2 === 1 ? .75 : 1);
+  if ((P.cds[id] || 0) > 0) return; if (P.wind < cost) { say('바람이 모자라요', '#9fe4ff', 1); sfx('no'); return; }
+  P.wind -= cost; P.cds[id] = s.cd * (f2 === 0 ? 1.15 : f2 === 1 ? .65 : 1); (P.cdx || (P.cdx = {}))[id] = P.cds[id]; const fk = lv >= 5 ? P.fork[id] : null;
+  if (f2 === 0 && !s.m) { P.hp = Math.min(P.mhp, P.hp + P.mhp * .15); P.wind = Math.min(P.mwind, P.wind + 10); G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .5, c: '#b6f0a0' }); }
   const t = nearestMob(P.x, P.y, s.t === 'bolt' || s.t === 'twister' || s.t === 'chain' || s.t === 'mist' ? 8 : 3); if (t && !P.aimLock) aimAt(P, t);
-  const [fx, fy] = facingW(P), mult = s.m * (1 + s.ml * (lv - 1)) * synergy(P, s), D = (m, k) => rollDmg(P, m, mult * (k || 1));
+  const [fx, fy] = facingW(P), mult = s.m * (1 + s.ml * (lv - 1)) * synergy(P, s) * (f2 === 0 ? 1.4 : 1), D = (m, k) => rollDmg(P, m, mult * (k || 1));
   P.an = ['buff', 'shout', 'flag', 'shield', 'mist', 'chain', 'twister'].includes(s.t) ? 'cast' : 'atk'; P.at = 0; P.atkDur = .38;
   sfx(CSK[s.t] ? CSKS[s.t] || 'nova' : s.t);
   if (CSK[s.t]) return CSK[s.t]({ P, s, id, lv, fk, t, fx, fy, mult, D });
@@ -825,6 +827,7 @@ function resolveBasic(m) {
 /* ---------- 매 프레임 ---------- */
 function update(dt) {
   const P = G.P; G.t += dt; P.play += dt;
+  if ((G.dck = (G.dck || 0) - dt) <= 0) { G.dck = 5; dailyCheck(); }
   G.flash = Math.max(0, G.flash - dt); if (G.cut) { G.cut.t += dt; if (G.cut.t > 1.3) G.cut = null; }
   for (const p of G.parts) { p.t += dt * (G.hitstop > 0 ? .25 : 1); }
   if (G.hitstop > 0) { G.hitstop -= dt; return; }
@@ -995,12 +998,16 @@ function near() {
   for (const k in Wd.npcAt) { const [x, y] = Wd.npcAt[k]; if (hyp(P.x - x, P.y - y) < 1.5) { G.near = { k: 'npc', id: k, label: NPCDEF[k].n + ' 말 걸기' }; return; } }
   for (const w of Wd.wps) if (hyp(P.x - w.x, P.y - w.y) < 1.4) { if (!w.on && (w.n !== '바람개비 언덕' || P.flags.boss) && (w.n !== '둥지섬' || P.flags.heron)) { w.on = 1; P.flags['wp_' + w.n] = 1; say('바람개비 표지 「' + w.n + '」에 바람이 깃들었어요', '#9fe4ff'); sfx('lvl'); if (w.n === '바람개비 언덕' && P.q.q3 && P.q.q3.s === 2 || w.n === '둥지섬' && P.q.q7 && P.q.q7.s === 2) say('촌장 들메에게 돌아가 소식을 전해요.', '#ffd166'); save(); }
     G.near = w.on ? { k: 'wp', label: '바람개비 표지(이동)' } : { k: 'wpx', label: w.n === '둥지섬' ? '아직 바람이 없어요(큰 왜가리를 먼저)' : '아직 바람이 없어요(우두머리를 먼저)' }; return; }
+  if (G.chest && hyp(P.x - G.chest.x, P.y - G.chest.y) < 1.5) { G.near = { k: 'chest', label: '오늘의 섬 상자 열기' }; return; }
+  if (Wd.signAt && hyp(P.x - Wd.signAt[0], P.y - Wd.signAt[1]) < 1.6) { G.near = { k: 'notice', label: '마을 게시판 보기' }; return; }
   const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'bridge', label: count('plank') >= 6 ? '다리 고치기 (널빤지 6)' : '끊어진 다리 (널빤지 ' + count('plank') + '/6)' }; return; } }
   const b2 = Wd.bridges[Wd.bq2]; if (b2.broken) for (const c of b2.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'bridge2', label: count('shell') >= 3 ? '다리 고치기 (둥지 껍질 3)' : '끊어진 다리 (둥지 껍질 ' + count('shell') + '/3)' }; return; } }
 }
 function interact() {
   const n = G.near; if (!n) return; const P = G.P;
   if (n.k === 'npc') talk(n.id);
+  else if (n.k === 'chest') openChest();
+  else if (n.k === 'notice') openPanel('daily');
   else if (n.k === 'wp') openPanel('travel');
   else if (n.k === 'bridge2') { if (count('shell') >= 3) { useGood('shell', 3); repairBridge(G.Wd, G.Wd.bq2); P.flags.bridge2 = 1; MINI = null; if (P.q.q5) qSet('q5', 2); G.shake = 5; sfx('lvl'); say('다리를 다시 놓았어요! 갈대 늪으로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq2].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('둥지 껍질이 ' + (3 - count('shell')) + '개 더 필요해요(둥지지기가 떨궈요)', '#ffe08a', 1); }
   else if (n.k === 'bridge') { if (count('plank') >= 6) { useGood('plank', 6); repairBridge(G.Wd, G.Wd.bq); P.flags.bridge = 1; qSet('q1', 2); G.shake = 5; sfx('lvl'); say('다리를 다시 놓았어요! 바람개비 언덕으로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('다리 널빤지가 ' + (6 - count('plank')) + '개 더 필요해요', '#ffe08a', 1); }
@@ -1174,6 +1181,71 @@ function ch1Area(a, dt) {
   return 1;
 }
 
+/* ---------- 10레벨 두 번째 갈래 + 매일 장치(순풍 알림 · 오늘의 섬 · 하루 의뢰) ---------- */
+// 스킬 점수 10이 되면 고르는 두 번째 갈래(모든 스킬 공통 두 방향)
+const FORK2 = [['세찬 바람', '피해 +40%, 다시 쓰기 시간 +15%.'], ['가벼운 바람', '다시 쓰기 시간 -35%, 바람 소모 -25%.']];
+const FORK2B = [['북돋는 바람', '쓸 때마다 생명력 15%와 바람 10을 채워요.'], FORK2[1]]; // 피해가 없는 스킬
+const fork2Of = s => s.m ? FORK2 : FORK2B;
+const f2Of = (P, id) => (P.sk[id] || 0) >= 10 && P.fork2 ? P.fork2[id] : null;
+
+// 하루 기준: 한국 시간 자정
+const dayKey = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+const dayNum = k => Math.floor(Date.parse(k + 'T00:00:00Z') / 864e5);
+const DAILY_LV = 3, ISLE_N = 15;
+function isleName(k) { const Wd = G.Wd; let i = Wd.fi.indexOf(k); if (i >= 0) return ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i]; i = Wd.mi.indexOf(k); if (i >= 0) return ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i]; return k === Wd.hill ? '바람개비 언덕' : '섬'; }
+// 갈 수 있는 사냥 섬 중 내 레벨에 맞는 곳 몇 개에서 날마다 하나
+function isleCands(P) { const Wd = G.Wd, L = Wd.fi.map((k, i) => [k, ISL_LV[i][1]]); if (P.flags.bridge) L.push([Wd.hill, 8]); if (P.flags.bridge2) Wd.mi.forEach((k, i) => L.push([k, MARSH_LV[i][1]]));
+  const fit = L.filter(([, lv]) => lv >= P.lv - 4 && lv <= P.lv + 3); return (fit.length ? fit : L.sort((a, b) => b[1] - a[1]).slice(0, 2)).map(a => a[0]); }
+const DTASK = {
+  kill: (t, n) => ['밑것 ' + n + '마리 쓰러뜨리기', n],
+  elite: (t, n) => ['정예 ' + n + '마리 쓰러뜨리기', n],
+  fell: (t, n) => ['섬 밖으로 ' + n + '마리 떨어뜨리기', n],
+  nest: (t, n) => ['둥지지기 ' + n + '마리 쓰러뜨리기', n],
+  isle: (t, n) => ['오늘의 섬 상자 열기', 1],
+  mob: (t, n) => [MOBDEF[t].n + ' ' + n + '마리', n],
+};
+function newDaily(P, d) {
+  const R = srand(dayNum(d) * 7919 + P.seed % 997), pk = a => a[Math.floor(R() * a.length)], C = isleCands(P);
+  const mobs = P.flags.bridge2 ? ['mudfluff', 'bogpod', 'heronling'] : ['fluff', 'seed', 'bird'];
+  const pool = [['mob', pk(mobs), 15], ['kill', '', 40], ['elite', '', 3], ['fell', '', 6], ['nest', '', 2]];
+  const tasks = [['isle', '', 1]]; while (tasks.length < 3) { const t = pool.splice(Math.floor(R() * pool.length), 1)[0]; tasks.push(t); }
+  P.daily = { d, isle: C[Math.floor(R() * C.length)], isleN: 0, chest: 0, all: 0, tasks: tasks.map(([k, t, n]) => ({ k, t, n, c: 0, got: 0 })) };
+}
+function dailyCheck(quiet) { const P = G.P; if (P.lv < DAILY_LV) return; const d = dayKey(); if (P.daily && P.daily.d === d) return;
+  const first = !P.daily; newDaily(P, d); G.today = P.daily.isle; G.chest = null; for (const pk of G.packs) if (pk.isl === G.today && !pk.boss && !pk.elite) pk.elite = ri(1, ELITE.length);
+  if (!quiet) { G.cut = { s: first ? '마을 게시판에 하루 의뢰가 붙었어요' : '새 하루가 밝았어요', c: '#ffd166', t: 0 }; say('오늘의 섬은 「' + isleName(P.daily.isle) + '」이에요. 마을 게시판에서 하루 의뢰 3개를 확인해요.', '#ffd166'); } }
+function dTask(k, t, n) { const D = G.P.daily; if (!D) return; for (const q of D.tasks) if (q.k === k && (!t || q.t === t) && q.c < q.n) { q.c = Math.min(q.n, q.c + (n || 1)); if (q.c >= q.n) { say('하루 의뢰 「' + DTASK[q.k](q.t, q.n)[0] + '」 끝! 마을 게시판에서 보상을 받아요.', '#ffd166'); sfx('lvl'); } } }
+function dailyKill(m, fell) { const P = G.P, D = P.daily; if (!D || P.lv < DAILY_LV) return;
+  dTask('kill'); dTask('mob', m.t); if (m.elite) dTask('elite'); if (fell) dTask('fell'); if (m.D.mini) dTask('nest');
+  if (m.pk && m.pk.isl === D.isle && !D.chest && !G.chest) { D.isleN = Math.min(ISLE_N, D.isleN + 1); if (D.isleN >= ISLE_N) { spawnChest(); G.cut = { s: '오늘의 섬 상자가 나타났어요!', c: '#ffd166', t: 0 }; sfx('lvl'); } } }
+function spawnChest() { const s = G.Wd.islands[G.P.daily.isle]; let x = s.cx + .5, y = s.cy + .5; for (let i = 0; i < 30 && !walk(G.Wd, x, y); i++) { x = s.cx + rnd(-2.5, 2.5); y = s.cy + rnd(-2.5, 2.5); }
+  G.chest = { x, y, t: 0 }; G.fx.push({ k: 'ring', x, y, r: 2, t: 0, life: .6, c: '#ffd166' }); }
+function dailyStart() { const P = G.P; G.today = P.daily && P.daily.d === dayKey() ? P.daily.isle : null; dailyCheck(); if (P.daily && P.daily.isleN >= ISLE_N && !P.daily.chest) spawnChest(); }
+function openChest() { const P = G.P, D = P.daily, C = G.chest; if (!C || !D) return; G.chest = null; D.chest = 1; dTask('isle');
+  const lv = Math.max(P.lv, ...(ISL_LV[G.Wd.fi.indexOf(D.isle)] || MARSH_LV[G.Wd.mi.indexOf(D.isle)] || [8])), put = it => G.drops.push({ x: C.x + rnd(-.8, .8), y: C.y + rnd(-.8, .8), it, t: 0 });
+  G.drops.push({ x: C.x, y: C.y + .5, gold: lv * 40, t: 0 }); put(rollDrop(lv + 2, P.find + 220, P.cls)); put(rollDrop(lv + 1, P.find + 150, P.cls)); put(goods(Math.random() < .5 ? 'bhone' : 'bglue')); put(goods('pot', 2));
+  if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: Math.random() < .35 ? 2 : 1 });
+  for (let i = 0; i < 14; i++) G.fx.push({ k: 'pop', x: C.x + rnd(-1, 1), y: C.y + rnd(-1, 1), t: -Math.random() * .4, life: .5, c: '#ffd166' }); G.shake = 4; sfx('ench'); say('오늘의 섬 상자를 열었어요!', '#ffd166'); save(); }
+function dReward(P) { return { gold: 20 + P.lv * 25, xp: Math.round(xpNeed(P.lv) * .12) }; }
+function claimTask(i) { const P = G.P, D = P.daily, q = D && D.tasks[i]; if (!q || q.c < q.n || q.got) return; q.got = 1; const r = dReward(P); P.gold += r.gold; gainXp(r.xp); addInv(goods(i === 0 ? 'pot' : 'wpot', 2));
+  if (!D.all && D.tasks.every(t => t.got)) { D.all = 1; P.gold += 50 + P.lv * 30; addInv(goods('bhone')); if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: 2 }); toast('하루 의뢰 셋을 다 했어요! 덤으로 축복 숫돌을 받았어요'); } else toast(r.gold + 'G · 경험치 ' + r.xp + ' 받았어요'); sfx('coin'); save(); }
+function dailyHtml(X) { const P = G.P, D = P.daily;
+  if (!D) return `<div class="sk-bx" style="max-width:440px">${X}<h3>마을 게시판</h3><p class="m">${DAILY_LV}레벨이 되면 날마다 하루 의뢰 3개와 오늘의 섬이 붙어요.</p></div>`;
+  const r = dReward(P); let h = `<div class="sk-bx" style="max-width:460px">${X}<h3>마을 게시판 <small style="font-size:12px;color:#8a7458">${D.d.slice(5).replace('-', '월 ')}일 · 자정에 바뀌어요</small></h3>`;
+  h += `<div class="sk-card" style="border-color:#e8b05a;background:#fff6e4"><b style="color:#b0702a">오늘의 섬 · ${isleName(D.isle)}</b><br><small>정예가 더 나오고 금화를 1.5배 떨궈요. 밑것 ${ISLE_N}마리를 쓰러뜨리면 상자가 나타나요.</small><br><small>${D.chest ? '상자를 열었어요 ✓' : G.chest ? '상자가 나와 있어요!' : '진행 ' + D.isleN + '/' + ISLE_N}</small></div>`;
+  h += '<h4 style="margin:8px 0 4px">하루 의뢰</h4>' + D.tasks.map((q, i) => { const [n, need] = DTASK[q.k](q.t, q.n); return `<div class="sk-row"><div class="f"><b>${n}</b><br><small>${Math.min(q.c, need)}/${need} · 보상 ${r.gold}G, 경험치 ${r.xp}, ${i === 0 ? '민들레 차' : '바람 사탕'} 2</small></div><button class="sk-b ${q.got ? '' : 'g'}" data-a="dclaim" data-i="${i}" ${q.c >= q.n && !q.got ? '' : 'disabled'}>${q.got ? '받음' : q.c >= q.n ? '받기' : '진행 중'}</button></div>`; }).join('');
+  h += `<p class="m" style="font-size:11.5px">셋을 다 하면 덤으로 축복 숫돌을 줘요. 못 한 날도 손해는 없어요.${P.rested > 1 ? ' · 지금 순풍: 경험치 2배 ' + Math.round(P.rested) + ' 남음' : ''}</p>` + TOAST + '</div>'; return h; }
+function dailyTrack() { const P = G.P, D = P.daily; if (!D) return null; const left = D.tasks.filter(q => !q.got).length; if (!left) return null; const ready = D.tasks.filter(q => q.c >= q.n && !q.got).length;
+  const q = D.tasks.find(q => q.c < q.n);
+  return ['하루 의뢰 ' + (3 - left) + '/3', ready ? '마을 게시판에서 보상 받기' : G.chest ? '오늘의 섬 상자 열기' : !D.chest ? '오늘의 섬 ' + isleName(D.isle) + ' ' + D.isleN + '/' + ISLE_N : q ? DTASK[q.k](q.t, q.n)[0] + ' ' + q.c + '/' + q.n : '마을 게시판']; }
+// 순풍 알림: 오래 쉬다 오면 한 번 알려 줌
+function restNote(S) { const away = Math.max(0, Date.now() - (S.t || Date.now())) / 36e5; if (away >= 1 && G.P.rested > 1) setTimeout(() => { if (G) say('쉬는 동안 순풍이 불었어요. 다음 경험치 ' + Math.round(G.P.rested) + '만큼은 2배로 받아요.', '#9fe4ff'); }, 1200); }
+// 상자 그림(나무 상자 + 빛)
+function drawChest(c, sx, sy) { const t = G.t; x.save(); x.globalAlpha = .35 + .2 * Math.sin(t * 3); x.fillStyle = '#ffe08a'; x.beginPath(); x.ellipse(sx, sy, 26, 12, 0, 0, TAU); x.fill(); x.globalAlpha = 1;
+  x.fillStyle = 'rgba(0,0,0,.25)'; x.beginPath(); x.ellipse(sx, sy + 2, 18, 7, 0, 0, TAU); x.fill(); const b = Math.sin(t * 2.4) * 1.5;
+  x.fillStyle = '#8a5a2a'; x.fillRect(sx - 15, sy - 20 + b, 30, 18); x.fillStyle = '#a8703a'; x.beginPath(); x.moveTo(sx - 16, sy - 20 + b); x.quadraticCurveTo(sx, sy - 34 + b, sx + 16, sy - 20 + b); x.closePath(); x.fill();
+  x.strokeStyle = '#5a3a1a'; x.lineWidth = 2; x.strokeRect(sx - 15, sy - 20 + b, 30, 18); x.fillStyle = '#ffd166'; x.fillRect(sx - 16, sy - 15 + b, 32, 3); x.fillRect(sx - 3, sy - 18 + b, 6, 8); x.restore(); }
+
 
 /* =================== 그리기 =================== */
 let ov, cv, x, lay = { Z: 1, dpr: 1, cw: 800, ch: 450 }, IM = {}, NPCK = [];
@@ -1263,6 +1335,7 @@ function draw() {
   for (const d of G.drops) if (vis(d.x, d.y)) L.push([d.x + d.y - .3, 3, d]);
   for (const w of Wd.wps) L.push([w.x + w.y, 5, w]);
   for (const a of G.areas) if (a.k === 'echo' && vis(a.x, a.y)) L.push([a.x + a.y, 6, a]);
+  if (G.chest && vis(G.chest.x, G.chest.y)) L.push([G.chest.x + G.chest.y, 7, G.chest]);
   L.push([P.x + P.y, 4, P]); L.sort((a, b) => a[0] - b[0]);
   const hs = .5; // 2배 아틀라스 → 1배
   for (const [, k, o] of L) {
@@ -1273,6 +1346,7 @@ function draw() {
     else if (k === 4) drawHero(o);
     else if (k === 5) { const [sx, sy] = iso(o.x, o.y); drawVane(sx, sy, o.on); }
     else if (k === 6) drawEcho(o);
+    else if (k === 7) { const [sx, sy] = iso(o.x, o.y); drawChest(o, sx, sy); }
   }
   drawBlightAir();
   // 투사체·효과
@@ -1569,7 +1643,7 @@ const SKC = { ult: '#fff3c0',  pierce: '#ffe9c0', sweep: '#ffd59a', bash: '#ffd2
 function skillBtn(i, id, X, Y, sz, key) {
   const P = G.P, ult = id === 'ult'; x.fillStyle = 'rgba(30,24,18,.6)'; rr(X, Y, sz, sz, sz * .22); x.fill(); x.strokeStyle = ult ? '#ffcf7a' : 'rgba(255,240,210,.45)'; x.lineWidth = ult ? 2.5 : 1.5; x.stroke();
   if (id) { const s = skillOf(P.cls, id); drawSkillIcon(x, s, X, Y, sz, P.cls); const cd = P.cds[id] || 0;
-    if (cd > 0) { x.fillStyle = 'rgba(0,0,0,.55)'; rr(X, Y + sz * (1 - cd / s.cd), sz, sz * cd / s.cd, sz * .2); x.fill(); if (cd > .9) { x.font = `800 ${sz * .32}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,.7)'; x.lineWidth = 3; x.strokeText(Math.ceil(cd), X + sz / 2, Y + sz * .62); x.fillText(Math.ceil(cd), X + sz / 2, Y + sz * .62); } }
+    const CDF = (G.P.cdx && G.P.cdx[s.id]) || s.cd; if (cd > 0) { x.fillStyle = 'rgba(0,0,0,.55)'; rr(X, Y + sz * (1 - cd / CDF), sz, sz * cd / CDF, sz * .2); x.fill(); if (cd > .9) { x.font = `800 ${sz * .32}px system-ui`; x.textAlign = 'center'; x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,.7)'; x.lineWidth = 3; x.strokeText(Math.ceil(cd), X + sz / 2, Y + sz * .62); x.fillText(Math.ceil(cd), X + sz / 2, Y + sz * .62); } }
     else if (ult) { x.globalAlpha = .4 + Math.sin(G.t * 5) * .3; x.strokeStyle = '#fff3c0'; x.lineWidth = 2; rr(X - 2, Y - 2, sz + 4, sz + 4, sz * .24); x.stroke(); x.globalAlpha = 1; }
     if (P.wind < s.cost) { x.fillStyle = 'rgba(20,60,120,.4)'; rr(X, Y, sz, sz, sz * .22); x.fill(); } }
   else if (i === 3 && P.lv < ULT[P.cls].req) { x.font = `700 ${sz * .2}px system-ui`; x.textAlign = 'center'; x.fillStyle = 'rgba(255,220,160,.7)'; x.fillText('궁극', X + sz / 2, Y + sz * .5); x.fillText(ULT[P.cls].req + '레벨', X + sz / 2, Y + sz * .74); }
@@ -1612,10 +1686,12 @@ function minimap(R, T, s) {
   for (const m of G.mobs) if (!m.dead) { x.fillStyle = m.D.boss ? '#ff4a3a' : m.D.mini ? '#c06aff' : m.elite ? m.E[1] : '#e85a4a'; x.fillRect(m.x * 2 - 1.5, m.y * 2 - 1.5, 3, 3); }
   for (const k in Wd.npcAt) { x.fillStyle = '#ffd166'; x.fillRect(Wd.npcAt[k][0] * 2 - 1.5, Wd.npcAt[k][1] * 2 - 1.5, 3, 3); }
   for (const wp of Wd.wps) { x.fillStyle = wp.on ? '#9fe4ff' : '#888'; x.beginPath(); x.arc(wp.x * 2, wp.y * 2, 2.6, 0, TAU); x.fill(); }
+  if (G.chest) { x.fillStyle = '#ffd166'; x.strokeStyle = '#7a5a20'; x.lineWidth = 1; x.beginPath(); x.arc(G.chest.x * 2, G.chest.y * 2, 3.4, 0, TAU); x.fill(); x.stroke(); }
   x.fillStyle = '#fff'; x.beginPath(); x.arc(P.x * 2, P.y * 2, 3, 0, TAU); x.fill(); x.restore();
 }
 function questTracker(R, T, s) {
   const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; L.push([Q.n, t]); }
+  const dt2 = dailyTrack(); if (dt2) L.push(dt2);
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
 }
@@ -1917,15 +1993,17 @@ function render(arg) {
     h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">1장 민들레 섬</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
   } else if (k === 'skill') {
     const sel = SEL; h = `<div class="sk-bx">${X}<h3>스킬 <small style="font-size:12px;color:#8a7458">남은 점수 ${P.skp} · 같은 갈래 스킬끼리 점수당 피해 +6%(잇기)</small></h3><div style="margin:-2px 0 6px"><button class="sk-b p" data-a="board" ${P.lv >= BOARD_LV ? '' : 'disabled'}>◆ 나침반판 (B)${P.lv >= BOARD_LV ? '' : ' · ' + BOARD_LV + '레벨'}</button>${respecBtn('rk')}</div><div class="sk-sk">`;
-    BRANCH[P.cls].forEach((bn, bi) => { h += `<div class="sk-br"><h4>${bn}</h4>`; for (const s of SKILLS[P.cls].filter(q => q.br === bi)) { const lv = P.sk[s.id] || 0, lk = P.lv < s.req; h += `<div class="sk-s${sel === s.id ? ' on' : ''}" data-sk="${s.id}"><span data-si="${s.id}"></span><div class="f ${lk ? 'lk' : ''}"><b>${s.name}</b> ${lv}/10${P.skb[bi] && lv ? ' (+' + P.skb[bi] + ')' : ''}${lk ? ' · ' + s.req + '레벨' : ''}<br>${esc(s.desc)}<br><small>바람 ${s.cost} · ${s.cd}초${lv >= 5 && P.fork[s.id] != null ? ' · 갈래: ' + s.fork[P.fork[s.id]][0] : ''}</small></div></div>`; } h += '</div>'; });
+    BRANCH[P.cls].forEach((bn, bi) => { h += `<div class="sk-br"><h4>${bn}</h4>`; for (const s of SKILLS[P.cls].filter(q => q.br === bi)) { const lv = P.sk[s.id] || 0, lk = P.lv < s.req; h += `<div class="sk-s${sel === s.id ? ' on' : ''}" data-sk="${s.id}"><span data-si="${s.id}"></span><div class="f ${lk ? 'lk' : ''}"><b>${s.name}</b> ${lv}/10${P.skb[bi] && lv ? ' (+' + P.skb[bi] + ')' : ''}${lk ? ' · ' + s.req + '레벨' : ''}<br>${esc(s.desc)}<br><small>바람 ${s.cost} · ${s.cd}초${lv >= 5 && P.fork[s.id] != null ? ' · 갈래: ' + s.fork[P.fork[s.id]][0] : ''}${lv >= 10 && P.fork2[s.id] != null ? ' · ' + fork2Of(s)[P.fork2[s.id]][0] : ''}</small></div></div>`; } h += '</div>'; });
     h += '</div>'; { const U = ULT[P.cls], on = P.lv >= U.req; h += `<div class="sk-card" style="margin-top:8px;border-color:#e8b05a;background:#fff6e4"><b style="color:#b0702a">궁극 기술 · ${U.name}</b> ${on ? '<small style="color:#3a7fa8">익힘 · 4번 칸</small>' : '<small style="color:#a88a5a">' + U.req + '레벨에 저절로 익혀요</small>'}<br>${esc(U.desc)}<br><small>다시 쓰기 ${U.cd}초 · 바람 안 씀</small></div>`; }
     const s = sel && SKILLS[P.cls].find(q => q.id === sel);
     if (s) { const lv = P.sk[s.id] || 0; h += `<div class="sk-card" style="margin-top:8px"><b>${s.name}</b> ${lv}/10 — ${esc(s.desc)}<br>`;
       h += `<button class="sk-b g" data-a="learn" ${P.skp && lv < 10 && P.lv >= s.req ? '' : 'disabled'}>배우기 +1</button> `; if (lv) h += [0, 1, 2, 3].filter(i => P.slots[i] !== 'ult').map(i => `<button class="sk-b${P.slots[i] === s.id ? ' p' : ''}" data-a="slot" data-i="${i}">${TOUCH.on ? '칸 ' : ''}${i + 1}번에 놓기</button>`).join('');
-      h += `<h4>갈래 고르기 (스킬 5레벨)</h4>` + s.fork.map((f, i) => `<button class="sk-b${P.fork[s.id] === i ? ' p' : ''}" data-a="fork" data-i="${i}" ${lv >= 5 && P.fork[s.id] == null ? '' : 'disabled'}><b>${f[0]}</b> — ${esc(f[1])}</button>`).join('<br>') + (P.fork[s.id] != null ? '<p class="m" style="font-size:11px">갈래는 정하면 바꿀 수 없어요(맛보기판).</p>' : '') + '</div>'; }
+      h += `<h4>갈래 고르기 (스킬 5레벨)</h4>` + s.fork.map((f, i) => `<button class="sk-b${P.fork[s.id] === i ? ' p' : ''}" data-a="fork" data-i="${i}" ${lv >= 5 && P.fork[s.id] == null ? '' : 'disabled'}><b>${f[0]}</b> — ${esc(f[1])}</button>`).join('<br>') + (P.fork[s.id] != null ? '<p class="m" style="font-size:11px">갈래는 다시 나누기로만 바꿀 수 있어요.</p>' : '');
+      h += `<h4>두 번째 갈래 (스킬 10레벨)</h4>` + fork2Of(s).map((f, i) => `<button class="sk-b${P.fork2[s.id] === i ? ' p' : ''}" data-a="fork2" data-i="${i}" ${lv >= 10 && P.fork2[s.id] == null ? '' : 'disabled'}><b>${f[0]}</b> — ${esc(f[1])}</button>`).join('<br>') + '</div>'; }
     else h += '<p style="font-size:12.5px;color:#8a7458">스킬을 누르면 배우기·칸 놓기·갈래 고르기를 할 수 있어요.</p>';
     h += TOAST + '</div>';
   } else if (k === 'board') h = boardHtml();
+  else if (k === 'daily') h = dailyHtml(X);
   else if (k === 'talk') h = talkHtml(arg);
   else if (k === 'smith') h = smithHtml();
   else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}</div>`; }
@@ -1947,7 +2025,7 @@ function respecBtn(kind) { const P = G.P, free = !P.flags[kind], cost = respecCo
   return `<button class="sk-b${CONF === kind ? ' p' : ''}" data-a="respec" data-k="${kind}" ${free || P.gold >= cost ? '' : 'disabled'}>${CONF === kind ? '정말 다시 나눌까요? 한 번 더 누르세요' : what + ' 다시 나누기 (' + (free ? '1장 무료 1번' : cost + 'G') + ')'}</button>`; }
 function doRespec(kind) { const P = G.P, free = !P.flags[kind], cost = respecCost(P); if (!free && P.gold < cost) { toast('골드가 모자라요'); return; } if (free) P.flags[kind] = 1; else P.gold -= cost;
   if (kind === 'rs') { let n = 0; for (const k in P.sp) n += P.sp[k]; P.sp = {}; P.pts += n; toast('능력 점수 ' + n + '점을 돌려받았어요'); }
-  else { const st = CLS_START[P.cls][2]; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
+  else { const st = CLS_START[P.cls][2]; let n = 0; for (const k in P.sk) n += P.sk[k]; n -= 1; P.sk = { [st]: 1 }; P.fork = {}; P.fork2 = {}; P.cdx = {}; P.skp += Math.max(0, n); P.slots = P.slots.map(x2 => x2 === 'ult' ? 'ult' : null); autoSlots(P); toast('스킬 점수 ' + Math.max(0, n) + '점을 돌려받았어요. 갈래도 다시 고를 수 있어요'); }
   calc(P); sfx('ench'); }
 function boardHtml() {
   const P = G.P, B = P.board, I = boardInfo(P), sum = boardSum(P), sel = SEL, w = 62, hh = 54;
@@ -2013,7 +2091,9 @@ function bindPanel(arg) {
     else if (a === 'lookit') { const it = P.inv[+SEL.slice(1)]; if (useGood('look')) { it.id = true; sfx('ench'); SEL = 'i' + P.inv.indexOf(it); } render(); }
     else if (a === 'purify') { const it = P.eq[SEL.slice(1)]; if (useGood('pure')) { it.st = 0; calc(P); sfx('ench'); toast('정화했어요'); } render(); }
     else if (a === 'st') { if (P.pts > 0) { P.pts--; P.sp[t.dataset.s] = (P.sp[t.dataset.s] || 0) + 1; calc(P); } render(); }
-    else if (a === 'learn') { const s = SKILLS[P.cls].find(q => q.id === SEL); if (P.skp > 0 && P.lv >= s.req && (P.sk[s.id] || 0) < 10) { P.skp--; P.sk[s.id] = (P.sk[s.id] || 0) + 1; autoSlots(P); if (P.sk[s.id] === 5) toast('5레벨! 갈래를 고를 수 있어요'); } render(); }
+    else if (a === 'learn') { const s = SKILLS[P.cls].find(q => q.id === SEL); if (P.skp > 0 && P.lv >= s.req && (P.sk[s.id] || 0) < 10) { P.skp--; P.sk[s.id] = (P.sk[s.id] || 0) + 1; autoSlots(P); if (P.sk[s.id] === 5) toast('5레벨! 갈래를 고를 수 있어요'); if (P.sk[s.id] === 10) toast('10레벨! 두 번째 갈래를 고를 수 있어요'); } render(); }
+    else if (a === 'fork2') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 10 && P.fork2[s.id] == null) { P.fork2[s.id] = +t.dataset.i; toast('「' + fork2Of(s)[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
+    else if (a === 'dclaim') { claimTask(+t.dataset.i); render(); }
     else if (a === 'slot') { const i = +t.dataset.i, o = P.slots.indexOf(SEL); if (o >= 0) P.slots[o] = P.slots[i]; P.slots[i] = SEL; render(); }
     else if (a === 'fork') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 5 && P.fork[s.id] == null) { P.fork[s.id] = +t.dataset.i; toast('「' + s.fork[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
     else if (a === 'go') { const w = G.Wd.wps[+t.dataset.i]; P.x = w.x + .8; P.y = w.y + .8; G.cam = [P.x, P.y]; closePanel(); sfx('dodge'); }
@@ -2054,6 +2134,9 @@ function drawMap(c) {
   g.font = '800 12px system-ui'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)';
   const lab = (s2, t) => { const [a, b] = M(s2.cx, s2.cy - s2.r * .9); g.fillStyle = '#3a4a2a'; g.strokeText(t, a, b); g.fillText(t, a, b); };
   lab(T, '민들레 마을'); lab(Wd.islands[Wd.hill], '바람개비 언덕'); Wd.fi.forEach((k2, i) => lab(Wd.islands[k2], ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i] || '들판')); Wd.mi.forEach((k2, i) => lab(Wd.islands[k2], ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i])); lab(Wd.islands[Wd.nestI], '둥지섬');
+  if (G.today != null) { const s2 = Wd.islands[G.today], [a, b] = M(s2.cx, s2.cy - s2.r * .9); g.font = '800 11px system-ui'; g.fillStyle = '#c07a10'; g.strokeText('★ 오늘의 섬', a, b + 14); g.fillText('★ 오늘의 섬', a, b + 14); }
+  if (G.chest) { const [a, b] = M(G.chest.x, G.chest.y); g.fillStyle = '#ffd166'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.5; g.fillRect(a - 5, b - 4, 10, 8); g.strokeRect(a - 5, b - 4, 10, 8); }
+  if (Wd.signAt && P.daily) { const [a, b] = M(...Wd.signAt); g.fillStyle = '#e8b05a'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.2; g.fillRect(a - 4, b - 4, 8, 8); g.strokeRect(a - 4, b - 4, 8, 8); }
   for (const k2 in Wd.npcAt) { const [a, b] = M(...Wd.npcAt[k2]); g.fillStyle = '#ffd166'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.2; g.beginPath(); g.arc(a, b, 4, 0, TAU); g.fill(); g.stroke(); }
   for (const wp of Wd.wps) { const [a, b] = M(wp.x, wp.y); g.fillStyle = wp.on ? '#9fe4ff' : '#c8c0b0'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a, b - 7); g.lineTo(a + 5, b); g.lineTo(a, b + 7); g.lineTo(a - 5, b); g.closePath(); g.fill(); g.stroke(); }
   // 할 일 목표

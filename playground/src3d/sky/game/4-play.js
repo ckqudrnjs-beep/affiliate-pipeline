@@ -10,24 +10,24 @@ const dirW = d => scr2w(DIRV[d][0] * TW, DIRV[d][1] * TH * 2); // 방향 d 의 �
 function newSave(cls) {
   const seed = (Math.random() * 1e9) | 0, it = id => makeItem(id, 0, 1, { id: 1, st: 0 });
   const CS = CLS_START[cls], eq = { weapon: it(CS[0]), off: it(CS[1]), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
-  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
+  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, fork2: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
 }
 function startGame(S) {
   const Wd = makeWorld(S.seed); Wd.props = placeProps(Wd, PM);
   if (S.flags.bridge) repairBridge(Wd, Wd.bq);
   if (S.flags.bridge2) repairBridge(Wd, Wd.bq2);
   for (const w of Wd.wps) if (S.flags['wp_' + w.n]) w.on = 1;
-  if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = [];
+  if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = []; if (!S.fork2) S.fork2 = {};
   const T = Wd.islands[Wd.town];
   const P = { ...S, x: T.cx + 1.5, y: T.cy + 2.5, r: .28, dir: 2, an: 'idle', at: 0, atkT: 0, cds: {}, buf: {}, hp: null, wind: null, dodge: 0, dcd: 0, inv0: 0, tgt: null, path: null, dead: 0, combo: 0 };
   // 순풍: 쉬는 동안 쌓이는 경험치 2배 몫(최대 다음 레벨 필요량의 절반)
   const away = Math.max(0, Date.now() - (S.t || Date.now())) / 36e5; P.rested = Math.min(xpNeed(P.lv) * .5, (S.rested || 0) + away * xpNeed(P.lv) * .06);
   G = { Wd, P, mobs: [], proj: [], fx: [], txt: [], drops: [], areas: [], parts: [], t: 0, cam: [P.x, P.y], shake: 0, packs: [], msg: [], hitstop: 0, flash: 0, cut: null };
   calc(P); P.hp = P.mhp; P.wind = P.mwind; autoSlots(P);
-  spawnAll(); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
+  dailyStart(); spawnAll(); restNote(S); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
+function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
 const pcode = () => { try { return localStorage.getItem('nr_pcode') || ''; } catch (e) { return ''; } };
@@ -53,7 +53,7 @@ function mkMob(t, x, y, lv, elite) {
   return { t, D, x, y, hx: x, hy: y, lv, hp, mhp: hp, dmg: [(D.dmg[0] + D.dmg[2] * lv) * (m.dmg || 1), (D.dmg[1] + D.dmg[2] * lv * 1.3) * (m.dmg || 1)], spd: D.spd * (m.spd || 1), r: D.r, dir: ri(0, 7), an: 'idle', at: Math.random(), cd: 1, st: 'idle', kx: 0, ky: 0, stun: 0, slow: 0, elite, E, kbimm: m.kbimm, wan: rnd(1, 4), fl: 0, fear: 0, taunt: 0, miss: 0, bleed: 0, id: Math.random() };
 }
 function spawnPack(pk) {
-  const s = G.Wd.islands[pk.isl], R = Math.random; pk.mobs = [];
+  const s = G.Wd.islands[pk.isl], R = Math.random; pk.mobs = []; if (G.today === pk.isl && !pk.boss && !pk.elite) pk.elite = ri(1, ELITE.length);
   for (let tries = 0; tries < 30 && pk.mobs.length < pk.n; tries++) {
     const a = R() * TAU, d = R() * 1.8, x = pk.x + Math.cos(a) * d, y = pk.y + Math.sin(a) * d;
     if (!walk(G.Wd, x, y)) continue; const elite = pk.elite && pk.mobs.length === 0 ? pk.elite : 0;
@@ -124,7 +124,7 @@ function killMob(m, fell) {
   if (m.t === 'fluff') qAdd('q2', 1);
   if (D.heron) { P.flags.heron = 1; if (P.q.q7 && P.q.q7.s === 1) qSet('q7', 2); G.shake = 14; G.flash = .4; say('큰 왜가리가 쓰러졌어요! 둥지섬 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
   else if (D.boss) { P.flags.boss = 1; qSet('q3', 2); G.shake = 10; say('우두머리 보풀이 흩어졌어요! 언덕의 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
-  ch1Kill(m);
+  ch1Kill(m); dailyKill(m, fell);
   if (fell) { G.txt.push({ x: m.x, y: m.y, z: 1, t: 0, s: '떨어짐!', c: '#9fe4ff' }); sfx('fall'); }
   else burst(m.x, m.y, m.t, D.boss ? 3 : D.mini ? 2.2 : m.elite ? 1.6 : 1);
   if (D.mini && m.pk) cleanse(m.pk);
@@ -135,7 +135,7 @@ function drops(m, fell) {
   const P = G.P, D = m.D, put = it => { const a = Math.random() * TAU, d = .3 + Math.random() * .6; let x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d; if (!walk(G.Wd, x, y)) { x = P.x; y = P.y; } if (it.gold) G.drops.push({ x, y, gold: it.gold, t: 0 }); else G.drops.push({ x, y, it, t: 0 }); };
   if (fell) { if (Math.random() < .5) G.drops.push({ x: P.x + rnd(-.5, .5), y: P.y + rnd(-.5, .5), gold: ri(m.lv, m.lv * 3), t: 0 }); return; }
   const ilv = m.lv + (m.elite ? 1 : 0) + (D.boss ? 2 : D.mini ? 1 : 0);
-  if (Math.random() < .55 || m.elite || D.mini) put({ gold: ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) });
+  if (Math.random() < .55 || m.elite || D.mini) put({ gold: Math.round(ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) * (m.pk && m.pk.isl === G.today ? 1.5 : 1)) });
   const nItem = D.boss ? 3 : D.mini ? 2 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
   for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
   if (D.boss) { const u = CLS_START[P.cls][4]; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
@@ -159,7 +159,7 @@ function burst(x2, y2, t, k) {
     G.parts.push({ k: t === 'seed' || t === 'keeper' || t === 'bogpod' ? 'chip' : t === 'bird' || t === 'heronling' || t === 'heron' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
-function gainXp(n) { gainXp0(n); boardCheck(); }
+function gainXp(n) { gainXp0(n); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
 // 3레벨: 나침반판이 열리고 처음 조각 2개
 function boardCheck() { const P = G.P; if (P.lv < BOARD_LV || P.flags.board0) return; P.flags.board0 = 1; giveShard({ c: 'sky', q: 1 }, 1); giveShard({ c: 'fire', q: 1 }, 1); G.cut = { s: '나침반판이 열렸어요 (B)', c: '#9fe4ff', t: 0 }; say('나침반판이 열렸어요! 기술 창(S)이나 B 키로 바람 조각을 끼워 보세요.', '#9fe4ff'); }
 function giveShard(sh, quiet) { const P = G.P; if (P.shd.length >= SHD_MAX) { P.gold += 30 * sh.q; if (!quiet) say('조각 주머니가 가득 차서 ' + 30 * sh.q + 'G로 바꿨어요', '#ffd166'); return; } P.shd.push(sh); if (!quiet) { say('바람 조각 「' + shardName(sh) + '」을 얻었어요!', SHARD[sh.c].c); G.txt.push({ x: P.x, y: P.y, z: 2.6, t: 0, s: '◆ ' + shardName(sh), c: SHARD[sh.c].c, pop: 1 }); sfx('ench'); } }
@@ -194,10 +194,12 @@ function aimAt(P, m) { if (!m) return; const dx = m.x - P.x, dy = m.y - P.y, l =
 function castSkill(i) {
   const P = G.P, id = P.slots[i]; if (!id || P.dead) return; if (id === 'ult') return castUlt();
   const s = SKILLS[P.cls].find(x => x.id === id), lv = skLv(P, s); if (!lv) return;
-  if ((P.cds[id] || 0) > 0) return; if (P.wind < s.cost) { say('바람이 모자라요', '#9fe4ff', 1); sfx('no'); return; }
-  P.wind -= s.cost; P.cds[id] = s.cd; const fk = lv >= 5 ? P.fork[id] : null;
+  const f2 = f2Of(P, id), cost = s.cost * (f2 === 1 ? .75 : 1);
+  if ((P.cds[id] || 0) > 0) return; if (P.wind < cost) { say('바람이 모자라요', '#9fe4ff', 1); sfx('no'); return; }
+  P.wind -= cost; P.cds[id] = s.cd * (f2 === 0 ? 1.15 : f2 === 1 ? .65 : 1); (P.cdx || (P.cdx = {}))[id] = P.cds[id]; const fk = lv >= 5 ? P.fork[id] : null;
+  if (f2 === 0 && !s.m) { P.hp = Math.min(P.mhp, P.hp + P.mhp * .15); P.wind = Math.min(P.mwind, P.wind + 10); G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .5, c: '#b6f0a0' }); }
   const t = nearestMob(P.x, P.y, s.t === 'bolt' || s.t === 'twister' || s.t === 'chain' || s.t === 'mist' ? 8 : 3); if (t && !P.aimLock) aimAt(P, t);
-  const [fx, fy] = facingW(P), mult = s.m * (1 + s.ml * (lv - 1)) * synergy(P, s), D = (m, k) => rollDmg(P, m, mult * (k || 1));
+  const [fx, fy] = facingW(P), mult = s.m * (1 + s.ml * (lv - 1)) * synergy(P, s) * (f2 === 0 ? 1.4 : 1), D = (m, k) => rollDmg(P, m, mult * (k || 1));
   P.an = ['buff', 'shout', 'flag', 'shield', 'mist', 'chain', 'twister'].includes(s.t) ? 'cast' : 'atk'; P.at = 0; P.atkDur = .38;
   sfx(CSK[s.t] ? CSKS[s.t] || 'nova' : s.t);
   if (CSK[s.t]) return CSK[s.t]({ P, s, id, lv, fk, t, fx, fy, mult, D });
@@ -263,6 +265,7 @@ function resolveBasic(m) {
 /* ---------- 매 프레임 ---------- */
 function update(dt) {
   const P = G.P; G.t += dt; P.play += dt;
+  if ((G.dck = (G.dck || 0) - dt) <= 0) { G.dck = 5; dailyCheck(); }
   G.flash = Math.max(0, G.flash - dt); if (G.cut) { G.cut.t += dt; if (G.cut.t > 1.3) G.cut = null; }
   for (const p of G.parts) { p.t += dt * (G.hitstop > 0 ? .25 : 1); }
   if (G.hitstop > 0) { G.hitstop -= dt; return; }
@@ -433,12 +436,16 @@ function near() {
   for (const k in Wd.npcAt) { const [x, y] = Wd.npcAt[k]; if (hyp(P.x - x, P.y - y) < 1.5) { G.near = { k: 'npc', id: k, label: NPCDEF[k].n + ' 말 걸기' }; return; } }
   for (const w of Wd.wps) if (hyp(P.x - w.x, P.y - w.y) < 1.4) { if (!w.on && (w.n !== '바람개비 언덕' || P.flags.boss) && (w.n !== '둥지섬' || P.flags.heron)) { w.on = 1; P.flags['wp_' + w.n] = 1; say('바람개비 표지 「' + w.n + '」에 바람이 깃들었어요', '#9fe4ff'); sfx('lvl'); if (w.n === '바람개비 언덕' && P.q.q3 && P.q.q3.s === 2 || w.n === '둥지섬' && P.q.q7 && P.q.q7.s === 2) say('촌장 들메에게 돌아가 소식을 전해요.', '#ffd166'); save(); }
     G.near = w.on ? { k: 'wp', label: '바람개비 표지(이동)' } : { k: 'wpx', label: w.n === '둥지섬' ? '아직 바람이 없어요(큰 왜가리를 먼저)' : '아직 바람이 없어요(우두머리를 먼저)' }; return; }
+  if (G.chest && hyp(P.x - G.chest.x, P.y - G.chest.y) < 1.5) { G.near = { k: 'chest', label: '오늘의 섬 상자 열기' }; return; }
+  if (Wd.signAt && hyp(P.x - Wd.signAt[0], P.y - Wd.signAt[1]) < 1.6) { G.near = { k: 'notice', label: '마을 게시판 보기' }; return; }
   const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'bridge', label: count('plank') >= 6 ? '다리 고치기 (널빤지 6)' : '끊어진 다리 (널빤지 ' + count('plank') + '/6)' }; return; } }
   const b2 = Wd.bridges[Wd.bq2]; if (b2.broken) for (const c of b2.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'bridge2', label: count('shell') >= 3 ? '다리 고치기 (둥지 껍질 3)' : '끊어진 다리 (둥지 껍질 ' + count('shell') + '/3)' }; return; } }
 }
 function interact() {
   const n = G.near; if (!n) return; const P = G.P;
   if (n.k === 'npc') talk(n.id);
+  else if (n.k === 'chest') openChest();
+  else if (n.k === 'notice') openPanel('daily');
   else if (n.k === 'wp') openPanel('travel');
   else if (n.k === 'bridge2') { if (count('shell') >= 3) { useGood('shell', 3); repairBridge(G.Wd, G.Wd.bq2); P.flags.bridge2 = 1; MINI = null; if (P.q.q5) qSet('q5', 2); G.shake = 5; sfx('lvl'); say('다리를 다시 놓았어요! 갈대 늪으로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq2].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('둥지 껍질이 ' + (3 - count('shell')) + '개 더 필요해요(둥지지기가 떨궈요)', '#ffe08a', 1); }
   else if (n.k === 'bridge') { if (count('plank') >= 6) { useGood('plank', 6); repairBridge(G.Wd, G.Wd.bq); P.flags.bridge = 1; qSet('q1', 2); G.shake = 5; sfx('lvl'); say('다리를 다시 놓았어요! 바람개비 언덕으로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('다리 널빤지가 ' + (6 - count('plank')) + '개 더 필요해요', '#ffe08a', 1); }
