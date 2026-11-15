@@ -33,7 +33,7 @@ function rollDrop(ilv, find, cls) {
   let ok = BASES.filter(b => b.lv <= ilv + 1 && (!b.cls || b.cls === cls || Math.random() < .35)); const hi = ok.filter(b => b.lv >= ilv - 9); if (hi.length >= 8) ok = hi;
   const b = pick(ok); const r = Math.random() / (1 + find / 100);
   const rar = r < .045 ? 2 : r < .3 ? 1 : 0;
-  if (Math.random() < .02 * (1 + find / 100) && ilv >= 3) { const sk = ilv >= 26 && SETS.harbor ? 'harbor' : ilv >= 14 && SETS.mill ? 'mill' : 'dandelion', sp = pick(SETS[sk].parts); return makeItem(sp[0], 4, Math.max(3, ilv), { set: sk }); }
+  if (Math.random() < .02 * (1 + find / 100) && ilv >= 3) { const sk = SET_TIERS.filter(t => ilv >= t[0]).map(t => t[1]).pop() || (ilv >= 26 && SETS.harbor ? 'harbor' : ilv >= 14 && SETS.mill ? 'mill' : 'dandelion'), sp = pick(SETS[sk].parts); return makeItem(sp[0], 4, Math.max(3, ilv), { set: sk }); }
   return makeItem(b.id, rar, ilv);
 }
 function itemName(it) {

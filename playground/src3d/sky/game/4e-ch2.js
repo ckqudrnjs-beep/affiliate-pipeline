@@ -69,7 +69,7 @@ Object.assign(QUESTS, {
     done: ['…풍차가 돈다! 군도의 풍차가 하나둘 다시 돌기 시작했어!', '고맙네, 이음꾼. 그런데 바람이 흘러가는 쪽을 보니… 닻 내린 항구 쪽 하늘이 이상하게 잠잠하구먼.'] },
 });
 const C2NPC = { chief: '풍차지기 대들보', smith: '대장장이 풀무', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' }, C1NPC = { chief: '촌장 들메', smith: '대장장이 무쇠', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' };
-function setNpcNames(ch) { const N = ch === 3 ? C3NPC : ch === 2 ? C2NPC : C1NPC; for (const k in N) NPCDEF[k].n = N[k]; }
+function setNpcNames(ch) { const N = typeof CHX !== 'undefined' && CHX[ch] ? CHX[ch].npc : ch === 3 ? C3NPC : ch === 2 ? C2NPC : C1NPC; for (const k in N) NPCDEF[k].n = N[k]; }
 const qCh = id => QUESTS[id].ch || 1;
 function qAvail2(id) { const q = G.P.q; if (G.Wd.ch !== 2) return false; if (id === 'q8' || id === 'q10' || id === 'q11') return true; if (id === 'q9') return q.q8 && q.q8.s === 3; if (id === 'q12') return q.q9 && q.q9.s === 3; return false; }
 function talk2(id, offer, finish) {
