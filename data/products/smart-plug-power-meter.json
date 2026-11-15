@@ -15,9 +15,10 @@
  "note": "꽂아 둔 가전이 실제로 전기를 얼마나 쓰는지 앱으로 보여 주는 플러그예요. 전기장판·온풍기처럼 겨울 가전의 실제 사용량을 재서 삼촌 전기요금 계산기에 넣으면 한 달 요금이 바로 나와요. 긍정 평가 98%, 판매 2천 개 넘게 팔렸어요.",
  "check": "16A 정격(고출력 난방기는 소비전력 확인), 앱(Tuya·Smart Life) 한국 계정 지원, 플러그 모양(한국 220V 콘센트 호환)",
  "commission": 7.0,
- "status": "active",
+ "status": "ended",
  "coupangName": "헤이홈 스마트 미니 플러그 EP2-H",
  "coupangPriceDate": "2026-11-11",
  "addedDate": "2026-11-10",
- "missingDays": 2
+ "missingDays": 3,
+ "endedDate": "2026-11-15"
 }
