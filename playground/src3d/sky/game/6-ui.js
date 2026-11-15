@@ -75,7 +75,7 @@ function clickWorld(px, py) {
   for (const w of Wd.wps) if (onScr(w.x, w.y, 60)) { if (w.on) P.goal = { k: 'wp', x: w.x, y: w.y, r: 1.3 }; P.path = [w.x + .5, w.y + .5]; return; }
   const d = G.drops.find(d => onScr(d.x, d.y, 30)); if (d) { P.path = [d.x, d.y]; return; }
   const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const cx = c % Wd.W + .5, cy = ((c / Wd.W) | 0) + .5; if (hyp(wx - cx, wy - cy) < 1.2) { P.goal = { k: 'bridge', x: cx, y: cy, r: 2.1 }; let best = null, bd = 1e9; for (const e of b.ends) { const ex = e % Wd.W + .5, ey = ((e / Wd.W) | 0) + .5, dd = hyp(ex - P.x, ey - P.y); if (dd < bd) { bd = dd; best = [ex, ey]; } } P.path = best || [cx, cy]; return; } }
-  { const b2 = Wd.bridges[Wd.bq2]; if (b2.broken) for (const c of b2.cells) { const cx = c % Wd.W + .5, cy = ((c / Wd.W) | 0) + .5; if (hyp(wx - cx, wy - cy) < 1.2) { let best = null, bd = 1e9; for (const e of b2.ends) { const ex = e % Wd.W + .5, ey = ((e / Wd.W) | 0) + .5, dd = hyp(ex - P.x, ey - P.y); if (dd < bd) { bd = dd; best = [ex, ey]; } } P.path = best || [cx, cy]; return; } } }
+  { const b2 = Wd.bridges[Wd.bq2]; if (b2 && b2.broken) for (const c of b2.cells) { const cx = c % Wd.W + .5, cy = ((c / Wd.W) | 0) + .5; if (hyp(wx - cx, wy - cy) < 1.2) { let best = null, bd = 1e9; for (const e of b2.ends) { const ex = e % Wd.W + .5, ey = ((e / Wd.W) | 0) + .5, dd = hyp(ex - P.x, ey - P.y); if (dd < bd) { bd = dd; best = [ex, ey]; } } P.path = best || [cx, cy]; return; } } }
   P.path = [wx, wy];
 }
 function input() {
@@ -196,7 +196,7 @@ function render(arg) {
       const big = P.dmg; h += `<h4>지금 수치</h4><div class="sk-card">생명력 ${P.mhp} · 바람 ${P.mwind} (초당 +${P.wreg.toFixed(1)})<br>피해: 작은 적 ${big[0]}~${big[1]} / 큰 적 ${big[2]}~${big[3]} · 피해 +${Math.round(P.dmgp)}%<br>방어력 ${P.ac} (맞을 확률 ${Math.round(clamp(.92 - P.ac * .008, .55, .95) * 100)}%)${P.blk ? ' · 막기 ' + Math.round(P.blk) + '%' : ''}<br>공격 속도 초당 ${P.aspd.toFixed(2)}번 · 치명타 ${P.crit.toFixed(1)}% · 이동 ${P.move.toFixed(1)}<br>돛: 활공 ${P.sail[0]}칸 / ${P.sail[1]}초${P.find ? ' · 좋은 물건 +' + P.find + '%' : ''}${P.xpm > 1 ? ' · 경험치 +' + Math.round((P.xpm - 1) * 100) + '%' : ''}<br>쓰러뜨린 밑것들 ${P.kills}마리 · 경험 ${P.xp}/${xpNeed(P.lv)}</div>${respecBtn('rs')}`; }
     h += '</div></div>' + TOAST + '</div>';
   } else if (k === 'map') {
-    h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">1장 민들레 섬</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
+    h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">${G.Wd.ch === 2 ? '2장 녹슨 풍차 군도' : '1장 민들레 섬'}</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
   } else if (k === 'skill') {
     const sel = SEL; h = `<div class="sk-bx">${X}<h3>스킬 <small style="font-size:12px;color:#8a7458">남은 점수 ${P.skp} · 같은 갈래 스킬끼리 점수당 피해 +6%(잇기)</small></h3><div style="margin:-2px 0 6px"><button class="sk-b p" data-a="board" ${P.lv >= BOARD_LV ? '' : 'disabled'}>◆ 나침반판 (B)${P.lv >= BOARD_LV ? '' : ' · ' + BOARD_LV + '레벨'}</button>${respecBtn('rk')}</div><div class="sk-sk">`;
     BRANCH[P.cls].forEach((bn, bi) => { h += `<div class="sk-br"><h4>${bn}</h4>`; for (const s of SKILLS[P.cls].filter(q => q.br === bi)) { const lv = P.sk[s.id] || 0, lk = P.lv < s.req; h += `<div class="sk-s${sel === s.id ? ' on' : ''}" data-sk="${s.id}"><span data-si="${s.id}"></span><div class="f ${lk ? 'lk' : ''}"><b>${s.name}</b> ${lv}/10${P.skb[bi] && lv ? ' (+' + P.skb[bi] + ')' : ''}${lk ? ' · ' + s.req + '레벨' : ''}<br>${esc(s.desc)}<br><small>바람 ${s.cost} · ${s.cd}초${lv >= 5 && P.fork[s.id] != null ? ' · 갈래: ' + s.fork[P.fork[s.id]][0] : ''}${lv >= 10 && P.fork2[s.id] != null ? ' · ' + fork2Of(s)[P.fork2[s.id]][0] : ''}</small></div></div>`; } h += '</div>'; });
@@ -212,7 +212,7 @@ function render(arg) {
   else if (k === 'daily') h = dailyHtml(X);
   else if (k === 'talk') h = talkHtml(arg);
   else if (k === 'smith') h = smithHtml();
-  else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}</div>`; }
+  else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}${chapHtml()}</div>`; }
   else if (k === 'quest') { h = `<div class="sk-bx" style="max-width:560px">${X}<h3>할 일</h3>`; for (const id in QUESTS) { const q = P.q[id], Q = QUESTS[id]; if (!q) continue; h += `<div class="sk-row"><div class="f"><b>${Q.n}</b> ${q.s === 3 ? '✔' : q.s === 2 ? '(보고하기)' : ''}<br><small>${esc(Q.goal)} — ${NPCDEF[Q.from].n}</small></div></div>`; } h += '</div>'; }
   else if (k === 'menu') { h = `<div class="sk-bx" style="max-width:420px;text-align:center">${X}<h3>잠깐 쉬기</h3><button class="sk-b p" data-a="x">계속하기</button><br><button class="sk-b" data-a="quest">할 일 보기</button><br><button class="sk-b" data-a="mute">${A.muted ? '소리 켜기' : '소리 끄기'}</button><br><button class="sk-b" data-a="help">조작법</button><br><button class="sk-b" data-a="title">저장하고 처음 화면으로</button><br><button class="sk-b" data-a="quit">저장하고 나가기</button><p class="m" style="font-size:11.5px;color:#8a7458;margin-top:8px">기록은 10초마다, 그리고 창을 닫을 때 이 기기에 저장돼요.</p></div>`; }
   else if (k === 'help') { h = `<div class="sk-bx" style="max-width:600px">${X}<h3>조작법</h3><div class="sk-card"><b>PC</b><br>마우스 왼쪽: 이동 (누르고 있으면 따라가요 · 사람·표지·다리를 누르면 가서 말 걸기)<br>마우스 오른쪽: 공격 (누르고 있으면 계속 · 적을 누르면 다가가서 공격)<br>1~4: 기술 (마우스 쪽으로 · 4번은 궁극 기술) · Q 민들레 차 · R 바람 사탕 · 스페이스 돛 활공(피하기)<br>I 가방 · C 캐릭터 · S 기술 · M 지도 · B 나침반판 · J 할 일 · F 말 걸기 · Esc 쉬기<br><br><b>휴대폰</b> (가로 화면)<br>왼쪽 아무 곳이나 끌어서 이동 · 오른쪽 큰 버튼 공격(누르고 있으면 계속, 가까운 적을 알아서 노려요) · 둘레 버튼 기술 4개(금색 테두리가 궁극 기술) · 돛·차·사탕 버튼 · 사람이나 물건을 톡 누르면 그쪽으로 가요.<br><br><b>요령</b>: 방패지기는 적을 섬 끝으로 밀어 떨어뜨릴 수 있어요(보상은 조금 줄어요). 쉬고 돌아오면 순풍(경험치 2배)이 쌓여 있어요.</div></div>`; }
@@ -259,11 +259,14 @@ function talkHtml(id) {
   const q = qid => P.q[qid];
   const offer = qid => { const Q = QUESTS[qid]; lines = Q.talk; btns.push(`<button class="sk-b p" data-a="accept" data-q="${qid}">맡을게요</button>`); };
   const finish = qid => { lines = QUESTS[qid].done; btns.push(`<button class="sk-b g" data-a="finish" data-q="${qid}">보상 받기</button>`); };
-  if (id === 'chief') { if (!q('q1')) offer('q1'); else if (q('q1').s === 2) finish('q1'); else if (q('q1').s === 3 && !q('q3')) offer('q3'); else if (q('q3') && q('q3').s === 2 && P.flags['wp_바람개비 언덕']) finish('q3'); else if (q('q3') && q('q3').s === 2) lines = ['우두머리를 쓰러뜨렸다고? 언덕의 바람개비 표지에 손을 얹어 주게. 그래야 바람이 섬에 돌아오네.']; else if (q('q3') && q('q3').s === 3 && !q('q5')) offer('q5'); else if (q('q5') && q('q5').s === 2) finish('q5'); else if (q('q5') && q('q5').s === 1) lines = ['둥지 껍질은 들판과 늪의 둥지지기가 떨군다네. 세 개 모아 바람개비 언덕 동쪽 끊긴 다리로 가게.']; else if (q('q5') && q('q5').s === 3 && !q('q7')) offer('q7'); else if (q('q7') && q('q7').s === 2 && P.flags['wp_둥지섬']) finish('q7'); else if (q('q7') && q('q7').s === 2) lines = ['큰 왜가리를 쓰러뜨렸다고?! 둥지섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.']; else if (q('q7') && q('q7').s === 1) lines = ['둥지섬은 갈대 늪 맨 끝일세. 녀석이 성나면 하늘에서 깃털이 쏟아진다니 붉은 자리를 피하게.']; else if (q('q7') && q('q7').s === 3) lines = ['민들레 섬이 더는 가라앉지 않네. 이음꾼, 정말 고맙네.', '녹슨 풍차 군도로 가는 길은… 머지않아 열릴 걸세.']; else lines = ['널빤지는 들판 밑것들이 물고 다닌다네. 다리는 마을 동쪽 들판 너머, 맨 위쪽 섬 끝에 있지.']; }
+  if (G.Wd.ch === 2) { const r = talk2(id, offer, finish); if (r.lines) lines = r.lines; btns.push(...r.btns); }
+  else {
+  if (id === 'chief') { if (!q('q1')) offer('q1'); else if (q('q1').s === 2) finish('q1'); else if (q('q1').s === 3 && !q('q3')) offer('q3'); else if (q('q3') && q('q3').s === 2 && P.flags['wp_바람개비 언덕']) finish('q3'); else if (q('q3') && q('q3').s === 2) lines = ['우두머리를 쓰러뜨렸다고? 언덕의 바람개비 표지에 손을 얹어 주게. 그래야 바람이 섬에 돌아오네.']; else if (q('q3') && q('q3').s === 3 && !q('q5')) offer('q5'); else if (q('q5') && q('q5').s === 2) finish('q5'); else if (q('q5') && q('q5').s === 1) lines = ['둥지 껍질은 들판과 늪의 둥지지기가 떨군다네. 세 개 모아 바람개비 언덕 동쪽 끊긴 다리로 가게.']; else if (q('q5') && q('q5').s === 3 && !q('q7')) offer('q7'); else if (q('q7') && q('q7').s === 2 && P.flags['wp_둥지섬']) finish('q7'); else if (q('q7') && q('q7').s === 2) lines = ['큰 왜가리를 쓰러뜨렸다고?! 둥지섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.']; else if (q('q7') && q('q7').s === 1) lines = ['둥지섬은 갈대 늪 맨 끝일세. 녀석이 성나면 하늘에서 깃털이 쏟아진다니 붉은 자리를 피하게.']; else if (q('q7') && q('q7').s === 3) lines = ['민들레 섬이 더는 가라앉지 않네. 이음꾼, 정말 고맙네.', '바람개비 표지에 녹슨 풍차 군도로 가는 바람길이 열렸네. 준비되면 건너가 보게.']; else lines = ['널빤지는 들판 밑것들이 물고 다닌다네. 다리는 마을 동쪽 들판 너머, 맨 위쪽 섬 끝에 있지.']; }
   if (id === 'sage') { if (!q('q2')) offer('q2'); else if (q('q2').s === 2) finish('q2'); else if (P.flags.bridge2 && q('q2').s === 3 && !q('q6')) offer('q6'); else if (q('q6') && q('q6').s === 2) finish('q6'); else lines = ['큰바람은 원래 세상을 한 바퀴 돌면서 섬마다 숨을 불어넣었대. 그게 멎었으니 뜸돌도 잠들어 가는 거야.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
     const n = P.inv.filter(it => !it.g && !it.id).length; btns.push(`<button class="sk-b" data-a="ident" ${n && P.gold >= 15 ? '' : 'disabled'}>감정하기 (${n}개 · 개당 15G)</button>`); }
   if (id === 'smith') { if (!q('q4')) offer('q4'); else if (q('q4').s === 1 && count('hone') >= 3) { lines = ['오, 숫돌 세 개 가져왔구나!']; btns.push(`<button class="sk-b g" data-a="finish" data-q="q4">숫돌 건네기</button>`); } else lines = ['강화든 옵션 다시 굴리기든 맡겨. 무기는 +6, 방어구는 +4까지 안전해.']; btns.push(`<button class="sk-b p" data-a="smith">대장간 열기</button>`); }
   if (id === 'merchant') { lines = ['어서 와. 다리가 끊겨서 나도 이 섬에 발이 묶였지 뭐야. 필요한 거 있어?']; btns.push(`<button class="sk-b p" data-a="shop">사고팔기</button>`); }
+  }
   return `<div class="sk-bx sk-talk"><button class="sk-x" data-a="x">✕</button><div class="who">${N.n}</div>${lines.map(l => '<p>' + esc(l) + '</p>').join('')}<div>${btns.join('')}<button class="sk-b" data-a="x">닫기</button></div>${TOAST}</div>`;
 }
 function smithHtml() {
@@ -277,7 +280,7 @@ function smithHtml() {
   } else h += '<p style="font-size:12.5px;color:#8a7458">강화하거나 옵션을 다시 굴릴 장비를 고르세요.<br>무기 +6 · 방어구 +4까지는 100% 성공, 그 위는 실패하면 한 단계 내려가요. 축복 받은 장비는 실패를 한 번 막아 줘요.</p>';
   return h + '</div></div>' + TOAST + '</div>';
 }
-function endHtml() { const P = G.P; if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>2장은 다음에 열려요. 그동안 늪과 둥지섬에서 장비를 모으고 강화해 보세요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
+function endHtml() { const P = G.P; if (G.Wd.ch === 2) return endHtml2(); if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 2장 녹슨 풍차 군도로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
   return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 앞부분 끝</h3><p>바람개비가 다시 돌기 시작했다. 아주 약하지만, 분명히 바람이다.</p><p>그런데 저 멀리 둥지섬 쪽 하늘에서 커다란 날개 그림자가 구름을 가르고 지나갔다…</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>촌장 들메에게 다시 말을 걸면 1장 뒷부분(갈대 늪·둥지섬)이 이어져요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
 function bindPanel(arg) {
   panel.onclick = e => {
@@ -302,6 +305,7 @@ function bindPanel(arg) {
     else if (a === 'dclaim') { claimTask(+t.dataset.i); render(); }
     else if (a === 'slot') { const i = +t.dataset.i, o = P.slots.indexOf(SEL); if (o >= 0) P.slots[o] = P.slots[i]; P.slots[i] = SEL; render(); }
     else if (a === 'fork') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 5 && P.fork[s.id] == null) { P.fork[s.id] = +t.dataset.i; toast('「' + s.fork[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
+    else if (a === 'chap') { goChapter(+t.dataset.i); return; }
     else if (a === 'go') { const w = G.Wd.wps[+t.dataset.i]; P.x = w.x + .8; P.y = w.y + .8; G.cam = [P.x, P.y]; closePanel(); sfx('dodge'); }
     else if (a === 'accept') { qSet(t.dataset.q, 1); toast('「' + QUESTS[t.dataset.q].n + '」을(를) 맡았어요'); closePanel(); }
     else if (a === 'finish') finishQuest(t.dataset.q);
@@ -339,7 +343,7 @@ function drawMap(c) {
   const T = Wd.islands[Wd.town]; { const [a, b] = M(T.cx, T.cy); g.fillStyle = '#d8d0c0'; g.beginPath(); g.ellipse(a, b, 3.2 * sc * 32, 3.2 * sc * 16, 0, 0, TAU); g.fill(); }
   g.font = '800 12px system-ui'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)';
   const lab = (s2, t) => { const [a, b] = M(s2.cx, s2.cy - s2.r * .9); g.fillStyle = '#3a4a2a'; g.strokeText(t, a, b); g.fillText(t, a, b); };
-  lab(T, '민들레 마을'); lab(Wd.islands[Wd.hill], '바람개비 언덕'); Wd.fi.forEach((k2, i) => lab(Wd.islands[k2], ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i] || '들판')); Wd.mi.forEach((k2, i) => lab(Wd.islands[k2], ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i])); lab(Wd.islands[Wd.nestI], '둥지섬');
+  for (const s2 of Wd.islands) if (s2.name) lab(s2, s2.name);
   if (G.today != null) { const s2 = Wd.islands[G.today], [a, b] = M(s2.cx, s2.cy - s2.r * .9); g.font = '800 11px system-ui'; g.fillStyle = '#c07a10'; g.strokeText('★ 오늘의 섬', a, b + 14); g.fillText('★ 오늘의 섬', a, b + 14); }
   if (G.chest) { const [a, b] = M(G.chest.x, G.chest.y); g.fillStyle = '#ffd166'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.5; g.fillRect(a - 5, b - 4, 10, 8); g.strokeRect(a - 5, b - 4, 10, 8); }
   if (Wd.signAt && P.daily) { const [a, b] = M(...Wd.signAt); g.fillStyle = '#e8b05a'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.2; g.fillRect(a - 4, b - 4, 8, 8); g.strokeRect(a - 4, b - 4, 8, 8); }
@@ -347,18 +351,23 @@ function drawMap(c) {
   for (const wp of Wd.wps) { const [a, b] = M(wp.x, wp.y); g.fillStyle = wp.on ? '#9fe4ff' : '#c8c0b0'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a, b - 7); g.lineTo(a + 5, b); g.lineTo(a, b + 7); g.lineTo(a - 5, b); g.closePath(); g.fill(); g.stroke(); }
   // 할 일 목표
   const goals = []; const q = P.q; const bq = Wd.bridges[Wd.bq];
+  if (Wd.ch === 2) { if (q.q9 && q.q9.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
+    if (q.q12 && q.q12.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
+    if (q.q12 && q.q12.s === 2 && !P.flags['wp_큰 풍차섬']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
+  else {
   if (q.q1 && q.q1.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q3 && q.q3.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
   if (q.q3 && q.q3.s === 2 && !P.flags['wp_바람개비 언덕']) goals.push([Wd.wps[1].x, Wd.wps[1].y]);
   if (q.q5 && q.q5.s === 1) { const b2 = Wd.bridges[Wd.bq2], i = b2.cells[b2.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q7 && q.q7.s === 1) { const N2 = Wd.islands[Wd.nestI]; goals.push([N2.cx, N2.cy]); }
-  if (q.q7 && q.q7.s === 2 && !P.flags['wp_둥지섬']) goals.push([Wd.wps[3].x, Wd.wps[3].y]);
-  for (const id in q) if (q[id].s === 2 && !(id === 'q7' && !P.flags['wp_둥지섬']) && !(id === 'q3' && !P.flags['wp_바람개비 언덕'])) goals.push(Wd.npcAt[QUESTS[id].from]);
+  if (q.q7 && q.q7.s === 2 && !P.flags['wp_둥지섬']) goals.push([Wd.wps[3].x, Wd.wps[3].y]); }
+  for (const id in q) if (q[id].s === 2 && qCh(id) === Wd.ch && !(id === 'q7' && !P.flags['wp_둥지섬']) && !(id === 'q3' && !P.flags['wp_바람개비 언덕']) && !(id === 'q12' && !P.flags['wp_큰 풍차섬'])) goals.push(Wd.npcAt[QUESTS[id].from]);
   for (const [gx, gy] of goals) { const [a, b] = M(gx, gy); g.strokeStyle = '#ff6a4a'; g.lineWidth = 2.5; g.beginPath(); g.arc(a, b, 9, 0, TAU); g.stroke(); g.fillStyle = '#ff6a4a'; g.font = '900 13px system-ui'; g.fillText('!', a, b - 12); }
   { const [a, b] = M(P.x, P.y); g.fillStyle = '#fff'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 2.5; g.beginPath(); g.arc(a, b, 6, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#3a5a7a'; g.font = '800 11px system-ui'; g.fillText('나', a, b - 10); }
 }
 function finishQuest(id) {
   const P = G.P, q = P.q[id]; if (!q) return;
+  if (qCh(id) === 2) { const R = finish2(id); if (!R) return; sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166'); if (id === 'q8' || id === 'q9') setTimeout(() => talk('chief'), 300); if (id === 'q12') setTimeout(() => openPanel('end'), 400); return; }
   if (id === 'q4') { if (!useGood('hone', 3)) return; addInv(goods('bhone')); }
   q.s = 3; const R = { q1: [150, 80], q2: [120, 50], q3: [500, 200], q4: [80, 30], q5: [700, 250], q6: [900, 300], q7: [2500, 800] }[id]; gainXp(R[0]); P.gold += R[1];
   if (id === 'q1') addInv(makeItem(CLS_START[P.cls][3], 1, 4, { id: 1, st: 0 }));

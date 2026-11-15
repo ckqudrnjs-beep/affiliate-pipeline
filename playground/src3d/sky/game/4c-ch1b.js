@@ -46,7 +46,7 @@ function heronStab(m) { const P = G.P; G.fx.push({ k: 'thrust', x: m.x, y: m.y, 
   if (hyp(P.x - m.sx, P.y - m.sy) < 1.2 + P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * 1.25, m); }
 // 늪 지역 효과(진흙 덩이)
 function ch1Area(a, dt) {
-  if (a.k !== 'mud') return 0; const P = G.P;
+  if (a.k !== 'mud') return ch2Area(a, dt); const P = G.P;
   a.x += a.vx * dt; a.y += a.vy * dt; if (!G.Wd.inb(Math.floor(a.x), Math.floor(a.y))) { a.t = a.life; return 1; }
   if (!P.dead && hyp(P.x - a.x, P.y - a.y) < .45 + P.r) { a.t = a.life; G.fx.push({ k: 'pop', x: a.x, y: a.y, t: 0, life: .3, c: '#6a5034' }); hurtPlayer(a.dmg, a.src); }
   return 1;

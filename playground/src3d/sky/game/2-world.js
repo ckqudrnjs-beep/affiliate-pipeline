@@ -9,7 +9,8 @@ function noise2(seed) { // 값 잡음(부드러운 0~1)
   const at = (x, y) => g[((y % N + N) % N) * N + ((x % N + N) % N)], sm = t => t * t * (3 - 2 * t);
   return (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = sm(x - x0), fy = sm(y - y0); return lerp(lerp(at(x0, y0), at(x0 + 1, y0), fx), lerp(at(x0, y0 + 1), at(x0 + 1, y0 + 1), fx), fy); };
 }
-function makeWorld(seed) {
+function makeWorld(seed, ch) {
+  ch = ch || 1;
   const W = 152, H = 84, R = srand(seed), nz = noise2(seed + 7), nz2 = noise2(seed + 13);
   const g = new Uint8Array(W * H), isl = new Int16Array(W * H).fill(-1), depth = new Float32Array(W * H);
   const id = (x, y) => y * W + x, inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
@@ -25,13 +26,23 @@ function makeWorld(seed) {
     return k;
   }
   // 섬 배치(맛보기판): 마을 섬 → 들판 섬 4~5개 → (끊어진 다리) → 바람개비 언덕
-  const town = blob(16, 42, 10.5, 'town');
-  const F = [[34, 30, 8], [37, 54, 8.5], [53, 40, 9], [62, 22, 7.5], [66, 60, 7.5]].map(([x, y, r]) => [x + R() * 3 - 1.5, y + R() * 3 - 1.5, r + R() * 1.2]);
-  const fi = F.map(([x, y, r]) => blob(x, y, r, 'field'));
-  const hill = blob(86, 30, 8.5, 'hill');
-  // 1장 뒷부분: 언덕 너머 갈대 늪 섬 3개 → 둥지섬(큰 왜가리)
-  const mi = [[105, 20, 7.5], [109, 47, 8.2], [126, 31, 8]].map(([x, y, r]) => blob(x, y, r, 'marsh'));
-  const nestI = blob(143, 54, 9, 'heron');
+  const town = blob(16, 42, 10.5, 'town'); let fi, hill, mi = [], nestI = -1, ci = [];
+  const nm = (k, n, lv) => { islands[k].name = n; islands[k].lv = lv; return k; };
+  if (ch === 2) { // 2장 녹슨 풍차 군도: 풍차 섬 4 → (끊어진 쇠사슬 다리) → 사슬 섬 2 → 큰 풍차섬(삐걱 파수꾼)
+    nm(town, '쇠바퀴 마을');
+    const F = [[36, 26, 8], [37, 58, 8.5], [56, 42, 9], [74, 24, 8]].map(([x, y, r]) => [x + R() * 2 - 1, y + R() * 2 - 1, r + R()]);
+    fi = F.map(([x, y, r], i) => nm(blob(x, y, r, 'mill'), ['방앗간 들', '아랫 풍차밭', '가운데 풍차섬', '삐걱 언덕'][i], C2_LV[i]));
+    ci = [[92, 50, 8.5], [110, 28, 8]].map(([x, y, r], i) => nm(blob(x, y, r, 'mill'), ['사슬 나루', '톱니 벌판'][i], C2_LV[4 + i]));
+    hill = nm(blob(130, 52, 9.5, 'gear'), '큰 풍차섬', [24, 25]);
+  } else {
+    nm(town, '민들레 마을');
+    const F = [[34, 30, 8], [37, 54, 8.5], [53, 40, 9], [62, 22, 7.5], [66, 60, 7.5]].map(([x, y, r]) => [x + R() * 3 - 1.5, y + R() * 3 - 1.5, r + R() * 1.2]);
+    fi = F.map(([x, y, r], i) => nm(blob(x, y, r, 'field'), ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i], ISL_LV[i]));
+    hill = nm(blob(86, 30, 8.5, 'hill'), '바람개비 언덕', [7, 9]);
+    // 1장 뒷부분: 언덕 너머 갈대 늪 섬 3개 → 둥지섬(큰 왜가리)
+    mi = [[105, 20, 7.5], [109, 47, 8.2], [126, 31, 8]].map(([x, y, r], i) => nm(blob(x, y, r, 'marsh'), ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i], MARSH_LV[i]));
+    nestI = nm(blob(143, 54, 9, 'heron'), '둥지섬', [13, 15]);
+  }
   // 작은 떠돌이 바위섬(장식)
   for (let i = 0; i < 11; i++) { const x = 10 + R() * 135, y = 6 + R() * 74; let ok = true; for (const s of islands) if (Math.hypot(s.cx - x, s.cy - y) < s.r + 5) ok = false; if (ok) blob(x, y, 1.6 + R() * 1.4, 'rock'); }
   // 다리: 두 섬 사이를 x축 → y축 순서로 잇는 2칸 너비 길. 빈칸만 다리로 바꾼다.
@@ -47,16 +58,19 @@ function makeWorld(seed) {
     const ends = land.filter(i => { const X = i % W, Y = (i / W) | 0; for (let yy = Y - 2; yy <= Y + 2; yy++) for (let xx = X - 2; xx <= X + 2; xx++) if (inb(xx, yy) && (g[id(xx, yy)] === 3 || g[id(xx, yy)] === 4) && Math.hypot(xx - X, yy - Y) < 2.2) return true; return false; });
     bridges.push({ a, b, cells, ends, broken: !!broken }); return bridges.length - 1;
   }
-  bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]); bridge(fi[2], fi[4]);
-  const bq = bridge(fi[3], hill, true);
-  const bq2 = bridge(hill, mi[0], true); bridge(mi[0], mi[1]); bridge(mi[1], mi[2]); bridge(mi[2], nestI);
+  let bq, bq2 = -1;
+  if (ch === 2) { bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]);
+    bq = bridge(fi[2], ci[0], true); bridge(ci[0], ci[1]); bridge(ci[1], hill); }
+  else { bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]); bridge(fi[2], fi[4]);
+    bq = bridge(fi[3], hill, true);
+    bq2 = bridge(hill, mi[0], true); bridge(mi[0], mi[1]); bridge(mi[1], mi[2]); bridge(mi[2], nestI); }
   // 길(흙): 마을 광장, 다리 입구 쪽 흙길
   const tI = islands[town];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = id(x, y); if (g[i] !== 1) continue;
     const dT = Math.hypot(x - tI.cx, y - tI.cy); if (isl[i] === town && dT < 3.2) g[i] = 5;
     else if (nz2(x * .22, y * .22) > (islands[isl[i]] && islands[isl[i]].kind === 'marsh' ? .58 : .7) && isl[i] !== town) { let ok = 1; for (let yy = y - 2; yy <= y + 2; yy++) for (let xx = x - 2; xx <= x + 2; xx++) if (!inb(xx, yy) || !g[id(xx, yy)]) ok = 0; if (ok) g[i] = 2; } }
   const bm = new Uint8Array(W * H); for (const b of bridges) { for (const i of b.cells) bm[i] = 1; for (const i of b.ends) bm[i] = 2; }
-  const Wd = { W, H, g, isl, depth, islands, bridges, bq, bq2, mi, nestI, town, fi, hill, id, inb, nz, seed, bm, shape };
+  const Wd = { ch, W, H, g, isl, depth, islands, bridges, bq, bq2, mi, nestI, ci, town, fi, hill, id, inb, nz, seed, bm, shape };
   for (const s2 of islands) s2.poly = contour(Wd, s2);
   return Wd;
 }
@@ -95,16 +109,20 @@ function placeProps(Wd, PM) {
   for (const [k, dx, dy] of [['barrel', 4, -3], ['crateB', 4.6, -2.2], ['sack', 3.6, 4.6], ['barrow', -4, 4.4], ['lumber', -4.4, -2.6], ['flag', 2.6, 2.4], ['crateS', 5.4, 1.3], ['bucket', 1.6, -1.6]]) add(k, T.cx + dx, T.cy + dy);
   Wd.npcAt = { chief: [T.cx - 1.6, T.cy + 1.8], smith: [T.cx + 3.6, T.cy - 3.6], merchant: [T.cx + 3.8, T.cy + 2.2], sage: [T.cx - 3.4, T.cy - 1.2] };
   Wd.wps = [{ n: '민들레 마을', x: T.cx + 1.6, y: T.cy + .2, on: 1 }];
-  const Hh = Wd.islands[Wd.hill]; Wd.wps.push({ n: '바람개비 언덕', x: Hh.cx - 1, y: Hh.cy + 1.5, on: 0 });
-  const M1 = Wd.islands[Wd.mi[1]], NI = Wd.islands[Wd.nestI]; Wd.wps.push({ n: '갈대 나루', x: M1.cx - 1.5, y: M1.cy + 2, on: 0 }, { n: '둥지섬', x: NI.cx - 3, y: NI.cy + 3.5, on: 0 });
-  add('ruin', NI.cx + 3.5, NI.cy - 4); add('rock4', NI.cx - 4.5, NI.cy - 3); add('lumber', NI.cx + 4.5, NI.cy + 2.5);
-  add('windmill', Hh.cx + 1.5, Hh.cy - 2.5); add('ruin', Hh.cx - 4, Hh.cy - 2.5); add('rock3', Hh.cx + 4, Hh.cy + 2);
+  const Hh = Wd.islands[Wd.hill];
+  if (Wd.ch === 2) { Wd.wps[0].n = '쇠바퀴 마을'; const C0 = Wd.islands[Wd.ci[0]]; Wd.wps.push({ n: '사슬 나루', x: C0.cx - 1.5, y: C0.cy + 2, on: 0 }, { n: '큰 풍차섬', x: Hh.cx - 3, y: Hh.cy + 3.5, on: 0 });
+    add('windmill', Hh.cx + 4, Hh.cy - 4); add('windmill', Hh.cx - 5, Hh.cy - 2.5); add('ruin', Hh.cx + 4.5, Hh.cy + 2.5); add('crateB', Hh.cx - 4.5, Hh.cy + 3);
+    for (const k of [...Wd.fi, ...Wd.ci]) { const s = Wd.islands[k]; for (let i = 0; i < 2; i++) { const a = R() * TAU, d = s.r * (.45 + R() * .25); add(i && R() < .5 ? 'ruin' : 'windmill', s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d); } } }
+  else { Wd.wps.push({ n: '바람개비 언덕', x: Hh.cx - 1, y: Hh.cy + 1.5, on: 0 });
+    const M1 = Wd.islands[Wd.mi[1]], NI = Wd.islands[Wd.nestI]; Wd.wps.push({ n: '갈대 나루', x: M1.cx - 1.5, y: M1.cy + 2, on: 0 }, { n: '둥지섬', x: NI.cx - 3, y: NI.cy + 3.5, on: 0 });
+    add('ruin', NI.cx + 3.5, NI.cy - 4); add('rock4', NI.cx - 4.5, NI.cy - 3); add('lumber', NI.cx + 4.5, NI.cy + 2.5);
+    add('windmill', Hh.cx + 1.5, Hh.cy - 2.5); add('ruin', Hh.cx - 4, Hh.cy - 2.5); add('rock3', Hh.cx + 4, Hh.cy + 2); }
   // 들판·언덕: 나무 무리·바위·통나무 더미
   const TREES = ['treesL', 'treesM', 'treesBL', 'treesBM', 'treesS', 'treesBS', 'tree1', 'tree2'], ROCK = ['rock1', 'rock2', 'rock3', 'rock4', 'rock5'];
   for (const s of Wd.islands) {
     if (s.kind === 'rock') { if (s.r > 2.2) add(ROCK[Math.floor(R() * 5)], s.cx, s.cy, true); continue; }
     if (s.kind === 'town') { for (let i = 0; i < 6; i++) { const a = R() * TAU, d = s.r * (.72 + R() * .2), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, k = TREES[4 + Math.floor(R() * 4)], f = PM[k][6]; if (free(x, y, f)) add(k, x, y); } continue; }
-    const n = s.kind === 'hill' ? 5 : s.kind === 'marsh' ? 5 : s.kind === 'heron' ? 3 : 9;
+    const n = s.kind === 'hill' ? 5 : s.kind === 'marsh' ? 5 : s.kind === 'heron' ? 3 : s.kind === 'gear' ? 2 : s.kind === 'mill' ? 6 : 9;
     for (let i = 0; i < n * 3 && n > 0; i++) { const a = R() * TAU, d = s.r * (.35 + R() * .6), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d;
       const r = R(), k = r < .55 ? TREES[Math.floor(R() * TREES.length)] : r < .85 ? ROCK[Math.floor(R() * ROCK.length)] : ['lumber', 'stone', 'crateO', 'barrel'][Math.floor(R() * 4)]; const f = PM[k][6];
       if (free(x, y, f)) add(k, x, y); }
