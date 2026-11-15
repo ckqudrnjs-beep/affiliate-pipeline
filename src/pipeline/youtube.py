@@ -40,7 +40,7 @@ VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 PUBLISH_HOUR = 19  # KST, 퇴근 후 시청 시간대 (쇼츠)
 LONG_HOUR = 20  # 롱폼
 DISCLOSURE = "광고 · 알리익스프레스 제휴 링크가 포함된 콘텐츠로, 구매 시 일정액의 수수료를 받습니다."
-TAGS = ["돈줍는삼촌", "살림템", "알리익스프레스", "가전추천"]
+TAGS = ["돈줍는삼촌", "생활비", "절약", "물가"]
 
 
 def load_queue(path: pathlib.Path = QUEUE, episodes: bool = True) -> list[dict]:
@@ -91,12 +91,12 @@ def is_ad(row: dict) -> bool:
 
 
 # 쇼츠 해시태그: 주제 2개 + #Shorts (3개 넘기지 않음, 2026-11-15 조회수 규칙). 형식은 대본 format.
-TAGS = {"prices": "#기름값 #환율", "quiz": "#생활비퀴즈 #물가", "skit-calc": "#전기요금 #생활비", "skit-q": "#생활비 #절약",
+HASHTAGS = {"prices": "#기름값 #환율", "quiz": "#생활비퀴즈 #물가", "skit-calc": "#전기요금 #생활비", "skit-q": "#생활비 #절약",
         "skit-recipe": "#집밥 #배달비", "guide": "#생활비 #절약", "ox": "#생활비 #절약"}
 
 
 def tags(row: dict) -> str:
-    return TAGS.get(row.get("format", ""), "#돈줍는삼촌 #생활비") + ("" if is_long(row) else " #Shorts")
+    return HASHTAGS.get(row.get("format", ""), "#돈줍는삼촌 #생활비") + ("" if is_long(row) else " #Shorts")
 
 
 def is_long(row: dict) -> bool:
