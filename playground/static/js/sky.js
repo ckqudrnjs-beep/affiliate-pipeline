@@ -826,7 +826,7 @@ const MC = { fluff: [96, 96, 48, 84], fluffking: [224, 224, 112, 200], seed: [96
 function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; ok(); }; im.onerror = () => ok(); im.src = src; }); }
 let assetsP = null;
 function assets() {
-  if (assetsP) return assetsP; const v = '?v=1';
+  if (assetsP) return assetsP; const v = '?v=29cf015e';
   assetsP = Promise.all([...['warden', 'windcaller', 'fluff', 'fluffking', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
     fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; }), fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; }), fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {})]);
   return assetsP;
