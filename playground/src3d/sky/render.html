@@ -277,6 +277,134 @@ const MODELS = {
       legs.forEach(([l, kn], i) => { l.rotation.x = (i ? -sw : sw) - rx; kn.rotation.x = Math.max(0, i ? sw : -sw) * .8 + (st === 'die' ? .6 : 0); l.visible = !(st === 'die' && t > .5); });
     } };
   },
+  scarecrow(o) { // 허수아비(2장): 녹슨 낫 손, 자루 머리, 짚 몸통, 한 발 장대로 콩콩
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const STRAW = 0xc8a050, SACK = 0x9a8058, CLOTH = 0x6a3a2a;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.03, .035, .9, 8), std(0x5a3e24)); pole.position.y = .1; body.add(pole);
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(.13, .2, .38, 10), std(CLOTH, { rough: .95 })); torso.position.y = .3; body.add(torso);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, st = new THREE.Mesh(new THREE.ConeGeometry(.02, .16, 4), std(i % 2 ? STRAW : 0xa88040)); st.position.set(Math.cos(a) * .17, .08, Math.sin(a) * .17); st.rotation.set(Math.sin(a) * .5 + Math.PI, 0, -Math.cos(a) * .5); body.add(st); } // 짚 치마
+    for (let i = 0; i < 6; i++) { const r = new THREE.Mesh(new THREE.BoxGeometry(.05, .14, .01), std(0x4a2a1e)); const a = -1 + i * .4; r.position.set(Math.sin(a) * .2, .14, Math.cos(a) * .2); r.rotation.y = a; r.rotation.x = .2; body.add(r); } // 너덜 천
+    const head = new THREE.Group(); head.position.y = .62; body.add(head);
+    const hd = new THREE.Mesh(new THREE.SphereGeometry(.15, 16, 12), std(SACK, { rough: 1 })); hd.scale.set(1, 1.1, .95); head.add(hd);
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(.07, .015, 6, 16), std(0x3a2a1a)); tie.rotation.x = Math.PI / 2; tie.position.y = -.13; head.add(tie);
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(.2, .2, 10), std(0x4a3a24)); hat.position.y = .17; hat.rotation.z = .15; head.add(hat);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, .02, 14), std(0x4a3a24)); brim.position.y = .08; brim.rotation.z = .15; head.add(brim);
+    glare(head, .15, .02, .13, .38, o.eye || 0xffa02a, .2); maw(head, .15, -.06, .135, .5, 5);
+    const arms = []; for (const s2 of [-1, 1]) { const a = new THREE.Group(); a.position.set(s2 * .12, .42, 0); body.add(a);
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(.022, .022, .4, 6), std(0x5a3e24)); st.rotation.z = Math.PI / 2; st.position.x = s2 * .2; a.add(st);
+      const sl = new THREE.Mesh(new THREE.BoxGeometry(.08, .14, .04), std(CLOTH)); sl.position.x = s2 * .06; a.add(sl);
+      const blade = new THREE.Mesh(new THREE.TorusGeometry(.12, .018, 4, 12, Math.PI * .9), std(0x8a6a5a, { rough: .4, metal: .6 })); blade.position.set(s2 * .4, .06, 0); blade.rotation.set(0, 0, s2 > 0 ? -.4 : Math.PI + .4); a.add(blade);
+      arms.push(a); }
+    outlineAll(body, 1.06); body.position.y = .3;
+    return { g, pose(st, t) {
+      let y = .3, rz = 0, sp = 0, la = 0;
+      if (st === 'idle') { rz = Math.sin(t * Math.PI * 2) * .08; la = Math.sin(t * Math.PI * 2) * .1; }
+      if (st === 'move') { y = .3 + Math.abs(Math.sin(t * Math.PI * 2)) * .14; rz = Math.sin(t * Math.PI * 2) * .1; la = .2; }
+      if (st === 'atk') { const k = Math.round(t * 2); sp = [-.6, 1.6, 3.4][k]; y = [.3, .36, .34][k]; la = [.5, -.1, -.2][k]; }
+      if (st === 'hurt') { rz = -.35; la = .6; }
+      if (st === 'die') { rz = [.6, 1.1][Math.round(t)]; y = [.15, -.02][Math.round(t)]; la = .9; }
+      body.position.y = y; body.rotation.set(0, sp, rz); arms[0].rotation.z = -la; arms[1].rotation.z = la;
+    } };
+  },
+  creaker(o) { // 삐걱 파수꾼(2장 보스): 녹슨 쇠·나무 몸, 등에 풍차 날개 넷, 외눈, 쇠망치 팔
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const WOOD = 0x6a4a30, IRON = 0x5a4e48, RUST = 0x9a5a2a;
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(.5, .56, .4), std(WOOD, { rough: .9 })); trunk.position.y = .1; body.add(trunk);
+    for (const yy of [-.1, .14, .32]) { const band = new THREE.Mesh(new THREE.BoxGeometry(.54, .05, .44), std(IRON, { rough: .5, metal: .5 })); band.position.y = yy; body.add(band);
+      for (const s2 of [-1, 1]) for (const z of [-1, 1]) { const rv = new THREE.Mesh(new THREE.SphereGeometry(.018, 6, 4), std(RUST)); rv.position.set(s2 * .27, yy, z * .2); body.add(rv); } }
+    for (let i = 0; i < 6; i++) { const pt = new THREE.Mesh(new THREE.CircleGeometry(.05 + (i % 3) * .02, 8), std(RUST, { rough: 1 })); pt.position.set(-.18 + (i % 3) * .16, -.05 + Math.floor(i / 3) * .25, .201); body.add(pt); } // 녹 얼룩
+    const head = new THREE.Group(); head.position.y = .5; body.add(head);
+    const hd = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, .24, 8), std(IRON, { rough: .45, metal: .6 })); head.add(hd);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(.22, .18, 8), std(RUST, { rough: .6 })); cap.position.y = .2; head.add(cap);
+    const slit = new THREE.Mesh(new THREE.BoxGeometry(.24, .05, .02), DARK); slit.position.set(0, .01, .17); head.add(slit);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 8), GLOW(0xff6a1a)); eye.scale.set(1.6, .6, .5); eye.position.set(0, .01, .18); head.add(eye);
+    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(.02, 8, 6), GLOW(0xfff0b0)); eye2.position.set(0, .01, .2); head.add(eye2);
+    // 등 풍차 날개
+    const hub = new THREE.Group(); hub.position.set(0, .36, -.26); body.add(hub);
+    const ax = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .12, 8), std(IRON, { metal: .6 })); ax.rotation.x = Math.PI / 2; hub.add(ax);
+    const rotor = new THREE.Group(); rotor.position.z = -.07; hub.add(rotor);
+    for (let i = 0; i < 4; i++) { const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2 + .4; rotor.add(arm);
+      const spar = new THREE.Mesh(new THREE.BoxGeometry(.04, .62, .03), std(WOOD)); spar.position.y = .33; arm.add(spar);
+      const sail = new THREE.Mesh(new THREE.BoxGeometry(.16, .46, .012), std(i % 2 ? 0xb8a888 : 0xa89070, { rough: 1 })); sail.position.set(.09, .38, 0); arm.add(sail);
+      for (let j = 0; j < 3; j++) { const tear = new THREE.Mesh(new THREE.BoxGeometry(.05, .06, .014), DARK); tear.position.set(.1 + (j % 2) * .04, .22 + j * .13, .002); arm.add(tear); } }
+    // 팔: 쇠망치 주먹
+    const arms = []; for (const s2 of [-1, 1]) { const sh = new THREE.Group(); sh.position.set(s2 * .32, .28, 0); body.add(sh);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 8), std(IRON, { metal: .6 })); sh.add(ball);
+      const up = new THREE.Mesh(new THREE.CylinderGeometry(.055, .065, .3, 8), std(WOOD)); up.position.y = -.16; sh.add(up);
+      const fist = new THREE.Mesh(new THREE.BoxGeometry(.2, .16, .18), std(IRON, { rough: .4, metal: .7 })); fist.position.y = -.36; sh.add(fist);
+      for (let k = 0; k < 3; k++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(.025, .07, 4), std(RUST)); sp.position.set((k - 1) * .06, -.36, .1); sp.rotation.x = Math.PI / 2; sh.add(sp); }
+      arms.push(sh); }
+    const legs = []; for (const s2 of [-1, 1]) { const lg = new THREE.Group(); lg.position.set(s2 * .15, -.18, 0); body.add(lg);
+      const l = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, .26, 8), std(IRON, { metal: .5 })); l.position.y = -.12; lg.add(l);
+      const ft = new THREE.Mesh(new THREE.BoxGeometry(.16, .07, .22), std(WOOD)); ft.position.set(0, -.26, .03); lg.add(ft); legs.push(lg); }
+    outlineAll(body, 1.04); const by = .5; body.position.y = by;
+    return { g, pose(st, t) {
+      let y = by, rx = 0, rz = 0, sw = 0, ar = [0, 0], rot = t * Math.PI;
+      if (st === 'idle') { y = by + Math.sin(t * Math.PI * 2) * .01; ar = [.1, -.1]; rot = t * Math.PI * .5; }
+      if (st === 'move') { sw = Math.sin(t * Math.PI * 2) * .45; rz = Math.sin(t * Math.PI * 2) * .06; y = by + Math.abs(Math.cos(t * Math.PI * 2)) * .03; ar = [-sw * .6, sw * .6]; }
+      if (st === 'atk') { const k = Math.round(t * 2); ar = [[-2.4, -2.4], [-.6, -.6], [.3, .3]][k]; rx = [-.2, .15, .35][k]; y = by + [.05, 0, -.06][k]; rot = [0, 1.2, 2.6][k]; }
+      if (st === 'hurt') { rx = -.25; ar = [.6, -.6]; }
+      if (st === 'die') { const k = Math.round(t); rx = [.5, 1.1][k]; y = by - [.1, .3][k]; ar = [1, 1]; rot = 0; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); rotor.rotation.z = rot; arms[0].rotation.x = ar[0]; arms[1].rotation.x = ar[1];
+      legs.forEach((l, i) => { l.rotation.x = i ? -sw : sw; });
+    } };
+  },
+  crab(o) { // 닻게(3장): 따개비 낀 등딱지, 한쪽은 닻 모양 큰 집게, 옆걸음
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const C = o.col || 0x8a3a2a, D2 = 0x5a2418;
+    const geo = new THREE.SphereGeometry(.28, 24, 14); geo.scale(1.25, .55, 1); const sh = new THREE.Mesh(geo, std(C, { rough: .6 })); body.add(sh);
+    for (let i = 0; i < 9; i++) { const a = i * 2.4, d = .1 + (i % 3) * .06, b = new THREE.Mesh(new THREE.ConeGeometry(.035, .06, 6), std(0xd8d0b8)); b.position.set(Math.cos(a) * d * 1.2, .13, Math.sin(a) * d - .04); body.add(b); } // 따개비
+    for (let i = -2; i <= 2; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(.02, .07, 4), std(D2)); sp.position.set(i * .1, .02, .27); sp.rotation.x = Math.PI / 2; body.add(sp); }
+    for (const s2 of [-1, 1]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .12, 6), std(D2)); st.position.set(s2 * .07, .16, .2); body.add(st); const e = new THREE.Mesh(new THREE.SphereGeometry(.035, 10, 8), GLOW(o.eye || 0xffd23a)); e.position.set(s2 * .07, .23, .2); body.add(e); const p2 = new THREE.Mesh(new THREE.SphereGeometry(.015, 6, 4), DARK); p2.position.set(s2 * .07, .24, .23); body.add(p2); }
+    maw(body, .28, -.02, .26, .35, 4);
+    const claws2 = []; for (const s2 of [-1, 1]) { const arm = new THREE.Group(); arm.position.set(s2 * .3, 0, .14); body.add(arm); const big = s2 > 0;
+      const a1 = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, .2, 8), std(C)); a1.rotation.z = Math.PI / 2; a1.position.x = s2 * .08; arm.add(a1);
+      if (big) { const shank = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .3, 8), std(0x5a5a62, { metal: .7, rough: .4 })); shank.position.set(.2, .1, .08); arm.add(shank);
+        const fl = new THREE.Mesh(new THREE.TorusGeometry(.12, .025, 6, 14, Math.PI), std(0x5a5a62, { metal: .7, rough: .4 })); fl.rotation.z = Math.PI; fl.position.set(.2, -.04, .08); arm.add(fl);
+        for (const t of [-1, 1]) { const tip = new THREE.Mesh(new THREE.ConeGeometry(.035, .08, 4), std(0x5a5a62, { metal: .7 })); tip.position.set(.2 + t * .12, -.03, .08); tip.rotation.z = t * .6; arm.add(tip); }
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(.04, .012, 6, 12), std(0x7a6a50)); ring.position.set(.2, .26, .08); arm.add(ring); }
+      else { const pc = new THREE.Mesh(new THREE.SphereGeometry(.08, 12, 8), std(C)); pc.scale.set(1.3, .7, .8); pc.position.set(-.2, 0, .06); arm.add(pc); const f2 = new THREE.Mesh(new THREE.ConeGeometry(.03, .1, 4), std(D2)); f2.rotation.z = Math.PI / 2; f2.position.set(-.3, 0, .06); arm.add(f2); }
+      claws2.push(arm); }
+    const legs = []; for (const s2 of [-1, 1]) for (let j = 0; j < 3; j++) { const l = new THREE.Group(); l.position.set(s2 * .26, -.02, -.1 + j * .1); body.add(l);
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(.015, .02, .22, 5), std(D2)); seg.position.set(s2 * .07, -.06, 0); seg.rotation.z = s2 * 1; l.add(seg); legs.push([l, s2, j]); }
+    outlineAll(body, 1.06); const by = .2; body.position.y = by;
+    return { g, pose(st, t) {
+      let y = by, rz = 0, sx = 0, cl = 0, rx = 0;
+      if (st === 'idle') { y = by + Math.sin(t * Math.PI * 2) * .01; cl = Math.sin(t * Math.PI * 2) * .15; }
+      if (st === 'move') { sx = Math.sin(t * Math.PI * 2) * .05; rz = Math.sin(t * Math.PI * 2) * .08; y = by + Math.abs(Math.sin(t * Math.PI * 2)) * .03; }
+      if (st === 'atk') { const k = Math.round(t * 2); cl = [-.9, .4, .7][k]; rx = [-.15, .1, .2][k]; }
+      if (st === 'hurt') { rx = -.3; cl = .5; }
+      if (st === 'die') { rz = [1.6, 3.1][Math.round(t)]; y = by + [.05, 0][Math.round(t)]; }
+      body.position.set(sx, y, 0); body.rotation.set(rx, 0, rz); claws2[0].rotation.y = cl * .6; claws2[1].rotation.x = cl;
+      legs.forEach(([l, s2, j]) => { l.rotation.x = Math.sin(t * Math.PI * 4 + j * 2) * (st === 'move' ? .5 : .05); });
+    } };
+  },
+  rustship(o) { // 녹슨 비행선(3장 보스): 기운 배 몸통 + 찢긴 기구 주머니 + 프로펠러, 닻 매달고 둥실
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const WOOD = 0x6a4a30, IRON = 0x4e4a4a, RUST = 0x9a5a2a, BAG = 0xb8a888;
+    const hullG = new THREE.SphereGeometry(.42, 22, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2); hullG.scale(1, .55, 1.7); const hull = new THREE.Mesh(hullG, std(WOOD, { rough: .85 })); body.add(hull);
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .03, 22), std(0x4a3424)); deck.scale.z = 1.7; body.add(deck);
+    for (const yy of [-.08, -.16]) { const band = new THREE.Mesh(new THREE.TorusGeometry(.4 - (yy === -.16 ? .06 : .01), .015, 6, 28), std(IRON, { metal: .6 })); band.rotation.x = Math.PI / 2; band.scale.y = 1.7; band.position.y = yy; body.add(band); }
+    for (let i = 0; i < 3; i++) for (const s2 of [-1, 1]) { const gun = new THREE.Mesh(new THREE.CylinderGeometry(.035, .045, .16, 8), std(IRON, { metal: .7, rough: .35 })); gun.rotation.z = s2 * Math.PI / 2; gun.position.set(s2 * .43, -.07, -.3 + i * .3); body.add(gun); const mz = new THREE.Mesh(new THREE.SphereGeometry(.025, 6, 4), GLOW(0xff7a2a)); mz.position.set(s2 * .51, -.07, -.3 + i * .3); body.add(mz); }
+    const prow = new THREE.Mesh(new THREE.ConeGeometry(.08, .3, 6), std(RUST)); prow.rotation.x = Math.PI / 2; prow.position.set(0, -.03, .82); body.add(prow);
+    glare(body, .3, -.06, .66, .35, 0xff4a1a, .18);
+    // 기구 주머니
+    const bagG = new THREE.SphereGeometry(.4, 22, 14); bagG.scale(1, .6, 1.9); const bag = new THREE.Mesh(bagG, std(BAG, { rough: 1 })); bag.position.y = .62; body.add(bag); for (const zz of [-.35, 0, .35]) { const st2 = new THREE.Mesh(new THREE.TorusGeometry(.4 * Math.sqrt(1 - (zz / .76) ** 2), .025, 6, 28), std(0x8a3a2a, { rough: .8 })); st2.scale.y = .6; st2.position.set(0, .62, zz); body.add(st2); }
+    for (let i = 0; i < 5; i++) { const pt = new THREE.Mesh(new THREE.BoxGeometry(.14, .1, .02), std(i % 2 ? 0x8a7458 : 0x6a5a48)); const a = -1 + i * .5; pt.position.set(Math.sin(a) * .4, .64 + (i % 2) * .08, Math.cos(a) * .3); pt.rotation.y = a; body.add(pt); }
+    for (let i = 0; i < 3; i++) { const tear = new THREE.Mesh(new THREE.BoxGeometry(.08, .12, .02), DARK); tear.position.set(.38, .6 + i * .05, -.2 + i * .25); tear.rotation.y = Math.PI / 2; body.add(tear); }
+    for (const s2 of [-1, 1]) for (const z of [-.5, .5]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .4, 4), std(0x3a2a1a)); r.position.set(s2 * .28, .3, z); r.rotation.z = s2 * .3; body.add(r); }
+    const prop = new THREE.Group(); prop.position.set(0, .1, -.8); body.add(prop); for (let i = 0; i < 3; i++) { const bl = new THREE.Mesh(new THREE.BoxGeometry(.05, .3, .02), std(IRON, { metal: .6 })); bl.rotation.z = i * Math.PI * 2 / 3; bl.position.set(Math.sin(i * Math.PI * 2 / 3) * .14, Math.cos(i * Math.PI * 2 / 3) * .14, 0); prop.add(bl); }
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(.02, .28, .26), std(RUST)); fin.position.set(0, .3, -.7); body.add(fin);
+    // 닻
+    const anc = new THREE.Group(); body.add(anc); const chain = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .5, 4), std(IRON)); chain.position.y = -.4; anc.add(chain);
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .26, 6), std(IRON, { metal: .7 })); sh.position.y = -.75; anc.add(sh);
+    const ar = new THREE.Mesh(new THREE.TorusGeometry(.13, .03, 6, 14, Math.PI), std(IRON, { metal: .7 })); ar.rotation.z = Math.PI; ar.position.y = -.84; anc.add(ar);
+    outlineAll(body, 1.04); const by = 1.05; body.position.y = by;
+    return { g, flying: 1, pose(st, t) {
+      let y = by + Math.sin(t * Math.PI * 2) * .04, rx = 0, rz = Math.sin(t * Math.PI * 2) * .05, ay = 0, pr = t * Math.PI * 4;
+      if (st === 'move') { rx = .12; rz = Math.sin(t * Math.PI * 2) * .08; }
+      if (st === 'atk') { const k = Math.round(t * 2); rz = [-.15, .1, .2][k]; rx = [-.1, .05, .15][k]; ay = [.15, -.25, -.4][k]; y = by + [.06, 0, -.08][k]; }
+      if (st === 'hurt') { rz = .3; rx = -.15; }
+      if (st === 'die') { const k = Math.round(t); rz = [.5, .9][k]; rx = [.3, .6][k]; y = by - [.35, .8][k]; }
+      body.position.y = y; body.rotation.set(rx, 0, rz); prop.rotation.z = pr; anc.position.y = ay; anc.rotation.x = Math.sin(t * Math.PI * 2) * .15;
+    } };
+  },
 };
 window.renderMob = async function (k) {
   const M = MOBS[k], mdl = MODELS[M.model](M), sc = M.scale || 1; mdl.g.scale.setScalar(sc);

@@ -269,7 +269,7 @@ const QUESTS = {
     done: ['늪에서 바람 냄새가 나기 시작했어. 고마워, 이건 내가 아끼던 귀걸이야.'] },
   q7: { n: '둥지섬의 큰 왜가리', from: 'chief', goal: '둥지섬의 큰 왜가리를 쓰러뜨리고 둥지섬 바람개비 표지에 손 얹기', need: 1,
     talk: ['둥지섬의 큰 왜가리가 날개 밑에 섬의 바람을 모조리 감춰 두었다네. 그래서 민들레 섬이 가라앉는 게야.', '녀석은 부리로 찌르고, 날개로 밀쳐 내고, 새끼들을 불러. 성이 나면 하늘에서 깃털을 퍼붓는다지.', '섬 끝으로 밀려나지 않게 조심하게. 녀석을 쓰러뜨리면 민들레 섬에 다시 숨이 돌 걸세.'],
-    done: ['…들리나? 섬 밑에서 바람이 올라오는 소리. 민들레 섬이 가라앉기를 멈췄어!', '자네 덕일세, 이음꾼. 허나 큰바람이 멎은 까닭은 아직 저 너머, 녹슨 풍차 군도에 있다는 소문이야.'] },
+    done: ['…들리나? 섬 밑에서 바람이 올라오는 소리. 민들레 섬이 가라앉기를 멈췄어!', '자네 덕일세, 이음꾼. 허나 큰바람이 멎은 까닭은 아직 저 너머, 녹슨 풍차 군도에 있다는 소문이야.', '바람개비 표지에 바람길이 열렸네. 준비되면 건너가 보게.'] },
 };
 const STORY_INTRO = ['큰바람이 멎었다.', '섬을 잇던 다리가 끊어지고, 섬들은 아주 조금씩 구름바다로 가라앉고 있다.', '헝겊 돛 하나에 몸을 맡기고 민들레 섬에 내려앉은 당신은 — 끊어진 길을 다시 잇는 이음꾼.'];
 
@@ -284,7 +284,8 @@ function noise2(seed) { // 값 잡음(부드러운 0~1)
   const at = (x, y) => g[((y % N + N) % N) * N + ((x % N + N) % N)], sm = t => t * t * (3 - 2 * t);
   return (x, y) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = sm(x - x0), fy = sm(y - y0); return lerp(lerp(at(x0, y0), at(x0 + 1, y0), fx), lerp(at(x0, y0 + 1), at(x0 + 1, y0 + 1), fx), fy); };
 }
-function makeWorld(seed) {
+function makeWorld(seed, ch) {
+  ch = ch || 1;
   const W = 152, H = 84, R = srand(seed), nz = noise2(seed + 7), nz2 = noise2(seed + 13);
   const g = new Uint8Array(W * H), isl = new Int16Array(W * H).fill(-1), depth = new Float32Array(W * H);
   const id = (x, y) => y * W + x, inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
@@ -300,13 +301,29 @@ function makeWorld(seed) {
     return k;
   }
   // 섬 배치(맛보기판): 마을 섬 → 들판 섬 4~5개 → (끊어진 다리) → 바람개비 언덕
-  const town = blob(16, 42, 10.5, 'town');
-  const F = [[34, 30, 8], [37, 54, 8.5], [53, 40, 9], [62, 22, 7.5], [66, 60, 7.5]].map(([x, y, r]) => [x + R() * 3 - 1.5, y + R() * 3 - 1.5, r + R() * 1.2]);
-  const fi = F.map(([x, y, r]) => blob(x, y, r, 'field'));
-  const hill = blob(86, 30, 8.5, 'hill');
-  // 1장 뒷부분: 언덕 너머 갈대 늪 섬 3개 → 둥지섬(큰 왜가리)
-  const mi = [[105, 20, 7.5], [109, 47, 8.2], [126, 31, 8]].map(([x, y, r]) => blob(x, y, r, 'marsh'));
-  const nestI = blob(143, 54, 9, 'heron');
+  const town = blob(16, 42, 10.5, 'town'); let fi, hill, mi = [], nestI = -1, ci = [];
+  const nm = (k, n, lv) => { islands[k].name = n; islands[k].lv = lv; return k; };
+  if (ch === 2) { // 2장 녹슨 풍차 군도: 풍차 섬 4 → (끊어진 쇠사슬 다리) → 사슬 섬 2 → 큰 풍차섬(삐걱 파수꾼)
+    nm(town, '쇠바퀴 마을');
+    const F = [[36, 26, 8], [37, 58, 8.5], [56, 42, 9], [74, 24, 8]].map(([x, y, r]) => [x + R() * 2 - 1, y + R() * 2 - 1, r + R()]);
+    fi = F.map(([x, y, r], i) => nm(blob(x, y, r, 'mill'), ['방앗간 들', '아랫 풍차밭', '가운데 풍차섬', '삐걱 언덕'][i], C2_LV[i]));
+    ci = [[92, 50, 8.5], [110, 28, 8]].map(([x, y, r], i) => nm(blob(x, y, r, 'mill'), ['사슬 나루', '톱니 벌판'][i], C2_LV[4 + i]));
+    hill = nm(blob(130, 52, 9.5, 'gear'), '큰 풍차섬', [24, 25]);
+  } else if (ch === 3) { // 3장 닻 내린 항구: 선창 섬 4 → (끊어진 줄다리) → 나루 섬 2 → 녹슨 정박장(녹슨 비행선)
+    nm(town, '닻돌 항구');
+    const F = [[36, 26, 8], [38, 58, 8.5], [57, 42, 9], [76, 62, 8]].map(([x, y, r]) => [x + R() * 2 - 1, y + R() * 2 - 1, r + R()]);
+    fi = F.map(([x, y, r], i) => nm(blob(x, y, r, 'dock'), ['소금 부두', '그물 말리는 터', '가운데 선창', '갈매기 바위'][i], C3_LV[i]));
+    ci = [[93, 28, 8.5], [112, 50, 8]].map(([x, y, r], i) => nm(blob(x, y, r, 'dock'), ['밧줄 나루', '따개비 여울'][i], C3_LV[4 + i]));
+    hill = nm(blob(132, 30, 9.5, 'wreck'), '녹슨 정박장', [32, 34]);
+  } else {
+    nm(town, '민들레 마을');
+    const F = [[34, 30, 8], [37, 54, 8.5], [53, 40, 9], [62, 22, 7.5], [66, 60, 7.5]].map(([x, y, r]) => [x + R() * 3 - 1.5, y + R() * 3 - 1.5, r + R() * 1.2]);
+    fi = F.map(([x, y, r], i) => nm(blob(x, y, r, 'field'), ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i], ISL_LV[i]));
+    hill = nm(blob(86, 30, 8.5, 'hill'), '바람개비 언덕', [7, 9]);
+    // 1장 뒷부분: 언덕 너머 갈대 늪 섬 3개 → 둥지섬(큰 왜가리)
+    mi = [[105, 20, 7.5], [109, 47, 8.2], [126, 31, 8]].map(([x, y, r], i) => nm(blob(x, y, r, 'marsh'), ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i], MARSH_LV[i]));
+    nestI = nm(blob(143, 54, 9, 'heron'), '둥지섬', [13, 15]);
+  }
   // 작은 떠돌이 바위섬(장식)
   for (let i = 0; i < 11; i++) { const x = 10 + R() * 135, y = 6 + R() * 74; let ok = true; for (const s of islands) if (Math.hypot(s.cx - x, s.cy - y) < s.r + 5) ok = false; if (ok) blob(x, y, 1.6 + R() * 1.4, 'rock'); }
   // 다리: 두 섬 사이를 x축 → y축 순서로 잇는 2칸 너비 길. 빈칸만 다리로 바꾼다.
@@ -322,16 +339,19 @@ function makeWorld(seed) {
     const ends = land.filter(i => { const X = i % W, Y = (i / W) | 0; for (let yy = Y - 2; yy <= Y + 2; yy++) for (let xx = X - 2; xx <= X + 2; xx++) if (inb(xx, yy) && (g[id(xx, yy)] === 3 || g[id(xx, yy)] === 4) && Math.hypot(xx - X, yy - Y) < 2.2) return true; return false; });
     bridges.push({ a, b, cells, ends, broken: !!broken }); return bridges.length - 1;
   }
-  bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]); bridge(fi[2], fi[4]);
-  const bq = bridge(fi[3], hill, true);
-  const bq2 = bridge(hill, mi[0], true); bridge(mi[0], mi[1]); bridge(mi[1], mi[2]); bridge(mi[2], nestI);
+  let bq, bq2 = -1;
+  if (ch >= 2) { bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]);
+    bq = bridge(fi[2], ci[0], true); bridge(ci[0], ci[1]); bridge(ci[1], hill); }
+  else { bridge(town, fi[0]); bridge(town, fi[1]); bridge(fi[0], fi[2]); bridge(fi[1], fi[2]); bridge(fi[2], fi[3]); bridge(fi[2], fi[4]);
+    bq = bridge(fi[3], hill, true);
+    bq2 = bridge(hill, mi[0], true); bridge(mi[0], mi[1]); bridge(mi[1], mi[2]); bridge(mi[2], nestI); }
   // 길(흙): 마을 광장, 다리 입구 쪽 흙길
   const tI = islands[town];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = id(x, y); if (g[i] !== 1) continue;
     const dT = Math.hypot(x - tI.cx, y - tI.cy); if (isl[i] === town && dT < 3.2) g[i] = 5;
     else if (nz2(x * .22, y * .22) > (islands[isl[i]] && islands[isl[i]].kind === 'marsh' ? .58 : .7) && isl[i] !== town) { let ok = 1; for (let yy = y - 2; yy <= y + 2; yy++) for (let xx = x - 2; xx <= x + 2; xx++) if (!inb(xx, yy) || !g[id(xx, yy)]) ok = 0; if (ok) g[i] = 2; } }
   const bm = new Uint8Array(W * H); for (const b of bridges) { for (const i of b.cells) bm[i] = 1; for (const i of b.ends) bm[i] = 2; }
-  const Wd = { W, H, g, isl, depth, islands, bridges, bq, bq2, mi, nestI, town, fi, hill, id, inb, nz, seed, bm, shape };
+  const Wd = { ch, W, H, g, isl, depth, islands, bridges, bq, bq2, mi, nestI, ci, town, fi, hill, id, inb, nz, seed, bm, shape };
   for (const s2 of islands) s2.poly = contour(Wd, s2);
   return Wd;
 }
@@ -370,18 +390,25 @@ function placeProps(Wd, PM) {
   for (const [k, dx, dy] of [['barrel', 4, -3], ['crateB', 4.6, -2.2], ['sack', 3.6, 4.6], ['barrow', -4, 4.4], ['lumber', -4.4, -2.6], ['flag', 2.6, 2.4], ['crateS', 5.4, 1.3], ['bucket', 1.6, -1.6]]) add(k, T.cx + dx, T.cy + dy);
   Wd.npcAt = { chief: [T.cx - 1.6, T.cy + 1.8], smith: [T.cx + 3.6, T.cy - 3.6], merchant: [T.cx + 3.8, T.cy + 2.2], sage: [T.cx - 3.4, T.cy - 1.2] };
   Wd.wps = [{ n: '민들레 마을', x: T.cx + 1.6, y: T.cy + .2, on: 1 }];
-  const Hh = Wd.islands[Wd.hill]; Wd.wps.push({ n: '바람개비 언덕', x: Hh.cx - 1, y: Hh.cy + 1.5, on: 0 });
-  const M1 = Wd.islands[Wd.mi[1]], NI = Wd.islands[Wd.nestI]; Wd.wps.push({ n: '갈대 나루', x: M1.cx - 1.5, y: M1.cy + 2, on: 0 }, { n: '둥지섬', x: NI.cx - 3, y: NI.cy + 3.5, on: 0 });
-  add('ruin', NI.cx + 3.5, NI.cy - 4); add('rock4', NI.cx - 4.5, NI.cy - 3); add('lumber', NI.cx + 4.5, NI.cy + 2.5);
-  add('windmill', Hh.cx + 1.5, Hh.cy - 2.5); add('ruin', Hh.cx - 4, Hh.cy - 2.5); add('rock3', Hh.cx + 4, Hh.cy + 2);
+  const Hh = Wd.islands[Wd.hill];
+  if (Wd.ch === 3) { Wd.wps[0].n = '닻돌 항구'; const C0 = Wd.islands[Wd.ci[0]]; Wd.wps.push({ n: '밧줄 나루', x: C0.cx - 1.5, y: C0.cy + 2, on: 0 }, { n: '녹슨 정박장', x: Hh.cx - 3, y: Hh.cy + 3.5, on: 0 });
+    add('ruin', Hh.cx + 4.5, Hh.cy - 3.5); add('lumber', Hh.cx - 5, Hh.cy - 2.5); add('crateB', Hh.cx + 4.5, Hh.cy + 2.5); add('barrel', Hh.cx - 4.5, Hh.cy + 3);
+    for (const k of [Wd.town, ...Wd.fi, ...Wd.ci]) { const s = Wd.islands[k], n = k === Wd.town ? 3 : 4; for (let i = 0; i < n; i++) { const a = R() * TAU, d = s.r * (k === Wd.town ? .78 : .45 + R() * .3); add(['crateB', 'barrel', 'crateS', 'sack', 'lumber'][Math.floor(R() * 5)], s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d); } } }
+  else if (Wd.ch === 2) { Wd.wps[0].n = '쇠바퀴 마을'; const C0 = Wd.islands[Wd.ci[0]]; Wd.wps.push({ n: '사슬 나루', x: C0.cx - 1.5, y: C0.cy + 2, on: 0 }, { n: '큰 풍차섬', x: Hh.cx - 3, y: Hh.cy + 3.5, on: 0 });
+    add('windmill', Hh.cx + 4, Hh.cy - 4); add('windmill', Hh.cx - 5, Hh.cy - 2.5); add('ruin', Hh.cx + 4.5, Hh.cy + 2.5); add('crateB', Hh.cx - 4.5, Hh.cy + 3);
+    for (const k of [...Wd.fi, ...Wd.ci]) { const s = Wd.islands[k]; for (let i = 0; i < 2; i++) { const a = R() * TAU, d = s.r * (.45 + R() * .25); add(i && R() < .5 ? 'ruin' : 'windmill', s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d); } } }
+  else { Wd.wps.push({ n: '바람개비 언덕', x: Hh.cx - 1, y: Hh.cy + 1.5, on: 0 });
+    const M1 = Wd.islands[Wd.mi[1]], NI = Wd.islands[Wd.nestI]; Wd.wps.push({ n: '갈대 나루', x: M1.cx - 1.5, y: M1.cy + 2, on: 0 }, { n: '둥지섬', x: NI.cx - 3, y: NI.cy + 3.5, on: 0 });
+    add('ruin', NI.cx + 3.5, NI.cy - 4); add('rock4', NI.cx - 4.5, NI.cy - 3); add('lumber', NI.cx + 4.5, NI.cy + 2.5);
+    add('windmill', Hh.cx + 1.5, Hh.cy - 2.5); add('ruin', Hh.cx - 4, Hh.cy - 2.5); add('rock3', Hh.cx + 4, Hh.cy + 2); }
   // 들판·언덕: 나무 무리·바위·통나무 더미
   const TREES = ['treesL', 'treesM', 'treesBL', 'treesBM', 'treesS', 'treesBS', 'tree1', 'tree2'], ROCK = ['rock1', 'rock2', 'rock3', 'rock4', 'rock5'];
   for (const s of Wd.islands) {
     if (s.kind === 'rock') { if (s.r > 2.2) add(ROCK[Math.floor(R() * 5)], s.cx, s.cy, true); continue; }
     if (s.kind === 'town') { for (let i = 0; i < 6; i++) { const a = R() * TAU, d = s.r * (.72 + R() * .2), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d, k = TREES[4 + Math.floor(R() * 4)], f = PM[k][6]; if (free(x, y, f)) add(k, x, y); } continue; }
-    const n = s.kind === 'hill' ? 5 : s.kind === 'marsh' ? 5 : s.kind === 'heron' ? 3 : 9;
+    const n = s.kind === 'hill' ? 5 : s.kind === 'marsh' ? 5 : s.kind === 'heron' ? 3 : s.kind === 'gear' || s.kind === 'wreck' ? 2 : s.kind === 'mill' ? 6 : s.kind === 'dock' ? 4 : 9;
     for (let i = 0; i < n * 3 && n > 0; i++) { const a = R() * TAU, d = s.r * (.35 + R() * .6), x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d;
-      const r = R(), k = r < .55 ? TREES[Math.floor(R() * TREES.length)] : r < .85 ? ROCK[Math.floor(R() * ROCK.length)] : ['lumber', 'stone', 'crateO', 'barrel'][Math.floor(R() * 4)]; const f = PM[k][6];
+      const r = R(), k = r < (s.kind === 'dock' || s.kind === 'wreck' ? .2 : .55) ? TREES[Math.floor(R() * TREES.length)] : r < .85 ? ROCK[Math.floor(R() * ROCK.length)] : ['lumber', 'stone', 'crateO', 'barrel'][Math.floor(R() * 4)]; const f = PM[k][6];
       if (free(x, y, f)) add(k, x, y); }
   }
   // 작은 장식(덤불·버섯·그루터기·민들레 솜털): 길을 막지 않는 것은 통과 가능
@@ -461,10 +488,10 @@ function makeItem(bid, rar, ilv, o) {
 }
 // 드롭할 장비 고르기: 레벨에 맞는 기본 장비 중 하나 + 등급
 function rollDrop(ilv, find, cls) {
-  const ok = BASES.filter(b => b.lv <= ilv + 1 && (!b.cls || b.cls === cls || Math.random() < .35));
+  let ok = BASES.filter(b => b.lv <= ilv + 1 && (!b.cls || b.cls === cls || Math.random() < .35)); const hi = ok.filter(b => b.lv >= ilv - 9); if (hi.length >= 8) ok = hi;
   const b = pick(ok); const r = Math.random() / (1 + find / 100);
   const rar = r < .045 ? 2 : r < .3 ? 1 : 0;
-  if (Math.random() < .02 * (1 + find / 100) && ilv >= 3) { const sp = pick(SETS.dandelion.parts); return makeItem(sp[0], 4, Math.max(3, ilv), { set: 'dandelion' }); }
+  if (Math.random() < .02 * (1 + find / 100) && ilv >= 3) { const sk = ilv >= 26 && SETS.harbor ? 'harbor' : ilv >= 14 && SETS.mill ? 'mill' : 'dandelion', sp = pick(SETS[sk].parts); return makeItem(sp[0], 4, Math.max(3, ilv), { set: sk }); }
   return makeItem(b.id, rar, ilv);
 }
 function itemName(it) {
@@ -572,12 +599,13 @@ const dirW = d => scr2w(DIRV[d][0] * TW, DIRV[d][1] * TH * 2); // 방향 d 의 �
 function newSave(cls) {
   const seed = (Math.random() * 1e9) | 0, it = id => makeItem(id, 0, 1, { id: 1, st: 0 });
   const CS = CLS_START[cls], eq = { weapon: it(CS[0]), off: it(CS[1]), armor: it('armor0'), legs: it('legs0'), sail: it('sail0') };
-  return { v: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, fork2: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
+  return { v: 1, ch: 1, cls, seed, lv: 1, xp: 0, sp: {}, pts: 0, skp: 1, sk: { [CS[2]]: 1 }, fork: {}, fork2: {}, slots: [null, null, null, null], eq, inv: [goods('pot', 3), goods('wpot', 2)], gold: 30, q: {}, flags: {}, board: Array(19).fill(null), shd: [], kills: 0, t: Date.now(), rested: 0, play: 0, codex: {} };
 }
 function startGame(S) {
-  const Wd = makeWorld(S.seed); Wd.props = placeProps(Wd, PM);
-  if (S.flags.bridge) repairBridge(Wd, Wd.bq);
-  if (S.flags.bridge2) repairBridge(Wd, Wd.bq2);
+  const Wd = makeWorld(S.seed, S.ch || 1); Wd.props = placeProps(Wd, PM); setNpcNames(Wd.ch);
+  if (Wd.ch === 3) { if (S.flags.c3bridge) repairBridge(Wd, Wd.bq); }
+  else if (Wd.ch === 2) { if (S.flags.c2bridge) repairBridge(Wd, Wd.bq); }
+  else { if (S.flags.bridge) repairBridge(Wd, Wd.bq); if (S.flags.bridge2) repairBridge(Wd, Wd.bq2); }
   for (const w of Wd.wps) if (S.flags['wp_' + w.n]) w.on = 1;
   if (!S.board) S.board = Array(19).fill(null); if (!S.shd) S.shd = []; if (!S.fork2) S.fork2 = {};
   const T = Wd.islands[Wd.town];
@@ -586,10 +614,11 @@ function startGame(S) {
   const away = Math.max(0, Date.now() - (S.t || Date.now())) / 36e5; P.rested = Math.min(xpNeed(P.lv) * .5, (S.rested || 0) + away * xpNeed(P.lv) * .06);
   G = { Wd, P, mobs: [], proj: [], fx: [], txt: [], drops: [], areas: [], parts: [], t: 0, cam: [P.x, P.y], shake: 0, packs: [], msg: [], hitstop: 0, flash: 0, cut: null };
   calc(P); P.hp = P.mhp; P.wind = P.mwind; autoSlots(P);
-  dailyStart(); spawnAll(); restNote(S); if (!S.q.q1) setTimeout(() => talk('chief', true), 600); boardCheck();
+  dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function save() { if (!G) return; const P = G.P, S = {}; for (const k of ['v', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily']) S[k] = P[k]; S.t = Date.now(); S.uid = UID;
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; return S; }
+function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
 const pcode = () => { try { return localStorage.getItem('nr_pcode') || ''; } catch (e) { return ''; } };
@@ -625,6 +654,8 @@ function spawnPack(pk) {
 }
 function spawnAll() {
   const Wd = G.Wd; G.mobs = []; G.packs = [];
+  if (Wd.ch === 2) return spawnCh2();
+  if (Wd.ch === 3) return spawnCh3();
   Wd.fi.forEach((k, i) => { const s = Wd.islands[k], n = 3 + (i >= 2 ? 1 : 0);
     for (let j = 0; j < n; j++) { const a = j / n * TAU + i, d = s.r * .5; let x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d; if (!walk(Wd, x, y)) { x = s.cx; y = s.cy; }
       const kind = pick([['fluff'], ['fluff'], ['seed', 'fluff'], ['bird'], ['seed']]);
@@ -684,9 +715,11 @@ function killMob(m, fell) {
   for (const s in P.eq) if (P.eq[s] && P.eq[s].hid) { const it = P.eq[s]; it.tame = (it.tame || 0) + 1; if (it.tame === TAME_N) { say('길들이기 완료! ' + itemName(it) + ' 숨은 옵션: ' + afxText(it.hid[0], it.hid[1], P.cls), '#c9a8ff'); calc(P); } }
   P.kills++; P.codex[m.t] = (P.codex[m.t] || 0) + 1;
   if (m.t === 'fluff') qAdd('q2', 1);
-  if (D.heron) { P.flags.heron = 1; if (P.q.q7 && P.q.q7.s === 1) qSet('q7', 2); G.shake = 14; G.flash = .4; say('큰 왜가리가 쓰러졌어요! 둥지섬 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
+  if (D.rustship) { P.flags.rustship = 1; if (P.q.q17 && P.q.q17.s === 1) qSet('q17', 2); G.shake = 14; G.flash = .4; say('녹슨 비행선이 내려앉았어요! 녹슨 정박장 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
+  else if (D.creaker) { P.flags.creaker = 1; if (P.q.q12 && P.q.q12.s === 1) qSet('q12', 2); G.shake = 14; G.flash = .4; say('삐걱 파수꾼이 멈췄어요! 큰 풍차섬 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
+  else if (D.heron) { P.flags.heron = 1; if (P.q.q7 && P.q.q7.s === 1) qSet('q7', 2); G.shake = 14; G.flash = .4; say('큰 왜가리가 쓰러졌어요! 둥지섬 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
   else if (D.boss) { P.flags.boss = 1; qSet('q3', 2); G.shake = 10; say('우두머리 보풀이 흩어졌어요! 언덕의 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); }
-  ch1Kill(m); dailyKill(m, fell);
+  ch1Kill(m); ch2Kill(m); ch3Kill(m); dailyKill(m, fell);
   if (fell) { G.txt.push({ x: m.x, y: m.y, z: 1, t: 0, s: '떨어짐!', c: '#9fe4ff' }); sfx('fall'); }
   else burst(m.x, m.y, m.t, D.boss ? 3 : D.mini ? 2.2 : m.elite ? 1.6 : 1);
   if (D.mini && m.pk) cleanse(m.pk);
@@ -700,7 +733,9 @@ function drops(m, fell) {
   if (Math.random() < .55 || m.elite || D.mini) put({ gold: Math.round(ri(m.lv * 2, m.lv * 5) * (D.mini ? 6 : m.elite ? 3 : 1) * (m.pk && m.pk.isl === G.today ? 1.5 : 1)) });
   const nItem = D.boss ? 3 : D.mini ? 2 : m.elite ? (Math.random() < .7 ? 2 : 1) : (Math.random() < .1 * (1 + P.find / 100) ? 1 : 0);
   for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
-  if (D.boss) { const u = CLS_START[P.cls][4]; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
+  if (D.rustship) { put(makeItem('amu3', 3, 34, { u: 'u_anchor' })); const sp = pick(SETS.harbor.parts); put(makeItem(sp[0], 4, 34, { set: 'harbor' })); put(goods('bhone')); put(goods('bglue')); }
+  else if (D.creaker) { put(makeItem('amu2', 3, 25, { u: 'u_millheart' })); const sp = pick(SETS.mill.parts); put(makeItem(sp[0], 4, 25, { set: 'mill' })); put(goods('bhone')); put(goods('bglue')); }
+  else if (D.boss) { const u = CLS_START[P.cls][4]; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
   // 바람 조각: 둥지지기 1개, 우두머리 2개, 정예는 가끔
   const col = () => pick(Object.keys(SHARD));
   if (P.lv >= BOARD_LV || D.big) { if (D.mini) giveShard({ c: col(), q: Math.random() < .3 ? 2 : 1 }); else if (D.boss) { giveShard({ c: col(), q: 3 }); giveShard({ c: col(), q: 2 }); } else if (m.elite && Math.random() < .1) giveShard({ c: col(), q: 1 }); }
@@ -716,9 +751,9 @@ function cleanse(pk) { // 둥지지기 쓰러짐: 둥지 걷힘
   say('둥지지기를 쓰러뜨렸어요! 둥지가 걷혀요.', '#fff1b0', 1);
 }
 function burst(x2, y2, t, k) {
-  const C = { fluff: ['#6e6578', '#4a4252', '#8a8098', '#ff6a3a'], fluffking: ['#4e4460', '#2e2638', '#b04aff', '#ff4a2a'], seed: ['#4a3e2a', '#9a3a2a', '#d8c8a0'], bird: ['#2c2834', '#1e1a24', '#ffc23a'], keeper: ['#2e261c', '#cfc0a0', '#b04aff', '#9a3a2a'], mudfluff: ['#6a5034', '#3e2c1c', '#8a7050'], bogpod: ['#3a5a2a', '#9a3a2a', '#c8d0a0'], heronling: ['#5a6a7a', '#3a4250', '#d8dce4'], heron: ['#56606e', '#d8dce4', '#2e3440', '#e0a83a'] }[t] || ['#fff'];
+  const C = { rustfluff: ['#8a4e2a', '#5a2e18', '#c8783a'], boltpod: ['#4a4a52', '#8a6a5a', '#c8b090'], rustcrow: ['#5a3a2a', '#3a2418', '#ff8a2a'], scarecrow: ['#c8a050', '#6a3a2a', '#9a8058'], cogkeeper: ['#5a4e48', '#9a5a2a', '#cfc0a0'], creaker: ['#6a4a30', '#5a4e48', '#9a5a2a', '#e8d8b0'], saltfluff: ['#a8b8c8', '#e8eef4', '#7a8a9a'], barnpod: ['#4a5a5a', '#c8c0b0', '#8a9a9a'], gull: ['#d8dce4', '#8a929e', '#e8a83a'], crab: ['#b04a2a', '#e8c8a0', '#6a5a50'], barnkeeper: ['#3a4a4e', '#c8c0b0', '#8a9a9a', '#b04a2a'], rustship: ['#4a3424', '#8a3a2a', '#c8b090', '#5a4e48'], fluff: ['#6e6578', '#4a4252', '#8a8098', '#ff6a3a'], fluffking: ['#4e4460', '#2e2638', '#b04aff', '#ff4a2a'], seed: ['#4a3e2a', '#9a3a2a', '#d8c8a0'], bird: ['#2c2834', '#1e1a24', '#ffc23a'], keeper: ['#2e261c', '#cfc0a0', '#b04aff', '#9a3a2a'], mudfluff: ['#6a5034', '#3e2c1c', '#8a7050'], bogpod: ['#3a5a2a', '#9a3a2a', '#c8d0a0'], heronling: ['#5a6a7a', '#3a4250', '#d8dce4'], heron: ['#56606e', '#d8dce4', '#2e3440', '#e0a83a'] }[t] || ['#fff'];
   const n = Math.round(14 * k); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, sp = rnd(1, 4.5) * Math.sqrt(k);
-    G.parts.push({ k: t === 'seed' || t === 'keeper' || t === 'bogpod' ? 'chip' : t === 'bird' || t === 'heronling' || t === 'heron' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
+    G.parts.push({ k: t === 'seed' || t === 'keeper' || t === 'bogpod' || t === 'barnpod' || t === 'barnkeeper' || t === 'rustship' || t === 'crab' ? 'chip' : t === 'bird' || t === 'heronling' || t === 'heron' || t === 'gull' ? 'leaf' : 'puff', x: x2, y: y2, z: rnd(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: rnd(60, 260), t: 0, life: rnd(.5, 1.1), c: pick(C), s: rnd(2.5, 5.5) * Math.sqrt(k), rot: Math.random() * TAU }); }
   G.fx.push({ k: 'ring', x: x2, y: y2, r: .9 * k, t: 0, life: .3, c: '#ffffff' }); G.hitstop = Math.max(G.hitstop, .04);
 }
 function gainXp(n) { gainXp0(n); boardCheck(); if (!G.P.daily && G.P.lv >= DAILY_LV) dailyCheck(); }
@@ -926,6 +961,7 @@ function mobUpdate(m, dt) {
   if (m.D.ai === 'dive' && m.back > 0) { m.back -= dt; move(m, -dx / d * sp * dt, -dy / d * sp * dt); m.an = 'move'; return; }
   if (m.D.big) return bossAI(m, dt, d, dx, dy);
   if (m.D.ai === 'spit') return spitAI(m, dt, d, dx, dy, sp);
+  if (m.D.ai === 'spin') return spinAI(m, dt, d, dx, dy, sp);
   const reach = m.r + P.r + .35;
   if (d > reach) { move(m, dx / d * sp * dt, dy / d * sp * dt); m.an = 'move'; separate(m); }
   else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = m.D.atk * rnd(.9, 1.3); if (m.D.ai === 'dive') m.back = .8; }
@@ -934,6 +970,8 @@ function mobUpdate(m, dt) {
 function separate(m) { for (const o of G.mobs) { if (o === m || o.dead) continue; const dx = m.x - o.x, dy = m.y - o.y, d = hyp(dx, dy), rr = m.r + o.r; if (d < rr && d > 0) { move(m, dx / d * (rr - d) * .3, dy / d * (rr - d) * .3); } } }
 function bossAI(m, dt, d, dx, dy) {
   if (m.D.heron) return heronAI(m, dt, d, dx, dy);
+  if (m.D.creaker) return creakerAI(m, dt, d, dx, dy);
+  if (m.D.rustship) return rustshipAI(m, dt, d, dx, dy);
   if (m.D.mini) { // 둥지지기: 가시 돌진 + 내려찍기, 피가 반 아래면 더 자주
     const rage = m.hp < m.mhp * .5 ? .65 : 1; m.gust = (m.gust ?? 3) - dt;
     if (m.gust <= 0 && d > 2 && d < 6.5) { m.gust = 6 * rage; m.warnC = .55; m.cvx = dx / d * 7.5; m.cvy = dy / d * 7.5; m.an = 'idle'; G.areas.push({ k: 'warn', x: m.x + dx / d * 2, y: m.y + dy / d * 2, r: 1.4, t: 0, life: .55 }); return; }
@@ -952,6 +990,7 @@ function bossAI(m, dt, d, dx, dy) {
 function bossHit(m) {
   const P = G.P, d = hyp(P.x - m.x, P.y - m.y);
   if (m.kind === 'stab') return heronStab(m);
+  if (m.kind === 'sweep') return creakerSweep(m);
   if (m.kind === 'slam') { const R = m.D.mini ? 1.9 : 2.4; G.fx.push({ k: 'ring', x: m.x, y: m.y, r: R, t: 0, life: .4, c: m.D.mini ? '#d9a8ff' : '#fff' }); G.fx.push({ k: 'crack', x: m.x, y: m.y, t: 0, life: 1.2 }); G.shake = m.D.mini ? 6 : 8; sfx('slam'); if (d < R + P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); }
   else { G.fx.push({ k: 'gust', x: m.x, y: m.y, dx: (P.x - m.x) / d, dy: (P.y - m.y) / d, r: 3.4, arc: 1.2, t: 0, life: .4 }); sfx('gust'); if (d < 3.4) { hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * .7, m); const kx = (P.x - m.x) / d * 3.2; const ky = (P.y - m.y) / d * 3.2; for (let i = 0; i < 10; i++) move(P, kx / 10, ky / 10); } }
 }
@@ -996,10 +1035,12 @@ function qAdd(id, n) { const q = G.P.q[id]; if (!q || q.s !== 1) return; q.n += 
 function near() {
   const P = G.P, Wd = G.Wd; G.near = null; if (P.dead) return;
   for (const k in Wd.npcAt) { const [x, y] = Wd.npcAt[k]; if (hyp(P.x - x, P.y - y) < 1.5) { G.near = { k: 'npc', id: k, label: NPCDEF[k].n + ' 말 걸기' }; return; } }
-  for (const w of Wd.wps) if (hyp(P.x - w.x, P.y - w.y) < 1.4) { if (!w.on && (w.n !== '바람개비 언덕' || P.flags.boss) && (w.n !== '둥지섬' || P.flags.heron)) { w.on = 1; P.flags['wp_' + w.n] = 1; say('바람개비 표지 「' + w.n + '」에 바람이 깃들었어요', '#9fe4ff'); sfx('lvl'); if (w.n === '바람개비 언덕' && P.q.q3 && P.q.q3.s === 2 || w.n === '둥지섬' && P.q.q7 && P.q.q7.s === 2) say('촌장 들메에게 돌아가 소식을 전해요.', '#ffd166'); save(); }
-    G.near = w.on ? { k: 'wp', label: '바람개비 표지(이동)' } : { k: 'wpx', label: w.n === '둥지섬' ? '아직 바람이 없어요(큰 왜가리를 먼저)' : '아직 바람이 없어요(우두머리를 먼저)' }; return; }
+  for (const w of Wd.wps) if (hyp(P.x - w.x, P.y - w.y) < 1.4) { if (!w.on && (w.n !== '바람개비 언덕' || P.flags.boss) && (w.n !== '둥지섬' || P.flags.heron) && (w.n !== '큰 풍차섬' || P.flags.creaker) && (w.n !== '녹슨 정박장' || P.flags.rustship)) { w.on = 1; P.flags['wp_' + w.n] = 1; say('바람개비 표지 「' + w.n + '」에 바람이 깃들었어요', '#9fe4ff'); sfx('lvl'); if (w.n === '바람개비 언덕' && P.q.q3 && P.q.q3.s === 2 || w.n === '둥지섬' && P.q.q7 && P.q.q7.s === 2 || w.n === '큰 풍차섬' && P.q.q12 && P.q.q12.s === 2 || w.n === '녹슨 정박장' && P.q.q17 && P.q.q17.s === 2) say(NPCDEF.chief.n + '에게 돌아가 소식을 전해요.', '#ffd166'); save(); }
+    G.near = w.on ? { k: 'wp', label: '바람개비 표지(이동)' } : { k: 'wpx', label: w.n === '녹슨 정박장' ? '아직 바람이 없어요(녹슨 비행선을 먼저)' : w.n === '큰 풍차섬' ? '아직 바람이 없어요(삐걱 파수꾼을 먼저)' : w.n === '둥지섬' ? '아직 바람이 없어요(큰 왜가리를 먼저)' : '아직 바람이 없어요(우두머리를 먼저)' }; return; }
   if (G.chest && hyp(P.x - G.chest.x, P.y - G.chest.y) < 1.5) { G.near = { k: 'chest', label: '오늘의 섬 상자 열기' }; return; }
   if (Wd.signAt && hyp(P.x - Wd.signAt[0], P.y - Wd.signAt[1]) < 1.6) { G.near = { k: 'notice', label: '마을 게시판 보기' }; return; }
+  if (Wd.ch === 3) { const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'ropeb', label: count('rope') >= 4 ? '줄다리 다시 매기 (밧줄 타래 4)' : '끊어진 줄다리 (밧줄 타래 ' + count('rope') + '/4)' }; return; } } return; }
+  if (Wd.ch === 2) { const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'chainb', label: count('chain') >= 4 ? '쇠사슬 다리 잇기 (사슬 고리 4)' : '끊어진 쇠사슬 다리 (사슬 고리 ' + count('chain') + '/4)' }; return; } } return; }
   const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'bridge', label: count('plank') >= 6 ? '다리 고치기 (널빤지 6)' : '끊어진 다리 (널빤지 ' + count('plank') + '/6)' }; return; } }
   const b2 = Wd.bridges[Wd.bq2]; if (b2.broken) for (const c of b2.cells) { const x = c % Wd.W + .5, y = ((c / Wd.W) | 0) + .5; if (hyp(P.x - x, P.y - y) < 2.2) { G.near = { k: 'bridge2', label: count('shell') >= 3 ? '다리 고치기 (둥지 껍질 3)' : '끊어진 다리 (둥지 껍질 ' + count('shell') + '/3)' }; return; } }
 }
@@ -1007,6 +1048,8 @@ function interact() {
   const n = G.near; if (!n) return; const P = G.P;
   if (n.k === 'npc') talk(n.id);
   else if (n.k === 'chest') openChest();
+  else if (n.k === 'chainb') { if (count('chain') >= 4) { useGood('chain', 4); repairBridge(G.Wd, G.Wd.bq); P.flags.c2bridge = 1; MINI = null; if (P.q.q9) qSet('q9', 2); G.shake = 5; sfx('lvl'); say('쇠사슬 다리를 다시 이었어요! 사슬 나루로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('사슬 고리가 ' + (4 - count('chain')) + '개 더 필요해요(톱니 둥지지기가 떨궈요)', '#ffe08a', 1); }
+  else if (n.k === 'ropeb') { if (count('rope') >= 4) { useGood('rope', 4); repairBridge(G.Wd, G.Wd.bq); P.flags.c3bridge = 1; MINI = null; if (P.q.q14) qSet('q14', 2); G.shake = 5; sfx('lvl'); say('줄다리를 다시 맸어요! 밧줄 나루로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('밧줄 타래가 ' + (4 - count('rope')) + '개 더 필요해요(따개비 둥지지기가 떨궈요)', '#ffe08a', 1); }
   else if (n.k === 'notice') openPanel('daily');
   else if (n.k === 'wp') openPanel('travel');
   else if (n.k === 'bridge2') { if (count('shell') >= 3) { useGood('shell', 3); repairBridge(G.Wd, G.Wd.bq2); P.flags.bridge2 = 1; MINI = null; if (P.q.q5) qSet('q5', 2); G.shake = 5; sfx('lvl'); say('다리를 다시 놓았어요! 갈대 늪으로 건너갈 수 있어요.', '#ffd166'); for (const c of G.Wd.bridges[G.Wd.bq2].cells) G.fx.push({ k: 'pop', x: c % G.Wd.W + .5, y: ((c / G.Wd.W) | 0) + .5, t: -Math.random() * .6, life: .5, c: '#ffe08a' }); save(); } else say('둥지 껍질이 ' + (3 - count('shell')) + '개 더 필요해요(둥지지기가 떨궈요)', '#ffe08a', 1); }
@@ -1175,7 +1218,7 @@ function heronStab(m) { const P = G.P; G.fx.push({ k: 'thrust', x: m.x, y: m.y, 
   if (hyp(P.x - m.sx, P.y - m.sy) < 1.2 + P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * 1.25, m); }
 // 늪 지역 효과(진흙 덩이)
 function ch1Area(a, dt) {
-  if (a.k !== 'mud') return 0; const P = G.P;
+  if (a.k !== 'mud') return ch2Area(a, dt); const P = G.P;
   a.x += a.vx * dt; a.y += a.vy * dt; if (!G.Wd.inb(Math.floor(a.x), Math.floor(a.y))) { a.t = a.life; return 1; }
   if (!P.dead && hyp(P.x - a.x, P.y - a.y) < .45 + P.r) { a.t = a.life; G.fx.push({ k: 'pop', x: a.x, y: a.y, t: 0, life: .3, c: '#6a5034' }); hurtPlayer(a.dmg, a.src); }
   return 1;
@@ -1192,9 +1235,9 @@ const f2Of = (P, id) => (P.sk[id] || 0) >= 10 && P.fork2 ? P.fork2[id] : null;
 const dayKey = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
 const dayNum = k => Math.floor(Date.parse(k + 'T00:00:00Z') / 864e5);
 const DAILY_LV = 3, ISLE_N = 15;
-function isleName(k) { const Wd = G.Wd; let i = Wd.fi.indexOf(k); if (i >= 0) return ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i]; i = Wd.mi.indexOf(k); if (i >= 0) return ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i]; return k === Wd.hill ? '바람개비 언덕' : '섬'; }
+function isleName(k) { const D = G.P.daily; if (D && k === D.isle && D.ich && D.ich !== G.Wd.ch) return D.iname + '(' + D.ich + '장)'; const s = G.Wd.islands[k]; return s && s.name || '섬'; }
 // 갈 수 있는 사냥 섬 중 내 레벨에 맞는 곳 몇 개에서 날마다 하나
-function isleCands(P) { const Wd = G.Wd, L = Wd.fi.map((k, i) => [k, ISL_LV[i][1]]); if (P.flags.bridge) L.push([Wd.hill, 8]); if (P.flags.bridge2) Wd.mi.forEach((k, i) => L.push([k, MARSH_LV[i][1]]));
+function isleCands(P) { const Wd = G.Wd, L = (Wd.ch === 3 ? [...Wd.fi, ...(P.flags.c3bridge ? Wd.ci : [])] : Wd.ch === 2 ? [...Wd.fi, ...(P.flags.c2bridge ? Wd.ci : [])] : [...Wd.fi, ...(P.flags.bridge ? [Wd.hill] : []), ...(P.flags.bridge2 ? Wd.mi : [])]).map(k => [k, Wd.islands[k].lv[1]]);
   const fit = L.filter(([, lv]) => lv >= P.lv - 4 && lv <= P.lv + 3); return (fit.length ? fit : L.sort((a, b) => b[1] - a[1]).slice(0, 2)).map(a => a[0]); }
 const DTASK = {
   kill: (t, n) => ['밑것 ' + n + '마리 쓰러뜨리기', n],
@@ -1206,10 +1249,10 @@ const DTASK = {
 };
 function newDaily(P, d) {
   const R = srand(dayNum(d) * 7919 + P.seed % 997), pk = a => a[Math.floor(R() * a.length)], C = isleCands(P);
-  const mobs = P.flags.bridge2 ? ['mudfluff', 'bogpod', 'heronling'] : ['fluff', 'seed', 'bird'];
+  const mobs = G.Wd.ch === 3 ? ['saltfluff', 'barnpod', 'crab'] : G.Wd.ch === 2 ? ['rustfluff', 'boltpod', 'scarecrow'] : P.flags.bridge2 ? ['mudfluff', 'bogpod', 'heronling'] : ['fluff', 'seed', 'bird'];
   const pool = [['mob', pk(mobs), 15], ['kill', '', 40], ['elite', '', 3], ['fell', '', 6], ['nest', '', 2]];
   const tasks = [['isle', '', 1]]; while (tasks.length < 3) { const t = pool.splice(Math.floor(R() * pool.length), 1)[0]; tasks.push(t); }
-  P.daily = { d, isle: C[Math.floor(R() * C.length)], isleN: 0, chest: 0, all: 0, tasks: tasks.map(([k, t, n]) => ({ k, t, n, c: 0, got: 0 })) };
+  const isle = C[Math.floor(R() * C.length)]; P.daily = { d, isle, ich: G.Wd.ch, iname: G.Wd.islands[isle].name, isleN: 0, chest: 0, all: 0, tasks: tasks.map(([k, t, n]) => ({ k, t, n, c: 0, got: 0 })) };
 }
 function dailyCheck(quiet) { const P = G.P; if (P.lv < DAILY_LV) return; const d = dayKey(); if (P.daily && P.daily.d === d) return;
   const first = !P.daily; newDaily(P, d); G.today = P.daily.isle; G.chest = null; for (const pk of G.packs) if (pk.isl === G.today && !pk.boss && !pk.elite) pk.elite = ri(1, ELITE.length);
@@ -1217,12 +1260,14 @@ function dailyCheck(quiet) { const P = G.P; if (P.lv < DAILY_LV) return; const d
 function dTask(k, t, n) { const D = G.P.daily; if (!D) return; for (const q of D.tasks) if (q.k === k && (!t || q.t === t) && q.c < q.n) { q.c = Math.min(q.n, q.c + (n || 1)); if (q.c >= q.n) { say('하루 의뢰 「' + DTASK[q.k](q.t, q.n)[0] + '」 끝! 마을 게시판에서 보상을 받아요.', '#ffd166'); sfx('lvl'); } } }
 function dailyKill(m, fell) { const P = G.P, D = P.daily; if (!D || P.lv < DAILY_LV) return;
   dTask('kill'); dTask('mob', m.t); if (m.elite) dTask('elite'); if (fell) dTask('fell'); if (m.D.mini) dTask('nest');
-  if (m.pk && m.pk.isl === D.isle && !D.chest && !G.chest) { D.isleN = Math.min(ISLE_N, D.isleN + 1); if (D.isleN >= ISLE_N) { spawnChest(); G.cut = { s: '오늘의 섬 상자가 나타났어요!', c: '#ffd166', t: 0 }; sfx('lvl'); } } }
+  if (m.pk && G.today != null && m.pk.isl === G.today && !D.chest && !G.chest) { D.isleN = Math.min(ISLE_N, D.isleN + 1); if (D.isleN >= ISLE_N) { spawnChest(); G.cut = { s: '오늘의 섬 상자가 나타났어요!', c: '#ffd166', t: 0 }; sfx('lvl'); } } }
 function spawnChest() { const s = G.Wd.islands[G.P.daily.isle]; let x = s.cx + .5, y = s.cy + .5; for (let i = 0; i < 30 && !walk(G.Wd, x, y); i++) { x = s.cx + rnd(-2.5, 2.5); y = s.cy + rnd(-2.5, 2.5); }
   G.chest = { x, y, t: 0 }; G.fx.push({ k: 'ring', x, y, r: 2, t: 0, life: .6, c: '#ffd166' }); }
-function dailyStart() { const P = G.P; G.today = P.daily && P.daily.d === dayKey() ? P.daily.isle : null; dailyCheck(); if (P.daily && P.daily.isleN >= ISLE_N && !P.daily.chest) spawnChest(); }
+function dailyStart() { const P = G.P, D = P.daily;
+  if (D && D.d === dayKey() && (D.ich || 1) !== G.Wd.ch && !D.isleN && !D.chest && P.lv >= DAILY_LV) { const C = isleCands(P); D.isle = C[Math.floor(Math.random() * C.length)]; D.ich = G.Wd.ch; D.iname = G.Wd.islands[D.isle].name; }
+  G.today = D && D.d === dayKey() && (D.ich || 1) === G.Wd.ch ? D.isle : null; dailyCheck(); if (P.daily && G.today != null && P.daily.isleN >= ISLE_N && !P.daily.chest) spawnChest(); if (P.daily && P.daily.isleN >= ISLE_N && !P.daily.chest) spawnChest(); }
 function openChest() { const P = G.P, D = P.daily, C = G.chest; if (!C || !D) return; G.chest = null; D.chest = 1; dTask('isle');
-  const lv = Math.max(P.lv, ...(ISL_LV[G.Wd.fi.indexOf(D.isle)] || MARSH_LV[G.Wd.mi.indexOf(D.isle)] || [8])), put = it => G.drops.push({ x: C.x + rnd(-.8, .8), y: C.y + rnd(-.8, .8), it, t: 0 });
+  const lv = Math.max(P.lv, (G.Wd.islands[D.isle].lv || [8, 8])[1]), put = it => G.drops.push({ x: C.x + rnd(-.8, .8), y: C.y + rnd(-.8, .8), it, t: 0 });
   G.drops.push({ x: C.x, y: C.y + .5, gold: lv * 40, t: 0 }); put(rollDrop(lv + 2, P.find + 220, P.cls)); put(rollDrop(lv + 1, P.find + 150, P.cls)); put(goods(Math.random() < .5 ? 'bhone' : 'bglue')); put(goods('pot', 2));
   if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: Math.random() < .35 ? 2 : 1 });
   for (let i = 0; i < 14; i++) G.fx.push({ k: 'pop', x: C.x + rnd(-1, 1), y: C.y + rnd(-1, 1), t: -Math.random() * .4, life: .5, c: '#ffd166' }); G.shake = 4; sfx('ench'); say('오늘의 섬 상자를 열었어요!', '#ffd166'); save(); }
@@ -1234,7 +1279,7 @@ function dailyHtml(X) { const P = G.P, D = P.daily;
   const r = dReward(P); let h = `<div class="sk-bx" style="max-width:460px">${X}<h3>마을 게시판 <small style="font-size:12px;color:#8a7458">${D.d.slice(5).replace('-', '월 ')}일 · 자정에 바뀌어요</small></h3>`;
   h += `<div class="sk-card" style="border-color:#e8b05a;background:#fff6e4"><b style="color:#b0702a">오늘의 섬 · ${isleName(D.isle)}</b><br><small>정예가 더 나오고 금화를 1.5배 떨궈요. 밑것 ${ISLE_N}마리를 쓰러뜨리면 상자가 나타나요.</small><br><small>${D.chest ? '상자를 열었어요 ✓' : G.chest ? '상자가 나와 있어요!' : '진행 ' + D.isleN + '/' + ISLE_N}</small></div>`;
   h += '<h4 style="margin:8px 0 4px">하루 의뢰</h4>' + D.tasks.map((q, i) => { const [n, need] = DTASK[q.k](q.t, q.n); return `<div class="sk-row"><div class="f"><b>${n}</b><br><small>${Math.min(q.c, need)}/${need} · 보상 ${r.gold}G, 경험치 ${r.xp}, ${i === 0 ? '민들레 차' : '바람 사탕'} 2</small></div><button class="sk-b ${q.got ? '' : 'g'}" data-a="dclaim" data-i="${i}" ${q.c >= q.n && !q.got ? '' : 'disabled'}>${q.got ? '받음' : q.c >= q.n ? '받기' : '진행 중'}</button></div>`; }).join('');
-  h += `<p class="m" style="font-size:11.5px">셋을 다 하면 덤으로 축복 숫돌을 줘요. 못 한 날도 손해는 없어요.${P.rested > 1 ? ' · 지금 순풍: 경험치 2배 ' + Math.round(P.rested) + ' 남음' : ''}</p>` + TOAST + '</div>'; return h; }
+  h += `${errandHtml()}<p class="m" style="font-size:11.5px">셋을 다 하면 덤으로 축복 숫돌을 줘요. 못 한 날도 손해는 없어요.${P.rested > 1 ? ' · 지금 순풍: 경험치 2배 ' + Math.round(P.rested) + ' 남음' : ''}</p>` + TOAST + '</div>'; return h; }
 function dailyTrack() { const P = G.P, D = P.daily; if (!D) return null; const left = D.tasks.filter(q => !q.got).length; if (!left) return null; const ready = D.tasks.filter(q => q.c >= q.n && !q.got).length;
   const q = D.tasks.find(q => q.c < q.n);
   return ['하루 의뢰 ' + (3 - left) + '/3', ready ? '마을 게시판에서 보상 받기' : G.chest ? '오늘의 섬 상자 열기' : !D.chest ? '오늘의 섬 ' + isleName(D.isle) + ' ' + D.isleN + '/' + ISLE_N : q ? DTASK[q.k](q.t, q.n)[0] + ' ' + q.c + '/' + q.n : '마을 게시판']; }
@@ -1246,17 +1291,332 @@ function drawChest(c, sx, sy) { const t = G.t; x.save(); x.globalAlpha = .35 + .
   x.fillStyle = '#8a5a2a'; x.fillRect(sx - 15, sy - 20 + b, 30, 18); x.fillStyle = '#a8703a'; x.beginPath(); x.moveTo(sx - 16, sy - 20 + b); x.quadraticCurveTo(sx, sy - 34 + b, sx + 16, sy - 20 + b); x.closePath(); x.fill();
   x.strokeStyle = '#5a3a1a'; x.lineWidth = 2; x.strokeRect(sx - 15, sy - 20 + b, 30, 18); x.fillStyle = '#ffd166'; x.fillRect(sx - 16, sy - 15 + b, 32, 3); x.fillRect(sx - 3, sy - 18 + b, 6, 8); x.restore(); }
 
+/* ---------- 2장 녹슨 풍차 군도 (15~25레벨) · 장 보스 삐걱 파수꾼 ---------- */
+const C2_LV = [[15, 16], [16, 17], [17, 18], [18, 19], [20, 21], [21, 22]];
+Object.assign(MOBDEF, {
+  rustfluff: { n: '녹 보풀', hp: [12, 6], dmg: [3, 5, 1], spd: 1.75, r: .3, sz: 0, xp: [8, 4], atk: 1, ai: 'melee', spr: 'rustfluff', desc: '멈춘 풍차에서 떨어진 녹가루가 엉겨 붙은 보풀이. 떼로 몰려와요.' },
+  boltpod: { n: '쇠못 꼬투리', hp: [20, 8], dmg: [4, 7, 1.4], spd: 1.2, r: .32, sz: 1, xp: [12, 5], atk: 1.2, ai: 'charge', spr: 'boltpod', desc: '껍질에 녹슨 쇠못이 박힌 꼬투리. 멀리서 냅다 들이받아요.' },
+  rustcrow: { n: '녹슨 까마귀', hp: [10, 4], dmg: [3, 5, .9], spd: 2.6, r: .28, sz: 0, xp: [9, 4], atk: .9, ai: 'dive', fly: 1, spr: 'rustcrow', desc: '멈춘 풍차 날개에 둥지를 튼 까마귀. 떼로 내리꽂아요.' },
+  scarecrow: { n: '낫 허수아비', hp: [34, 11], dmg: [5, 9, 1.5], spd: 1.3, r: .36, sz: 1, xp: [16, 6], atk: 2.6, ai: 'spin', spr: 'scarecrow', desc: '주인 잃은 밭을 지키던 허수아비. 가까이 오면 낫 손을 휘휘 돌려요(바닥 표시를 보고 피해요).' },
+  cogkeeper: { n: '톱니 둥지지기', hp: [110, 26], dmg: [7, 12, 1.6], spd: 1.05, r: .55, sz: 1, xp: [80, 26], atk: 1.8, ai: 'boss', mini: 1, big: 1, spr: 'cogkeeper', desc: '쇠 껍질을 두른 둥지지기. 풍차 섬마다 둥지를 틀고 사슬 고리를 품고 있어요.' },
+  creaker: { n: '삐걱 파수꾼', hp: [3600, 0], dmg: [18, 28, 0], spd: 1.05, r: 1.05, sz: 1, xp: [2600, 0], atk: 2.2, ai: 'boss', boss: 1, big: 1, creaker: 1, spr: 'creaker', desc: '큰 풍차를 지키던 나무·쇠 파수꾼. 바람이 멎자 등의 풍차 날개를 거꾸로 돌려 섬의 바람을 빨아들이고 있어요.' },
+});
+const C2MOB = { rustfluff: 1, boltpod: 1, rustcrow: 1, scarecrow: 1, cogkeeper: 1 };
+Object.assign(GOODS, {
+  chain: { n: '사슬 고리', ic: 'plank', d: '톱니 둥지지기가 품은 쇠사슬 고리. 다리를 잇는 데 써요', quest: 1 },
+  cog: { n: '녹슨 톱니', ic: 'hone', d: '멈춘 풍차에서 빠진 톱니. 대장장이 풀무가 찾아요', quest: 1 },
+});
+// 2장 장비(12·18레벨 단계) · 한 벌 「풍차지기」 · 전해진 「멈춘 풍차의 심장」
+const C2BASES = [
+  { id: 'spear3', n: '풍차살 창', s: 'weapon', ic: 'spear2', cls: 'warden', dmg: [7, 14, 8, 16], spd: 1, lv: 12, req: { str: 26 } },
+  { id: 'spear4', n: '톱니 창', s: 'weapon', ic: 'spear2', cls: 'warden', dmg: [9, 18, 11, 21], spd: .95, lv: 18, req: { str: 34 } },
+  { id: 'staff3', n: '방앗간 지팡이', s: 'weapon', ic: 'staff2', cls: 'windcaller', dmg: [6, 13, 7, 14], spd: 1.05, lv: 12, req: { spi: 28 } },
+  { id: 'staff4', n: '녹슨 바람틀 지팡이', s: 'weapon', ic: 'staff2', cls: 'windcaller', dmg: [8, 17, 9, 19], spd: 1.05, lv: 18, req: { spi: 36 } },
+  { id: 'sword3', n: '쇠사슬 쌍칼', s: 'weapon', ic: 'sword2', cls: 'drifter', dmg: [5, 12, 6, 13], spd: 1.05, lv: 12, req: { agi: 28 } },
+  { id: 'sword4', n: '톱날 쌍칼', s: 'weapon', ic: 'sword2', cls: 'drifter', dmg: [7, 15, 8, 17], spd: 1.08, lv: 18, req: { agi: 36 } },
+  { id: 'xbow3', n: '방앗간 석궁', s: 'weapon', ic: 'xbow2', cls: 'trapper', dmg: [6, 14, 7, 15], spd: 1, lv: 12, req: { agi: 28 } },
+  { id: 'xbow4', n: '쇠바퀴 석궁', s: 'weapon', ic: 'xbow2', cls: 'trapper', dmg: [8, 18, 9, 20], spd: 1, lv: 18, req: { agi: 36 } },
+  { id: 'hammer3', n: '풍차 망치', s: 'weapon', ic: 'hammer2', cls: 'ringer', dmg: [8, 16, 9, 18], spd: .95, lv: 12, req: { str: 26 } },
+  { id: 'hammer4', n: '큰 톱니 망치', s: 'weapon', ic: 'hammer2', cls: 'ringer', dmg: [10, 20, 12, 24], spd: .95, lv: 18, req: { str: 34 } },
+  { id: 'dagger2', n: '녹슨 바람칼', s: 'off', ic: 'dagger', cls: 'drifter', ac: 2, fix: { crit: 4, aspd: 4 }, lv: 14 },
+  { id: 'trapbox2', n: '톱니 덫 상자', s: 'off', ic: 'trapbox', cls: 'trapper', ac: 3, fix: { agi: 3 }, lv: 14 },
+  { id: 'gong2', n: '쇠바퀴 종', s: 'off', ic: 'gong', cls: 'ringer', ac: 4, fix: { vit: 3 }, lv: 14 },
+  { id: 'shield3', n: '풍차날 방패', s: 'off', ic: 'shield2', cls: 'warden', ac: 6, blk: 15, lv: 14, req: { str: 26 } },
+  { id: 'bell2', n: '방앗간 풍경', s: 'off', ic: 'bell', cls: 'windcaller', ac: 2, fix: { spi: 3, wreg: 10 }, lv: 14 },
+  { id: 'helm3', n: '풍차지기 고깔모', s: 'helm', ic: 'hat', ac: 4, lv: 12 },
+  { id: 'helm4', n: '톱니 투구', s: 'helm', ic: 'helm', ac: 6, lv: 18, req: { str: 28 } },
+  { id: 'armor3', n: '풍차지기 앞치마', s: 'armor', ic: 'armor1', ac: 11, lv: 12 },
+  { id: 'armor4', n: '쇠사슬 조끼', s: 'armor', ic: 'armor2', ac: 14, lv: 18, req: { str: 28 } },
+  { id: 'legs3', n: '방앗간 바지', s: 'legs', ic: 'legs1', ac: 7, lv: 12 },
+  { id: 'legs4', n: '사슬 다리싸개', s: 'legs', ic: 'legs2', ac: 9, lv: 18, req: { str: 26 } },
+  { id: 'inner2', n: '기름 먹인 안감', s: 'inner', ic: 'inner', ac: 3, fix: { res: 8 }, lv: 14 },
+  { id: 'cloak3', n: '돛천 망토', s: 'cloak', ic: 'cloak2', ac: 3, fix: { agi: 2 }, lv: 12 },
+  { id: 'glove2', n: '풍차지기 장갑', s: 'gloves', ic: 'gloves', ac: 3, lv: 12 },
+  { id: 'belt2', n: '풍차지기 허리띠', s: 'belt', ic: 'belt', ac: 3, fix: { hp: 20 }, lv: 12 },
+  { id: 'boots2', n: '쇠징 장화', s: 'boots', ic: 'boots', ac: 4, fix: { move: 3 }, lv: 14 },
+  { id: 'amu2', n: '톱니 목걸이', s: 'amulet', ic: 'amulet2', fix: { hp: 30 }, lv: 12, noench: 1 },
+  { id: 'ear2', n: '쇠 귀걸이', s: 'ear', ic: 'ear', fix: { crit: 3 }, lv: 14, noench: 1 },
+  { id: 'ring3', n: '녹 반지', s: 'ring', ic: 'ring', fix: { vit: 3 }, lv: 12, noench: 1 },
+  { id: 'ring4', n: '쇠바퀴 반지', s: 'ring', ic: 'ring2', fix: { str: 2, agi: 2 }, lv: 16, noench: 1 },
+  { id: 'sail4', n: '풍차 날개 돛', s: 'sail', ic: 'sail3', sail: [4.5, .95], fix: { move: 6 }, lv: 16 },
+];
+BASES.push(...C2BASES); for (const b of C2BASES) BASE[b.id] = b;
+SETS.mill = { n: '풍차지기', parts: [['helm3', '풍차지기 고깔모'], ['armor3', '풍차지기 앞치마'], ['glove2', '풍차지기 장갑'], ['belt2', '풍차지기 허리띠']], bonus: [[2, [['ac', 6], ['hp', 40]]], [3, [['dmgp', 10], ['res', 10]]], [4, [['aspd', 8], ['windk', 3], ['find', 25]]]] };
+UNIQ.push({ id: 'u_millheart', n: '멈춘 풍차의 심장', base: 'amu2', story: '삐걱 파수꾼의 가슴 속에서 아직도 아주 천천히 돌고 있던 작은 톱니. 쥐면 손바닥에 바람이 인다.', fx: [['dmgp', 20], ['hp', 40], ['windk', 3], ['res', 12]], lv: 16 });
+
+Object.assign(QUESTS, {
+  q8: { ch: 2, n: '쇠바퀴 마을의 부탁', from: 'chief', goal: '풍차 섬의 녹슨 밑것 20마리 쓰러뜨리기', need: 20,
+    talk: ['자네가 민들레 섬의 바람을 되찾았다는 이음꾼인가! 바람길을 타고 여기까지 오다니.', '여긴 쇠바퀴 마을, 녹슨 풍차 군도일세. 풍차가 멈춘 뒤로 녹 보풀이며 낫 허수아비가 들끓어.', '우선 스무 마리만 혼내 주게. 그래야 마을 사람들이 밭에 나갈 수 있어.'],
+    done: ['허허, 밭에 사람들이 다시 나가는구먼. 자네 솜씨가 소문대로야.'] },
+  q9: { ch: 2, n: '쇠사슬 다리', from: 'chief', goal: '톱니 둥지지기의 사슬 고리 4개를 모아 가운데 풍차섬 동쪽 쇠사슬 다리 잇기', need: 4,
+    talk: ['가운데 풍차섬 동쪽으로 쇠사슬 다리가 있었는데, 큰 풍차가 거꾸로 돌던 날 사슬이 끊어졌다네.', '풍차 섬마다 톱니 둥지지기가 둥지를 틀고 끊어진 사슬 고리를 품고 있어. 네 개면 다리를 이을 수 있지.'],
+    done: ['사슬 다리가 다시 이어졌구먼! 저 너머 사슬 나루, 그리고 큰 풍차섬…', '삐걱 파수꾼이 있는 곳일세. 마음 단단히 먹게.'] },
+  q10: { ch: 2, n: '허수아비 밭', from: 'sage', goal: '낫 허수아비 12마리 쓰러뜨리기', need: 12,
+    talk: ['솔바람이야, 나도 바람길 따라 왔어! 여기 허수아비들 봤어? 원래는 새만 쫓던 착한 애들이었대.', '바람이 멎으니까 낫 손을 돌리며 사람한테 덤벼. 바닥에 둥근 표시가 뜨면 얼른 물러나. 열두 마리만 쉬게 해 줘.'],
+    done: ['고마워. 밭에서 바람 냄새가 다시 나. 이건 내가 주운 반지야.'] },
+  q11: { ch: 2, n: '녹 벗기기', from: 'smith', goal: '녹슨 톱니 5개 가져오기', need: 5,
+    talk: ['난 풀무, 여기 대장장이야. 무쇠 녀석 이야기는 들었지.', '녹 보풀이랑 쇠못 꼬투리가 풍차에서 빠진 톱니를 물고 다녀. 다섯 개만 갖다 주면 녹 벗기는 법을 알려 주지.'],
+    done: ['좋아, 잘 닦으면 새것처럼 돌아가. 수고비로 축복 받은 숫돌이랑 아교를 줄게.'] },
+  q12: { ch: 2, n: '큰 풍차섬의 삐걱 파수꾼', from: 'chief', goal: '큰 풍차섬의 삐걱 파수꾼을 쓰러뜨리고 큰 풍차섬 바람개비 표지에 손 얹기', need: 1,
+    talk: ['큰 풍차를 지키던 파수꾼이 미쳐 버렸네. 등의 날개를 거꾸로 돌려 군도의 바람을 다 빨아들이고 있어.', '녀석은 날개를 휘둘러 둘레를 쓸고, 쇠사슬 주먹으로 바닥을 줄줄이 내리친다네. 쇠못 꼬투리도 불러내지.', '성이 나면 날개에서 바람 칼날이 사방으로 날아온다는군. 칼날 사이 틈으로 피하게.'],
+    done: ['…풍차가 돈다! 군도의 풍차가 하나둘 다시 돌기 시작했어!', '고맙네, 이음꾼. 그런데 바람이 흘러가는 쪽을 보니… 닻 내린 항구 쪽 하늘이 이상하게 잠잠하구먼.'] },
+});
+const C2NPC = { chief: '풍차지기 대들보', smith: '대장장이 풀무', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' }, C1NPC = { chief: '촌장 들메', smith: '대장장이 무쇠', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' };
+function setNpcNames(ch) { const N = ch === 3 ? C3NPC : ch === 2 ? C2NPC : C1NPC; for (const k in N) NPCDEF[k].n = N[k]; }
+const qCh = id => QUESTS[id].ch || 1;
+function qAvail2(id) { const q = G.P.q; if (G.Wd.ch !== 2) return false; if (id === 'q8' || id === 'q10' || id === 'q11') return true; if (id === 'q9') return q.q8 && q.q8.s === 3; if (id === 'q12') return q.q9 && q.q9.s === 3; return false; }
+function talk2(id, offer, finish) {
+  const P = G.P, q = qid => P.q[qid], btns = []; let lines = null;
+  if (id === 'chief') {
+    if (!q('q8')) offer('q8'); else if (q('q8').s === 2) finish('q8'); else if (q('q8').s === 1) lines = ['녹 보풀이며 허수아비며 풍차 섬마다 들끓네. 스무 마리만 부탁하네.'];
+    else if (!q('q9')) offer('q9'); else if (q('q9').s === 2) finish('q9'); else if (q('q9').s === 1) lines = ['사슬 고리는 풍차 섬 둥지의 톱니 둥지지기가 품고 있다네. 네 개 모아 가운데 풍차섬 동쪽 끊긴 사슬 다리로 가게.'];
+    else if (!q('q12')) offer('q12'); else if (q('q12').s === 2 && P.flags['wp_큰 풍차섬']) finish('q12'); else if (q('q12').s === 2) lines = ['파수꾼을 쓰러뜨렸다고?! 큰 풍차섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.'];
+    else if (q('q12').s === 1) lines = ['큰 풍차섬은 사슬 나루 너머 톱니 벌판 끝일세. 녀석이 성나면 바람 칼날이 사방으로 날아와. 칼날 사이 틈을 보게.'];
+    else lines = ['군도의 풍차가 다시 돈다네. 자네 덕일세, 이음꾼.', '닻 내린 항구로 가는 바람길이 열렸네. 바람개비 표지에서 건너가 보게.']; }
+  if (id === 'sage') { if (!q('q10')) offer('q10'); else if (q('q10').s === 2) finish('q10'); else lines = ['풍차가 멈추면 바람도 고여서 썩어. 그래서 녹이 이렇게 빨리 스는 거래.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
+    const n = P.inv.filter(it => !it.g && !it.id).length; btns.push(`<button class="sk-b" data-a="ident" ${n && P.gold >= 15 ? '' : 'disabled'}>감정하기 (${n}개 · 개당 15G)</button>`); }
+  if (id === 'smith') { if (!q('q11')) offer('q11'); else if (q('q11').s === 1 && count('cog') >= 5) { lines = ['오, 톱니 다섯 개 다 모았구나!']; btns.push(`<button class="sk-b g" data-a="finish" data-q="q11">톱니 건네기</button>`); } else if (q('q11').s === 1) lines = ['녹슨 톱니는 녹 보풀이랑 쇠못 꼬투리가 물고 다녀. 다섯 개야.']; else lines = ['강화든 옵션 다시 굴리기든 맡겨. 여기 쇠는 단단해서 무쇠네보다 잘 붙지.']; btns.push(`<button class="sk-b p" data-a="smith">대장간 열기</button>`); }
+  if (id === 'merchant') { lines = ['또 만났네! 바람길이 열리니까 나도 따라왔지. 여긴 쇠붙이가 좋아.']; btns.push(`<button class="sk-b p" data-a="shop">사고팔기</button>`); }
+  return { lines, btns };
+}
+function finish2(id) { const P = G.P; if (id === 'q11' && !useGood('cog', 5)) return false;
+  const R = { q8: [1800, 500], q9: [2500, 700], q10: [2200, 600], q11: [1200, 400], q12: [6000, 2000] }[id]; if (!R) return false;
+  P.q[id].s = 3; gainXp(R[0]); P.gold += R[1];
+  if (id === 'q8') addInv(makeItem('amu2', 2, 17, { id: 1, st: 0 }));
+  if (id === 'q9') addInv(makeItem('boots2', 2, 19, { id: 1, st: 1 }));
+  if (id === 'q10') addInv(makeItem('ring4', 2, 19, { id: 1, st: 0 }));
+  if (id === 'q11') { addInv(goods('bhone')); addInv(goods('bglue')); }
+  if (id === 'q12') { addInv(makeItem('sail4', 2, 25, { id: 1, st: 1 })); addInv(goods('bhone', 2)); addInv(goods('bglue', 2)); }
+  return R; }
+function track2(id, q) { if (id === 'q8') return '녹슨 밑것 ' + q.n + '/20'; if (id === 'q9') return '사슬 고리 ' + Math.min(4, count('chain')) + '/4 → 가운데 풍차섬 동쪽 끊긴 다리'; if (id === 'q10') return '낫 허수아비 ' + q.n + '/12'; if (id === 'q11') return '녹슨 톱니 ' + Math.min(5, count('cog')) + '/5'; if (id === 'q12') return '큰 풍차섬의 삐걱 파수꾼'; return null; }
+function spawnCh2() {
+  const Wd = G.Wd, L = [...Wd.fi, ...Wd.ci];
+  L.forEach((k, i) => { const s = Wd.islands[k], n = i >= 4 ? 5 : 4;
+    for (let j = 0; j < n; j++) { const a = j / n * TAU + i * 1.1, d = s.r * .5; let x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d; if (!walk(Wd, x, y)) { x = s.cx; y = s.cy; }
+      const kind = pick([['rustfluff'], ['rustfluff', 'boltpod'], ['rustcrow'], ['scarecrow'], ['scarecrow', 'rustfluff'], ['boltpod']]);
+      const pk = j === 0 ? { isl: k, x, y, lv: s.lv, kinds: ['rustfluff', 'boltpod', 'rustfluff'], n: 6, lead: 'cogkeeper', nest: 1, elite: ri(1, ELITE.length) }
+        : { isl: k, x, y, lv: s.lv, kinds: kind, n: kind[0] === 'rustcrow' ? 3 : kind[0] === 'scarecrow' ? ri(2, 3) : ri(3, 5), elite: Math.random() < .25 ? ri(1, ELITE.length) : 0 };
+      G.packs.push(pk); spawnPack(pk); } });
+  const H = Wd.islands[Wd.hill];
+  if (!G.P.flags.creaker) { const pk = { isl: Wd.hill, x: H.cx + 1, y: H.cy - 1, lv: [25, 25], kinds: ['creaker'], n: 1, boss: 1, nest: 1 }; G.packs.push(pk); spawnPack(pk); }
+  for (const [ox, oy, kinds] of [[-4, 3, ['scarecrow', 'rustfluff']], [3.5, 3.5, ['boltpod', 'rustcrow']]]) { const pk = { isl: Wd.hill, x: H.cx + ox, y: H.cy + oy, lv: [22, 23], kinds, n: 3 }; G.packs.push(pk); spawnPack(pk); }
+}
+function ch2Kill(m) { const P = G.P; if (G.Wd.ch !== 2) return;
+  if (C2MOB[m.t]) qAdd('q8', 1); if (m.t === 'scarecrow') qAdd('q10', 1);
+  if (m.t === 'cogkeeper' && P.q.q9 && P.q.q9.s === 1 && count('chain') + G.drops.filter(d => d.it && d.it.g === 'chain').length < 4) { G.drops.push({ x: m.x + rnd(-.4, .4), y: m.y + rnd(-.4, .4), it: goods('chain'), t: 0 }); say('사슬 고리를 떨궜어요!', '#ffe08a', 1); }
+  if ((m.t === 'rustfluff' || m.t === 'boltpod') && P.q.q11 && P.q.q11.s === 1 && count('cog') + G.drops.filter(d => d.it && d.it.g === 'cog').length < 5 && Math.random() < .2) G.drops.push({ x: m.x + rnd(-.4, .4), y: m.y + rnd(-.4, .4), it: goods('cog'), t: 0 });
+}
+// 낫 허수아비: 다가와서 낫 손 돌리기(바닥 표시 뒤 원형 공격)
+function spinAI(m, dt, d, dx, dy, sp) {
+  if (m.spinW > 0) { m.spinW -= dt; m.an = 'hurt'; m.at = .1; if (m.spinW <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 1; G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 1.6, t: 0, life: .35, c: '#e8c88a' }); sfx('cone'); if (hyp(G.P.x - m.x, G.P.y - m.y) < 1.6 + G.P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]), m); } return; }
+  if (d < 1.7 && m.cd <= 0) { m.cd = m.D.atk * rnd(.9, 1.2); m.spinW = .65; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 1.6, t: 0, life: .65 }); return; }
+  if (d > 1.1) { move(m, dx / d * sp * dt, dy / d * sp * dt); m.an = 'move'; separate(m); } else m.an = 'idle';
+}
+// 삐걱 파수꾼: 날개 휘둘러 쓸기 · 쇠사슬 주먹 줄 내리치기 · 쇠못 꼬투리 부르기 · (성나면) 바람 칼날
+function creakerAI(m, dt, d, dx, dy) {
+  const P = G.P, rage = m.hp < m.mhp * .5; if (rage && !m.raged) { m.raged = 1; G.cut = { s: '삐걱 파수꾼의 날개가 거꾸로 돌아요!', t: 0, c: '#ffb070' }; sfx('slam'); G.shake = 8; }
+  m.sum = (m.sum ?? 12) - dt; m.sw = (m.sw ?? 4) - dt; m.chn = (m.chn ?? 7) - dt; m.bl = (m.bl ?? 2) - dt;
+  if (m.sum <= 0) { m.sum = rage ? 14 : 18; for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, x2 = m.x + Math.cos(a) * 2, y2 = m.y + Math.sin(a) * 2; if (walk(G.Wd, x2, y2)) { const n = mkMob('boltpod', x2, y2, 22); n.st = 'chase'; G.mobs.push(n); } }
+    G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 2.4, t: 0, life: .5, c: '#c8a070' }); say('삐걱 파수꾼이 쇠못 꼬투리를 불러냈어요!', '#e8c88a', 1); }
+  if (rage && m.bl <= 0) { m.bl = 6.5; m.ang = (m.ang || 0) + .4; for (let i = 0; i < 8; i++) { const a = m.ang + i / 8 * TAU; G.areas.push({ k: 'blade', x: m.x, y: m.y, vx: Math.cos(a) * 4.2, vy: Math.sin(a) * 4.2, t: 0, life: 2.3, dmg: rnd(m.dmg[0], m.dmg[1]) * .55, src: m }); } sfx('gust'); }
+  if (m.chn <= 0 && d > 2.4 && d < 8.5) { m.chn = rage ? 6.5 : 8.5; const ux = dx / d, uy = dy / d; m.an = 'atk'; m.at = 0; m.hitDone = 1;
+    for (let i = 1; i <= 4; i++) { const cx = m.x + ux * i * 1.7, cy = m.y + uy * i * 1.7, w = .8 + i * .16; G.areas.push({ k: 'warn', x: cx, y: cy, r: 1.15, t: 0, life: w });
+      later(w, () => { if (m.dead) return; G.fx.push({ k: 'ring', x: cx, y: cy, r: 1.15, t: 0, life: .3, c: '#ffd0a0' }, { k: 'crack', x: cx, y: cy, t: 0, life: .9 }); G.shake = Math.max(G.shake, 4); sfx('slam'); if (hyp(G.P.x - cx, G.P.y - cy) < 1.15 + G.P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * .8, m); }); }
+    return; }
+  if (m.sw <= 0 && d < 3.4) { m.sw = rage ? 5 : 7; m.an = 'atk'; m.at = 0; m.hitDone = 0; m.kind = 'sweep'; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 3.1, t: 0, life: .8 }); return; }
+  if (d > m.r + 1) { move(m, dx / d * m.spd * (rage ? 1.15 : 1) * dt, dy / d * m.spd * (rage ? 1.15 : 1) * dt); m.an = 'move'; }
+  else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = rage ? 1.9 : 2.6; m.kind = 'slam'; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 2.4, t: 0, life: .8 }); }
+  else m.an = 'idle';
+}
+function creakerSweep(m) { const P = G.P, d = hyp(P.x - m.x, P.y - m.y) || 1; G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 3.1, t: 0, life: .4, c: '#f0d8a8' }, { k: 'ring', x: m.x, y: m.y, r: 2.2, t: 0, life: .3, c: '#ffffff' }); G.shake = 7; sfx('gust');
+  if (d < 3.1 + P.r) { hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * .9, m); const kx = (P.x - m.x) / d * 2.6, ky = (P.y - m.y) / d * 2.6; for (let i = 0; i < 10; i++) move(P, kx / 10, ky / 10); } }
+function ch2Area(a, dt) {
+  if (a.k !== 'blade') return ch3Area(a, dt); const P = G.P; a.x += a.vx * dt; a.y += a.vy * dt; a.rot = (a.rot || 0) + dt * 14;
+  if (!G.Wd.inb(Math.floor(a.x), Math.floor(a.y))) { a.t = a.life; return 1; }
+  if (!P.dead && hyp(P.x - a.x, P.y - a.y) < .5 + P.r && !a.hit) { a.hit = 1; a.t = a.life; G.fx.push({ k: 'pop', x: a.x, y: a.y, t: 0, life: .3, c: '#f0d8a8' }); hurtPlayer(a.dmg, a.src); }
+  return 1;
+}
+function drawBlade(a) { const [ax, ay] = iso(a.x, a.y), Y = ay - 22; x.save(); x.translate(ax, Y); x.rotate(a.rot || 0); x.fillStyle = 'rgba(30,24,18,.25)'; x.restore();
+  x.fillStyle = 'rgba(30,30,20,.22)'; x.beginPath(); x.ellipse(ax, ay, 9, 4, 0, 0, TAU); x.fill();
+  x.save(); x.translate(ax, Y); x.rotate(a.rot || 0); for (let i = 0; i < 4; i++) { x.rotate(Math.PI / 2); x.fillStyle = i % 2 ? '#e8d8b0' : '#c8a878'; x.beginPath(); x.moveTo(0, 0); x.lineTo(14, -3); x.lineTo(15, 3); x.closePath(); x.fill(); x.strokeStyle = '#5a3e24'; x.lineWidth = 1.2; x.stroke(); } x.fillStyle = '#5a4e48'; x.beginPath(); x.arc(0, 0, 3, 0, TAU); x.fill(); x.restore(); }
+// 장 넘나들기(바람개비 표지)
+const CHAPS = { 1: ['1장 · 민들레 섬', '민들레 마을로 돌아가요', () => 1], 2: ['2장 · 녹슨 풍차 군도', '바람길을 타고 건너가요 (15~25레벨)', P => P.q.q7 && P.q.q7.s === 3], 3: ['3장 · 닻 내린 항구', '바람길을 타고 건너가요 (25~34레벨)', P => P.q.q12 && P.q.q12.s === 3] };
+function goChapter(n) { const P = G.P; P.ch = n; const S = snap(); PANEL = null; panel.hidden = true; panel.innerHTML = ''; MINI = null; startGame(S); G.cut = { s: CHAPS[n][0], c: '#ffd166', t: 0 }; save(); last = performance.now(); }
+function chapHtml() { const P = G.P, ch = G.Wd.ch; let h = '';
+  for (const n in CHAPS) { const [t, d, ok] = CHAPS[n]; if (+n === ch || !ok(P)) continue; h += `<div class="sk-row"><div class="f"><b>${t}</b><br><small>${+n < ch ? '다시 건너가요' : d}</small></div><button class="sk-b${+n > ch ? ' g' : ''}" data-a="chap" data-i="${n}">건너가기</button></div>`; }
+  return h ? '<h4 style="margin:10px 0 4px">바람길</h4>' + h : ''; }
+function endHtml2() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>2장 「녹슨 풍차 군도」 끝</h3><p>삐걱 파수꾼이 쓰러지자 거꾸로 돌던 큰 풍차가 멈칫하더니, 천천히 제 방향으로 돌기 시작했다.</p><p>군도의 풍차들이 하나둘 따라 돈다. 바람은 이제 닻 내린 항구 쪽으로 흘러간다 — 거기엔 묶인 비행선들이 있다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 3장 닻 내린 항구로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
+
+/* ---------- 3장 닻 내린 항구 (25~34레벨) · 장 보스 녹슨 비행선 ---------- */
+const C3_LV = [[25, 26], [26, 27], [27, 28], [28, 29], [30, 31], [31, 32]];
+Object.assign(MOBDEF, {
+  saltfluff: { n: '소금 보풀', hp: [14, 7], dmg: [4, 6, 1.1], spd: 1.8, r: .3, sz: 0, xp: [9, 4.5], atk: 1, ai: 'melee', spr: 'saltfluff', desc: '바닷바람에 말라붙은 소금이 엉겨 붙은 보풀이. 따끔따끔 떼로 몰려와요.' },
+  barnpod: { n: '따개비 꼬투리', hp: [24, 9], dmg: [5, 8, 1.5], spd: 1.25, r: .32, sz: 1, xp: [13, 5.5], atk: 1.2, ai: 'charge', spr: 'barnpod', desc: '껍질에 따개비가 다닥다닥 붙은 꼬투리. 멀리서 냅다 들이받아요.' },
+  gull: { n: '심술 갈매기', hp: [12, 5], dmg: [4, 6, 1], spd: 2.8, r: .28, sz: 0, xp: [10, 4.5], atk: .9, ai: 'dive', fly: 1, spr: 'gull', desc: '묶인 비행선 돛대에 앉아 있다가 떼로 내리꽂는 갈매기.' },
+  crab: { n: '닻집게', hp: [40, 13], dmg: [6, 10, 1.6], spd: 1.25, r: .4, sz: 1, xp: [18, 7], atk: 2.6, ai: 'spin', spr: 'crab', desc: '닻처럼 생긴 큰 집게를 단 게. 가까이 오면 집게를 휘휘 휘둘러요(바닥 표시를 보고 피해요).' },
+  barnkeeper: { n: '따개비 둥지지기', hp: [130, 30], dmg: [8, 13, 1.7], spd: 1.05, r: .55, sz: 1, xp: [90, 30], atk: 1.8, ai: 'boss', mini: 1, big: 1, spr: 'barnkeeper', desc: '따개비 껍질을 두른 둥지지기. 선창마다 둥지를 틀고 밧줄 타래를 품고 있어요.' },
+  rustship: { n: '녹슨 비행선', hp: [6200, 0], dmg: [26, 40, 0], spd: .85, r: 1.15, sz: 1, xp: [5200, 0], atk: 2.2, ai: 'boss', boss: 1, big: 1, rustship: 1, fly: 1, spr: 'rustship', desc: '항구에 묶여 있던 낡은 비행선. 바람이 멎자 닻줄을 끊고 스스로 떠올라 항구를 내려다보며 포를 쏘아 대요.' },
+});
+const C3MOB = { saltfluff: 1, barnpod: 1, gull: 1, crab: 1, barnkeeper: 1 };
+Object.assign(GOODS, {
+  rope: { n: '밧줄 타래', ic: 'plank', d: '따개비 둥지지기가 품은 굵은 밧줄 타래. 줄다리를 잇는 데 써요', quest: 1 },
+  salt: { n: '소금 결정', ic: 'hone', d: '바닷바람이 굳힌 소금 덩어리. 대장장이가 담금질에 써요', quest: 1 },
+});
+// 3장 장비(24·30레벨 단계): 2장 장비 틀을 한 단계 올린다 · 한 벌 「항구지기」 · 전해진 「닻의 마지막 무게」
+const C3NAME = { spear3: ['spear5', '닻줄 창'], spear4: ['spear6', '작살 창'], staff3: ['staff5', '등대지기 지팡이'], staff4: ['staff6', '돛대 지팡이'], sword3: ['sword5', '갈고리 쌍칼'], sword4: ['sword6', '물보라 쌍칼'], xbow3: ['xbow5', '선창 석궁'], xbow4: ['xbow6', '작살 석궁'], hammer3: ['hammer5', '닻 망치'], hammer4: ['hammer6', '큰 닻 망치'], dagger2: ['dagger3', '소금 바람칼'], trapbox2: ['trapbox3', '그물 덫 상자'], gong2: ['gong3', '뱃종'], shield3: ['shield4', '방현재 방패'], bell2: ['bell3', '항구 풍경'], helm3: ['helm5', '항구지기 두건'], helm4: ['helm6', '잠수 투구'], armor3: ['armor5', '항구지기 비옷'], armor4: ['armor6', '따개비 갑옷'], legs3: ['legs5', '선원 바지'], legs4: ['legs6', '닻사슬 다리싸개'], inner2: ['inner3', '소금 먹인 안감'], cloak3: ['cloak4', '돛폭 망토'], glove2: ['glove3', '항구지기 장갑'], belt2: ['belt3', '항구지기 허리띠'], boots2: ['boots3', '갑판 장화'], amu2: ['amu3', '닻 목걸이'], ear2: ['ear3', '진주 귀걸이'], ring3: ['ring5', '따개비 반지'], ring4: ['ring6', '나침 반지'], sail4: ['sail5', '비행선 돛'] };
+const C3BASES = C2BASES.map(b => { const [id, n] = C3NAME[b.id], o = { ...b, id, n, lv: b.lv + 12 };
+  if (b.dmg) o.dmg = b.dmg.map(v => Math.round(v * 1.45));
+  if (b.ac) o.ac = Math.round(b.ac * 1.4); if (b.blk) o.blk = b.blk + 3;
+  if (b.fix) { o.fix = {}; for (const k in b.fix) o.fix[k] = Math.round(b.fix[k] * 1.6); }
+  if (b.req) { o.req = {}; for (const k in b.req) o.req[k] = b.req[k] + 12; }
+  if (b.sail) o.sail = [5.2, b.sail[1]];
+  return o; });
+BASES.push(...C3BASES); for (const b of C3BASES) BASE[b.id] = b;
+SETS.harbor = { n: '항구지기', parts: [['helm5', '항구지기 두건'], ['armor5', '항구지기 비옷'], ['glove3', '항구지기 장갑'], ['belt3', '항구지기 허리띠']], bonus: [[2, [['ac', 10], ['hp', 70]]], [3, [['dmgp', 14], ['res', 14]]], [4, [['aspd', 10], ['lifek', 6], ['find', 30]]]] };
+UNIQ.push({ id: 'u_anchor', n: '닻의 마지막 무게', base: 'amu3', story: '녹슨 비행선이 끊고 날아오른 닻줄 끝에 매달려 있던 작은 쇠닻. 걸고 있으면 어떤 바람에도 발이 땅에 붙는다.', fx: [['dmgp', 26], ['hp', 80], ['ac', 14], ['res', 16]], lv: 28 });
+
+Object.assign(QUESTS, {
+  q13: { ch: 3, n: '닻돌 항구의 부탁', from: 'chief', goal: '선창의 밑것 20마리 쓰러뜨리기', need: 20,
+    talk: ['바람길을 타고 온 이음꾼이로군. 풍차 군도 소식은 갈매기보다 빨리 왔다네.', '여긴 닻돌 항구야. 바람이 멎은 뒤로 비행선이 한 척도 못 떴어. 선창엔 소금 보풀이며 닻집게가 들끓고.', '우선 스무 마리만 치워 주게. 짐꾼들이 선창에 나갈 수 있게.'],
+    done: ['선창에 짐수레 소리가 다시 나는구먼. 고맙네.'] },
+  q14: { ch: 3, n: '밧줄 다리', from: 'chief', goal: '따개비 둥지지기의 밧줄 타래 4개를 모아 가운데 선창 동쪽 줄다리 잇기', need: 4,
+    talk: ['가운데 선창에서 밧줄 나루로 건너가는 줄다리가 있었는데, 녹슨 비행선이 닻줄을 끊고 떠오르던 날 같이 끊어졌어.', '선창마다 따개비 둥지지기가 둥지를 틀고 밧줄 타래를 품고 있다네. 네 타래면 다리를 다시 맬 수 있지.'],
+    done: ['줄다리가 다시 걸렸어! 저 너머 밧줄 나루, 따개비 여울… 그리고 녹슨 정박장.', '비행선이 떠 있는 곳일세. 하늘을 잘 보게.'] },
+  q15: { ch: 3, n: '집게 쫓기', from: 'sage', goal: '닻집게 12마리 쓰러뜨리기', need: 12,
+    talk: ['솔바람이야. 여기까지 따라왔지! 닻집게들 봤어? 원래 끊어진 닻을 주워다 모으던 얌전한 게들이래.', '바람이 멎으니까 집게를 휘두르며 덤벼. 바닥에 둥근 표시가 뜨면 물러나. 열두 마리만 쉬게 해 줘.'],
+    done: ['고마워. 바닷바람에서 다시 짠 냄새가 나. 이건 내가 주운 반지야.'] },
+  q16: { ch: 3, n: '소금 담금질', from: 'smith', goal: '소금 결정 5개 가져오기', need: 5,
+    talk: ['난 소금쇠, 항구 대장장이야. 무쇠랑 풀무 이야기는 들었어.', '바닷소금으로 담금질하면 쇠가 녹슬지 않지. 소금 보풀이랑 따개비 꼬투리가 소금 결정을 달고 다녀. 다섯 개만 부탁해.'],
+    done: ['좋아, 이 정도면 한 해 내내 담금질하겠다. 수고비로 축복 받은 숫돌이랑 아교를 줄게.'] },
+  q17: { ch: 3, n: '녹슨 정박장의 비행선', from: 'chief', goal: '녹슨 정박장의 녹슨 비행선을 떨어뜨리고 정박장 바람개비 표지에 손 얹기', need: 1,
+    talk: ['녹슨 비행선이 정박장 위에 떠서 항구로 오는 바람을 다 막고 있네.', '녀석은 뱃전의 포를 한꺼번에 쏘아 바닥에 둥근 표시를 여러 개 띄우고, 닻을 내리꽂는다네. 갈매기 떼도 불러내지.', '성이 나면 머리 위를 지나가며 줄줄이 폭탄을 떨군다는군. 표시가 줄로 뜨면 옆으로 비켜서게.'],
+    done: ['…바람이다! 묶여 있던 비행선들 돛이 부풀고 있어!', '고맙네, 이음꾼. 바람이 항구를 지나 더 높은 쪽으로 흘러가는구먼. 저 위 구름 너머에서 무언가가 바람을 기다리고 있는 것 같아.'] },
+});
+const C3NPC = { chief: '항구지기 닻줄', smith: '대장장이 소금쇠', merchant: '떠돌이 상인 얼레', sage: '이야기꾼 솔바람' };
+function qAvail3(id) { const q = G.P.q; if (G.Wd.ch !== 3) return false; if (id === 'q13' || id === 'q15' || id === 'q16') return true; if (id === 'q14') return q.q13 && q.q13.s === 3; if (id === 'q17') return q.q14 && q.q14.s === 3; return false; }
+function talk3(id, offer, finish) {
+  const P = G.P, q = qid => P.q[qid], btns = []; let lines = null;
+  if (id === 'chief') {
+    if (!q('q13')) offer('q13'); else if (q('q13').s === 2) finish('q13'); else if (q('q13').s === 1) lines = ['소금 보풀이며 닻집게며 선창마다 들끓네. 스무 마리만 부탁하네.'];
+    else if (!q('q14')) offer('q14'); else if (q('q14').s === 2) finish('q14'); else if (q('q14').s === 1) lines = ['밧줄 타래는 선창 둥지의 따개비 둥지지기가 품고 있다네. 네 타래 모아 가운데 선창 동쪽 끊긴 줄다리로 가게.'];
+    else if (!q('q17')) offer('q17'); else if (q('q17').s === 2 && P.flags['wp_녹슨 정박장']) finish('q17'); else if (q('q17').s === 2) lines = ['비행선을 떨어뜨렸다고?! 정박장 바람개비 표지에 손을 얹어 주게. 바람이 항구로 돌아오게.'];
+    else if (q('q17').s === 1) lines = ['녹슨 정박장은 밧줄 나루 너머 따개비 여울 끝일세. 표시가 줄로 뜨면 옆으로, 여러 개 뜨면 틈으로 비켜서게.'];
+    else lines = ['비행선들이 다시 뜨기 시작했네. 자네 덕일세, 이음꾼.', '구름 너머로 가는 바람길은… 머지않아 열릴 걸세.']; }
+  if (id === 'sage') { if (!q('q15')) offer('q15'); else if (q('q15').s === 2) finish('q15'); else lines = ['비행선은 원래 큰바람을 타고 섬과 섬 사이를 오갔대. 바람이 멎으니 다 묶여 버린 거지.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
+    const n = P.inv.filter(it => !it.g && !it.id).length; btns.push(`<button class="sk-b" data-a="ident" ${n && P.gold >= 15 ? '' : 'disabled'}>감정하기 (${n}개 · 개당 15G)</button>`); }
+  if (id === 'smith') { if (!q('q16')) offer('q16'); else if (q('q16').s === 1 && count('salt') >= 5) { lines = ['오, 소금 결정 다섯 개 다 모았구나!']; btns.push(`<button class="sk-b g" data-a="finish" data-q="q16">소금 건네기</button>`); } else if (q('q16').s === 1) lines = ['소금 결정은 소금 보풀이랑 따개비 꼬투리가 달고 다녀. 다섯 개야.']; else lines = ['강화든 옵션 다시 굴리기든 맡겨. 소금물에 담금질한 쇠는 잘 안 깨져.']; btns.push(`<button class="sk-b p" data-a="smith">대장간 열기</button>`); }
+  if (id === 'merchant') { lines = ['또 만났네! 항구엔 먼 섬 물건이 많아서 좋아.']; btns.push(`<button class="sk-b p" data-a="shop">사고팔기</button>`); }
+  return { lines, btns };
+}
+function finish3(id) { const P = G.P; if (id === 'q16' && !useGood('salt', 5)) return false;
+  const R = { q13: [4200, 900], q14: [5600, 1200], q15: [5000, 1100], q16: [2800, 800], q17: [12000, 3500] }[id]; if (!R) return false;
+  P.q[id].s = 3; gainXp(R[0]); P.gold += R[1];
+  if (id === 'q13') addInv(makeItem('amu3', 2, 27, { id: 1, st: 0 }));
+  if (id === 'q14') addInv(makeItem('boots3', 2, 29, { id: 1, st: 1 }));
+  if (id === 'q15') addInv(makeItem('ring6', 2, 29, { id: 1, st: 0 }));
+  if (id === 'q16') { addInv(goods('bhone')); addInv(goods('bglue')); }
+  if (id === 'q17') { addInv(makeItem('sail5', 2, 34, { id: 1, st: 1 })); addInv(goods('bhone', 2)); addInv(goods('bglue', 2)); }
+  return R; }
+function track3(id, q) { if (id === 'q13') return '선창 밑것 ' + q.n + '/20'; if (id === 'q14') return '밧줄 타래 ' + Math.min(4, count('rope')) + '/4 → 가운데 선창 동쪽 끊긴 줄다리'; if (id === 'q15') return '닻집게 ' + q.n + '/12'; if (id === 'q16') return '소금 결정 ' + Math.min(5, count('salt')) + '/5'; if (id === 'q17') return '녹슨 정박장의 녹슨 비행선'; return null; }
+function spawnCh3() {
+  const Wd = G.Wd, L = [...Wd.fi, ...Wd.ci];
+  L.forEach((k, i) => { const s = Wd.islands[k], n = i >= 4 ? 5 : 4;
+    for (let j = 0; j < n; j++) { const a = j / n * TAU + i * 1.1, d = s.r * .5; let x = s.cx + Math.cos(a) * d, y = s.cy + Math.sin(a) * d; if (!walk(Wd, x, y)) { x = s.cx; y = s.cy; }
+      const kind = pick([['saltfluff'], ['saltfluff', 'barnpod'], ['gull'], ['crab'], ['crab', 'saltfluff'], ['barnpod']]);
+      const pk = j === 0 ? { isl: k, x, y, lv: s.lv, kinds: ['saltfluff', 'barnpod', 'saltfluff'], n: 6, lead: 'barnkeeper', nest: 1, elite: ri(1, ELITE.length) }
+        : { isl: k, x, y, lv: s.lv, kinds: kind, n: kind[0] === 'gull' ? 3 : kind[0] === 'crab' ? ri(2, 3) : ri(3, 5), elite: Math.random() < .25 ? ri(1, ELITE.length) : 0 };
+      G.packs.push(pk); spawnPack(pk); } });
+  const H = Wd.islands[Wd.hill];
+  if (!G.P.flags.rustship) { const pk = { isl: Wd.hill, x: H.cx + 1, y: H.cy - 1, lv: [34, 34], kinds: ['rustship'], n: 1, boss: 1, nest: 1 }; G.packs.push(pk); spawnPack(pk); }
+  for (const [ox, oy, kinds] of [[-4, 3, ['crab', 'saltfluff']], [3.5, 3.5, ['barnpod', 'gull']]]) { const pk = { isl: Wd.hill, x: H.cx + ox, y: H.cy + oy, lv: [32, 33], kinds, n: 3 }; G.packs.push(pk); spawnPack(pk); }
+}
+function ch3Kill(m) { const P = G.P; if (G.Wd.ch !== 3) return;
+  if (C3MOB[m.t]) qAdd('q13', 1); if (m.t === 'crab') qAdd('q15', 1);
+  if (m.t === 'barnkeeper' && P.q.q14 && P.q.q14.s === 1 && count('rope') + G.drops.filter(d => d.it && d.it.g === 'rope').length < 4) { G.drops.push({ x: m.x + rnd(-.4, .4), y: m.y + rnd(-.4, .4), it: goods('rope'), t: 0 }); say('밧줄 타래를 떨궜어요!', '#ffe08a', 1); }
+  if ((m.t === 'saltfluff' || m.t === 'barnpod') && P.q.q16 && P.q.q16.s === 1 && count('salt') + G.drops.filter(d => d.it && d.it.g === 'salt').length < 5 && Math.random() < .2) G.drops.push({ x: m.x + rnd(-.4, .4), y: m.y + rnd(-.4, .4), it: goods('salt'), t: 0 });
+}
+// 포탄·닻·폭탄이 떨어지는 자리: 바닥 표시 뒤 터짐
+function shipBlast(m, cx, cy, r, w, mul, c) { G.areas.push({ k: 'warn', x: cx, y: cy, r, t: 0, life: w });
+  later(w, () => { if (m.dead) return; G.fx.push({ k: 'ring', x: cx, y: cy, r, t: 0, life: .35, c: c || '#ffc890' }, { k: 'crack', x: cx, y: cy, t: 0, life: .9 }); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU; G.parts.push({ k: 'puff', x: cx, y: cy, z: 6, vx: Math.cos(a) * rnd(1, 3), vy: Math.sin(a) * rnd(1, 3), vz: rnd(60, 160), t: 0, life: rnd(.4, .8), c: pick(['#5a4e48', '#8a8078', '#ffb070']), s: rnd(2.5, 4.5) }); }
+    G.shake = Math.max(G.shake, 4); sfx('slam'); if (!G.P.dead && hyp(G.P.x - cx, G.P.y - cy) < r + G.P.r) hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * mul, m); }); }
+// 녹슨 비행선: 포 한꺼번에 쏘기 · 닻 내리꽂기 · 갈매기 부르기 · (성나면) 줄폭탄
+function rustshipAI(m, dt, d, dx, dy) {
+  const P = G.P, rage = m.hp < m.mhp * .5; if (rage && !m.raged) { m.raged = 1; G.cut = { s: '녹슨 비행선의 풍선이 찢어지며 기울어요!', t: 0, c: '#ffb070' }; sfx('slam'); G.shake = 8; }
+  m.sum = (m.sum ?? 10) - dt; m.vol = (m.vol ?? 3) - dt; m.anc = (m.anc ?? 6) - dt; m.bomb = (m.bomb ?? 2) - dt;
+  if (m.sum <= 0) { m.sum = rage ? 13 : 17; const ng = G.mobs.filter(o => o.t === 'gull' && !o.dead && hyp(o.x - m.x, o.y - m.y) < 9).length; if (ng < 6) for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, x2 = m.x + Math.cos(a) * 2.2, y2 = m.y + Math.sin(a) * 2.2; if (walk(G.Wd, x2, y2)) { const n = mkMob('gull', x2, y2, 32); n.st = 'chase'; G.mobs.push(n); } }
+    G.fx.push({ k: 'ring', x: m.x, y: m.y, r: 2.4, t: 0, life: .5, c: '#d8dce4' }); say('녹슨 비행선이 갈매기 떼를 불러냈어요!', '#d8dce4', 1); }
+  if (rage && m.bomb <= 0 && d < 9) { m.bomb = 7; const ux = dx / d, uy = dy / d; m.an = 'atk'; m.at = 0; m.hitDone = 1; sfx('gust');
+    for (let i = 0; i < 7; i++) shipBlast(m, m.x + ux * (i * 1.5 + 1), m.y + uy * (i * 1.5 + 1), 1.1, .85 + i * .14, .75, '#ff9a60'); return; }
+  if (m.vol <= 0 && d < 9) { m.vol = rage ? 4.2 : 5.5; m.an = 'atk'; m.at = 0; m.hitDone = 1; sfx('cone');
+    const n = rage ? 6 : 5; for (let i = 0; i < n; i++) { const a = Math.random() * TAU, r = i === 0 ? 0 : rnd(1.2, 2.8); shipBlast(m, P.x + Math.cos(a) * r, P.y + Math.sin(a) * r, .95, 1 + i * .08, .6); } return; }
+  if (m.anc <= 0 && d < 4.2) { m.anc = rage ? 5 : 7; m.an = 'atk'; m.at = 0; m.hitDone = 1; shipBlast(m, P.x, P.y, 2, .95, 1.05, '#e8d8b0'); return; }
+  // 떠서 거리를 두고 맴돈다(너무 멀면 다가오고, 너무 가까우면 살짝 물러남)
+  const sp = m.spd * (rage ? 1.2 : 1);
+  if (d > 4.5) { move(m, dx / d * sp * dt, dy / d * sp * dt); m.an = 'move'; }
+  else if (d < 2.2 && m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = rage ? 2 : 2.8; m.kind = 'slam'; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 2.4, t: 0, life: .8 }); }
+  else { const s = (m.orb = (m.orb || 1)); move(m, -dy / d * sp * .6 * s * dt, dx / d * sp * .6 * s * dt); if (Math.random() < dt * .25) m.orb = -s; m.an = 'move'; }
+}
+function ch3Area(a, dt) { return 0; }
+function ch3Goals(Wd, P, goals) { const q = P.q, bq = Wd.bridges[Wd.bq];
+  if (q.q14 && q.q14.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
+  if (q.q17 && q.q17.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
+  if (q.q17 && q.q17.s === 2 && !P.flags['wp_녹슨 정박장']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
+function endHtml3() { const P = G.P; return `<div class="sk-bx sk-talk" style="text-align:center"><h3>3장 「닻 내린 항구」 끝</h3><p>녹슨 비행선이 정박장 위로 천천히 내려앉자, 막혀 있던 바람이 한꺼번에 항구로 쏟아져 들어왔다.</p><p>묶여 있던 비행선들의 돛이 부푼다. 바람은 이제 구름 너머 더 높은 곳으로 흘러간다.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>4장은 다음에 열려요. 그동안 오늘의 섬과 하루 의뢰로 장비를 모아 보세요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
+
+/* ---------- 4-3 매일 오는 재미: 날마다 바뀌는 떠돌이 상인 · 비행선 심부름 · 대장간 분해 ---------- */
+const hashS = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+// 떠돌이 상인: 같은 날(KST)에는 같은 물건, 자정에 바뀜. 산 물건은 그날 다시 안 나옴. 골드로만 사요.
+function makeShop() {
+  const P = G.P, d = dayKey(); if (!P.shopD || P.shopD.d !== d) P.shopD = { d, got: [] };
+  const R = srand(hashS(d) ^ P.seed ^ (G.Wd.ch * 7919)), keep = Math.random; Math.random = R;
+  const L = [goods('pot'), goods('wpot'), goods('pure'), goods('look')], lv = Math.max(2, P.lv);
+  try {
+    const roll = (l, f) => { let it; for (let k = 0; k < 6; k++) { it = rollDrop(l, f, P.cls); if (!it.u && !it.set) break; } delete it.u; delete it.set; return it; };
+    for (let i = 0; i < 8; i++) { const it = roll(lv, 30); it.id = true; if (it.r > 1) it.r = 1; if (it.st === -1) it.st = 0; it.sk = 'n' + i; L.push(it); }
+    // 오늘의 귀한 물건 1개(파란 테 이상, 감정된 채로) · 오늘의 재료 1개
+    let sp = roll(lv + 2, 260); for (let k = 0; k < 30 && sp.r !== 2; k++) sp = roll(lv + 2, 260); sp.id = true; if (sp.st === -1) sp.st = 0; sp.sk = 'sp'; sp.today = 1; L.push(sp);
+    const m = goods(R() < .5 ? 'bhone' : 'bglue'); m.pr = 300 + lv * 25; m.sk = 'mat'; m.today = 1; L.push(m);
+  } finally { Math.random = keep; }
+  return L.filter(it => !it.sk || !P.shopD.got.includes(it.sk)); }
+function shopBought(it) { const P = G.P; if (it.sk && P.shopD) P.shopD.got.push(it.sk); }
+function shopFresh() { return G.shop && G.shopDay === dayKey() ? G.shop : (G.shopDay = dayKey(), G.shop = makeShop()); }
+// 비행선 심부름: 보내 두면 접속을 안 해도 시간이 흘러 재료를 가져와요. 하루 횟수 제한 없음.
+const ERRAND_LV = 5;
+const ERRANDS = [
+  { k: 'near', n: '가까운 섬 장보기', m: 30, d: '차·사탕과 숫돌·아교 조금' },
+  { k: 'mid', n: '이웃 군도 짐 나르기', m: 120, d: '골드, 숫돌·아교, 가끔 장비 하나' },
+  { k: 'far', n: '먼 하늘 건너 물건 찾기', m: 480, d: '골드 듬뿍, 장비 하나, 축복 숫돌·아교 반반' },
+];
+const errandLeft = E => Math.max(0, E.t0 + E.m * 6e4 - Date.now());
+function errandSend(i) { const P = G.P, E = ERRANDS[i]; if (!E || P.errand || P.lv < ERRAND_LV) return; P.errand = { k: E.k, n: E.n, m: E.m, t0: Date.now(), lv: P.lv }; sfx('gust'); say('비행선이 「' + E.n + '」 심부름을 떠났어요', '#9fe4ff'); save(); }
+function errandClaim() { const P = G.P, E = P.errand; if (!E || errandLeft(E) > 0) return; const lv = E.lv, got = [];
+  const add = it => { if (!addInv(it)) G.drops.push({ x: P.x + rnd(-.6, .6), y: P.y + rnd(-.6, .6), it, t: 0 }); got.push(it.g ? GOODS[it.g].n + (it.n > 1 ? ' ' + it.n : '') : itemName(it)); };
+  const gold = Math.round(lv * (E.k === 'far' ? 160 : E.k === 'mid' ? 55 : 18)); P.gold += gold;
+  if (E.k === 'near') { add(goods('pot', 2)); add(goods('wpot', 2)); add(goods(Math.random() < .5 ? 'hone' : 'glue')); }
+  if (E.k === 'mid') { add(goods('hone', 2)); add(goods('glue', 2)); if (Math.random() < .5) add(rollDrop(lv, P.find + 80, P.cls)); }
+  if (E.k === 'far') { add(goods('hone', 3)); add(goods('glue', 3)); add(goods(Math.random() < .5 ? 'bhone' : 'bglue')); add(rollDrop(lv + 1, P.find + 180, P.cls)); if (P.lv >= BOARD_LV) giveShard({ c: pick(Object.keys(SHARD)), q: Math.random() < .3 ? 2 : 1 }); }
+  P.errand = null; sfx('coin'); toast('비행선이 돌아왔어요! ' + gold + 'G · ' + got.join(', ')); save(); }
+const fmtLeft = ms => { const m = Math.ceil(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + '시간 ' + (m % 60 ? m % 60 + '분' : '') : m + '분'; };
+function errandHtml() { const P = G.P, E = P.errand; let h = '<h4 style="margin:10px 0 4px">비행선 심부름</h4>';
+  if (P.lv < ERRAND_LV) return h + `<p class="m" style="font-size:12px">${ERRAND_LV}레벨이 되면 마을 비행선을 심부름 보낼 수 있어요.</p>`;
+  if (E) { const left = errandLeft(E); return h + `<div class="sk-row"><div class="f"><b>${E.n}</b><br><small>${left > 0 ? fmtLeft(left) + ' 뒤에 돌아와요 · 게임을 꺼 둬도 시간은 흘러요' : '돌아왔어요!'}</small></div><button class="sk-b ${left > 0 ? '' : 'g'}" data-a="errc" ${left > 0 ? 'disabled' : ''}>${left > 0 ? '다녀오는 중' : '짐 받기'}</button></div>`; }
+  return h + ERRANDS.map((e, i) => `<div class="sk-row"><div class="f"><b>${e.n}</b> <small>${e.m >= 60 ? e.m / 60 + '시간' : e.m + '분'}</small><br><small>${e.d}</small></div><button class="sk-b p" data-a="errs" data-i="${i}">보내기</button></div>`).join('') + '<p class="m" style="font-size:11.5px">한 번에 하나씩 보낼 수 있어요. 횟수 제한은 없어요.</p>'; }
+function errandTrack() { const E = G.P.errand; if (!E) return null; const left = errandLeft(E); return ['비행선 심부름', left > 0 ? E.n + ' · ' + fmtLeft(left) + ' 남음' : '돌아왔어요! 마을 게시판에서 짐 받기']; }
+// 대장간 분해: 안 쓰는 장비를 숫돌·아교로 바꿔요(무기 → 숫돌, 나머지 → 아교)
+function salvageOf(it) { const b = BASE[it.b]; if (!b || it.g) return null; const n = [1, 1, 2, 3, 3][it.r] + (b.lv >= 18 ? 1 : 0) + (it.en >= 4 ? 1 : 0); return [b.s === 'weapon' ? 'hone' : 'glue', n]; }
+function salvage(i) { const P = G.P, it = P.inv[i], s = salvageOf(it); if (!s) return; P.inv.splice(i, 1); addInv(goods(s[0], s[1])); sfx('ench'); toast(itemName(it) + ' → ' + GOODS[s[0]].n + ' ' + s[1] + '개'); save(); }
+
 
 /* =================== 그리기 =================== */
 let ov, cv, x, lay = { Z: 1, dpr: 1, cw: 800, ch: 450 }, IM = {}, NPCK = [];
 const HC = [112, 120, 56, 100], HF = ['idle0', 'idle1', 'run0', 'run1', 'run2', 'run3', 'run4', 'run5', 'atk0', 'atk1', 'atk2', 'atk3', 'cast0', 'cast1', 'cast2', 'hurt', 'dodge', 'die0', 'die1'];
-const MC = { mudfluff: [110, 110, 55, 96], bogpod: [96, 104, 48, 92], heronling: [104, 132, 52, 120], heron: [260, 300, 130, 282], fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
+const MC = { saltfluff: [110, 110, 55, 96], barnpod: [96, 104, 48, 92], gull: [104, 132, 52, 120], crab: [150, 120, 75, 104], barnkeeper: [196, 212, 98, 192], rustship: [320, 400, 160, 372], rustfluff: [106, 106, 53, 92], boltpod: [96, 104, 48, 92], rustcrow: [104, 132, 52, 120], scarecrow: [156, 156, 78, 138], cogkeeper: [196, 212, 98, 192], creaker: [270, 300, 135, 270], mudfluff: [110, 110, 55, 96], bogpod: [96, 104, 48, 92], heronling: [104, 132, 52, 120], heron: [260, 300, 130, 282], fluff: [96, 96, 48, 84], fluffking: [240, 260, 120, 236], seed: [96, 104, 48, 92], bird: [104, 132, 52, 120], keeper: [196, 212, 98, 192] };
 function loadImg(k, src) { return new Promise(ok => { const im = new Image(); im.onload = () => { IM[k] = im; LOADP.n++; ok(); }; im.onerror = () => { LOADP.n++; ok(); }; im.src = src; }); }
 // 폰 로딩: 처음엔 꼭 필요한 그림만(약 1.4MB) 받고, 큰 보스 그림(둥지지기·우두머리)은 시작한 뒤 뒤에서 받는다
-const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking', 'mudfluff', 'bogpod', 'heronling', 'heron'];
+const LOADP = { n: 0, N: 10 }, LATE = ['keeper', 'fluffking', 'mudfluff', 'bogpod', 'heronling', 'heron', 'rustfluff', 'boltpod', 'rustcrow', 'scarecrow', 'cogkeeper', 'creaker', 'saltfluff', 'barnpod', 'gull', 'crab', 'barnkeeper', 'rustship'];
 let assetsP = null;
 function assets() {
-  if (assetsP) return assetsP; const v = '?v=51eb43a4';
+  if (assetsP) return assetsP; const v = '?v=279a22d0';
   const J = p => p.then(() => { LOADP.n++; });
   assetsP = Promise.all([...['heads', 'fluff', 'seed', 'bird', 'npc', 'props', 'icons'].map(k => loadImg(k, IMG + k + '.webp' + v)),
     J(fetch(IMG + 'props.json' + v).then(r => r.json()).then(j => { PM = j; })), J(fetch(IMG + 'npc.json' + v).then(r => r.json()).then(j => { NPCK = j; })), J(fetch(IMG + 'icons.json' + v).then(r => r.json()).then(j => { ICM = j; }).catch(() => {}))])
@@ -1265,7 +1625,7 @@ function assets() {
 }
 // 영웅 그림은 고른 직업 것만 받는다(직업 5개 → 처음 화면은 얼굴 한 장)
 const HEROP = {};
-function loadHero(cls) { return HEROP[cls] || (HEROP[cls] = IM[cls] ? Promise.resolve() : new Promise(ok => { const im = new Image(); im.onload = () => { IM[cls] = im; ok(); }; im.onerror = () => { delete HEROP[cls]; ok(); }; im.src = IMG + cls + '.webp?v=51eb43a4'; })); }
+function loadHero(cls) { return HEROP[cls] || (HEROP[cls] = IM[cls] ? Promise.resolve() : new Promise(ok => { const im = new Image(); im.onload = () => { IM[cls] = im; ok(); }; im.onerror = () => { delete HEROP[cls]; ok(); }; im.src = IMG + cls + '.webp?v=279a22d0'; })); }
 let ICM = {}; const DIRT = [];
 function sprite(im, cw, ch, ax, ay, fr, row, X, Y, sc, flash, alpha) {
   if (!im) return; const w = cw * sc, h = ch * sc; if (alpha != null) x.globalAlpha = alpha;
@@ -1456,6 +1816,14 @@ function islandTop(Wd, s, g, T) {
   if (s.kind === 'marsh' || s.kind === 'heron') { // 늪: 탁한 풀빛 + 물웅덩이
     x.fillStyle = s.kind === 'heron' ? 'rgba(60,60,70,.22)' : 'rgba(50,80,50,.2)'; x.fill(g.top);
     for (const [xx, yy, t, own] of g.cells) { if (!own || hsh(xx + 11, yy) > .1) continue; const [sx, sy] = iso(xx, yy), r = 10 + hsh(xx, yy + 5) * 14; x.fillStyle = 'rgba(70,110,120,.55)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .45, 0, 0, TAU); x.fill(); x.fillStyle = 'rgba(200,230,240,.35)'; x.beginPath(); x.ellipse(sx - r * .25, sy + TH / 2 - 2, r * .4, r * .12, 0, 0, TAU); x.fill(); } }
+  if (s.kind === 'dock' || s.kind === 'wreck' || s.kind === 'town' && Wd.ch === 3) { // 닻 내린 항구: 바랜 모래빛 + 소금 얼룩·널판
+    x.fillStyle = s.kind === 'wreck' ? 'rgba(70,80,95,.42)' : 'rgba(205,195,150,.48)'; x.fill(g.top);
+    for (const [xx, yy, t, own] of g.cells) { if (!own) continue; const h2 = hsh(xx + 5, yy + 1); if (h2 > .16) continue; const [sx, sy] = iso(xx, yy);
+      if (h2 < .07) { x.fillStyle = 'rgba(110,80,50,.45)'; x.beginPath(); x.moveTo(sx - 20, sy + TH / 2); x.lineTo(sx, sy + TH / 2 - 10); x.lineTo(sx + 20, sy + TH / 2); x.lineTo(sx, sy + TH / 2 + 10); x.closePath(); x.fill(); }
+      else { const r = 7 + hsh(xx, yy + 4) * 10; x.fillStyle = 'rgba(245,248,250,.5)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } } }
+  if (s.kind === 'mill' || s.kind === 'gear' || s.kind === 'town' && Wd.ch === 2) { // 녹슨 풍차 군도: 늦가을 들판 + 녹 얼룩
+    x.fillStyle = s.kind === 'gear' ? 'rgba(120,70,40,.32)' : 'rgba(200,135,40,.3)'; x.fill(g.top);
+    for (const [xx, yy, t, own] of g.cells) { if (!own || hsh(xx + 3, yy + 9) > .07) continue; const [sx, sy] = iso(xx, yy), r = 8 + hsh(xx, yy + 2) * 12; x.fillStyle = 'rgba(140,70,30,.28)'; x.beginPath(); x.ellipse(sx, sy + TH / 2, r, r * .5, 0, 0, TAU); x.fill(); } }
   x.strokeStyle = 'rgba(255,255,220,.22)'; x.lineWidth = 3; x.stroke(g.top);
   x.restore();
   // 풀 테두리(낭떠러지 위로 살짝 늘어짐)
@@ -1577,8 +1945,8 @@ function drawVortex(a) { const [ax, ay] = iso(a.x, a.y), k = a.t / a.life, al = 
   x.globalAlpha = al * .35; x.fillStyle = '#cfeaff'; x.beginPath(); x.ellipse(ax, ay, a.r * 45, a.r * 22, 0, 0, TAU); x.fill();
   for (let i = 0; i < 9; i++) { const rr2 = a.r * (1 - i / 10) * 45, y2 = ay - i * 9; x.globalAlpha = al * (.85 - i * .05); x.strokeStyle = i % 2 ? '#ffffff' : '#9fe4ff'; x.lineWidth = 3.2 - i * .2; x.beginPath(); x.ellipse(ax + Math.sin(G.t * 6 + i) * 4, y2, rr2 * (.35 + i * .02 + .65 * (1 - k * .3)), rr2 * .42, 0, G.t * (9 + i) + i, G.t * (9 + i) + i + 3.6); x.stroke(); }
   x.globalAlpha = 1; }
-function questMark(k) { const P = G.P; for (const id in QUESTS) { const Q = QUESTS[id]; if (Q.from !== k) continue; const q = P.q[id]; if (q && q.s === 2) return '?'; if (!q && qAvail(id)) return '!'; } return ''; }
-function qAvail(id) { const q = G.P.q; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
+function questMark(k) { const P = G.P; for (const id in QUESTS) { const Q = QUESTS[id]; if (Q.from !== k || qCh(id) !== G.Wd.ch) continue; const q = P.q[id]; if (q && q.s === 2) return '?'; if (!q && qAvail(id)) return '!'; } return ''; }
+function qAvail(id) { const q = G.P.q; if (qCh(id) === 2) return qAvail2(id); if (qCh(id) === 3) return qAvail3(id); if (G.Wd.ch !== 1) return false; if (id === 'q1') return true; if (id === 'q2') return true; if (id === 'q4') return true; if (id === 'q3') return q.q1 && q.q1.s === 3; if (id === 'q5') return q.q3 && q.q3.s === 3; if (id === 'q6') return !!G.P.flags.bridge2 && q.q2 && q.q2.s === 3; if (id === 'q7') return q.q5 && q.q5.s === 3; return false; }
 
 /* ---------- 화면 위 정보(HUD) ---------- */
 let BTN = [];
@@ -1677,9 +2045,9 @@ function rrp(g, X, Y, w, h, r) { g.moveTo(X + r, Y); g.arcTo(X + w, Y, X + w, Y 
 let MINI = null;
 function minimap(R, T, s) {
   const Wd = G.Wd, w = 112 * s, h = 112 * s, X = R - w;
-  if (!MINI || MINI.v !== (Wd.bridges[Wd.bq].broken ? 0 : 1) + (Wd.bridges[Wd.bq2].broken ? 0 : 2)) { const c = document.createElement('canvas'); c.width = Wd.W * 2; c.height = Wd.H * 2; const g = c.getContext('2d');
+  if (!MINI || MINI.v !== (Wd.bridges[Wd.bq].broken ? 0 : 1) + (Wd.bridges[Wd.bq2] && !Wd.bridges[Wd.bq2].broken ? 2 : 0)) { const c = document.createElement('canvas'); c.width = Wd.W * 2; c.height = Wd.H * 2; const g = c.getContext('2d');
     for (let y = 0; y < Wd.H; y++) for (let xx = 0; xx < Wd.W; xx++) { const t = Wd.g[Wd.id(xx, y)]; if (!t) continue; g.fillStyle = t === 3 ? '#c8a070' : t === 4 ? '#8a6a50' : t === 5 ? '#d8d0c0' : t === 2 ? '#d8c08a' : Wd.block[Wd.id(xx, y)] ? '#5a8a4a' : '#9ccc7a'; g.fillRect(xx * 2, y * 2, 2, 2); }
-    MINI = { c, v: (Wd.bridges[Wd.bq].broken ? 0 : 1) + (Wd.bridges[Wd.bq2].broken ? 0 : 2) }; }
+    MINI = { c, v: (Wd.bridges[Wd.bq].broken ? 0 : 1) + (Wd.bridges[Wd.bq2] && !Wd.bridges[Wd.bq2].broken ? 2 : 0) }; }
   x.save(); x.fillStyle = 'rgba(30,24,18,.55)'; rr(X, T, w, h, 10); x.fill(); x.beginPath(); rr(X + 3, T + 3, w - 6, h - 6, 8); x.clip();
   const sc = 1.6 * s, P = G.P; x.translate(X + w / 2, T + h / 2); x.rotate(Math.PI / 4); x.scale(sc * .72, sc * .72 * .5 / .5); x.scale(1, 1);
   x.translate(-P.x * 2, -P.y * 2); x.drawImage(MINI.c, 0, 0);
@@ -1690,8 +2058,8 @@ function minimap(R, T, s) {
   x.fillStyle = '#fff'; x.beginPath(); x.arc(P.x * 2, P.y * 2, 3, 0, TAU); x.fill(); x.restore();
 }
 function questTracker(R, T, s) {
-  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; L.push([Q.n, t]); }
-  const dt2 = dailyTrack(); if (dt2) L.push(dt2);
+  const P = G.P, L = []; for (const id in QUESTS) { const q = P.q[id]; if (!q || q.s === 3) continue; const Q = QUESTS[id]; let t = Q.goal; if (q.s === 2) t = NPCDEF[Q.from].n + '에게 돌아가기'; else if (id === 'q1') t = '다리 널빤지 ' + Math.min(6, count('plank')) + '/6 → 동쪽 끊긴 다리'; else if (id === 'q2') t = '보풀이 ' + q.n + '/15'; else if (id === 'q4') t = '바람 숫돌 ' + Math.min(3, count('hone')) + '/3'; else if (id === 'q5') t = '둥지 껍질 ' + Math.min(3, count('shell')) + '/3 → 언덕 동쪽 끊긴 다리'; else if (id === 'q6') t = '늪 밑것 ' + q.n + '/20'; else if (id === 'q7') t = '둥지섬의 큰 왜가리'; else t = track2(id, q) || track3(id, q) || t; L.push([Q.n, t]); }
+  const dt2 = dailyTrack(); if (dt2) L.push(dt2); const et = errandTrack(); if (et) L.push(et);
   if (!L.length) return; x.textAlign = 'right'; let y = T;
   for (const [n, t] of L) { x.font = `800 ${10.5 * s}px system-ui`; x.fillStyle = '#ffd166'; x.strokeStyle = 'rgba(30,24,18,.8)'; x.lineWidth = 3; x.strokeText(n, R, y + 10 * s); x.fillText(n, R, y + 10 * s); x.font = `600 ${9.5 * s}px system-ui`; x.fillStyle = '#fff'; x.strokeText(t, R, y + 23 * s); x.fillText(t, R, y + 23 * s); y += 30 * s; }
 }
@@ -1736,6 +2104,7 @@ function drawClsAir() {
       for (let i = 0; i < n; i++) { const s = Math.floor(G.t * 12) * 31 + i * 7, rx = (hsh(s, i) - .5) * 2 * a.r, ry = (hsh(i, s) - .5) * 2 * a.r; if (rx * rx + ry * ry > a.r * a.r) continue; const [px, py] = iso(a.x + rx, a.y + ry), h = (G.t * 12 % 1) * 70;
         x.globalAlpha = .9; x.beginPath(); x.moveTo(px - 4, py - 80 + h); x.lineTo(px, py - 64 + h); x.stroke(); } x.globalAlpha = 1; }
     else if (a.k === 'hawk') drawHawk(a);
+    else if (a.k === 'blade') drawBlade(a);
     else if (a.k === 'mud') { const [ax, ay] = iso(a.x, a.y), Y = ay - 18 - Math.sin(a.t / .8 * Math.PI) * 14; x.fillStyle = 'rgba(30,30,20,.25)'; x.beginPath(); x.ellipse(ax, ay, 6, 3, 0, 0, TAU); x.fill(); x.fillStyle = '#5a4026'; x.strokeStyle = '#2a1e10'; x.lineWidth = 1.5; x.beginPath(); x.arc(ax, Y, 6, 0, TAU); x.fill(); x.stroke(); x.fillStyle = '#8a6a44'; x.beginPath(); x.arc(ax - 2, Y - 2, 2, 0, TAU); x.fill(); }
     else if (a.k === 'bigbell') { const [ax, ay] = iso(a.x, a.y), k = Math.min(1, a.t / .5), al = Math.min(1, (a.life - a.t) * 2); const shake = a.t > .5 && a.t < 2 ? Math.sin(G.t * 40) * 2 : 0; drawBell(ax + shake, ay - (1 - k * k) * 320, 46, al); }
   }
@@ -1869,7 +2238,7 @@ function clickWorld(px, py) {
   for (const w of Wd.wps) if (onScr(w.x, w.y, 60)) { if (w.on) P.goal = { k: 'wp', x: w.x, y: w.y, r: 1.3 }; P.path = [w.x + .5, w.y + .5]; return; }
   const d = G.drops.find(d => onScr(d.x, d.y, 30)); if (d) { P.path = [d.x, d.y]; return; }
   const b = Wd.bridges[Wd.bq]; if (b.broken) for (const c of b.cells) { const cx = c % Wd.W + .5, cy = ((c / Wd.W) | 0) + .5; if (hyp(wx - cx, wy - cy) < 1.2) { P.goal = { k: 'bridge', x: cx, y: cy, r: 2.1 }; let best = null, bd = 1e9; for (const e of b.ends) { const ex = e % Wd.W + .5, ey = ((e / Wd.W) | 0) + .5, dd = hyp(ex - P.x, ey - P.y); if (dd < bd) { bd = dd; best = [ex, ey]; } } P.path = best || [cx, cy]; return; } }
-  { const b2 = Wd.bridges[Wd.bq2]; if (b2.broken) for (const c of b2.cells) { const cx = c % Wd.W + .5, cy = ((c / Wd.W) | 0) + .5; if (hyp(wx - cx, wy - cy) < 1.2) { let best = null, bd = 1e9; for (const e of b2.ends) { const ex = e % Wd.W + .5, ey = ((e / Wd.W) | 0) + .5, dd = hyp(ex - P.x, ey - P.y); if (dd < bd) { bd = dd; best = [ex, ey]; } } P.path = best || [cx, cy]; return; } } }
+  { const b2 = Wd.bridges[Wd.bq2]; if (b2 && b2.broken) for (const c of b2.cells) { const cx = c % Wd.W + .5, cy = ((c / Wd.W) | 0) + .5; if (hyp(wx - cx, wy - cy) < 1.2) { let best = null, bd = 1e9; for (const e of b2.ends) { const ex = e % Wd.W + .5, ey = ((e / Wd.W) | 0) + .5, dd = hyp(ex - P.x, ey - P.y); if (dd < bd) { bd = dd; best = [ex, ey]; } } P.path = best || [cx, cy]; return; } } }
   P.path = [wx, wy];
 }
 function input() {
@@ -1990,7 +2359,7 @@ function render(arg) {
       const big = P.dmg; h += `<h4>지금 수치</h4><div class="sk-card">생명력 ${P.mhp} · 바람 ${P.mwind} (초당 +${P.wreg.toFixed(1)})<br>피해: 작은 적 ${big[0]}~${big[1]} / 큰 적 ${big[2]}~${big[3]} · 피해 +${Math.round(P.dmgp)}%<br>방어력 ${P.ac} (맞을 확률 ${Math.round(clamp(.92 - P.ac * .008, .55, .95) * 100)}%)${P.blk ? ' · 막기 ' + Math.round(P.blk) + '%' : ''}<br>공격 속도 초당 ${P.aspd.toFixed(2)}번 · 치명타 ${P.crit.toFixed(1)}% · 이동 ${P.move.toFixed(1)}<br>돛: 활공 ${P.sail[0]}칸 / ${P.sail[1]}초${P.find ? ' · 좋은 물건 +' + P.find + '%' : ''}${P.xpm > 1 ? ' · 경험치 +' + Math.round((P.xpm - 1) * 100) + '%' : ''}<br>쓰러뜨린 밑것들 ${P.kills}마리 · 경험 ${P.xp}/${xpNeed(P.lv)}</div>${respecBtn('rs')}`; }
     h += '</div></div>' + TOAST + '</div>';
   } else if (k === 'map') {
-    h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">1장 민들레 섬</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
+    h = `<div class="sk-bx sk-map" style="max-width:900px">${X}<h3>지도 <small style="font-size:12px;color:#8a7458">${CHAPS[G.Wd.ch][0].replace(' · ', ' ')}</small></h3><canvas data-map></canvas><div class="sk-lg"><span><i style="background:#fff;border:2px solid #3a5a7a"></i>나</span><span><i style="background:#ffd166"></i>마을 사람</span><span><i style="background:#9fe4ff"></i>바람개비 표지</span><span><i style="background:#ff6a4a"></i>할 일 목표</span><span><i style="background:#c8a070"></i>다리</span></div></div>`;
   } else if (k === 'skill') {
     const sel = SEL; h = `<div class="sk-bx">${X}<h3>스킬 <small style="font-size:12px;color:#8a7458">남은 점수 ${P.skp} · 같은 갈래 스킬끼리 점수당 피해 +6%(잇기)</small></h3><div style="margin:-2px 0 6px"><button class="sk-b p" data-a="board" ${P.lv >= BOARD_LV ? '' : 'disabled'}>◆ 나침반판 (B)${P.lv >= BOARD_LV ? '' : ' · ' + BOARD_LV + '레벨'}</button>${respecBtn('rk')}</div><div class="sk-sk">`;
     BRANCH[P.cls].forEach((bn, bi) => { h += `<div class="sk-br"><h4>${bn}</h4>`; for (const s of SKILLS[P.cls].filter(q => q.br === bi)) { const lv = P.sk[s.id] || 0, lk = P.lv < s.req; h += `<div class="sk-s${sel === s.id ? ' on' : ''}" data-sk="${s.id}"><span data-si="${s.id}"></span><div class="f ${lk ? 'lk' : ''}"><b>${s.name}</b> ${lv}/10${P.skb[bi] && lv ? ' (+' + P.skb[bi] + ')' : ''}${lk ? ' · ' + s.req + '레벨' : ''}<br>${esc(s.desc)}<br><small>바람 ${s.cost} · ${s.cd}초${lv >= 5 && P.fork[s.id] != null ? ' · 갈래: ' + s.fork[P.fork[s.id]][0] : ''}${lv >= 10 && P.fork2[s.id] != null ? ' · ' + fork2Of(s)[P.fork2[s.id]][0] : ''}</small></div></div>`; } h += '</div>'; });
@@ -2006,7 +2375,7 @@ function render(arg) {
   else if (k === 'daily') h = dailyHtml(X);
   else if (k === 'talk') h = talkHtml(arg);
   else if (k === 'smith') h = smithHtml();
-  else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}</div>`; }
+  else if (k === 'travel') { h = `<div class="sk-bx" style="max-width:420px">${X}<h3>바람개비 표지</h3>${G.Wd.wps.map((w, i) => `<div class="sk-row"><div class="f"><b>${w.n}</b></div><button class="sk-b p" data-a="go" data-i="${i}" ${w.on ? '' : 'disabled'}>${w.on ? '날아가기' : '아직 잠김'}</button></div>`).join('')}${chapHtml()}</div>`; }
   else if (k === 'quest') { h = `<div class="sk-bx" style="max-width:560px">${X}<h3>할 일</h3>`; for (const id in QUESTS) { const q = P.q[id], Q = QUESTS[id]; if (!q) continue; h += `<div class="sk-row"><div class="f"><b>${Q.n}</b> ${q.s === 3 ? '✔' : q.s === 2 ? '(보고하기)' : ''}<br><small>${esc(Q.goal)} — ${NPCDEF[Q.from].n}</small></div></div>`; } h += '</div>'; }
   else if (k === 'menu') { h = `<div class="sk-bx" style="max-width:420px;text-align:center">${X}<h3>잠깐 쉬기</h3><button class="sk-b p" data-a="x">계속하기</button><br><button class="sk-b" data-a="quest">할 일 보기</button><br><button class="sk-b" data-a="mute">${A.muted ? '소리 켜기' : '소리 끄기'}</button><br><button class="sk-b" data-a="help">조작법</button><br><button class="sk-b" data-a="title">저장하고 처음 화면으로</button><br><button class="sk-b" data-a="quit">저장하고 나가기</button><p class="m" style="font-size:11.5px;color:#8a7458;margin-top:8px">기록은 10초마다, 그리고 창을 닫을 때 이 기기에 저장돼요.</p></div>`; }
   else if (k === 'help') { h = `<div class="sk-bx" style="max-width:600px">${X}<h3>조작법</h3><div class="sk-card"><b>PC</b><br>마우스 왼쪽: 이동 (누르고 있으면 따라가요 · 사람·표지·다리를 누르면 가서 말 걸기)<br>마우스 오른쪽: 공격 (누르고 있으면 계속 · 적을 누르면 다가가서 공격)<br>1~4: 기술 (마우스 쪽으로 · 4번은 궁극 기술) · Q 민들레 차 · R 바람 사탕 · 스페이스 돛 활공(피하기)<br>I 가방 · C 캐릭터 · S 기술 · M 지도 · B 나침반판 · J 할 일 · F 말 걸기 · Esc 쉬기<br><br><b>휴대폰</b> (가로 화면)<br>왼쪽 아무 곳이나 끌어서 이동 · 오른쪽 큰 버튼 공격(누르고 있으면 계속, 가까운 적을 알아서 노려요) · 둘레 버튼 기술 4개(금색 테두리가 궁극 기술) · 돛·차·사탕 버튼 · 사람이나 물건을 톡 누르면 그쪽으로 가요.<br><br><b>요령</b>: 방패지기는 적을 섬 끝으로 밀어 떨어뜨릴 수 있어요(보상은 조금 줄어요). 쉬고 돌아오면 순풍(경험치 2배)이 쌓여 있어요.</div></div>`; }
@@ -2044,34 +2413,37 @@ function boardHtml() {
     <h4>지금 얻는 힘</h4><div class="sk-card">${fxs}</div><h4>잇기 보너스</h4><div class="sk-card">${sets}</div>
     <button class="sk-b" data-a="skillp">← 스킬로</button></div></div>${TOAST}</div>`;
 }
-function shopHtml() { return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기)</small></h4><div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + coinHtml(); }
+function shopHtml() { const td = SHOP.filter(it => it.today); return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기 · 자정에 물건이 바뀌어요)</small></h4>${td.length ? '<p class="m" style="font-size:11.5px;color:#b0702a">오늘만: ' + td.map(it => it.g ? GOODS[it.g].n : itemName(it)).join(', ') + '</p>' : ''}<div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + coinHtml(); }
 function coinHtml() { const B = opts.bonus; if (!B) return ''; const day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), used = G.P.flags.coinDay === day ? G.P.flags.coinN || 0 : 0; return `<h4>5락실 코인 바꾸기</h4><p class="m" style="font-size:11.5px;color:#8a7458">코인 1개 = 200G, 하루 5개까지 (보유 ${B.coins()}개, 오늘 ${used}/5)</p><button class="sk-b" data-a="coin" ${B.coins() > 0 && used < 5 ? '' : 'disabled'}>🪙 1개 → 200G</button>`; }
-const buyPrice = it => it.g ? GOODS[it.g].price : priceOf(it) * 4;
-function makeShop() { const P = G.P, L = [goods('pot'), goods('wpot'), goods('pure'), goods('look')]; const lv = Math.max(2, P.lv); for (let i = 0; i < 8; i++) { const it = rollDrop(lv, 30, P.cls); it.id = true; if (it.r > 1) it.r = 1; if (it.st === -1) it.st = 0; L.push(it); } return L; }
+const buyPrice = it => it.pr ? it.pr : it.g ? GOODS[it.g].price : priceOf(it) * 4;
 function talkHtml(id) {
   const P = G.P, N = NPCDEF[id]; let lines = [], btns = [];
   const q = qid => P.q[qid];
   const offer = qid => { const Q = QUESTS[qid]; lines = Q.talk; btns.push(`<button class="sk-b p" data-a="accept" data-q="${qid}">맡을게요</button>`); };
   const finish = qid => { lines = QUESTS[qid].done; btns.push(`<button class="sk-b g" data-a="finish" data-q="${qid}">보상 받기</button>`); };
-  if (id === 'chief') { if (!q('q1')) offer('q1'); else if (q('q1').s === 2) finish('q1'); else if (q('q1').s === 3 && !q('q3')) offer('q3'); else if (q('q3') && q('q3').s === 2 && P.flags['wp_바람개비 언덕']) finish('q3'); else if (q('q3') && q('q3').s === 2) lines = ['우두머리를 쓰러뜨렸다고? 언덕의 바람개비 표지에 손을 얹어 주게. 그래야 바람이 섬에 돌아오네.']; else if (q('q3') && q('q3').s === 3 && !q('q5')) offer('q5'); else if (q('q5') && q('q5').s === 2) finish('q5'); else if (q('q5') && q('q5').s === 1) lines = ['둥지 껍질은 들판과 늪의 둥지지기가 떨군다네. 세 개 모아 바람개비 언덕 동쪽 끊긴 다리로 가게.']; else if (q('q5') && q('q5').s === 3 && !q('q7')) offer('q7'); else if (q('q7') && q('q7').s === 2 && P.flags['wp_둥지섬']) finish('q7'); else if (q('q7') && q('q7').s === 2) lines = ['큰 왜가리를 쓰러뜨렸다고?! 둥지섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.']; else if (q('q7') && q('q7').s === 1) lines = ['둥지섬은 갈대 늪 맨 끝일세. 녀석이 성나면 하늘에서 깃털이 쏟아진다니 붉은 자리를 피하게.']; else if (q('q7') && q('q7').s === 3) lines = ['민들레 섬이 더는 가라앉지 않네. 이음꾼, 정말 고맙네.', '녹슨 풍차 군도로 가는 길은… 머지않아 열릴 걸세.']; else lines = ['널빤지는 들판 밑것들이 물고 다닌다네. 다리는 마을 동쪽 들판 너머, 맨 위쪽 섬 끝에 있지.']; }
+  if (G.Wd.ch >= 2) { const r = (G.Wd.ch === 3 ? talk3 : talk2)(id, offer, finish); if (r.lines) lines = r.lines; btns.push(...r.btns); }
+  else {
+  if (id === 'chief') { if (!q('q1')) offer('q1'); else if (q('q1').s === 2) finish('q1'); else if (q('q1').s === 3 && !q('q3')) offer('q3'); else if (q('q3') && q('q3').s === 2 && P.flags['wp_바람개비 언덕']) finish('q3'); else if (q('q3') && q('q3').s === 2) lines = ['우두머리를 쓰러뜨렸다고? 언덕의 바람개비 표지에 손을 얹어 주게. 그래야 바람이 섬에 돌아오네.']; else if (q('q3') && q('q3').s === 3 && !q('q5')) offer('q5'); else if (q('q5') && q('q5').s === 2) finish('q5'); else if (q('q5') && q('q5').s === 1) lines = ['둥지 껍질은 들판과 늪의 둥지지기가 떨군다네. 세 개 모아 바람개비 언덕 동쪽 끊긴 다리로 가게.']; else if (q('q5') && q('q5').s === 3 && !q('q7')) offer('q7'); else if (q('q7') && q('q7').s === 2 && P.flags['wp_둥지섬']) finish('q7'); else if (q('q7') && q('q7').s === 2) lines = ['큰 왜가리를 쓰러뜨렸다고?! 둥지섬 바람개비 표지에 손을 얹어 주게. 바람이 돌아오게.']; else if (q('q7') && q('q7').s === 1) lines = ['둥지섬은 갈대 늪 맨 끝일세. 녀석이 성나면 하늘에서 깃털이 쏟아진다니 붉은 자리를 피하게.']; else if (q('q7') && q('q7').s === 3) lines = ['민들레 섬이 더는 가라앉지 않네. 이음꾼, 정말 고맙네.', '바람개비 표지에 녹슨 풍차 군도로 가는 바람길이 열렸네. 준비되면 건너가 보게.']; else lines = ['널빤지는 들판 밑것들이 물고 다닌다네. 다리는 마을 동쪽 들판 너머, 맨 위쪽 섬 끝에 있지.']; }
   if (id === 'sage') { if (!q('q2')) offer('q2'); else if (q('q2').s === 2) finish('q2'); else if (P.flags.bridge2 && q('q2').s === 3 && !q('q6')) offer('q6'); else if (q('q6') && q('q6').s === 2) finish('q6'); else lines = ['큰바람은 원래 세상을 한 바퀴 돌면서 섬마다 숨을 불어넣었대. 그게 멎었으니 뜸돌도 잠들어 가는 거야.', '감정 안 된 물건이 있으면 보여 줘. 하나에 15G면 봐 줄게.'];
     const n = P.inv.filter(it => !it.g && !it.id).length; btns.push(`<button class="sk-b" data-a="ident" ${n && P.gold >= 15 ? '' : 'disabled'}>감정하기 (${n}개 · 개당 15G)</button>`); }
   if (id === 'smith') { if (!q('q4')) offer('q4'); else if (q('q4').s === 1 && count('hone') >= 3) { lines = ['오, 숫돌 세 개 가져왔구나!']; btns.push(`<button class="sk-b g" data-a="finish" data-q="q4">숫돌 건네기</button>`); } else lines = ['강화든 옵션 다시 굴리기든 맡겨. 무기는 +6, 방어구는 +4까지 안전해.']; btns.push(`<button class="sk-b p" data-a="smith">대장간 열기</button>`); }
   if (id === 'merchant') { lines = ['어서 와. 다리가 끊겨서 나도 이 섬에 발이 묶였지 뭐야. 필요한 거 있어?']; btns.push(`<button class="sk-b p" data-a="shop">사고팔기</button>`); }
+  }
   return `<div class="sk-bx sk-talk"><button class="sk-x" data-a="x">✕</button><div class="who">${N.n}</div>${lines.map(l => '<p>' + esc(l) + '</p>').join('')}<div>${btns.join('')}<button class="sk-b" data-a="x">닫기</button></div>${TOAST}</div>`;
 }
 function smithHtml() {
   const P = G.P, sel = SEL, it = sel ? (sel[0] === 'e' ? P.eq[sel.slice(1)] : P.inv[+sel.slice(1)]) : null;
-  let h = `<div class="sk-bx"><button class="sk-x" data-a="x">✕</button><h3>무쇠의 대장간 <small style="font-size:12px;color:#8a7458">숫돌 ${count('hone')} · 아교 ${count('glue')} · 축복 숫돌 ${count('bhone')} · 축복 아교 ${count('bglue')} · ${P.gold}G</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${P.inv.map((x2, i) => x2.g ? '' : cell(x2, 'i' + i)).join('')}</div></div><div>`;
+  let h = `<div class="sk-bx"><button class="sk-x" data-a="x">✕</button><h3>${NPCDEF.smith.n.replace('대장장이 ', '')}의 대장간 <small style="font-size:12px;color:#8a7458">숫돌 ${count('hone')} · 아교 ${count('glue')} · 축복 숫돌 ${count('bhone')} · 축복 아교 ${count('bglue')} · ${P.gold}G</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${P.inv.map((x2, i) => x2.g ? '' : cell(x2, 'i' + i)).join('')}</div></div><div>`;
   if (it && !it.g) { const kind = encKind(BASE[it.b]); h += itemCard(it, P);
     if (kind) { const next = it.en + 1, safe = next <= SAFE[kind], rate = safe ? 1 : (ENCH_RATE[kind][next] || 0); const mat = kind === 'weapon' ? ['hone', 'bhone'] : ['glue', 'bglue'];
       h += `<h4>강화 (+${it.en} → +${next}) · 성공 ${Math.round(rate * 100)}%${safe ? ' · 안전' : ' · 실패하면 한 단계 내려감'}</h4><button class="sk-b p" data-a="ench" data-m="${mat[0]}" ${count(mat[0]) && it.en < MAXENCH ? '' : 'disabled'}>${GOODS[mat[0]].n}로 강화</button><button class="sk-b g" data-a="ench" data-m="${mat[1]}" ${count(mat[1]) && it.en < MAXENCH ? '' : 'disabled'}>${GOODS[mat[1]].n}로 강화</button>`; }
     else h += '<p class="m" style="font-size:12px">장신구는 강화할 수 없어요.</p>';
+    { const sv = sel[0] === 'i' && salvageOf(it); if (sv) h += `<h4>분해하기</h4><p class="m" style="font-size:11.5px">이 장비를 부숴서 ${GOODS[sv[0]].n} ${sv[1]}개로 바꿔요. 되돌릴 수 없어요.</p><button class="sk-b" data-a="salv">분해하기</button>`; }
     if ((it.r === 1 || it.r === 2) && it.id) { const cost = 40 + it.ilv * 15, mat = kind === 'weapon' ? 'hone' : 'glue'; h += `<h4>옵션 다시 굴리기</h4><p class="m" style="font-size:11.5px">무작위 옵션 하나를 새로 굴려요. ${cost}G${kind ? ' + ' + GOODS[mat].n + ' 1' : ''}</p><button class="sk-b" data-a="reroll" ${P.gold >= cost && (!kind || count(mat)) ? '' : 'disabled'}>다시 굴리기</button>`; }
   } else h += '<p style="font-size:12.5px;color:#8a7458">강화하거나 옵션을 다시 굴릴 장비를 고르세요.<br>무기 +6 · 방어구 +4까지는 100% 성공, 그 위는 실패하면 한 단계 내려가요. 축복 받은 장비는 실패를 한 번 막아 줘요.</p>';
   return h + '</div></div>' + TOAST + '</div>';
 }
-function endHtml() { const P = G.P; if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>2장은 다음에 열려요. 그동안 늪과 둥지섬에서 장비를 모으고 강화해 보세요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
+function endHtml() { const P = G.P; if (G.Wd.ch === 3) return endHtml3(); if (G.Wd.ch === 2) return endHtml2(); if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 2장 녹슨 풍차 군도로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
   return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 앞부분 끝</h3><p>바람개비가 다시 돌기 시작했다. 아주 약하지만, 분명히 바람이다.</p><p>그런데 저 멀리 둥지섬 쪽 하늘에서 커다란 날개 그림자가 구름을 가르고 지나갔다…</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>촌장 들메에게 다시 말을 걸면 1장 뒷부분(갈대 늪·둥지섬)이 이어져요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`; }
 function bindPanel(arg) {
   panel.onclick = e => {
@@ -2086,7 +2458,7 @@ function bindPanel(arg) {
     else if (a === 'use') { const it = P.inv[+SEL.slice(1)]; drink(it.g); if (!P.inv.includes(it)) SEL = null; render(); }
     else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
-    else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g) { SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
+    else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
     else if (a === 'coin') { const B = opts.bonus, day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10); if (P.flags.coinDay !== day) { P.flags.coinDay = day; P.flags.coinN = 0; } if (P.flags.coinN >= 5 || !B.spend(1)) return; P.flags.coinN++; P.gold += 200; sfx('coin'); render(); }
     else if (a === 'lookit') { const it = P.inv[+SEL.slice(1)]; if (useGood('look')) { it.id = true; sfx('ench'); SEL = 'i' + P.inv.indexOf(it); } render(); }
     else if (a === 'purify') { const it = P.eq[SEL.slice(1)]; if (useGood('pure')) { it.st = 0; calc(P); sfx('ench'); toast('정화했어요'); } render(); }
@@ -2094,14 +2466,18 @@ function bindPanel(arg) {
     else if (a === 'learn') { const s = SKILLS[P.cls].find(q => q.id === SEL); if (P.skp > 0 && P.lv >= s.req && (P.sk[s.id] || 0) < 10) { P.skp--; P.sk[s.id] = (P.sk[s.id] || 0) + 1; autoSlots(P); if (P.sk[s.id] === 5) toast('5레벨! 갈래를 고를 수 있어요'); if (P.sk[s.id] === 10) toast('10레벨! 두 번째 갈래를 고를 수 있어요'); } render(); }
     else if (a === 'fork2') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 10 && P.fork2[s.id] == null) { P.fork2[s.id] = +t.dataset.i; toast('「' + fork2Of(s)[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
     else if (a === 'dclaim') { claimTask(+t.dataset.i); render(); }
+    else if (a === 'errs') { errandSend(+t.dataset.i); render(); }
+    else if (a === 'errc') { errandClaim(); render(); }
+    else if (a === 'salv') { if (SEL && SEL[0] === 'i') { salvage(+SEL.slice(1)); SEL = null; render(); } }
     else if (a === 'slot') { const i = +t.dataset.i, o = P.slots.indexOf(SEL); if (o >= 0) P.slots[o] = P.slots[i]; P.slots[i] = SEL; render(); }
     else if (a === 'fork') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 5 && P.fork[s.id] == null) { P.fork[s.id] = +t.dataset.i; toast('「' + s.fork[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
+    else if (a === 'chap') { goChapter(+t.dataset.i); return; }
     else if (a === 'go') { const w = G.Wd.wps[+t.dataset.i]; P.x = w.x + .8; P.y = w.y + .8; G.cam = [P.x, P.y]; closePanel(); sfx('dodge'); }
     else if (a === 'accept') { qSet(t.dataset.q, 1); toast('「' + QUESTS[t.dataset.q].n + '」을(를) 맡았어요'); closePanel(); }
     else if (a === 'finish') finishQuest(t.dataset.q);
     else if (a === 'ident') { let n = 0; for (const it of P.inv) if (!it.g && !it.id && P.gold >= 15) { P.gold -= 15; it.id = true; n++; } toast(n + '개 감정했어요'); sfx('ench'); render(arg); }
     else if (a === 'smith') { PANEL = 'smith'; SEL = null; render(); }
-    else if (a === 'shop') { PANEL = 'inv'; SHOP = G.shop || (G.shop = makeShop()); SEL = null; render(); }
+    else if (a === 'shop') { PANEL = 'inv'; SHOP = shopFresh(); SEL = null; render(); }
     else if (a === 'ench') { const it = SEL[0] === 'e' ? P.eq[SEL.slice(1)] : P.inv[+SEL.slice(1)], m = t.dataset.m; if (!count(m)) return; const r = enchant(it, m); if (r.ok || r.msg.includes('실패')) useGood(m); if (!r.ok && !r.msg.includes('실패')) { toast(r.msg); return; } sfx(r.ok === 1 ? 'ench' : 'fail'); calc(P); render(); toast(r.msg); }
     else if (a === 'reroll') { const it = SEL[0] === 'e' ? P.eq[SEL.slice(1)] : P.inv[+SEL.slice(1)], kind = encKind(BASE[it.b]), cost = 40 + it.ilv * 15; if (P.gold < cost) return; if (kind && !useGood(kind === 'weapon' ? 'hone' : 'glue')) return; P.gold -= cost; const i = reroll(it); calc(P); sfx('ench'); render(); toast(i === false ? '바뀌지 않았어요' : '새 옵션: ' + afxText(it.af[i][0], it.af[i][1], P.cls)); }
     else if (a === 'respec') { const kd = t.dataset.k; if (CONF === kd) { CONF = null; doRespec(kd); } else CONF = kd; render(); }
@@ -2133,7 +2509,7 @@ function drawMap(c) {
   const T = Wd.islands[Wd.town]; { const [a, b] = M(T.cx, T.cy); g.fillStyle = '#d8d0c0'; g.beginPath(); g.ellipse(a, b, 3.2 * sc * 32, 3.2 * sc * 16, 0, 0, TAU); g.fill(); }
   g.font = '800 12px system-ui'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)';
   const lab = (s2, t) => { const [a, b] = M(s2.cx, s2.cy - s2.r * .9); g.fillStyle = '#3a4a2a'; g.strokeText(t, a, b); g.fillText(t, a, b); };
-  lab(T, '민들레 마을'); lab(Wd.islands[Wd.hill], '바람개비 언덕'); Wd.fi.forEach((k2, i) => lab(Wd.islands[k2], ['동쪽 들판', '남쪽 들판', '가운데 들판', '윗 들판', '아랫 들판'][i] || '들판')); Wd.mi.forEach((k2, i) => lab(Wd.islands[k2], ['갈대 늪 어귀', '갈대 나루', '안쪽 갈대 늪'][i])); lab(Wd.islands[Wd.nestI], '둥지섬');
+  for (const s2 of Wd.islands) if (s2.name) lab(s2, s2.name);
   if (G.today != null) { const s2 = Wd.islands[G.today], [a, b] = M(s2.cx, s2.cy - s2.r * .9); g.font = '800 11px system-ui'; g.fillStyle = '#c07a10'; g.strokeText('★ 오늘의 섬', a, b + 14); g.fillText('★ 오늘의 섬', a, b + 14); }
   if (G.chest) { const [a, b] = M(G.chest.x, G.chest.y); g.fillStyle = '#ffd166'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.5; g.fillRect(a - 5, b - 4, 10, 8); g.strokeRect(a - 5, b - 4, 10, 8); }
   if (Wd.signAt && P.daily) { const [a, b] = M(...Wd.signAt); g.fillStyle = '#e8b05a'; g.strokeStyle = '#7a5a20'; g.lineWidth = 1.2; g.fillRect(a - 4, b - 4, 8, 8); g.strokeRect(a - 4, b - 4, 8, 8); }
@@ -2141,18 +2517,25 @@ function drawMap(c) {
   for (const wp of Wd.wps) { const [a, b] = M(wp.x, wp.y); g.fillStyle = wp.on ? '#9fe4ff' : '#c8c0b0'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a, b - 7); g.lineTo(a + 5, b); g.lineTo(a, b + 7); g.lineTo(a - 5, b); g.closePath(); g.fill(); g.stroke(); }
   // 할 일 목표
   const goals = []; const q = P.q; const bq = Wd.bridges[Wd.bq];
+  if (Wd.ch === 3) ch3Goals(Wd, P, goals);
+  else if (Wd.ch === 2) { if (q.q9 && q.q9.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
+    if (q.q12 && q.q12.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
+    if (q.q12 && q.q12.s === 2 && !P.flags['wp_큰 풍차섬']) goals.push([Wd.wps[2].x, Wd.wps[2].y]); }
+  else {
   if (q.q1 && q.q1.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q3 && q.q3.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }
   if (q.q3 && q.q3.s === 2 && !P.flags['wp_바람개비 언덕']) goals.push([Wd.wps[1].x, Wd.wps[1].y]);
   if (q.q5 && q.q5.s === 1) { const b2 = Wd.bridges[Wd.bq2], i = b2.cells[b2.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q7 && q.q7.s === 1) { const N2 = Wd.islands[Wd.nestI]; goals.push([N2.cx, N2.cy]); }
-  if (q.q7 && q.q7.s === 2 && !P.flags['wp_둥지섬']) goals.push([Wd.wps[3].x, Wd.wps[3].y]);
-  for (const id in q) if (q[id].s === 2 && !(id === 'q7' && !P.flags['wp_둥지섬']) && !(id === 'q3' && !P.flags['wp_바람개비 언덕'])) goals.push(Wd.npcAt[QUESTS[id].from]);
+  if (q.q7 && q.q7.s === 2 && !P.flags['wp_둥지섬']) goals.push([Wd.wps[3].x, Wd.wps[3].y]); }
+  for (const id in q) if (q[id].s === 2 && qCh(id) === Wd.ch && !(id === 'q7' && !P.flags['wp_둥지섬']) && !(id === 'q3' && !P.flags['wp_바람개비 언덕']) && !(id === 'q12' && !P.flags['wp_큰 풍차섬']) && !(id === 'q17' && !P.flags['wp_녹슨 정박장'])) goals.push(Wd.npcAt[QUESTS[id].from]);
   for (const [gx, gy] of goals) { const [a, b] = M(gx, gy); g.strokeStyle = '#ff6a4a'; g.lineWidth = 2.5; g.beginPath(); g.arc(a, b, 9, 0, TAU); g.stroke(); g.fillStyle = '#ff6a4a'; g.font = '900 13px system-ui'; g.fillText('!', a, b - 12); }
   { const [a, b] = M(P.x, P.y); g.fillStyle = '#fff'; g.strokeStyle = '#3a5a7a'; g.lineWidth = 2.5; g.beginPath(); g.arc(a, b, 6, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#3a5a7a'; g.font = '800 11px system-ui'; g.fillText('나', a, b - 10); }
 }
 function finishQuest(id) {
   const P = G.P, q = P.q[id]; if (!q) return;
+  if (qCh(id) === 3) { const R = finish3(id); if (!R) return; sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166'); if (id === 'q13' || id === 'q14') setTimeout(() => talk('chief'), 300); if (id === 'q17') setTimeout(() => openPanel('end'), 400); return; }
+  if (qCh(id) === 2) { const R = finish2(id); if (!R) return; sfx('lvl'); save(); closePanel(); say('「' + QUESTS[id].n + '」 완료! 경험치 ' + R[0] + ', ' + R[1] + 'G', '#ffd166'); if (id === 'q8' || id === 'q9') setTimeout(() => talk('chief'), 300); if (id === 'q12') setTimeout(() => openPanel('end'), 400); return; }
   if (id === 'q4') { if (!useGood('hone', 3)) return; addInv(goods('bhone')); }
   q.s = 3; const R = { q1: [150, 80], q2: [120, 50], q3: [500, 200], q4: [80, 30], q5: [700, 250], q6: [900, 300], q7: [2500, 800] }[id]; gainXp(R[0]); P.gold += R[1];
   if (id === 'q1') addInv(makeItem(CLS_START[P.cls][3], 1, 4, { id: 1, st: 0 }));

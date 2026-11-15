@@ -55,6 +55,20 @@ export const MOBS = {
   bogpod: { model: 'seed', col: 0x3a5a2a, cell: [96, 104, 48, 92] },
   heronling: { model: 'bird', col: 0x5a6a7a, eye: 0xff5a3a, cell: [104, 132, 52, 120] },
   heron: { model: 'heron', scale: 1.9, cell: [260, 300, 130, 282] },
+  // 2장 녹슨 풍차 군도
+  rustfluff: { model: 'fluff', col: 0x8a4e2a, tip: 0x5a2e18, feet: 0x2a1a12, eye: 0xffd02a, scale: 1.1, cell: [106, 106, 53, 92] },
+  boltpod: { model: 'seed', col: 0x4a4a52, cell: [96, 104, 48, 92] },
+  rustcrow: { model: 'bird', col: 0x5a3a2a, eye: 0xff8a2a, cell: [104, 132, 52, 120] },
+  scarecrow: { model: 'scarecrow', scale: 1.25, cell: [156, 156, 78, 138] },
+  cogkeeper: { model: 'seed', keeper: 1, col: 0x5a4e48, scale: 1.9, cell: [196, 212, 98, 192] },
+  creaker: { model: 'creaker', scale: 2.3, cell: [270, 300, 135, 270] },
+  // 3장 닻 내린 항구
+  saltfluff: { model: 'fluff', col: 0xa8b8c8, tip: 0x6a7a8a, feet: 0x2a3440, eye: 0xff5a3a, scale: 1.15, cell: [110, 110, 55, 96] },
+  barnpod: { model: 'seed', col: 0x4a5a5a, cell: [96, 104, 48, 92] },
+  gull: { model: 'bird', col: 0xd8dce4, eye: 0xff4a2a, cell: [104, 132, 52, 120] },
+  crab: { model: 'crab', scale: 1.4, cell: [150, 120, 75, 104] },
+  barnkeeper: { model: 'seed', keeper: 1, col: 0x3a4a4e, scale: 1.9, cell: [196, 212, 98, 192] },
+  rustship: { model: 'rustship', scale: 1.75, cell: [320, 400, 160, 372] },
 };
 // 소품: KayKit Medieval Hexagon (CC0). s = 크기 배율, foot = 바닥 차지 반경(칸)
 export const PROPS = [
