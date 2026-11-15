@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts
       - name: 오늘 이미 보낸 알림 단계 불러오기
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .cfusage
           key: cfusage-${{ github.run_id }}
@@ -39,7 +39,7 @@ jobs:
         run: python3 scripts/cf_usage_alert.py ${{ inputs.setup && '--setup' || '' }}
       - name: 보낸 알림 단계 저장
         if: always() && hashFiles('.cfusage/sent.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .cfusage
           key: cfusage-${{ github.run_id }}
