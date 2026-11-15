@@ -6,3 +6,10 @@
   Strict-Transport-Security: max-age=31536000
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
 
+# pages.dev 주소가 검색에 따로 잡히지 않게 (2026-11-15 BK, plan/SCALING.md). 본 주소 301 은 Cloudflare Bulk Redirects(대시보드).
+# 미리보기(해시·브랜치.프로젝트.pages.dev)는 Cloudflare 가 기본으로 noindex 를 붙이지만 한 번 더 명시한다.
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex
+
+https://:version.:project.pages.dev/*
+  X-Robots-Tag: noindex

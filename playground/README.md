@@ -172,3 +172,16 @@
 - 캐릭터·일반 적 그림과 몸 크기 CS=0.82 (보스는 그대로).
 - 적은 모두 오른쪽에서 등장.
 - 일반 적 공격(raid.js AKS/eAtk): 정비병 휘두르기·렌치 던지기·돌진, 방패 수리공 휘두르기·바닥 충격파·전기탄, 정비반장 휘두르기·연속 지진·부채꼴 탄·돌진. 돌진은 빨간 줄+화살표 경고(위험 'rush'), 협동은 각자 판정.
+
+## 게임 포스터 자동 갱신 (2026-11-15 BK)
+- 전체 화면 게임의 시작 전 포스터 `static/img/<slug>-poster.jpg`(1280x720)와 공유 이미지 `static/og/<slug>.jpg`(1200x630)는 손으로 만들지 않는다. meta.json `"poster"` 조리법(디버그 주소·시작 후 실행할 JS·기다릴 시간)대로 `scripts/game_posters.js` 가 실제 게임 화면을 찍는다.
+- `python playground/posters.py` = 바뀐 게임만(`static/img/posters.json` 해시 비교), `--all` 전부, `--check` 확인만. 필요: Pillow, Node + playwright.
+- main 에 게임 코드·그림이 바뀌면 Actions `posters` 가 자동으로 다시 찍어 커밋한다.
+- build.py 가 게임 본문 그림 주소와 og:image 에 `?v=<내용 해시>` 를 붙여 폰 캐시에 옛 포스터가 남지 않게 한다.
+- 규칙·조리법 예시: docs/GAME_QUALITY.md 2-1.
+
+## 순 방문자 수 (관리자 전용, 2026-11-15)
+- 모든 페이지 공통 스크립트(build.py `VISIT_JS`)가 브라우저마다 하루 1번 `POST /api/visit` (5raksil.com 주소에서만, /admin·자동화 브라우저 제외, 1.5초 이상 머문 경우).
+- 서버 `functions/api/visit.js`: IP를 (날짜+VOTE_SALT)로 해시해 하루 1명만 셈(원본 IP 저장 안 함), UA 봇 제외. 지난날은 `visit_daily` 날짜별 숫자로 접고 해시 삭제.
+- 보기: /admin 의 '📈 순 방문자 수'(오늘·어제·최근 7일·30일 + 30일 막대). 7일·30일은 하루 순방문의 합(날짜를 넘는 같은 사람 구분은 개인정보 때문에 하지 않음).
+- D1 부담: 새 방문자 1명당 쓰기 1행 + 하루 1번 정리. 하루 수천 명이어도 무료 한도(쓰기 10만 행/일) 안.

@@ -9,6 +9,7 @@ import html
 import json
 import os
 import urllib.request
+from urllib.parse import urlparse
 import re
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -178,6 +179,20 @@ load();
 """
 
 
+def static_ver(rel: str) -> str:
+    """static/ 안 파일 내용 해시 8자리(없으면 ''). 그림·스크립트 주소 뒤 ?v= 에 붙여 폰이 예전 파일을 계속 쓰지 않게 한다."""
+    f = HERE / "static" / rel.lstrip("/")
+    return __import__("hashlib").md5(f.read_bytes()).hexdigest()[:8] if f.is_file() else ""
+
+
+def bust_imgs(html: str) -> str:
+    """게임 본문의 /img/·/og/ 그림 주소에 내용 해시를 붙인다(BK 11/15: 포스터를 새로 찍어도 옛 그림이 보이지 않게). 예전 수동 ?v=2 같은 것은 바꿔 씀."""
+    def rep(m):
+        v = static_ver(m.group(1))
+        return m.group(1) + (f"?v={v}" if v else "")
+    return re.sub(r"(/(?:img|og)/[\w./-]+\.(?:jpg|jpeg|png|webp))(?:\?v=\w+)?(?=['\"])", rep, html)
+
+
 def load_games() -> list[dict]:
     games = []
     for d in sorted((HERE / "games").iterdir()):
@@ -186,6 +201,7 @@ def load_games() -> list[dict]:
         g = json.loads((d / "meta.json").read_text(encoding="utf-8"))
         g["slug"] = d.name
         g["body"] = (d / "body.html").read_text(encoding="utf-8")
+        g["body"] = bust_imgs(g["body"])
         g["js"] = (d / "game.js").read_text(encoding="utf-8")
         # 게임 스크립트 주소에 내용 해시를 붙여 폰·앱 브라우저가 예전 파일을 계속 쓰지 않게 (BK 11/14: 배포 후에도 예전 네온 레이드가 보임)
         g["js"] = re.sub(r"(/js/([\w-]+)\.js)(?=['\"])", lambda m: m.group(1) + ("?v=" + __import__("hashlib").md5((HERE / "static/js" / (m.group(2) + ".js")).read_bytes()).hexdigest()[:8] if (HERE / "static/js" / (m.group(2) + ".js")).exists() else ""), g["js"])
@@ -772,6 +788,7 @@ ADMIN_BODY = """<h1>🔧 관리자</h1><p class="lead">프로필을 찾아 코�
 <div class="card adm"><label>관리자 비밀번호 <input type="password" id="ak" autocomplete="off"></label> <button class="share" type="button" id="aout">🔒 이 탭에서 비밀번호 지우기</button>
 <div id="ast" class="ast"></div>
 <form id="af"><input id="aq" placeholder="별명 일부 또는 복구 코드" maxlength="20"> <button class="share" type="submit">찾기</button> <button class="share" type="button" id="atst">🧪 테스터 모두 보기</button></form><p id="am" class="muted"></p><div id="al"></div></div>
+<div class="card"><h2>📈 순 방문자 수</h2><p class="muted">같은 IP는 하루 1명으로 세요(봇 제외, 원본 IP 저장 안 함). 7일·30일은 날마다 센 순 방문자를 더한 값이에요(이틀 온 사람은 2명).</p><div id="avs" class="ast"></div><div id="avd" class="avd"></div></div>
 <div class="card"><h2>👥 별명 목록</h2><p class="muted">최근 사용 순. 별명을 누르면 위에서 바로 관리할 수 있어요. 복구 코드 원본은 보안상 저장하지 않아요. 잃어버린 사람에게는 '새 복구 코드 발급'을 눌러 새 코드를 주세요.</p><button class="share" type="button" id="alst">불러오기</button> <span id="atot" class="muted"></span><ol id="aplist" class="list"></ol><button class="share" type="button" id="amore" hidden>더 보기</button></div>
 <div class="card"><h2>최근 관리자 작업</h2><button class="share" type="button" id="alog">불러오기</button><ol id="alist" class="list"></ol></div>"""
 ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:inline-block;margin-bottom:10px}.adm input{font:inherit;padding:8px 10px;border-radius:9px;border:2px solid #ffffff33;background:#0b0620;color:#fff;max-width:100%}
@@ -781,13 +798,18 @@ ADMIN_CSS = """#alist small{word-break:break-all}.adm label{display:inline-block
 .ap details.sh{border:1px solid #ffffff26;border-radius:10px;margin:8px 0;padding:6px 10px;background:#ffffff05}.ap details.sh>summary{cursor:pointer;font-weight:800;padding:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ap .grp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:14px}.ap .grp b{color:#ffd23f}.ap .eq{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;margin:2px 0 6px}
 .ap .abar{padding:8px 0;border-bottom:1px solid #ffffff22}.ap .cnt{font-size:12px;color:var(--muted);font-weight:400}
+.avd{display:flex;align-items:flex-end;gap:2px;height:90px;margin-top:6px}.avd i{flex:1;background:#3ddc84;border-radius:3px 3px 0 0;min-height:2px;position:relative}.avd i:last-child{background:#ffd23f}
 .ast{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}.ast span{border:1px solid #ffffff33;border-radius:10px;padding:6px 10px;font-size:13px}.ast span.warn{border-color:#ff8fb1;color:#ff8fb1}"""
 ADMIN_JS = r"""(function(){const $=i=>document.getElementById(i),ak=$('ak');try{ak.value=sessionStorage.getItem('nr_admk')||''}catch(e){}
 const api=async b=>{const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json','x-admin-key':ak.value},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(e){}if(!r.ok)$('am').textContent=j.msg||('오류 '+r.status);return r.ok?j:null};
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function stats(){if(!ak.value)return;const j=await api({a:'stats'});if(!j)return;api({a:'devtoken'}).then(d=>{if(d&&d.t)try{localStorage.setItem('nr_dev',d.t);localStorage.removeItem('nr_tester')}catch(e){}});const w=(n,t)=>`<span${n?' class="warn"':''}>${t} <b>${n}</b></span>`;
+async function stats(){if(!ak.value)return;const j=await api({a:'stats'});if(!j)return;visits();api({a:'devtoken'}).then(d=>{if(d&&d.t)try{localStorage.setItem('nr_dev',d.t);localStorage.removeItem('nr_tester')}catch(e){}});const w=(n,t)=>`<span${n?' class="warn"':''}>${t} <b>${n}</b></span>`;
  $('ast').innerHTML=`<span>프로필 <b>${j.profiles}</b>명</span><span>오늘 저장 <b>${j.today}</b>명</span><span>테스터 <b>${j.testers}</b></span>`+w(j.autohid,'🚨 신고로 숨겨진 글')+w(j.secret,'🔒 답변 안 한 비밀글')+w(j.qprops,'💡 대기 중 질문 제안')+`<span>글쓰기 제한 <b>${j.bans}</b>명</span>`}
 ak.onchange=()=>{try{sessionStorage.setItem('nr_admk',ak.value)}catch(e){}stats()};
+async function visits(){if(!ak.value)return;const j=await api({a:'visits'});if(!j)return;const f=n=>Number(n).toLocaleString('ko-KR');
+ $('avs').innerHTML=`<span>오늘 <b>${f(j.today)}</b>명</span><span>어제 <b>${f(j.yday)}</b>명</span><span>최근 7일 <b>${f(j.d7)}</b>명 <small class="muted">(하루 평균 ${f(Math.round(j.d7/7))})</small></span><span>최근 30일 <b>${f(j.d30)}</b>명</span><span class="muted">집계 시작 ${esc(j.since)}</span>`;
+ const mx=Math.max(1,...j.days.map(r=>r.n)),m=new Map(j.days.map(r=>[r.day,r.n])),ds=[];for(let i=29;i>=0;i--){const d=new Date(Date.now()+9*3600e3-i*864e5).toISOString().slice(0,10);ds.push([d,m.get(d)||0])}
+ $('avd').innerHTML=ds.map(([d,n])=>`<i style="height:${Math.round(n/mx*100)}%" title="${d.slice(5)} ${n}명"></i>`).join('')}
 $('aout').onclick=()=>{ak.value='';try{sessionStorage.removeItem('nr_admk');localStorage.removeItem('nr_dev');localStorage.removeItem('nr_tester')}catch(e){}$('al').innerHTML='';$('ast').innerHTML='';$('am').textContent='이 탭에서 비밀번호를 지웠어요.'};
 // 상점 구조: 사이트 공통(출석·코인 상점) + 게임마다 그 게임 상점. eq = 장착 칸 [저장 필드, 키, 기본값 이름]
 const AGN=window.AGN||{},gname=g=>AGN[g]?AGN[g][1]+' '+AGN[g][0]:g;
@@ -979,6 +1001,12 @@ nav a.me{display:flex;align-items:center;gap:4px;max-width:150px;border-color:#f
 #profpage .row{display:flex;gap:8px;justify-content:center}#profpage .btn{border:0;cursor:pointer;font:inherit;font-weight:800}#profpage .ld{margin-top:4px}
 """
 
+# 순 방문자 수(2026-11-15 BK, 관리자 페이지에서만 봄): 브라우저마다 하루 1번 /api/visit 에 빈 신호. 서버는 IP를 날짜+비밀값으로 해시해 하루 1명만 센다.
+# 진짜 주소(5raksil.com)에서만, 관리자 페이지·자동화 브라우저(navigator.webdriver)는 빼고, 페이지가 1.5초 이상 열려 있을 때만 보낸다.
+VISIT_JS = r"""(function(){try{if(location.hostname!==VH||location.pathname.indexOf('/admin')===0||navigator.webdriver)return;
+const d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);if(localStorage.getItem('nr_vday')===d)return;
+setTimeout(function(){try{if(document.visibilityState==='hidden')return;localStorage.setItem('nr_vday',d);fetch('/api/visit',{method:'POST',keepalive:true}).catch(function(){})}catch(e){}},1500)}catch(e){}})();"""
+
 
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
@@ -1012,7 +1040,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스<span class="hs">게임</span></a><a href="/rank">순위</a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크·코인 상점, 보유 코인"><em>출석·상점</em>🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
-<script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script>{kakao}</body></html>"""
+<script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script><script>var VH={json.dumps(urlparse(cfg["baseUrl"]).hostname)};{VISIT_JS}</script>{kakao}</body></html>"""
 
 
 def qcard(q, n=None, link=True):
@@ -1112,7 +1140,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                        "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "All", "inLanguage": "ko", "isAccessibleForFree": True,
                        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}},
                       crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])], noindex=bool(g.get("hidden")),
-              og=g.get("og") if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
+              og=f"{g['og']}?v={static_ver(g['og'])}" if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
@@ -1188,9 +1216,10 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     write("privacy", f"개인정보처리방침 | {cfg['siteName']}", f"{cfg['siteName']} 개인정보처리방침",
           f"<h1>개인정보처리방침</h1><p>시행일: {cfg['privacyDate']}</p><h2>1. 수집하는 정보</h2><p>회원 가입이 없고 이름·연락처를 받지 않습니다. 투표와 반응 버튼을 누르면 '어떤 질문에 어느 쪽을 골랐는지'만 숫자로 집계합니다.</p>"
           "<h2>2. 중복 투표 방지</h2><p>같은 사람의 중복 투표를 막기 위해 접속 IP 주소를 비밀값과 함께 되돌릴 수 없는 해시값으로 바꿔 최대 2일 동안 보관한 뒤 자동 삭제합니다. 원래 IP 주소는 저장하지 않습니다. 이용자의 브라우저에는 이미 투표한 질문 목록이 저장됩니다(브라우저에서 언제든 삭제 가능).</p>"
-          "<h2>3. 광고와 쿠키</h2><p>이 사이트는 Google 애드센스, 카카오 애드핏 등 제3자 광고를 게재할 수 있으며, 광고 영역에는 ‘광고’라고 표시합니다. Google을 포함한 제3자 공급업체는 쿠키를 사용하여 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 게재합니다. "
+          "<h2>3. 방문자 수 집계</h2><p>하루 방문자 수를 알기 위해 접속 IP 주소를 날짜·비밀값과 함께 되돌릴 수 없는 해시값으로 바꿔 그날 하루만 보관하고, 다음 날에는 날짜별 방문자 숫자만 남기고 해시값을 삭제합니다. 원래 IP 주소는 저장하지 않으며, 날짜가 바뀌면 같은 사람인지 알 수 없습니다. 이용자의 브라우저에는 오늘 이미 집계됐는지 표시하는 날짜만 저장됩니다.</p>"
+          "<h2>4. 광고와 쿠키</h2><p>이 사이트는 Google 애드센스, 카카오 애드핏 등 제3자 광고를 게재할 수 있으며, 광고 영역에는 ‘광고’라고 표시합니다. Google을 포함한 제3자 공급업체는 쿠키를 사용하여 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 게재합니다. "
           "맞춤 광고는 <a href=\"https://adssettings.google.com\" rel=\"nofollow\">Google 광고 설정</a>에서 끌 수 있고, <a href=\"https://www.aboutads.info\" rel=\"nofollow\">aboutads.info</a>에서 제3자 쿠키 사용을 거부할 수 있습니다.</p>"
-          f"<h2>4. 문의</h2><p><a href=\"mailto:{esc(email)}\">{esc(email)}</a></p>")
+          f"<h2>5. 문의</h2><p><a href=\"mailto:{esc(email)}\">{esc(email)}</a></p>")
 
     base = cfg["baseUrl"].rstrip("/")
     lm = today().isoformat()
