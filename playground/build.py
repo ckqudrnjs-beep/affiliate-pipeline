@@ -1261,7 +1261,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
     write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
-          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->")
+          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->", noindex=True)  # 질문 목록뿐이고 각 질문 페이지도 noindex(2026-11-16)
 
     write("games", f"무료 미니게임 | {cfg['siteName']}", "5락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
           f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{trial}{grid}")
