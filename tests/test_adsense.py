@@ -39,7 +39,8 @@ class AdsenseTest(unittest.TestCase):
 
     def test_thin_news(self):
         self.assertTrue(S.thin_news({"id": "drop-x-2026-11-12"}))
-        self.assertFalse(S.thin_news({"id": "winter-400kwh"}))
+        self.assertFalse(S.thin_news({"id": "winter-400kwh", "body": "가" * 300}))
+        self.assertTrue(S.thin_news({"id": "winter-400kwh", "body": "짧은 소식"}))
 
 
 if __name__ == "__main__":

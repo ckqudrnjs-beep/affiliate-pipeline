@@ -698,7 +698,7 @@ def contact_body() -> str:
 
 def thin_news(n: dict) -> bool:
     """자동 '가격 내림' 알림(drop-…)은 상품 한 줄짜리라 애드센스 심사에서 얇은 제휴 페이지로 보인다 → 색인·사이트맵·광고 제외."""
-    return str(n.get("id", "")).startswith("drop-")
+    return str(n.get("id", "")).startswith("drop-") or len(n.get("body", "")) < 300  # 본문 300자 미만 소식도 얇다(2026-11-16)
 
 
 HIST: dict = {}
@@ -779,7 +779,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     reps = R.load_all()
     (o / "report").mkdir(exist_ok=True)
     (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "기름값·장바구니 물가·환율을 공공 데이터로 매주 월요일 정리합니다.",
-        R.list_body(reps), path="report.html"), encoding="utf-8")
+        R.list_body(reps), path="report.html", noindex=not reps), encoding="utf-8")  # 첫 리포트 전엔 빈 목록이라 색인 제외
     for r in reps:
         (o / "report" / f"{r['date']}.html").write_text(page(f"{R.title(r)} | {BRAND}", " ".join(r["lines"])[:150], R.body(r), root="../",
             path=f"report/{r['date']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": R.title(r),
