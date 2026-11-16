@@ -321,6 +321,9 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
                    for v in ([CFG[k]] if isinstance(CFG.get(k), str) else CFG.get(k) or []) if v)
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
     lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
+    # 대가성 문구 띠: 제휴 링크(rel=sponsored)가 있는 페이지와 상품 페이지에만 + 상품을 소개하는 홈 (2026-11-16, 애드센스 심사 대비 — 계산기·소개처럼 링크 없는 페이지가 광고 페이지처럼 보이지 않게)
+    adbar = (f'<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>'
+             if ("sponsored" in body or path.startswith("p/") or path in ("", "index.html")) else "")
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
             f'<meta property="og:locale" content="ko_KR"><meta property="og:image" content="{BASE}/{og}"><meta property="og:image:width" content="1200">'
@@ -333,7 +336,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}{DY.CSS}</style></head><body>
-<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>
+{adbar}
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
 <nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
