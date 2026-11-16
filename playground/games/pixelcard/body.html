@@ -1,0 +1,241 @@
+<h1>🪪 게이머 면허증·도트 프사 만들기</h1><p class="lead">내 사진이나 프로필 아바타를 8비트 도트로 바꾸고, 게이머 면허증·전투력 영수증·정사각형 프사 카드로 저장하세요. 사진은 서버로 보내지 않고 이 기기 안에서만 처리돼요.</p>
+<style>.pxc .studio-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.pxc .studio-grid{grid-template-columns:minmax(0,1fr)}}
+.pxc .preview-box{background:linear-gradient(180deg,var(--card2),var(--card)); border:3px solid var(--b);border-radius:18px;padding:16px; box-shadow:0 8px 0 #00000088,0 0 24px #22d3ee33; position:static}
+@media (max-width:820px){.pxc .preview-box{position:static}}
+.pxc .tpl-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.pxc .tpl-tabs button{font:inherit;font-family:var(--hd);font-size:15px;padding:10px 6px;border-radius:10px; border:2px solid var(--line);background:var(--bg2);color:var(--muted);cursor:pointer;transition:all .12s}
+.pxc .tpl-tabs button.active{border-color:var(--y);color:#1a0f00;background:var(--y); box-shadow:0 4px 0 #b8860b,0 0 14px #ffd23f66}
+.pxc .canvas-stage{background:#070312;border:2px solid #000;border-radius:12px;padding:12px; display:grid;place-items:center;min-height:320px; box-shadow:inset 0 0 28px #000}
+.pxc #cardCanvas{max-width:100%;max-height:60vh;width:auto;height:auto;border-radius:8px;box-shadow:0 0 22px rgba(34,211,238,.25)}
+.pxc .act-row{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:14px}
+@media (max-width:460px){.pxc .act-row{grid-template-columns:1fr}}
+.pxc .btn-neon{font:inherit;font-family:var(--hd);font-size:18px;border:0;border-radius:12px; padding:13px 16px 11px;background:var(--btn);color:var(--btn-ink);cursor:pointer; box-shadow:0 5px 0 #b8860b,0 0 18px #ffd23f55;transition:transform .08s,box-shadow .08s; display:flex;align-items:center;justify-content:center;gap:6px}
+.pxc .btn-neon:active{transform:translateY(4px);box-shadow:0 1px 0 #b8860b}
+.pxc .btn-neon.cyan{background:transparent;color:var(--b);border:2px solid var(--b); box-shadow:0 4px 0 #0e7490,0 0 14px #22d3ee44}
+.pxc .ctrl-box{background:linear-gradient(180deg,var(--card2),var(--card)); border:2px solid var(--line);border-radius:18px;padding:18px; box-shadow:0 6px 0 #00000066;display:grid;gap:16px}
+.pxc .sec-title{font-family:var(--hd);font-size:18px;color:var(--y);margin:0 0 8px; display:flex;justify-content:space-between;align-items:center; border-bottom:1px dashed var(--line);padding-bottom:6px}
+.pxc .sec-title small{font-family:"Noto Sans KR",sans-serif;font-size:12px;color:var(--muted)}
+.pxc .f-row{display:grid;gap:6px;font-size:14px}
+.pxc .f-row label{color:var(--muted);font-weight:700;font-size:13px;display:flex;justify-content:space-between}
+.pxc .f-row input[type="text"],.pxc .f-row select{font:inherit;font-size:15px;padding:10px 12px;border-radius:10px; border:2px solid var(--line);background:#0a0518;color:var(--ink);width:100%}
+.pxc .f-row input[type="text"]:focus,.pxc .f-row select:focus{outline:none;border-color:var(--b);box-shadow:0 0 10px #22d3ee44}
+.pxc .f-row input[type="range"]{width:100%;accent-color:var(--a);cursor:pointer}
+.pxc .upload-zone{display:flex;gap:8px;align-items:center;flex-wrap:wrap; background:#0a0518;border:2px dashed var(--b);border-radius:12px;padding:10px 12px}
+.pxc .btn-sm{font:inherit;font-weight:700;font-size:13px;padding:8px 12px;border-radius:8px; border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer}
+.pxc .btn-sm:hover,.pxc .btn-sm.on{border-color:var(--y);color:var(--y);background:#ffd23f1a}
+.pxc .btn-sm.pink{border-color:var(--a);background:#ff3d7f22;color:#fff}
+.pxc .av-strip{display:flex;gap:6px;overflow-x:auto;padding:4px 0;scrollbar-width:thin}
+.pxc .av-strip button{flex:none;width:42px;height:42px;font-size:22px;border-radius:10px; border:2px solid var(--line);background:#0a0518;cursor:pointer;padding:0}
+.pxc .av-strip button.sel{border-color:var(--y);box-shadow:0 0 10px #ffd23f88;background:#ffd23f22}
+.pxc .frame-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.pxc .frame-btn{font:inherit;text-align:left;padding:9px 10px;border-radius:10px; border:2px solid var(--line);background:#0a0518;color:var(--ink);cursor:pointer; display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.pxc .frame-btn.sel{border-color:var(--y);box-shadow:0 0 12px #ffd23f55;background:#ffd23f15}
+.pxc .frame-btn .cost{color:var(--y);font-weight:800;font-size:12px}
+.pxc .stat-sliders{display:grid;gap:8px;background:#0a0518;padding:12px;border-radius:12px;border:1px solid var(--line)}
+.pxc .stat-item{display:grid;grid-template-columns:76px 1fr 38px;gap:8px;align-items:center;font-size:13px}
+.pxc .stat-item b{color:var(--b)}
+.pxc .stat-item span{font-family:var(--px);font-size:10px;color:var(--y);text-align:right}
+.pxc .reflex-pad{margin-top:6px;padding:12px;border-radius:12px;border:2px solid var(--g); background:#0a0518;text-align:center;cursor:pointer;user-select:none; font-family:var(--hd);font-size:16px;color:var(--g);transition:all .1s}
+.pxc .reflex-pad.wait{border-color:var(--a);background:#3a0ca333;color:var(--a)}
+.pxc .reflex-pad.go{border-color:var(--y);background:#ffd23f33;color:var(--y);box-shadow:0 0 20px #ffd23f66}
+.pxc .note{font-size:13px;color:var(--muted);margin:6px 0 0}</style>
+<div class="pxc" id="pxc">
+<div class="studio-grid">
+    <!-- Left: Live Canvas Preview & Download -->
+    <div class="preview-box">
+      <div class="tpl-tabs" role="tablist" aria-label="카드 템플릿 고르기">
+        <button type="button" class="active" data-tpl="license">🪪 게이머 면허증</button>
+        <button type="button" data-tpl="receipt">🧾 전투력 영수증</button>
+        <button type="button" data-tpl="avatar">👾 1:1 도트 프사</button>
+      </div>
+
+      <div class="canvas-stage">
+        <canvas id="cardCanvas" width="800" height="500"></canvas>
+      </div>
+
+      <div class="act-row">
+        <button type="button" class="btn-neon" id="btnDownload">💾 PNG 이미지 저장</button>
+        <button type="button" class="btn-neon cyan" id="btnShare">📤 카드 공유</button>
+      </div>
+    </div>
+
+    <!-- Right: Customization Controls -->
+    <div class="ctrl-box">
+      <!-- Section 1: Photo / Avatar & 8-bit Pixel Filter -->
+      <div>
+        <div class="sec-title">
+          <span>1. 내 사진 8비트 도트 변환 / 아바타</span>
+          <small>셀카·반려동물·캐릭터 사진 환영</small>
+        </div>
+
+        <div class="upload-zone">
+          <input type="file" id="photoInput" accept="image/*" hidden>
+          <button type="button" class="btn-sm pink" id="btnUploadPhoto">📸 내 사진 도트로 변환하기</button>
+          <button type="button" class="btn-sm" id="btnUseAvatar">👾 아바타로 돌아가기</button>
+          <small class="note" style="flex-basis:100%">사진을 올리면 즉석에서 레트로 8비트 도트 아트로 바꿔 줍니다.</small>
+        </div>
+
+        <div class="f-row" style="margin-top:10px">
+          <label>빠른 아바타 선택 <small>프로필 아바타가 먼저 골라져 있어요</small></label>
+          <div class="av-strip" id="avStrip"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          <div class="f-row">
+            <label for="pixelRes">도트 입자 해상도 <span id="pixelResLabel">48×48 BIT</span></label>
+            <input type="range" id="pixelRes" min="20" max="96" step="4" value="48">
+          </div>
+          <div class="f-row">
+            <label for="paletteSel">레트로 컬러 팔레트</label>
+            <select id="paletteSel">
+              <option value="cyber">🌃 사이버 네온 (5락실 시그니처)</option>
+              <option value="orig">🎨 오리지널 컬러 도트</option>
+              <option value="gameboy">🟩 1989 게임보이 그린</option>
+              <option value="sunset">🌅 아케이드 신스웨이브</option>
+              <option value="gold">👑 황금 전설 팔레트</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Player Info & Speech Stamp -->
+      <div>
+        <div class="sec-title">
+          <span>2. 플레이어 프로필 &amp; 한 줄 도발</span>
+          <small>면허증·영수증에 인쇄될 정보</small>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="f-row">
+            <label for="nickInput">닉네임</label>
+            <input type="text" id="nickInput" maxlength="14" value="" placeholder="별명">
+          </div>
+          <div class="f-row">
+            <label for="titleSel">칭호 <small>상점에서 산 칭호도 나와요</small></label>
+            <select id="titleSel">
+              <option value="퇴근 후 한 판">「퇴근 후 한 판」</option>
+              <option value="손가락 워밍업 중">「손가락 워밍업 중」</option>
+              <option value="오늘도 출석">「오늘도 출석」</option>
+              <option value="한 판만 더">「한 판만 더」</option>
+              <option value="">(칭호 없이)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          <div class="f-row">
+            <label for="classSel">주력 클래스 (전공)</label>
+            <select id="classSel">
+              <option value="⚔️ 액션·슈팅 마스터">⚔️ 액션·슈팅 마스터</option>
+              <option value="🧩 두뇌 풀가동 퍼즐러">🧩 두뇌 풀가동 퍼즐러</option>
+              <option value="🎵 리듬·타이밍 장인">🎵 리듬·타이밍 장인</option>
+              <option value="⚖️ 밸런스 민심 판독기">⚖️ 밸런스 민심 판독기</option>
+              <option value="👑 올라운더 고인물">👑 올라운더 고인물</option>
+            </select>
+          </div>
+          <div class="f-row">
+            <label for="favGameSel">최애 기계 (주 종목)</label>
+            <select id="favGameSel">
+              <option value="네온 생존자">🧿 네온 생존자</option>
+              <option value="별빛 요격대">🚀 별빛 요격대</option>
+              <option value="네온 레이드">⚔️ 네온 레이드</option>
+              <option value="끊어진 하늘">🪁 끊어진 하늘</option>
+              <option value="네온 사격장">🔫 네온 사격장</option>
+              <option value="별똥별 피하기">🌠 별똥별 피하기</option>
+              <option value="하늘 탑 쌓기">🏗️ 하늘 탑 쌓기</option>
+              <option value="통통 네온런">🎵 통통 네온런</option>
+              <option value="딱 멈춰!">🎯 딱 멈춰!</option>
+              <option value="반응속도 측정">⚡ 반응속도 측정</option>
+              <option value="오늘의 숫자 퍼즐">🔢 오늘의 숫자 퍼즐</option>
+              <option value="오늘의 틀린그림찾기">🔍 오늘의 틀린그림찾기</option>
+              <option value="별사탕 합치기">🍬 별사탕 합치기</option>
+              <option value="오늘의 초성 퀴즈">🔤 오늘의 초성 퀴즈</option>
+              <option value="다수결 맞히기">🗳️ 다수결 맞히기</option>
+              <option value="몽글숲 아지트">🌱 몽글숲 아지트</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="f-row" style="margin-top:8px">
+          <label for="quoteInput">도발 문구 / 스탬프 대사 <small>빠른 버튼 클릭 또는 직접 입력</small></label>
+          <input type="text" id="quoteInput" maxlength="28" value="내 기록 깰 수 있으면 덤벼라 🔥">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="quotePresets">
+            <button type="button" class="btn-sm" data-q="내 기록 깰 수 있으면 덤벼라 🔥">덤벼라🔥</button>
+            <button type="button" class="btn-sm" data-q="지면 오늘 커피 쏘기 ☕">커피 내기☕</button>
+            <button type="button" class="btn-sm" data-q="1코인만 더... 막판 간다!">1코인만 더!</button>
+            <button type="button" class="btn-sm" data-q="오늘 폼 미쳤다 (상위 1%)">상위 1%👑</button>
+            <button type="button" class="btn-sm" data-q="INSERT COIN TO CONTINUE">INSERT COIN</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: 5 Stats & Real Reflex Measurement -->
+      <div>
+        <div class="sec-title">
+          <span>3. 재미로 매기는 5대 스탯</span>
+          <small id="cpPreview">전투력 계산 중...</small>
+        </div>
+
+        <div class="stat-sliders">
+          <div class="stat-item">
+            <b>⚡ 순발력</b>
+            <input type="range" data-stat="spd" min="40" max="99" value="92">
+            <span id="val-spd">92</span>
+          </div>
+          <div class="stat-item">
+            <b>🎯 정확도</b>
+            <input type="range" data-stat="acc" min="40" max="99" value="88">
+            <span id="val-acc">88</span>
+          </div>
+          <div class="stat-item">
+            <b>🧠 두뇌력</b>
+            <input type="range" data-stat="brn" min="40" max="99" value="90">
+            <span id="val-brn">90</span>
+          </div>
+          <div class="stat-item">
+            <b>🍀 운빨</b>
+            <input type="range" data-stat="lck" min="40" max="99" value="85">
+            <span id="val-lck">85</span>
+          </div>
+          <div class="stat-item">
+            <b>🔥 승부욕</b>
+            <input type="range" data-stat="grt" min="40" max="99" value="96">
+            <span id="val-grt">96</span>
+          </div>
+        </div>
+
+        <div class="reflex-pad" id="reflexPad">
+          ⚡ 여기를 눌러 순발력(ms) 한 번 재기 → 카드에 실측 배지
+        </div>
+      </div>
+
+      <!-- Section 4: Neon Frame & Coin Unlocks -->
+      <div>
+        <div class="sec-title">
+          <span>4. 카드 테두리</span>
+          <small>기본 2종 무료 · 코인 테두리는 겉모습만</small>
+        </div>
+        <div class="frame-grid" id="frameGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<h2>이렇게 만들어요</h2>
+<ol class="list">
+<li><b>카드 고르기</b>: 위 탭에서 가로형 '게이머 면허증'(800×500), 세로형 '전투력 영수증'(600×820), 프로필용 '1:1 도트 프사'(640×640) 중 하나를 고릅니다. 바꿔도 적은 내용은 그대로예요.</li>
+<li><b>얼굴 정하기</b>: 프로필이 있으면 내 아바타가 먼저 골라져 있어요. '내 사진 도트로 변환하기'로 셀카·반려동물 사진을 올리면 가운데를 정사각형으로 잘라 도트로 바꿉니다. 도트 해상도는 20×20(굵은 픽셀)부터 96×96(세밀함)까지, 색은 5가지 팔레트 중에서 고를 수 있어요.</li>
+<li><b>내용 적기</b>: 별명, 칭호, 주력 장르, 최애 게임, 한 줄 도발 문구를 적습니다. 상점에서 산 칭호가 있으면 칭호 목록에 함께 나와요.</li>
+<li><b>스탯 정하기</b>: 순발력·정확도·두뇌력·운빨·승부욕을 40~99 사이로 직접 정해요. 순발력 칸 아래 버튼으로 반응속도를 한 번 재면 순발력이 그 기록으로 바뀌고 카드에 '실측 ○○ms' 배지가 찍혀요.</li>
+<li><b>저장·공유</b>: 'PNG 이미지 저장'으로 내려받거나 '카드 공유'로 바로 보냅니다.</li>
+</ol>
+<h2>사진은 어디로도 가지 않아요</h2>
+<p>올린 사진은 지금 보고 있는 브라우저의 캔버스 안에서만 도트로 다시 그려집니다. 5락실 서버로 보내지 않고, 저장하지도 않아요. 페이지를 닫으면 사진은 사라지고, 내려받은 카드 그림만 내 기기에 남습니다. 친구 얼굴 사진은 친구에게 먼저 물어보고 쓰세요.</p>
+<h2>스탯과 등급은 재미용이에요</h2>
+<p>카드의 스탯·전투력(CP)·등급·'환산 게이머 가치(P)'는 내가 직접 정한 숫자로 계산하는 놀이용 표시예요. 실제 게임 순위나 기록과는 관계가 없고, P는 돈이나 코인이 아닙니다. 진짜 실력을 겨루고 싶다면 <a href="/games/reaction">반응속도 측정</a>이나 <a href="/rank">오늘의 순위</a>에서 기록을 남겨 보세요.</p>
+<h2>코인과 카드 테두리</h2>
+<ul class="list">
+<li>처음으로 카드를 저장하거나 공유하면 첫 플레이 보너스 🪙1을 받고, 오늘의 미션 '게임 2가지'에도 한 가지로 셉니다.</li>
+<li>기본 테두리 2종은 무료예요. 오로라·황금 테두리는 출석과 미션으로 모은 코인으로 열 수 있는 꾸미기이고, 한 번 열면 계속 쓸 수 있어요.</li>
+<li>코인은 돈으로 사거나 바꿀 수 없고, 출석·미션·업적으로만 모아요. 자세한 것은 <a href="/bonus">출석·상점</a>에서 볼 수 있어요.</li>
+</ul>

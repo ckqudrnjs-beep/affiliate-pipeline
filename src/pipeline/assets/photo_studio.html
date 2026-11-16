@@ -1,0 +1,203 @@
+  <div class="studio">
+    <!-- Left: Interactive Canvas Stage -->
+    <div class="stage-card">
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="empty-state">
+          <span class="ic">📷</span>
+          <b>정리할 사진을 여기에 끌어다 놓으세요</b>
+          <p>휴대폰 카메라로 찍은 사진, 캡처 화면, 영수증 모두 가능해요.<br>(Ctrl+V 로 클립보드 이미지 붙여넣기도 지원합니다)</p>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button type="button" class="sbtn primary" id="btnPickFile" style="padding:11px 20px;font-size:14.5px">📁 내 기기에서 사진 고르기</button>
+            <button type="button" class="sbtn" id="btnLoadSample" style="padding:11px 16px;font-size:14px">🧾 샘플 사진으로 체험하기</button>
+          </div>
+        </div>
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="editorCanvas" width="900" height="675"></canvas>
+        </div>
+      </div>
+
+      <div class="stage-bar">
+        <div class="stage-actions">
+          <button type="button" class="sbtn" id="btnChangePhoto">📁 다른 사진</button>
+          <button type="button" class="sbtn" id="btnUndo" disabled>↩ 실행 취소</button>
+          <button type="button" class="sbtn" id="btnClearMasks" disabled>🧹 모자이크 전체 지우기</button>
+          <button type="button" class="sbtn" id="btnRotate">🔄 90° 회전</button>
+        </div>
+        <button type="button" class="sbtn" id="btnCompare" disabled title="누르고 있는 동안 원본 사진을 봅니다">👁️ 원본 비교 (누르기)</button>
+      </div>
+    </div>
+
+    <!-- Right: Tool Controls & Receipt Summary -->
+    <div class="panel-card">
+      <div class="tabs" role="tablist" aria-label="편집 기능 선택">
+        <button type="button" role="tab" aria-selected="true" data-tab="mosaic">1. 개인정보 가리기</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="stamp">2. 중고거래 가격표</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="compress">3. 크기·용량 줄이기</button>
+      </div>
+
+      <!-- Tab 1: Mosaic / Blur / Blackout -->
+      <div class="tab-pane active" id="pane-mosaic" role="tabpanel">
+        <div class="hint-box">
+          <b>💡 사용법:</b> 사진 위의 택배 운송장 번호, 집 주소, 계좌번호, 차량 번호판, 얼굴 위를 <b>마우스나 손가락으로 쓱 문지르면</b> 즉시 가려집니다. 운송장 번호·바코드·계좌번호처럼 <b>숫자는 '먹줄'</b>로 덮는 것이 가장 확실해요.
+        </div>
+
+        <div class="field">
+          <span class="lbl">가리기 방식</span>
+          <div class="seg" id="maskTypeSeg">
+            <button type="button" data-type="pixel" aria-pressed="true">🟫 픽셀 모자이크</button>
+            <button type="button" data-type="blur" aria-pressed="false">🌫️ 안개 블러</button>
+            <button type="button" data-type="black" aria-pressed="false">⬛ 영수증 먹줄</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="lbl">그리기 도구 모양</span>
+          <div class="seg" id="drawShapeSeg">
+            <button type="button" data-shape="brush" aria-pressed="true">🖌️ 형광펜 브러시 (문지르기)</button>
+            <button type="button" data-shape="rect" aria-pressed="false">⬜ 네모 박스 (영역 드래그)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="brushSize">브러시 굵기 · 모자이크 강도 <small id="brushSizeVal">굵기 36px · 강도 16px</small></label>
+          <input type="range" id="brushSize" min="14" max="90" value="36">
+        </div>
+
+        <div class="field">
+          <label for="pixelStrength">모자이크 입자 크기 (클수록 더 안 보여요)</label>
+          <input type="range" id="pixelStrength" min="8" max="36" value="16">
+        </div>
+      </div>
+
+      <!-- Tab 2: Second-hand Price Tag & Spec Stamp -->
+      <div class="tab-pane" id="pane-stamp" role="tabpanel">
+        <div class="hint-box">
+          <b>💡 당근·중고나라 판매 팁:</b> 사진에 가격과 상태를 미리 적어 두면 <i>"네고 되나요?", "택포인가요?"</i> 같은 반복 질문이 확 줄어들고 훨씬 빨리 팔립니다.
+        </div>
+
+        <div class="field">
+          <span class="lbl">가격표 스탬프 표시</span>
+          <div class="seg" id="stampEnableSeg">
+            <button type="button" data-on="1" aria-pressed="true">✅ 사진에 가격표 넣기</button>
+            <button type="button" data-on="0" aria-pressed="false">❌ 가격표 끄기</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="stampTitle">물건 이름 <small>예: 샤오미 미지아 전동칫솔 / 에어프라이어</small></label>
+          <input type="text" id="stampTitle" placeholder="예: 다이슨 V10 호환 헤드 (미개봉)" maxlength="32">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label for="stampPrice">판매 가격 (원)</label>
+            <input type="text" id="stampPrice" placeholder="예: 25,000원" maxlength="20">
+          </div>
+          <div class="field">
+            <label for="stampOrigPrice">구매가·정가 (선택)</label>
+            <input type="text" id="stampOrigPrice" placeholder="예: 정가 49,000원" maxlength="20">
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="lbl">빠른 상태 배지 (클릭해서 선택)</span>
+          <div class="preset-chips" id="badgeChips">
+            <button type="button" class="on" data-badge="미개봉 새상품">미개봉 새상품</button>
+            <button type="button" data-badge="실사용 3회 미만">실사용 3회 미만</button>
+            <button type="button" data-badge="상태 A급 · 정상작동">상태 A급 · 정상작동</button>
+            <button type="button" data-badge="택배비 포함">택배비 포함</button>
+            <button type="button" data-badge="직거래 환영">직거래 환영</button>
+            <button type="button" data-badge="쿨거래 시 네고">쿨거래 시 네고</button>
+            <button type="button" data-badge="영수증·박스 있음">영수증·박스 있음</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="stampMemo">추가 한 줄 메모 (선택)</label>
+          <input type="text" id="stampMemo" placeholder="예: 흡입력 짱짱해요 · 반값택배 가능" maxlength="40">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label for="stampPos">스탬프 위치</label>
+            <select id="stampPos">
+              <option value="bottom-bar">하단 전체 바 (가장 깔끔)</option>
+              <option value="bottom-left">왼쪽 아래 카드</option>
+              <option value="bottom-right">오른쪽 아래 카드</option>
+              <option value="top-left">왼쪽 위 카드</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="stampTheme">스탬프 스타일</label>
+            <select id="stampTheme">
+              <option value="uncle">삼촌 영수증 (미색·초록)</option>
+              <option value="dark">모던 다크 (반투명 검정)</option>
+              <option value="carrot">중고장터 오렌지 강조</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Resize & WebP Compression -->
+      <div class="tab-pane" id="pane-compress" role="tabpanel">
+        <div class="hint-box">
+          <b>💡 용량 다이어트:</b> 요즘 휴대폰 사진은 한 장에 3~10MB 안팎이라 올리는 데 오래 걸리고 블로그가 느려집니다. <b>WebP(권장)</b>나 <b>JPG 압축</b>을 쓰면 눈으로 보는 화질은 거의 그대로인데 용량은 크게 줄어드는 경우가 많아요.
+        </div>
+
+        <div class="field">
+          <span class="lbl">저장 파일 형식</span>
+          <div class="seg" id="formatSeg">
+            <button type="button" data-fmt="image/webp" aria-pressed="true">⚡ WebP (용량 최소·추천)</button>
+            <button type="button" data-fmt="image/jpeg" aria-pressed="false">🖼️ JPG (어디나 호환)</button>
+            <button type="button" data-fmt="image/png" aria-pressed="false">💎 PNG (무손실)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="lbl">비율 자르기 (크롭)</span>
+          <div class="seg" id="aspectSeg">
+            <button type="button" data-asp="orig" aria-pressed="true">원본 비율</button>
+            <button type="button" data-asp="1:1" aria-pressed="false">1:1 정사각형 (당근·인스타)</button>
+            <button type="button" data-asp="4:3" aria-pressed="false">4:3 가로형 (블로그)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="maxWidthSel">가로 최대 해상도 제한</label>
+          <select id="maxWidthSel">
+            <option value="1200" selected>1200px (블로그·중고거래 최적 표준)</option>
+            <option value="860">860px (모바일 빠른 로딩용)</option>
+            <option value="1600">1600px (고화질 상세 사진)</option>
+            <option value="0">원본 해상도 유지</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="qualityRange">압축 화질 <small id="qualityVal">85% (화질·용량 균형 추천)</small></label>
+          <input type="range" id="qualityRange" min="40" max="98" value="85">
+        </div>
+      </div>
+
+      <!-- Uncle's Receipt Summary -->
+      <div class="ps-rcpt" aria-live="polite">
+        <div class="r-title">
+          <span>🧾 삼촌의 사진 정리 영수증</span>
+          <small id="rcpStatus" style="font-family:var(--body);font-size:12px;color:var(--green)">준비 완료</small>
+        </div>
+        <div class="r-row"><span>원본 사진 크기 · 용량</span><b id="rcpOrig">-</b></div>
+        <div class="r-row"><span>개인정보 보호 마스킹</span><b id="rcpMasks">0곳 가림</b></div>
+        <div class="r-row"><span>중고거래 가격표 스탬프</span><b id="rcpStamp">미적용</b></div>
+        <div class="r-row"><span>변환 후 예상 용량</span><b id="rcpAfter">-</b></div>
+        <div class="sum">
+          <span>절약한 데이터 용량</span>
+          <span id="rcpSaved">사진을 선택해 주세요</span>
+        </div>
+      </div>
+
+      <div class="dl-group">
+        <button type="button" class="btn-dl" id="btnDownload" disabled>💾 정리된 사진 저장하기</button>
+        <button type="button" class="btn-share" id="btnShareTool" title="이 도구를 친구나 가족에게 공유합니다">📤 공유</button>
+      </div>
+    </div>
+  </div>

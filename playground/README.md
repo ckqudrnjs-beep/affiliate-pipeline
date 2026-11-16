@@ -212,3 +212,8 @@
 - 도전 순위 `/rank` 도 noindex(숫자만 JS로 채움).
 - 글이 짧던 게임 4개(reaction·stop·majority·chosung) body.html 에 설명 한 단락씩 추가.
 - 홈 첫 화면(히어로)에 대표 게임 버튼을 두지 않는다(BK 11/16). 버튼은 '게임 고르기'(#games)로 목록에 이동.
+
+## 게이머 면허증·도트 프사 (/games/pixelcard, 2026-11-16)
+- BK가 안티그래비티로 만든 도구를 게임 페이지 틀로 옮김(docs/ANTIGRAVITY.md). 순위 없음, genre `etc`. 사진은 캔버스에서만 처리.
+- 코인: 저장·공유가 끝났을 때 `Bonus.played('pixelcard')`(첫 플레이 🪙1 + 미션). 테두리 오로라·황금은 GAME_ITEMS `pixelcard/fr` (🪙4·🪙8), 기본·체리 핑크는 무료. 칭호 목록엔 가진 상점 칭호만 + 카드 전용 문구.
+
