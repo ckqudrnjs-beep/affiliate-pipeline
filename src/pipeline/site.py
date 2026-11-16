@@ -322,9 +322,9 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
                    for v in ([CFG[k]] if isinstance(CFG.get(k), str) else CFG.get(k) or []) if v)
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
     lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
-    # 대가성 문구 띠: 제휴 링크(rel=sponsored)가 있는 페이지와 상품 페이지에만 + 상품을 소개하는 홈 (2026-11-16, 애드센스 심사 대비 — 계산기·소개처럼 링크 없는 페이지가 광고 페이지처럼 보이지 않게)
+    # 대가성 문구 띠: 제휴 링크(rel=sponsored)가 있는 페이지와 상품 페이지에만 (홈은 2026-11-16 BK 확인 후 상품 칸 옆 한 줄로 대체) (2026-11-16, 애드센스 심사 대비 — 계산기·소개처럼 링크 없는 페이지가 광고 페이지처럼 보이지 않게)
     adbar = (f'<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>'
-             if ("sponsored" in body or path.startswith("p/") or path in ("", "index.html")) else "")
+             if ("sponsored" in body or path.startswith("p/")) else "")
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
             f'<meta property="og:locale" content="ko_KR"><meta property="og:image" content="{BASE}/{og}"><meta property="og:image:width" content="1200">'
@@ -533,6 +533,7 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
 <h1>오늘 아낄 돈,<br>삼촌이 먼저 계산해 뒀어요.</h1>
 <p>기름값·환율·장바구니 시세를 매일 아침 정리하고, 하루 한 문제로 생활 물가 감각을 키워요. 물건은 직접 계산해 보고 정말 괜찮을 때만 소개해요.</p></div></section>"""
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
+<p class="small">[광고] 상품을 누르면 쿠팡 파트너스·알리익스프레스 제휴 링크가 있는 페이지로 이동하며, 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다.</p>
 <div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
 <p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
     fresh = sorted((p for p in products if is_new(p)), key=lambda p: p["addedDate"], reverse=True)[:8]
