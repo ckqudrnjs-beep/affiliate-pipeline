@@ -177,7 +177,8 @@ class SiteTest(unittest.TestCase):
             self.assertGreater(n, 0)
             html = (pathlib.Path(d) / "index.html").read_text(encoding="utf-8")
             body = html.split("<body>", 1)[1]
-            self.assertIn("수수료를 제공받습니다", body[:400])
+            self.assertNotIn('class="adbar"', body)  # 홈 맨 위 띠는 없음 (2026-11-16)
+            self.assertIn("수수료를 받습니다", body.split('id="picks"', 1)[1][:600])  # 상품 칸 바로 위 한 줄
 
 
 class CurateTest(unittest.TestCase):
