@@ -18,6 +18,7 @@ import urllib.parse
 import urllib.request
 
 from .youtube import KST, LOG, access_token
+from .yt_analytics import latest_by_video
 
 STATS = pathlib.Path("data/youtube/stats.json")
 RAKSIL = pathlib.Path("data/youtube/raksil_uploaded.json")  # 5락실 쇼츠
@@ -96,11 +97,14 @@ def weekly() -> int:
     last = max(data)
     snap = data[last]
     meta = episode_meta()
+    an = latest_by_video()  # 시청 비율·공유 (분석 토큰 있을 때만)
     rows = []
     for slug, v in snap.items():
         m = meta.get(slug, {"format": "5락실" if slug.startswith("5raksil-") else "예전", "title": slug,
                             "date": v.get("published", "")[:10]})
-        rows.append((v["views"], slug, m["format"], m["title"], m["date"], v["likes"], v["comments"]))
+        a = an.get(v.get("id", ""), {})
+        rows.append((v["views"], slug, m["format"], m["title"], m["date"], v["likes"], v["comments"],
+                     f'{a["avg_pct"]}%' if a else "-", str(a["shares"]) if a else "-"))
     rows.sort(reverse=True)
     by = {}
     for r in rows:
@@ -109,8 +113,9 @@ def weekly() -> int:
              "## 형식별 평균 조회수", "| 형식 | 편 수 | 평균 | 최고 |", "|---|---|---|---|"]
     for f, vs in sorted(by.items(), key=lambda x: -sum(x[1]) / len(x[1])):
         lines.append(f"| {f} | {len(vs)} | {sum(vs) // len(vs):,} | {max(vs):,} |")
-    lines += ["", "## 편별 (조회수 순)", "| 조회수 | 좋아요 | 댓글 | 형식 | 날짜 | 제목 |", "|---|---|---|---|---|---|"]
-    lines += [f"| {r[0]:,} | {r[5]} | {r[6]} | {r[2]} | {r[4]} | {r[3]} |" for r in rows]
+    lines += ["", "## 편별 (조회수 순)", "| 조회수 | 시청비율 | 공유 | 좋아요 | 댓글 | 형식 | 날짜 | 제목 |",
+              "|---|---|---|---|---|---|---|---|"]
+    lines += [f"| {r[0]:,} | {r[7]} | {r[8]} | {r[5]} | {r[6]} | {r[2]} | {r[4]} | {r[3]} |" for r in rows]
     WEEKLY.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines[:12]))
     return 0

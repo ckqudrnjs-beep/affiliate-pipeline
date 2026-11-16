@@ -238,7 +238,25 @@ def body(r: dict, root: str = "../") -> str:
 def list_body(reports: list[dict]) -> str:
     items = "".join(f'<li><a href="report/{r["date"]}.html">{html.escape(title(r))}</a><br><small>{html.escape(r["lines"][0])}</small></li>'
                     for r in reports)
-    return f'<h1>주간 생활물가 리포트</h1><p>기름값·장바구니 물가·환율을 공공 데이터로 매주 월요일 정리해요.</p><ul class="rep-list">{items}</ul>'
+    # 목록만 있으면 본문이 너무 얇다 → 최신 리포트 요약 전체 + 만드는 방법·읽는 법 (2026-11-16 애드센스 점검)
+    e = html.escape
+    latest = ""
+    if reports:
+        r = reports[0]
+        latest = (f'<h2>이번 주 요약 ({e(title(r))})</h2><ul>' + "".join(f"<li>{e(s)}</li>" for s in r["lines"]) +
+                  f'</ul><p><a href="report/{r["date"]}.html">이번 주 리포트 전체 보기</a></p>')
+    src = "".join(f"<li>{e(v)}</li>" for v in SOURCES.values())
+    how = ('<h2>이 리포트는 이렇게 만들어요</h2>'
+           '<p>매주 월요일 아침, 아래 공공 데이터에서 지난주 숫자를 가져와 지난주·지난달과 비교해요. '
+           '숫자는 모두 원 자료 그대로 쓰고, 해석은 "주유를 미룰까?", "이번 주 장바구니에 뭘 담을까?", "직구를 지금 할까?"처럼 '
+           '살림 결정에 바로 쓸 수 있는 한 줄로 붙여요.</p>'
+           f'<ul>{src}</ul>'
+           '<h2>읽는 법</h2><ul><li><b>기름값</b>: 전국 평균 휘발유 가격과 지난주 대비 변화. 크게 오르는 주에는 미리 주유하는 게 유리해요.</li>'
+           '<li><b>장바구니</b>: 한 달 전보다 많이 오른 품목과 내린 품목. 내린 품목은 이번 주에 담기 좋은 후보예요.</li>'
+           '<li><b>환율</b>: 원/달러 환율과 최근 4주 평균 비교. 해외 직구 시점을 정할 때 참고해요.</li></ul>'
+           '<p class="small">공공 데이터 발표가 늦거나 빠진 주에는 해당 항목을 빼고 정리해요.</p>')
+    return (f'<h1>주간 생활물가 리포트</h1><p>기름값·장바구니 물가·환율을 공공 데이터로 매주 월요일 정리해요.</p>'
+            f'{latest}<h2>지난 리포트</h2><ul class="rep-list">{items}</ul>{how}')
 
 
 def load_all(root: pathlib.Path = OUT) -> list[dict]:
