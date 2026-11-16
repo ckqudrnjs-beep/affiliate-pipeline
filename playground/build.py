@@ -1420,9 +1420,12 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     base = cfg["baseUrl"].rstrip("/")
     lm = today().isoformat()
     sm = "".join(f"<url><loc>{base}/{p}</loc><lastmod>{(p[2:6] + '-' + p[6:8] + '-' + p[8:10]) if p.startswith('q/') else lm}</lastmod></url>" for p in pages)
-    items = "".join(f"<item><title>{esc(q['a'])} vs {esc(q['b'])}</title><link>{base}/q/{q['id']}</link><guid>{base}/q/{q['id']}</guid>"
-                    f"<pubDate>{datetime.fromisoformat(q['date']).replace(tzinfo=KST).strftime('%a, %d %b %Y 00:00:00 +0900')}</pubDate><description>{esc(q['note'])}</description></item>" for q in qs[:50])
-    (out / "feed.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>{esc(cfg["siteName"])} 오늘의 밸런스게임</title><link>{base}/</link>'
+    # RSS = 공략 글(색인되는 페이지). 질문 페이지는 noindex 라 넣지 않는다(2026-11-16, 색인 빠르게).
+    def _rfc(d):
+        return datetime.fromisoformat(d[:10]).replace(tzinfo=KST).strftime('%a, %d %b %Y 00:00:00 +0900')
+    items = "".join(f"<item><title>{esc(g['title'])}</title><link>{base}/guide/{g['slug']}</link><guid>{base}/guide/{g['slug']}</guid>"
+                    f"<pubDate>{_rfc(g['updated'])}</pubDate><description>{esc(g['description'])}</description></item>" for g in guides[:50])
+    (out / "feed.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>{esc(cfg["siteName"])} 게임 공략</title><link>{base}/</link>'
                                   f'<description>{esc(cfg["description"])}</description><language>ko</language>{items}</channel></rss>', encoding="utf-8")
     import shutil
     shutil.copytree(HERE / "static", out, dirs_exist_ok=True)
