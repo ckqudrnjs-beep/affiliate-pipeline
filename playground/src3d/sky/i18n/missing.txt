@@ -1,6 +1,0 @@
-금화가 모자라요 (
-G 필요)
-분실물 칸이 
-칸으로 늘었어요
-<p style="font-size:11px;color:#8a7458;margin:0 0 4px">땅에 오래 남은 물건이 여기로 와요. 누르면 가방으로 · 넘치면 낮은 등급부터 재료로 바뀌어요</p>⟨0⟩<div class="sk-grid">⟨1⟩</div>
-<button class="sk-b g" data-a="lostx" style="margin:0 0 6px;padding:4px 10px;font-size:12px">칸 +⟨0⟩ 늘리기 · ⟨1⟩G (지금 ⟨2⟩G)</button>

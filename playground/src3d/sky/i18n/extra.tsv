@@ -75,3 +75,8 @@ G 필요)	G needed)
 칸으로 늘었어요	 slots
 <p style="font-size:11px;color:#8a7458;margin:0 0 4px">땅에 오래 남은 물건이 여기로 와요. 누르면 가방으로 · 넘치면 낮은 등급부터 재료로 바뀌어요</p>⟨0⟩<div class="sk-grid">⟨1⟩</div>	<p style="font-size:11px;color:#8a7458;margin:0 0 4px">Items left on the ground too long end up here. Tap to move to your bag · when full, the lowest-rarity items turn into materials</p>⟨0⟩<div class="sk-grid">⟨1⟩</div>
 <button class="sk-b g" data-a="lostx" style="margin:0 0 6px;padding:4px 10px;font-size:12px">칸 +⟨0⟩ 늘리기 · ⟨1⟩G (지금 ⟨2⟩G)</button>	<button class="sk-b g" data-a="lostx" style="margin:0 0 6px;padding:4px 10px;font-size:12px">+⟨0⟩ slots · ⟨1⟩G (you have ⟨2⟩G)</button>
+<button class="sk-b" data-a="drop" style="color:#c84a3a;border-color:#c84a3a">내려놓을까요?⟨0⟩ 한 번 더 누르세요</button>	<button class="sk-b" data-a="drop" style="color:#c84a3a;border-color:#c84a3a">Drop it?⟨0⟩ Tap again to confirm</button>
+ 모두)	 all)
+<button class="sk-b" data-a="drop" style="margin-left:10px">내려놓기</button>	<button class="sk-b" data-a="drop" style="margin-left:10px">Drop</button>
+<p class="m" style="font-size:13px;line-height:1.6;padding:8px 10px;background:#fff6dc;border-radius:8px">지금 받은 일이 없어요. 마을의 <b>⟨0⟩</b>에게 가까이 가서 말을 걸어 보세요 (머리 위 <b>!</b> 표시).</p>	<p class="m" style="font-size:13px;line-height:1.6;padding:8px 10px;background:#fff6dc;border-radius:8px">No quests yet. Walk up to <b>⟨0⟩</b> in the village and talk to them (look for the <b>!</b> above their head).</p>
+<button class="sk-b p" data-a="start" data-n="0">⟨0⟩ 이어하기 (⟨1⟩레벨)</button><button class="sk-b" data-a="start" data-n="1">처음부터 (기록 지움)</button>	<button class="sk-b p" data-a="start" data-n="0">Continue ⟨0⟩ (Lv ⟨1⟩)</button><button class="sk-b" data-a="start" data-n="1">New game (erases save)</button>
