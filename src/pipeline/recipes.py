@@ -34,6 +34,7 @@ CSS = """
 .ingtable th,.ingtable td{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left;word-break:keep-all}.ingtable td.n,.ingtable th.n{text-align:right}
 .ingtable tfoot td{font-weight:600}
 .shopbox{border:1px solid var(--line);border-radius:14px;padding:6px 18px 12px;margin-top:36px}.shopbox h2{margin-top:14px}
+.shopbox .ad{margin:12px 0 8px}.shopbox summary{cursor:pointer;font-weight:700;padding:12px 0;color:var(--green)}.shopbox summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .shopbox ul{list-style:none;padding:0;margin:0}.shopbox li{border-bottom:1px solid var(--line);padding:12px 0;display:flex;justify-content:space-between;gap:12px}
 .shopbox li:last-child{border-bottom:0}.shopbox a{font-weight:600}.shopbox li span{color:var(--muted);font-size:14px;white-space:nowrap}
 .rlist{list-style:none;padding:0;margin:0}.rlist li{border-bottom:1px solid var(--line);padding:18px 0}
@@ -123,9 +124,12 @@ def shop_box(rows: list[dict]) -> str:
         return ""
     e = html.escape
     li = "".join(f'<li><a href="{e(x["pantry"]["coupangUrl"])}" target="_blank" rel="sponsored nofollow noopener">{e(x["pantry"]["name"])}</a><span>쿠팡에서 보기</span></li>' for x in linked)
-    return (f'<section class="shopbox"><h2>재료 한 번에 장보기</h2><p class="ad">[광고] {COUPANG_DISCLOSURE}</p>'
+    # 2026-11-16 BK: 본문 중간이 아니라 페이지 맨 아래, 접힌 버튼 하나로. 대가성 문구는 접힌 칸 밖(버튼 바로 위)에 항상 보이게.
+    # 링크는 HTML 에 그대로 있고 펼치기만 하는 것(사람·검색엔진에 같은 내용).
+    return (f'<section class="shopbox"><p class="ad">[광고] {COUPANG_DISCLOSURE}</p>'
+            f'<details><summary>🛒 재료 한눈에 보기 (쿠팡 {len(linked)}개)</summary>'
             f'<p class="small">큰 봉지로 사 두면 여러 레시피에 나눠 써서 1인분 원가가 내려가요. 실제 가격과 배송일은 판매 페이지에서 확인하세요.</p>'
-            f'<ul>{li}</ul></section>')
+            f'<ul>{li}</ul></details></section>')
 
 
 def page_body(r: dict, others: list[dict]) -> str:
@@ -169,8 +173,8 @@ def page_body(r: dict, others: list[dict]) -> str:
 <p class="small">삼촌 장보기 기준가({pd.year}년 {pd.month}월 {pd.day}일, 대형마트·온라인 장보기 흔한 가격대)로 큰 봉지 한 개 값을 쓴 양만큼 나눠 계산했어요. 실제 가격은 사는 곳과 시기에 따라 달라요. <a href="../recipe.html#pantry">기준가 전체 보기</a></p>
 <h2>만드는 법</h2><ol>{steps}</ol>
 <h2>삼촌의 아끼는 팁</h2><ul>{tips}</ul>
-{shop_box(r["rows"])}
-<section class="related"><h2>{'다른 홈파티 레시피' if party else '다른 1인분 레시피'}</h2><ul class="rlist">{more}</ul></section></article>"""
+<section class="related"><h2>{'다른 홈파티 레시피' if party else '다른 1인분 레시피'}</h2><ul class="rlist">{more}</ul></section>
+{shop_box(r["rows"])}</article>"""
 
 
 def list_body(recs: list[dict], pantry: dict[str, dict]) -> str:
