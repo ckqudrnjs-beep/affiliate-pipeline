@@ -343,6 +343,8 @@ BANNED = ["써 봤", "써봤", "직접 사용", "무조건", "100%", "최고의"
 
 
 def check(spec: dict) -> list[str]:
+    if spec.get("engine") == "hyperframes":  # 2026-11-16 글자형 Shorts (pipeline.textshort): 장면·내레이션 없음
+        return check_textshort(spec)
     e = []
     kind = spec.get("kind", "short")
     if kind not in ("short", "long"):
@@ -804,6 +806,26 @@ def render(path: pathlib.Path) -> pathlib.Path:
     path.with_suffix(".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"완성: {out} ({t_acc:.1f}초, {out.stat().st_size / 1e6:.1f}MB)")
     return out
+
+
+def check_textshort(spec: dict) -> list[str]:
+    e = []
+    try:
+        dt.date.fromisoformat(spec.get("date", ""))
+    except ValueError:
+        e.append("date 형식")
+    title = spec.get("title", "").strip()
+    if not 4 <= len(title) <= 60 or "#" in title or "[광고]" in title or "<" in title or ">" in title:
+        e.append("제목 4~60자, # ·[광고]·<> 없음")
+    if spec.get("product") or spec.get("products"):
+        e.append("글자형은 상품 없음")
+    if not spec.get("takeaway") or len(spec["takeaway"]) > 40:
+        e.append("takeaway 1~40자")
+    if spec.get("site_path") not in ("index.html", "report.html"):
+        e.append("site_path 는 index.html 또는 report.html")
+    if "출처" not in spec.get("description", ""):
+        e.append("설명에 출처")
+    return e
 
 
 def unrendered() -> list[pathlib.Path]:
