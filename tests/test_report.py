@@ -46,6 +46,11 @@ class ReportTest(unittest.TestCase):
         self.assertIsNone(R.parse_grocery(kamis(4)))
         self.assertIsNone(R.parse_grocery({"error_code": "200"}))
 
+    def test_clean_name(self):
+        self.assertEqual(R.clean_name("토마토/토마토"), "토마토")
+        self.assertEqual(R.clean_name("오이/취청"), "오이(취청)")
+        self.assertEqual(R.clean_name("쌀"), "쌀")
+
     def test_fx(self):
         x = R.parse_fx(ecos([1400] * 19 + [1380]))
         self.assertEqual(x["usd"], 1380.0)
