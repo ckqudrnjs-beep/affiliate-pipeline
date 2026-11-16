@@ -1,0 +1,59 @@
+name: textshort
+
+# 글자형 정보 Shorts (HyperFrames, 2026-11-16 BK). docs/SHORTS_GROWTH.md 'HyperFrames 글자형 Shorts 섞는 규칙'.
+# 격주 월요일 07:40 KST(주간 리포트 07:10 뒤, 유튜브 업로드 10:00 전)에 리포트 숫자로 사전 체크 4개를 보고,
+# 모두 통과하면 그날 월요일 시세 대본·영상을 글자형으로 바꿔 main 에 올린다. 하나라도 걸리면 아무것도 안 한다.
+# Claude 토큰 없음. 수동 실행: date(비우면 오늘), force=true 면 격주 조건 무시.
+on:
+  schedule:
+    - cron: "40 22 * * 0"   # 월 07:40 KST
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "리포트 날짜 YYYY-MM-DD (비우면 오늘 KST)"
+        required: false
+        default: ""
+      force:
+        description: "true 면 격주 조건 무시"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: 준비
+        run: sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+      - name: 검사
+        run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: 체크 → 만들기 → main
+        env:
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        run: |
+          git pull -q origin main
+          D="${{ github.event.inputs.date }}"
+          F=""; [ "${{ github.event.inputs.force }}" = "true" ] && F="--force"
+          PYTHONPATH=src python -m pipeline.textshort check $D
+          PYTHONPATH=src python -m pipeline.textshort make $D $F | tee -a "$GITHUB_STEP_SUMMARY"
+          git config user.name "textshort-bot"
+          git config user.email "textshort-bot@users.noreply.github.com"
+          git add media/youtube data/episodes
+          git commit -m "글자형 쇼츠 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase -q origin main
+          git push origin HEAD:main
