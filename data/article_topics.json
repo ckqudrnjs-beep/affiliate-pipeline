@@ -64,8 +64,9 @@
  },
  {
   "q": "겨울 난방비 아끼는 생활 습관 10가지",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "winter-heating-bill-saving-habits"
  },
  {
   "q": "전기요와 전기장판 차이와 전기요금",
