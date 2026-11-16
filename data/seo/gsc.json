@@ -1,35 +1,5 @@
 {
  "2026-11-16": {
-  "https://vetromaterials.com/": {
-   "clicks": 0,
-   "impressions": 5,
-   "position": 52.0,
-   "top_query": [
-    {
-     "key": "vetro",
-     "clicks": 0,
-     "impressions": 4,
-     "position": 64.8
-    }
-   ],
-   "top_page": [
-    {
-     "key": "https://vetromaterials.com/",
-     "clicks": 0,
-     "impressions": 5,
-     "position": 52.0
-    }
-   ],
-   "sitemaps": [
-    {
-     "path": "https://vetromaterials.com/sitemap.xml",
-     "last_read": "2026-11-13",
-     "errors": 0,
-     "submitted": 1,
-     "indexed": 0
-    }
-   ]
-  },
   "sc-domain:don3chon.com": {
    "clicks": 0,
    "impressions": 20,
