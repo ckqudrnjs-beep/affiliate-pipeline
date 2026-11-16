@@ -220,7 +220,7 @@ def home_block(recs: list[dict]) -> str:
     e = html.escape
     top = sorted(recs, key=lambda r: -r["save"])[:4]
     items = "".join(f'<li><a href="recipe/{r["slug"]}.html"><b>{e(r["name"])}</b><span>1인분 {won(r["total"])}</span></a></li>' for r in top)
-    return (f'<section id="recipes"><div class="sechead"><h2>1인분 원가 레시피</h2><a href="recipe.html" class="small">전체 보기</a></div>'
+    return (f'<section id="recipes"><div class="sechead"><h2>1인분 원가 레시피</h2><a href="recipe.html" class="small">전체 보기<span class="sr"> (원가 레시피)</span></a></div>'
             f'<ul class="rlist">{items}</ul></section>')
 
 

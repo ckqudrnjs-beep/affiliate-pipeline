@@ -274,8 +274,14 @@ footer .wrap{padding-block:32px 48px}
 .adfit{display:flex;justify-content:center;margin:32px 0 0}
 footer .foot{margin-bottom:8px;color:var(--ink)}
 @media (prefers-reduced-motion:reduce){.ph img{transition:none}}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 """
-FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap">'
+# 웹폰트 CSS 는 화면 그리기를 막지 않게 늦게 붙인다 (2026-11-16 모바일 속도: 이 CSS 가 첫 화면을 2~3초 막았음).
+# 글꼴·굵기는 그대로라 다 받은 뒤 모습은 같다. 받기 전 잠깐은 기기 기본 글꼴(--display/--body 의 대체 글꼴).
+FONT_URL = "https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap"
+FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+         f'<link rel="preload" as="style" href="{FONT_URL}"><link rel="stylesheet" href="{FONT_URL}" media="print" onload="this.media=\'all\'">'
+         f'<noscript><link rel="stylesheet" href="{FONT_URL}"></noscript>')
 
 ICONS = {
     "electric": '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
@@ -286,6 +292,8 @@ ICONS = {
 
 # 상품 영상: PC는 마우스를 올린 카드만, 모바일은 화면 가운데 카드만 재생 (전부 동시에 움직이지 않게)
 VIDEO_JS = """(()=>{const vs=[...document.querySelectorAll('.ph video')];if(!vs.length)return;
+const pio=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){const v=x.target;v.poster=v.dataset.poster||'';pio.unobserve(v)}}),{rootMargin:'600px 0px'});
+vs.forEach(v=>v.dataset.poster&&pio.observe(v));
 const play=v=>{v.play().catch(()=>{})},stop=v=>{v.pause();v.load()};
 if(matchMedia('(hover:hover)').matches){vs.forEach(v=>{const c=v.closest('.pick')||v.parentNode;
 c.addEventListener('mouseenter',()=>play(v));c.addEventListener('mouseleave',()=>stop(v))});return}
@@ -356,7 +364,7 @@ def media(p: dict, root: str = "") -> str:
     img = e(p.get("imageUrl") or "")
     if p.get("videoUrl"):
         v = p["videoUrl"] if p["videoUrl"].startswith("http") else root + p["videoUrl"]
-        return (f'<video src="{e(v)}" poster="{img}" muted loop playsinline preload="metadata" '
+        return (f'<video src="{e(v)}" data-poster="{img}" muted loop playsinline preload="none" '
                 f'aria-label="{e(p["name"])} 사용 영상"></video>')
     return f'<img src="{img}" alt="{e(p["name"])}" loading="lazy">' if img else f'<em>{e(p["name"])}</em>'
 
