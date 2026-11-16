@@ -1118,7 +1118,8 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
               f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}{st}"
               f"<p class=\"next\"><a class=\"btn\" href=\"/q/{nxt['id']}\">다음 밸런스게임 ▶</a></p><!--AD--><h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS,
               jsonld=[crumbs(cfg, [("밸런스게임", "archive"), (f"{q['a']} vs {q['b']}", f"q/{q['id']}")])],
-              og=f"og/q/{q['id']}.png" if (HERE / "static" / "og" / "q" / f"{q['id']}.png").exists() else None)
+              og=f"og/q/{q['id']}.png" if (HERE / "static" / "og" / "q" / f"{q['id']}.png").exists() else None,
+              noindex=True)  # 질문 한 줄 + 해설 1~2문장이라 애드센스·애드핏 심사에서 얇은 페이지로 보인다(2026-11-16). 공유·직접 방문은 그대로.
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
     write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
@@ -1161,7 +1162,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
     write("rank", f"도전 순위 | {cfg['siteName']}", "5락실 오늘의 도전 순위. 매일 모두 같은 판으로 겨루는 미니게임 기록 TOP 10.",
           f"<h1>🏆 도전 순위</h1><p class=\"lead\">매일 0시(한국 시간)에 새 판이 열리고 오늘 순위가 새로 시작돼요. <b>프로필을 만든 사람의 기록은 7일 동안 보관</b>돼서 '최근 7일' 순위와 <a href=\"/profile\">내 프로필</a>에서 볼 수 있어요. 자동 별명 기록은 그날만 보여요.</p><div class=\"re\">{tabs}</div><p class=\"re\"><button class=\"share\" type=\"button\" data-w=\"0\" style=\"font-weight:800\">오늘</button> <button class=\"share\" type=\"button\" data-w=\"1\">최근 7일 (프로필)</button></p><div class=\"card\"><ol id=\"rk\" class=\"list\"></ol></div>",
-          COMMON_JS + RANK_PAGE_JS)
+          COMMON_JS + RANK_PAGE_JS, noindex=True)  # 숫자만 JS로 채우는 순위표라 글이 거의 없다(2026-11-16)
 
     gnames = json.dumps({g["slug"]: g["name"] for g in ranked}, ensure_ascii=False)
     write("profile", f"내 프로필 | {cfg['siteName']}", "5락실 프로필. 가입 없이 별명·아바타를 정하고 복구 코드로 다른 기기에서도 코인·스킨을 이어 써요.",
