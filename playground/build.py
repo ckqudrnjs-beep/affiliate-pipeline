@@ -667,6 +667,9 @@ GAME_ITEMS = [
     {"g": "chosung", "k": "cheer", "kn": "끝났을 때 축하", "id": "stars", "name": "별 비", "icon": "⭐", "p": 6},
     {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
     {"g": "majority", "k": "cheer", "kn": "끝났을 때 축하", "id": "hearts", "name": "하트 비", "icon": "💗", "p": 6},
+    # 게이머 면허증(도구, 2026-11-16): 카드 테두리. 기본·체리 핑크는 무료(코드 안), 아래 둘만 코인
+    {"g": "pixelcard", "k": "fr", "kn": "카드 테두리", "id": "aurora", "name": "오로라 그린", "icon": "🟢", "p": 4},
+    {"g": "pixelcard", "k": "fr", "kn": "카드 테두리", "id": "gold", "name": "황금 홀로그램", "icon": "👑", "p": 8},
 ]
 # 관리자 지급용 '게임 안 아이템'(BK 11/14): 게임 안 화폐(골드·도토리)로 사는 꾸미기. 미니 상점(코인)에는 안 나오고 /admin 에만.
 # 새 게임은 games/<slug>/items.json {"items":[{k,kn,id,name,icon}]} 만 두면 관리자 페이지에 자동으로 생긴다.
