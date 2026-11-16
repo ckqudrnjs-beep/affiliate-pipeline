@@ -79,6 +79,31 @@ class PlaygroundTest(unittest.TestCase):
         self.assertFalse((d / "report.html").exists())
         self.assertNotIn("명이 투표했어요", (d / "q" / f"{qs[0]['id']}.html").read_text(encoding="utf-8"))
 
+    def test_guides_built_linked_indexed(self):
+        d = self._build()
+        sm = (d / "sitemap.xml").read_text(encoding="utf-8")
+        gdir = ROOT / "playground" / "guides"
+        for f in gdir.glob("*.md"):
+            page = (d / "guide" / f"{f.stem}.html").read_text(encoding="utf-8")
+            self.assertNotIn("noindex", page)
+            self.assertIn(f"/guide/{f.stem}</loc>", sm)
+            self.assertIn('"@type": "Article"', page)
+        self.assertIn("/guide</loc>", sm)
+        game = (d / "games" / "dodge.html").read_text(encoding="utf-8")
+        self.assertIn('href="/guide/dodge"', game)
+        self.assertIn('href="/guide"', (d / "index.html").read_text(encoding="utf-8"))
+
+    def test_guide_markdown_and_near_duplicate_block(self):
+        html, toc = pg.md_html("## 가\n문단 **굵게** [링크](/games)\n\n- 하나\n- 둘\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n> 팁")
+        self.assertEqual(toc, [("s1", "가")])
+        for part in ("<b>굵게</b>", '<a href="/games">링크</a>', "<ul", "<table", 'class="gtip"'):
+            self.assertIn(part, html)
+        self.assertNotIn("<script", pg.md_html("<script>x</script>")[0])
+        a = {"slug": "a", "title": "A", "text": "같은 문장이 계속 반복되는 공략 글입니다. " * 30}
+        b = {"slug": "b", "title": "B", "text": "같은 문장이 계속 반복되는 공략 글입니다. " * 29 + "끝"}
+        with self.assertRaises(ValueError):
+            pg.guide_check([a, b])
+
 
 if __name__ == "__main__":
     unittest.main()
