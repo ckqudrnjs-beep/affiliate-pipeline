@@ -33,3 +33,7 @@
 1. yt-stats 워크플로가 매일 22:41 KST 공개 조회수를 data/youtube/stats.json 에 쌓는다.
 2. 월요일: docs/SHORTS_WEEKLY.md (형식별 평균·편별 순위) → 상위 형식은 늘리고 하위 형식은 훅·배지·길이를 바꾼다. 3주 연속 하위면 요일표에서 교체.
 3. 결과를 BK에게 짧게 보고.
+
+## 도구 (2026-11-16)
+- 업로드 전 화면 확인: `.claude/skills/watch` (local, 키 없음).
+- 시세 Shorts 새 형식 시험: HyperFrames 템플릿 `tools/hyperframes/price_short` (아직 자동 업로드 미연결).
