@@ -49,6 +49,13 @@ class PlaygroundTest(unittest.TestCase):
         pg.build(Path(d), upto=date(2030, 1, 1), stats=stats, cfg=cfg)
         return Path(d)
 
+    def test_every_page_sends_visit_beacon(self):
+        # 2026-11-16: /en/sky(레딧 유입)가 page()를 안 거쳐 방문자 신호가 빠져 있었다 → 모든 공개 HTML에 있어야 한다
+        d = self._build()
+        miss = [str(f.relative_to(d)) for f in d.rglob("*.html") if "nr_vday" not in f.read_text(encoding="utf-8")]
+        self.assertEqual(miss, [])
+        self.assertIn('var VH="5raksil.com"', (d / "en" / "sky.html").read_text(encoding="utf-8"))
+
     def test_ads_hidden_without_ids(self):
         d = self._build({"adsensePublisherId": "", "adsenseSlot": "", "adfitUnit": "", "adfitUnitPc": ""})
         for f in ("index.html", "games/spot.html", "q/20261112-1.html"):

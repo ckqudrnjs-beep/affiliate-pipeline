@@ -1433,7 +1433,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         sky_og = "og/sky-en.jpg" if (HERE / "static/og/sky-en.jpg").exists() else "og/sky.jpg"
         (out / "en").mkdir(exist_ok=True)
         v = lambda rel: (f"?v={static_ver(rel)}" if static_ver(rel) else "")
-        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("{{SKYV}}", v("js/sky-en.js")).replace("/img/sky-poster.jpg{{POSTERV}}", f"/{sky_poster}{v(sky_poster)}").replace("/og/sky.jpg{{OGV}}", f"/{sky_og}{v(sky_og)}"), encoding="utf-8")
+        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("{{SKYV}}", v("js/sky-en.js")).replace("/img/sky-poster.jpg{{POSTERV}}", f"/{sky_poster}{v(sky_poster)}").replace("/og/sky.jpg{{OGV}}", f"/{sky_og}{v(sky_og)}")
+                                         # 순 방문자 신호(11/16): 이 페이지는 page()를 안 거쳐서 빠져 있었다 → 레딧 유입이 관리자 방문자 수에 안 잡혔음
+                                         .replace("</body>", f'<script>var VH={json.dumps(urlparse(cfg["baseUrl"]).hostname)};{VISIT_JS}</script></body>', 1), encoding="utf-8")
         sm += f"<url><loc>{base}/en/sky</loc><lastmod>{lm}</lastmod></url>"
     (out / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>', encoding="utf-8")
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")
