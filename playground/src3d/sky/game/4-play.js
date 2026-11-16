@@ -30,7 +30,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13 || CHX[Wd.ch] && Wd.ch < 8 && !S.q[CHX[Wd.ch].qid[0]]) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam', 'lost']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
@@ -320,7 +320,7 @@ function update(dt) {
   if (G.fx.length > FX_MAX) G.fx.splice(0, G.fx.length - FX_MAX);
   // 줍기
   for (const d of G.drops) { d.t += dt; if (P.dead || d.t < .35) continue; if (hyp(d.x - P.x, d.y - P.y) < .8) pickUp(d); else d.warn = 0; }
-  G.drops = G.drops.filter(d => !d.got && d.t < dropLife(d)); if (G.drops.length > DROP_MAX) trimDrops();
+  for (const d of G.drops) if (!d.got && d.t >= dropLife(d)) toLost(d); G.drops = G.drops.filter(d => !d.got); if (G.drops.length > DROP_MAX) trimDrops();
   // 카메라
   const k = 1 - Math.exp(-dt * 8); G.cam[0] += (P.x - G.cam[0]) * k; G.cam[1] += (P.y - G.cam[1]) * k; G.shake = Math.max(0, G.shake - dt * 20);
   for (const s of G.msg) s.t += dt; G.msg = G.msg.filter(s => s.t < 4.5);
@@ -435,12 +435,21 @@ function areaUpdate(a, dt) {
       for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + .6)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { kb: 10, fx: a.x, fy: a.y, col: '#9fe4ff' }); } } }
   if (a.k === 'mist' && a.fk === 1) { a.tick -= dt; if (a.tick <= 0) { a.tick = 1; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c); G.fx.push({ k: 'zap', x: a.x, y: a.y, x2: m.x, y2: m.y, t: 0, life: .2 }); } } }
 }
-// 땅에 떨어진 물건: 오래 두면 사라짐(가방이 차서 못 주운 게 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
-// 보통·손본·재료 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 치움.
-const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160;
+// 땅에 떨어진 물건: 오래 두면 마을 창고의 「분실물」 칸으로 옮겨짐(가방이 차서 못 주운 게 땅에 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
+// 보통·손본·재료·금화 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 옮김. 금화는 바로 지갑으로.
+// 분실물은 LOST_N 칸까지, 넘치면 가장 오래된 낮은 등급 장비를 재료로 바꿔 둔다(잃는 것 없음, BK 11/16).
+const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160, LOST_N = 40;
 function dropLife(d) { return d.gold ? 120 : d.mine || d.it && !d.it.g && d.it.r >= 2 ? 600 : 120; }
 function dropRank(d) { return d.mine ? 9 : d.gold ? 1 : d.it.g ? 2 : 3 + (d.it.r || 0); }
-function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t), cut = new Set(L.slice(0, G.drops.length - DROP_MAX)); G.drops = G.drops.filter(d => !cut.has(d) || hyp(d.x - P.x, d.y - P.y) < 1.2); }
+function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t);
+  for (const d of L) { if (G.drops.length - L.filter(q => q.got).length <= DROP_MAX) break; if (hyp(d.x - P.x, d.y - P.y) >= 1.2) toLost(d); } G.drops = G.drops.filter(d => !d.got); }
+function lostAdd(it) { const P = G.P, L = P.lost || (P.lost = []);
+  if (it.g) { const h = L.find(q => q.g === it.g); if (h) { h.n = (h.n || 1) + (it.n || 1); return; } }
+  L.push(it);
+  while (L.length > LOST_N) { let k = -1; for (let i = 0; i < L.length; i++) if (!L[i].g && !L[i].lk && (k < 0 || L[i].r < L[k].r)) k = i; if (k < 0) { L.shift(); continue; }
+    const s = salvageOf(L[k]); L.splice(k, 1); if (s) { const h = L.find(q => q.g === s[0]); if (h) h.n = (h.n || 1) + s[1]; else L.push(goods(s[0], s[1])); } } }
+function toLost(d) { const P = G.P; d.got = 1; if (d.gold) { P.gold += d.gold; return; } lostAdd(d.it);
+  if (!G.lostTold) { G.lostTold = 1; say('못 주운 물건은 마을 「내 집 창고」의 분실물 칸에 모아 둘게요', '#9fe4ff'); } }
 function pickUp(d) {
   const P = G.P;
   if (d.gold) { P.gold += d.gold; d.got = 1; G.txt.push({ x: d.x, y: d.y, z: 1, t: 0, s: '+' + d.gold + 'G', c: '#ffd166', small: 1 }); sfx('coin'); return; }
