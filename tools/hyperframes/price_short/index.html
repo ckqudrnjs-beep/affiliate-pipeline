@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "NSq"; src: url("assets/fonts/NanumBarunGothicBold.ttf"); font-weight: 800; }
+      @font-face { font-family: "NSq"; src: url("assets/fonts/NanumSquareB.ttf"); font-weight: 700; }
+      :root { --ground: #fff8ec; --ink: #1d1d1f; --down: #1e7bff; --up: #ff3b30; --accent: #ffb000; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--ground); }
+      #root { position: relative; width: 100%; height: 100%; font-family: "NSq", sans-serif; color: var(--ink); }
+      .scene { position: absolute; left: 0; right: 0; top: 168px; height: 1162px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 36px; padding: 0 90px; }
+      .tag { font-size: 44px; font-weight: 700; background: var(--ink); color: #fff; padding: 14px 34px; border-radius: 999px; }
+      .big { font-size: 112px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; }
+      .item { font-size: 96px; font-weight: 800; }
+      .pct { font-size: 240px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+      .sub { font-size: 50px; font-weight: 700; color: #555; }
+      .down { color: var(--down); } .up { color: var(--up); }
+      .bar { width: 760px; height: 46px; border-radius: 23px; background: #e8e1d4; overflow: hidden; }
+      .fill { height: 100%; width: 100%; border-radius: 23px; transform-origin: left center; }
+      .src { position: absolute; left: 0; right: 0; top: 1240px; text-align: center; font-size: 30px; font-weight: 700; color: #8a8378; }
+      .cta { font-size: 84px; font-weight: 800; line-height: 1.25; }
+      .url { font-size: 58px; font-weight: 800; color: #fff; background: var(--accent); padding: 18px 40px; border-radius: 20px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="12" data-width="1080" data-height="1920">
+      <div id="s1" class="clip scene" data-start="0" data-duration="3" data-track-index="0">
+        <div id="s1-tag" class="tag">11월 셋째 주 장바구니</div>
+        <div id="s1-big" class="big">한 달 새<br/>거의 반값 된<br/>채소 있어요</div>
+      </div>
+      <div id="s2" class="clip scene" data-start="3" data-duration="3.5" data-track-index="0">
+        <div id="s2-item" class="item">토마토 1kg</div>
+        <div id="s2-pct" class="pct down">-46%</div>
+        <div class="bar"><div id="s2-fill" class="fill" style="background: var(--down)"></div></div>
+        <div id="s2-sub" class="sub">지금 3,909원 · 이번 주에 담기</div>
+      </div>
+      <div id="s3" class="clip scene" data-start="6.5" data-duration="3.5" data-track-index="0">
+        <div id="s3-item" class="item">오이 10개</div>
+        <div id="s3-pct" class="pct up">+71%</div>
+        <div class="bar"><div id="s3-fill" class="fill" style="background: var(--up)"></div></div>
+        <div id="s3-sub" class="sub">15,652원 · 애호박으로 대체 추천</div>
+      </div>
+      <div id="s4" class="clip scene" data-start="10" data-duration="2" data-track-index="0">
+        <div id="s4-cta" class="cta">137개 품목<br/>이번 주 시세 전체는</div>
+        <div id="s4-url" class="url">don3chon.com</div>
+      </div>
+      <div id="src" class="clip src" data-start="0" data-duration="12" data-track-index="1">출처: KAMIS 농산물 가격 · 한 달 전 대비</div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#s1-tag", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 0);
+      tl.fromTo("#s1-big", { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(1.6)" }, 0.1);
+      tl.fromTo("#s2-item", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 3.0);
+      tl.fromTo("#s2-pct", { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power4.out" }, 3.15);
+      tl.fromTo("#s2-fill", { scaleX: 1 }, { scaleX: 0.54, duration: 1.0, ease: "power2.inOut" }, 3.5);
+      tl.fromTo("#s2-sub", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 4.3);
+      tl.fromTo("#s3-item", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 6.5);
+      tl.fromTo("#s3-pct", { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power4.out" }, 6.65);
+      tl.fromTo("#s3-fill", { scaleX: 0.58 }, { scaleX: 1, duration: 1.0, ease: "power2.inOut" }, 7.0);
+      tl.fromTo("#s3-sub", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 7.8);
+      tl.fromTo("#s4-cta", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 10.0);
+      tl.fromTo("#s4-url", { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2)" }, 10.25);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

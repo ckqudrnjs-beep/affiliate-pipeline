@@ -6,3 +6,6 @@ video_work/
 playground/dist/
 playground/src3d/node_modules/
 media/raksil/
+tools/hyperframes/*/assets/
+tools/hyperframes/*/renders/
+tools/hyperframes/*/.hyperframes/
