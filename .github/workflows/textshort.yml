@@ -17,6 +17,10 @@ on:
         description: "true 면 격주 조건 무시"
         required: false
         default: "false"
+      preview:
+        description: "true 면 main 에 올리지 않고 영상만 Artifacts 로 (확인용)"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -38,7 +42,13 @@ jobs:
         with:
           node-version: "22"
       - name: 준비
-        run: sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+          pip install -q pillow numpy supertonic==1.3.1
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/supertonic3
+          key: supertonic-3-v1
       - name: 검사
         run: PYTHONPATH=src python -m unittest discover -s tests
       - name: 체크 → 만들기 → main
@@ -51,9 +61,16 @@ jobs:
           F=""; [ "${{ github.event.inputs.force }}" = "true" ] && F="--force"
           PYTHONPATH=src python -m pipeline.textshort check $D
           PYTHONPATH=src python -m pipeline.textshort make $D $F | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event.inputs.preview }}" = "true" ]; then mkdir -p preview && cp media/youtube/ep-*-prices.mp4 preview/ 2>/dev/null; git checkout -q -- . ; git clean -fdq data/episodes media/youtube; exit 0; fi
           git config user.name "textshort-bot"
           git config user.email "textshort-bot@users.noreply.github.com"
           git add media/youtube data/episodes
           git commit -m "글자형 쇼츠 $(TZ=Asia/Seoul date +%F)" || exit 0
           git pull --rebase -q origin main
           git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: github.event.inputs.preview == 'true'
+        with:
+          name: textshort-preview
+          path: preview/
+          if-no-files-found: warn

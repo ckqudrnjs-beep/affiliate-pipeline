@@ -121,7 +121,79 @@ def spec_for(rep: dict, picks: dict, d: dt.date) -> dict:
     }
 
 
-def render(index_html: str, out: pathlib.Path) -> None:
+SR = 44100
+TOTAL = 12.0
+# (장면 시작, 쓸 수 있는 길이) — template.html 의 s1~s4 와 맞춘다
+SLOTS = [(0.15, 2.75), (3.1, 3.3), (6.6, 3.3), (10.05, 1.9)]
+POPS = [0.1, 3.15, 6.65, 10.25]
+
+
+def say_lines(rep: dict, picks: dict) -> list[str]:
+    """내레이션 4줄 (숫자는 리포트 그대로, %는 '퍼센트'로 읽게)."""
+    down, up = picks["down"], picks["up"]
+    dm, um = abs(down["m"]), up["m"]
+    hook = "한 달 새 거의 반값 된 품목이 있어요." if dm >= 40 else f"한 달 새 {dm:.0f}퍼센트 싸진 품목이 있어요."
+    return [hook,
+            f"{short_name(down['name'])}, 한 달 새 {dm:.0f}퍼센트 내렸어요.",
+            f"{short_name(up["name"])}는 {um:.0f}퍼센트 올랐어요. 한 주 쉬어 가요.",
+            "전체 시세는 돈삼촌에서."]
+
+
+def pop(freq: float = 880.0, ms: int = 90):
+    import numpy as np
+    t = np.arange(int(SR * ms / 1000)) / SR
+    f = freq * (1 - 0.5 * t / t[-1])  # 살짝 내려가는 '톡'
+    return (np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 40)).astype(np.float32)
+
+
+def fit(clip, slot: float):
+    """슬롯보다 길면 ffmpeg atempo 로 최대 1.3배까지 빠르게, 그래도 길면 끝을 자른다."""
+    import numpy as np
+    n = len(clip) / SR
+    if n <= slot:
+        return clip
+    ratio = min(1.3, n / slot)
+    with tempfile.TemporaryDirectory() as tmpd:
+        a, b = pathlib.Path(tmpd) / "a.wav", pathlib.Path(tmpd) / "b.wav"
+        write_wav(a, clip)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(a), "-filter:a", f"atempo={ratio:.3f}", str(b)], check=True)
+        import wave
+        with wave.open(str(b)) as w:
+            out = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32767
+    return out[: int(slot * SR)]
+
+
+def write_wav(path: pathlib.Path, a) -> None:
+    import numpy as np
+    import wave
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        w.writeframes((np.clip(a, -1, 1) * 32767).astype(np.int16).tobytes())
+
+
+def soundtrack(rep: dict, picks: dict, voice: bool = True):
+    """효과음(직접 합성, 저작권 없음) + 무료 TTS 내레이션(삼촌 쇼츠와 같은 목소리). TTS 가 안 되면 효과음만."""
+    import numpy as np
+    track = np.zeros(int(SR * TOTAL), dtype=np.float32)
+    for i, t in enumerate(POPS):
+        p = pop(660.0 if i == 0 else 880.0) * 0.22
+        j = int(t * SR)
+        track[j:j + len(p)] += p[: len(track) - j]
+    if voice:
+        try:
+            from .uncle import tts
+            for (t, slot), clip in zip(SLOTS, tts(say_lines(rep, picks))):
+                c = fit(np.asarray(clip, dtype=np.float32), slot)
+                j = int(t * SR)
+                track[j:j + len(c)] += c[: len(track) - j] * 0.9
+        except Exception as e:  # 모델 내려받기 실패 등 → 효과음만
+            print(f"TTS 건너뜀 (효과음만): {type(e).__name__}: {e}", file=sys.stderr)
+    return track
+
+
+def render(index_html: str, out: pathlib.Path, audio=None) -> None:
     with tempfile.TemporaryDirectory() as tmpd:
         proj = pathlib.Path(tmpd) / "price_short"
         shutil.copytree(TEMPLATE_DIR, proj, ignore=shutil.ignore_patterns("renders", ".hyperframes", "assets", "index.html", "template.html", "README.md"))
@@ -135,7 +207,14 @@ def render(index_html: str, out: pathlib.Path) -> None:
         subprocess.run(npx + ["check"], cwd=proj, env=env, check=True)
         subprocess.run(npx + ["render", "-o", "renders/out.mp4"], cwd=proj, env=env, check=True)
         out.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(proj / "renders" / "out.mp4", out)
+        if audio is None:
+            shutil.copy(proj / "renders" / "out.mp4", out)
+            return
+        wav = proj / "renders" / "sound.wav"
+        write_wav(wav, audio)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(proj / "renders" / "out.mp4"), "-i", str(wav),
+                        "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest",
+                        "-movflags", "+faststart", str(out)], check=True)
 
 
 def uploaded_slugs() -> set[str]:
@@ -166,7 +245,7 @@ def make(d: dt.date, force: bool = False) -> str:
         if old.get("slug") and old["slug"] != spec["slug"]:
             spec["slug"] = old["slug"]
     out = MEDIA / f"{spec['slug']}.mp4"
-    render(fill(rep, picks, d), out)
+    render(fill(rep, picks, d), out, soundtrack(rep, picks, voice=os.environ.get("TEXTSHORT_VOICE", "1") != "0"))
     ep.write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     meta = {"slug": spec["slug"], "seconds": 12.0, "chapters": [], "engine": "hyperframes"}
     ep.with_suffix(".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

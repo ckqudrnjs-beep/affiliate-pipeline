@@ -37,3 +37,22 @@ class TextShortTest(unittest.TestCase):
         self.assertFalse(T.is_trial_week(dt.date(2026, 11, 16)))
         self.assertTrue(T.is_trial_week(dt.date(2026, 11, 23)))
         self.assertFalse(T.is_trial_week(dt.date(2026, 11, 24)))
+
+
+class SoundTest(unittest.TestCase):
+    def test_soundtrack_fits_12s_with_long_voice(self):
+        import numpy as np
+        from unittest import mock
+        _, _, picks = T.checks(REP)
+        fake = lambda lines: [np.full(int(T.SR * 4.0), 0.1, dtype=np.float32) for _ in lines]  # 4초 > 슬롯
+        with mock.patch("pipeline.uncle.tts", fake):
+            a = T.soundtrack(REP, picks)
+        self.assertEqual(len(a), int(T.SR * T.TOTAL))
+        self.assertGreater(float(np.abs(a[int(T.SR * 1.0)])), 0.05)  # 첫 줄 내레이션이 들어감
+
+    def test_say_lines_use_report_numbers(self):
+        _, _, picks = T.checks(REP)
+        s = " ".join(T.say_lines(REP, picks))
+        self.assertIn("46퍼센트", s)
+        self.assertIn("71퍼센트", s)
+        self.assertIn("오이는", s)
