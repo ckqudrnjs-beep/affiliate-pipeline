@@ -919,10 +919,11 @@ function update(dt) {
   // 지역 효과
   for (const a of G.areas) areaUpdate(a, dt); G.areas = G.areas.filter(a => a.k === 'delay' ? !a.done : a.t < a.life);
   for (const f of G.fx) f.t += dt; G.fx = G.fx.filter(f => f.t < f.life);
-  for (const t of G.txt) t.t += dt; G.txt = G.txt.filter(t => t.t < 1);
+  for (const t of G.txt) t.t += dt; G.txt = G.txt.filter(t => t.t < 1); if (G.txt.length > TXT_MAX) G.txt.splice(0, G.txt.length - TXT_MAX);
+  if (G.fx.length > FX_MAX) G.fx.splice(0, G.fx.length - FX_MAX);
   // 줍기
   for (const d of G.drops) { d.t += dt; if (P.dead || d.t < .35) continue; if (hyp(d.x - P.x, d.y - P.y) < .8) pickUp(d); else d.warn = 0; }
-  G.drops = G.drops.filter(d => !d.got);
+  G.drops = G.drops.filter(d => !d.got && d.t < dropLife(d)); if (G.drops.length > DROP_MAX) trimDrops();
   // 카메라
   const k = 1 - Math.exp(-dt * 8); G.cam[0] += (P.x - G.cam[0]) * k; G.cam[1] += (P.y - G.cam[1]) * k; G.shake = Math.max(0, G.shake - dt * 20);
   for (const s of G.msg) s.t += dt; G.msg = G.msg.filter(s => s.t < 4.5);
@@ -1037,6 +1038,12 @@ function areaUpdate(a, dt) {
       for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + .6)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { kb: 10, fx: a.x, fy: a.y, col: '#9fe4ff' }); } } }
   if (a.k === 'mist' && a.fk === 1) { a.tick -= dt; if (a.tick <= 0) { a.tick = 1; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c); G.fx.push({ k: 'zap', x: a.x, y: a.y, x2: m.x, y2: m.y, t: 0, life: .2 }); } } }
 }
+// 땅에 떨어진 물건: 오래 두면 사라짐(가방이 차서 못 주운 게 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
+// 보통·손본·재료 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 치움.
+const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160;
+function dropLife(d) { return d.gold ? 120 : d.mine || d.it && !d.it.g && d.it.r >= 2 ? 600 : 120; }
+function dropRank(d) { return d.mine ? 9 : d.gold ? 1 : d.it.g ? 2 : 3 + (d.it.r || 0); }
+function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t), cut = new Set(L.slice(0, G.drops.length - DROP_MAX)); G.drops = G.drops.filter(d => !cut.has(d) || hyp(d.x - P.x, d.y - P.y) < 1.2); }
 function pickUp(d) {
   const P = G.P;
   if (d.gold) { P.gold += d.gold; d.got = 1; G.txt.push({ x: d.x, y: d.y, z: 1, t: 0, s: '+' + d.gold + 'G', c: '#ffd166', small: 1 }); sfx('coin'); return; }
@@ -2032,7 +2039,9 @@ function draw() {
   x.textAlign = 'center';
   drawTownMarks();
   { const LB = []; // 이름표: 겹치면 위로 비켜 쌓기
-    for (const d of G.drops) { if (!vis(d.x, d.y) || d.gold) continue; const [sx, sy] = iso(d.x, d.y), it = d.it, eq = !it.g, hi = eq && it.r >= 2; x.font = (hi ? '800 11px' : '600 10px') + ' system-ui'; const tag = eq && it.r >= 1 ? '[' + RAR[it.r].n + '] ' : '', s = tag + itemName(it), w = x.measureText(s).width + 10, hh = hi ? 16 : 14; LB.push({ sx, ty: sy - 24 - (hi ? 2 : 0), w, hh, s, it, eq, hi }); }
+    // 가까운 것부터 LB_MAX 개만(겹침 비키기가 개수²이라 많으면 느려짐). 글자·폭은 물건마다 한 번만 잼.
+    const DV = []; for (const d of G.drops) if (!d.gold && vis(d.x, d.y)) DV.push([hyp(d.x - P.x, d.y - P.y), d]); if (DV.length > LB_MAX) { DV.sort((a, b) => a[0] - b[0]); DV.length = LB_MAX; }
+    for (const [, d] of DV) { const [sx, sy] = iso(d.x, d.y), it = d.it, eq = !it.g, hi = eq && it.r >= 2; if (!d.lb) { x.font = (hi ? '800 11px' : '600 10px') + ' system-ui'; const tag = eq && it.r >= 1 ? '[' + RAR[it.r].n + '] ' : '', s = tag + itemName(it); d.lb = [s, x.measureText(s).width + 10]; } LB.push({ sx, ty: sy - 24 - (hi ? 2 : 0), w: d.lb[1], hh: hi ? 16 : 14, s: d.lb[0], it, eq, hi }); }
     LB.sort((a, b) => b.ty - a.ty); for (let i = 0; i < LB.length; i++) { const a = LB[i]; for (let k = 0; k < 8; k++) { let hit = 0; for (let j = 0; j < i; j++) { const o = LB[j]; if (Math.abs(o.sx - a.sx) < (o.w + a.w) / 2 + 2 && a.ty < o.ty + o.hh + 1 && a.ty + a.hh > o.ty - 1) { a.ty = o.ty - a.hh - 2; hit = 1; } } if (!hit) break; } }
     for (const a of LB) { x.font = (a.hi ? '800 11px' : '600 10px') + ' system-ui'; x.fillStyle = 'rgba(20,16,10,.8)'; rr(a.sx - a.w / 2, a.ty, a.w, a.hh, 4); x.fill(); if (a.eq && a.it.r >= 1) { x.strokeStyle = itemColor(a.it); x.lineWidth = a.hi ? 1.6 : 1; x.stroke(); } x.fillStyle = itemColor(a.it); x.fillText(a.s, a.sx, a.ty + a.hh - 3.5); } }
   for (const t of G.txt) { const [sx, sy] = iso(t.x, t.y), a = Math.min(1, (1 - t.t) * 2.2), sc = t.pop ? 1 + Math.max(0, .18 - t.t) * (t.big ? 6 : 3.5) : 1; x.globalAlpha = a; x.font = (t.big ? '900 19px ' : t.small ? '700 10px ' : '800 14px ') + 'system-ui'; x.lineWidth = t.big ? 4 : 3; x.strokeStyle = t.big ? 'rgba(90,30,0,.9)' : 'rgba(30,20,10,.8)';
@@ -2196,6 +2205,7 @@ function drawMob(m) {
     if (m.elite) { x.font = '700 9px system-ui'; x.textAlign = 'center'; x.fillStyle = m.E[1]; x.strokeStyle = 'rgba(20,14,10,.8)'; x.lineWidth = 2.5; const s = m.E[0] + ' ' + D.n; x.strokeText(s, sx, top - 4); x.fillText(s, sx, top - 4); } }
   if (m.stun > 0 && !m.dead) { x.fillStyle = '#ffe08a'; for (let i = 0; i < 3; i++) { const a2 = G.t * 5 + i * TAU / 3; x.beginPath(); x.arc(sx + Math.cos(a2) * 9, sy - c[3] * .42 + Math.sin(a2) * 3, 2, 0, TAU); x.fill(); } }
 }
+const LB_MAX = 24;
 function drawDrop(d) {
   const [sx, sy] = iso(d.x, d.y), b = Math.max(0, .35 - d.t) * 60;
   if (d.gold) { x.fillStyle = '#ffd166'; x.strokeStyle = '#8a6a1a'; x.lineWidth = 1; for (let i = 0; i < Math.min(4, 1 + d.gold / 10); i++) { x.beginPath(); x.ellipse(sx - 4 + i * 3, sy - 3 - b - i * 1.5, 4, 2.4, 0, 0, TAU); x.fill(); x.stroke(); } return; }
@@ -3069,7 +3079,7 @@ function bindPanel(arg) {
     else if (a === 'uneq') { unequip(SEL.slice(1)); SEL = null; render(); }
     else if (a === 'nosel') { SEL = null; render(); }
     else if (a === 'use') { const it = P.inv[+SEL.slice(1)]; drink(it.g); if (!P.inv.includes(it)) SEL = null; render(); }
-    else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
+    else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1, mine: 1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
     else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('Not enough gold'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('Bag is full'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
     else if (a === 'selljunk') { let g = 0; P.inv = P.inv.filter(it => { if (!it.g && it.r === 0 && !it.lk) { g += priceOf(it) * (it.n || 1); return false; } return true; }); P.gold += g; SEL = null; sfx('coin'); render(); toast(g + 'G received'); }

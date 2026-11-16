@@ -316,10 +316,11 @@ function update(dt) {
   // 지역 효과
   for (const a of G.areas) areaUpdate(a, dt); G.areas = G.areas.filter(a => a.k === 'delay' ? !a.done : a.t < a.life);
   for (const f of G.fx) f.t += dt; G.fx = G.fx.filter(f => f.t < f.life);
-  for (const t of G.txt) t.t += dt; G.txt = G.txt.filter(t => t.t < 1);
+  for (const t of G.txt) t.t += dt; G.txt = G.txt.filter(t => t.t < 1); if (G.txt.length > TXT_MAX) G.txt.splice(0, G.txt.length - TXT_MAX);
+  if (G.fx.length > FX_MAX) G.fx.splice(0, G.fx.length - FX_MAX);
   // 줍기
   for (const d of G.drops) { d.t += dt; if (P.dead || d.t < .35) continue; if (hyp(d.x - P.x, d.y - P.y) < .8) pickUp(d); else d.warn = 0; }
-  G.drops = G.drops.filter(d => !d.got);
+  G.drops = G.drops.filter(d => !d.got && d.t < dropLife(d)); if (G.drops.length > DROP_MAX) trimDrops();
   // 카메라
   const k = 1 - Math.exp(-dt * 8); G.cam[0] += (P.x - G.cam[0]) * k; G.cam[1] += (P.y - G.cam[1]) * k; G.shake = Math.max(0, G.shake - dt * 20);
   for (const s of G.msg) s.t += dt; G.msg = G.msg.filter(s => s.t < 4.5);
@@ -434,6 +435,12 @@ function areaUpdate(a, dt) {
       for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + .6)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { kb: 10, fx: a.x, fy: a.y, col: '#9fe4ff' }); } } }
   if (a.k === 'mist' && a.fk === 1) { a.tick -= dt; if (a.tick <= 0) { a.tick = 1; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c); G.fx.push({ k: 'zap', x: a.x, y: a.y, x2: m.x, y2: m.y, t: 0, life: .2 }); } } }
 }
+// 땅에 떨어진 물건: 오래 두면 사라짐(가방이 차서 못 주운 게 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
+// 보통·손본·재료 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 치움.
+const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160;
+function dropLife(d) { return d.gold ? 120 : d.mine || d.it && !d.it.g && d.it.r >= 2 ? 600 : 120; }
+function dropRank(d) { return d.mine ? 9 : d.gold ? 1 : d.it.g ? 2 : 3 + (d.it.r || 0); }
+function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t), cut = new Set(L.slice(0, G.drops.length - DROP_MAX)); G.drops = G.drops.filter(d => !cut.has(d) || hyp(d.x - P.x, d.y - P.y) < 1.2); }
 function pickUp(d) {
   const P = G.P;
   if (d.gold) { P.gold += d.gold; d.got = 1; G.txt.push({ x: d.x, y: d.y, z: 1, t: 0, s: '+' + d.gold + 'G', c: '#ffd166', small: 1 }); sfx('coin'); return; }

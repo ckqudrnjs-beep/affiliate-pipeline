@@ -109,7 +109,9 @@ function draw() {
   x.textAlign = 'center';
   drawTownMarks();
   { const LB = []; // 이름표: 겹치면 위로 비켜 쌓기
-    for (const d of G.drops) { if (!vis(d.x, d.y) || d.gold) continue; const [sx, sy] = iso(d.x, d.y), it = d.it, eq = !it.g, hi = eq && it.r >= 2; x.font = (hi ? '800 11px' : '600 10px') + ' system-ui'; const tag = eq && it.r >= 1 ? '[' + RAR[it.r].n + '] ' : '', s = tag + itemName(it), w = x.measureText(s).width + 10, hh = hi ? 16 : 14; LB.push({ sx, ty: sy - 24 - (hi ? 2 : 0), w, hh, s, it, eq, hi }); }
+    // 가까운 것부터 LB_MAX 개만(겹침 비키기가 개수²이라 많으면 느려짐). 글자·폭은 물건마다 한 번만 잼.
+    const DV = []; for (const d of G.drops) if (!d.gold && vis(d.x, d.y)) DV.push([hyp(d.x - P.x, d.y - P.y), d]); if (DV.length > LB_MAX) { DV.sort((a, b) => a[0] - b[0]); DV.length = LB_MAX; }
+    for (const [, d] of DV) { const [sx, sy] = iso(d.x, d.y), it = d.it, eq = !it.g, hi = eq && it.r >= 2; if (!d.lb) { x.font = (hi ? '800 11px' : '600 10px') + ' system-ui'; const tag = eq && it.r >= 1 ? '[' + RAR[it.r].n + '] ' : '', s = tag + itemName(it); d.lb = [s, x.measureText(s).width + 10]; } LB.push({ sx, ty: sy - 24 - (hi ? 2 : 0), w: d.lb[1], hh: hi ? 16 : 14, s: d.lb[0], it, eq, hi }); }
     LB.sort((a, b) => b.ty - a.ty); for (let i = 0; i < LB.length; i++) { const a = LB[i]; for (let k = 0; k < 8; k++) { let hit = 0; for (let j = 0; j < i; j++) { const o = LB[j]; if (Math.abs(o.sx - a.sx) < (o.w + a.w) / 2 + 2 && a.ty < o.ty + o.hh + 1 && a.ty + a.hh > o.ty - 1) { a.ty = o.ty - a.hh - 2; hit = 1; } } if (!hit) break; } }
     for (const a of LB) { x.font = (a.hi ? '800 11px' : '600 10px') + ' system-ui'; x.fillStyle = 'rgba(20,16,10,.8)'; rr(a.sx - a.w / 2, a.ty, a.w, a.hh, 4); x.fill(); if (a.eq && a.it.r >= 1) { x.strokeStyle = itemColor(a.it); x.lineWidth = a.hi ? 1.6 : 1; x.stroke(); } x.fillStyle = itemColor(a.it); x.fillText(a.s, a.sx, a.ty + a.hh - 3.5); } }
   for (const t of G.txt) { const [sx, sy] = iso(t.x, t.y), a = Math.min(1, (1 - t.t) * 2.2), sc = t.pop ? 1 + Math.max(0, .18 - t.t) * (t.big ? 6 : 3.5) : 1; x.globalAlpha = a; x.font = (t.big ? '900 19px ' : t.small ? '700 10px ' : '800 14px ') + 'system-ui'; x.lineWidth = t.big ? 4 : 3; x.strokeStyle = t.big ? 'rgba(90,30,0,.9)' : 'rgba(30,20,10,.8)';
@@ -273,6 +275,7 @@ function drawMob(m) {
     if (m.elite) { x.font = '700 9px system-ui'; x.textAlign = 'center'; x.fillStyle = m.E[1]; x.strokeStyle = 'rgba(20,14,10,.8)'; x.lineWidth = 2.5; const s = m.E[0] + ' ' + D.n; x.strokeText(s, sx, top - 4); x.fillText(s, sx, top - 4); } }
   if (m.stun > 0 && !m.dead) { x.fillStyle = '#ffe08a'; for (let i = 0; i < 3; i++) { const a2 = G.t * 5 + i * TAU / 3; x.beginPath(); x.arc(sx + Math.cos(a2) * 9, sy - c[3] * .42 + Math.sin(a2) * 3, 2, 0, TAU); x.fill(); } }
 }
+const LB_MAX = 24;
 function drawDrop(d) {
   const [sx, sy] = iso(d.x, d.y), b = Math.max(0, .35 - d.t) * 60;
   if (d.gold) { x.fillStyle = '#ffd166'; x.strokeStyle = '#8a6a1a'; x.lineWidth = 1; for (let i = 0; i < Math.min(4, 1 + d.gold / 10); i++) { x.beginPath(); x.ellipse(sx - 4 + i * 3, sy - 3 - b - i * 1.5, 4, 2.4, 0, 0, TAU); x.fill(); x.stroke(); } return; }
