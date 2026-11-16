@@ -1,0 +1,198 @@
+<h1>🧲 네온 올가미</h1><p class="lead">손가락이나 마우스로 빛의 선을 그어 고리를 닫으면, 고리 안의 네온 코어를 한꺼번에 잡아요. 한 번에 많이 묶을수록 점수가 크게 뛰고, 기뢰는 피해야 해요. 90초에서 시작해 잘하면 시간이 늘어나요.</p>
+<style>.nl-wrap *{box-sizing:border-box}
+.nl-wrap{
+  margin:0;padding:0;color:var(--ink);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  word-break:keep-all;
+}
+.nl-wrap [hidden]{display:none!important}
+
+/* Top Title & Controls */
+.nl-head{
+  display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin:8px 0 12px
+}
+.nl-head h1{
+  font-family:var(--hd);font-weight:400;font-size:clamp(26px,4.5vw,34px);line-height:1.2;
+  margin:0;color:#fff;text-shadow:0 0 14px #ff3d7f88
+}
+.nl-head .sub{color:var(--muted);font-size:14px;margin:4px 0 0}
+.nl-tag{
+  font-family:var(--px);font-size:9px;letter-spacing:1px;color:var(--y);
+  border:2px solid var(--y);padding:4px 7px 3px;border-radius:4px;
+  text-shadow:0 0 6px #ffd23f88;display:inline-block;margin-bottom:6px
+}
+.nl-topbtns{display:flex;gap:6px;flex-wrap:wrap}
+.nl-sbtn{
+  font:inherit;font-size:13px;font-weight:700;padding:7px 11px;border-radius:9px;
+  border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer
+}
+.nl-sbtn:hover,.nl-sbtn.on{border-color:var(--y);color:var(--y)}
+
+/* HUD Bar */
+.nl-hud{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px
+}
+@media (max-width:520px){.nl-hud{grid-template-columns:repeat(2,1fr)}}
+.nl-hcard{
+  background:linear-gradient(180deg,var(--card2),var(--card));
+  border:2px solid var(--line);border-radius:12px;padding:8px 12px;
+  box-shadow:0 4px 0 #00000066
+}
+.nl-hcard small{display:block;font-size:11.5px;color:var(--muted)}
+.nl-hcard b{
+  font-family:var(--px);font-size:clamp(13px,2.2vw,16px);color:#fff;
+  display:block;margin-top:3px;white-space:nowrap
+}
+.nl-hcard b.cy{color:var(--b)}
+.nl-hcard b.yl{color:var(--y)}
+.nl-hcard b.pk{color:var(--a)}
+.nl-hcard b.gr{color:var(--g)}
+
+/* Game Stage */
+.nl-stage{
+  position:relative;width:100%;aspect-ratio:4/3;max-height:72vh;
+  background:#070314;border:3px solid var(--b);border-radius:18px;overflow:hidden;
+  box-shadow:0 8px 0 #00000088,0 0 26px #22d3ee44,inset 0 0 36px #000;
+  touch-action:none;user-select:none
+}
+@media (max-width:560px){.nl-stage{aspect-ratio:640/750;max-height:none}}
+.nl-overlay{overflow:auto}
+@media (max-width:560px){.nl-overlay{padding:10px;justify-content:flex-start}.nl-overlay h2{font-size:20px;margin-bottom:6px}.nl-overlay p{font-size:13.5px;margin-bottom:10px}.nl-legend{font-size:11.5px;line-height:1.4;padding:8px;margin-bottom:8px}#startOverlay>p,.nl-overlay>.nl-tag,#overComment{display:none}.nl-legend{gap:4px}.nl-stats-row{gap:6px 12px;margin-bottom:12px}.nl-btn{font-size:18px;padding:11px 20px 9px}}
+#nlCanvas{width:100%;height:100%;display:block;cursor:crosshair}
+
+/* Stage Overlay Screens (Start / Game Over) */
+.nl-overlay{
+  position:absolute;inset:0;background:rgba(10,5,24,0.88);backdrop-filter:blur(5px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:22px;text-align:center;z-index:10
+}
+.nl-overlay h2{
+  font-family:var(--hd);font-size:clamp(28px,5vw,42px);font-weight:400;margin:0 0 8px;
+  color:#fff;text-shadow:0 0 14px var(--a),3px 3px 0 #22d3ee88
+}
+.nl-overlay p{max-width:440px;color:#dcd3ff;font-size:15px;margin:0 0 16px;line-height:1.55}
+.nl-legend{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:440px;
+  background:#140a2e;border:2px solid var(--line);border-radius:14px;padding:12px;
+  margin-bottom:18px;text-align:left;font-size:13px
+}
+@media (max-width:420px){.nl-legend{grid-template-columns:1fr;gap:6px}}
+.nl-legend div{display:flex;align-items:center;gap:8px}
+.nl-legend i{font-style:normal;font-size:18px;min-width:24px;text-align:center;white-space:nowrap}
+
+.nl-btn{
+  font:inherit;font-family:var(--hd);font-size:20px;font-weight:400;
+  border:0;border-radius:12px;padding:13px 28px 11px;
+  background:var(--btn);color:var(--btn-ink);cursor:pointer;
+  box-shadow:0 5px 0 #b8860b,0 0 22px #ffd23f66;transition:transform .08s,box-shadow .08s
+}
+.nl-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b8860b}
+.nl-btn.ghost{
+  background:transparent;color:var(--b);border:2px solid var(--b);
+  box-shadow:0 4px 0 #0e7490,0 0 14px #22d3ee44;font-size:17px;padding:11px 20px 9px
+}
+.nl-cta-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+.nl-score-big{
+  font-family:var(--px);font-size:clamp(24px,4.5vw,36px);color:var(--y);
+  margin:6px 0 10px;text-shadow:0 0 16px #ffd23f88
+}
+.nl-stats-row{
+  display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+  font-size:13.5px;color:var(--muted);margin-bottom:16px
+}
+.nl-stats-row b{color:#fff}
+
+/* Quick Status Bar below Canvas */
+.nl-footbar{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;
+  background:#0a0518;border:2px dashed var(--line);border-radius:12px;
+  padding:10px 14px;margin:12px 0 32px;font-size:13.5px;color:var(--muted)
+}
+.nl-footbar b{color:var(--y)}
+</style>
+<section class="nl-wrap">
+    <div class="nl-topbtns">
+      <button type="button" class="nl-sbtn on" id="btnDailySeed" title="오늘 접속한 모든 사람이 같은 시작 배치로 겨루고 순위에 올라갑니다">📅 오늘의 판(순위)</button>
+      <button type="button" class="nl-sbtn" id="btnFreeSeed" title="매 판 새로운 배치로 연습합니다. 순위에는 안 올라가요">🎲 연습</button>
+      <button type="button" class="nl-sbtn" id="btnMute" aria-pressed="false">🔊 소리 켜짐</button>
+      <a class="nl-sbtn" href="/guide/lasso" style="text-decoration:none">📖 공략</a>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div class="nl-hud">
+    <div class="nl-hcard">
+      <small>점수 (SCORE)</small>
+      <b class="yl" id="hudScore">0</b>
+    </div>
+    <div class="nl-hcard">
+      <small>남은 시간 (TIME)</small>
+      <b class="cy" id="hudTime">90.0s</b>
+    </div>
+    <div class="nl-hcard">
+      <small>연속 콤보 (COMBO)</small>
+      <b class="pk" id="hudCombo">x1.0 (0)</b>
+    </div>
+    <div class="nl-hcard">
+      <small>내 최고 기록 (BEST)</small>
+      <b class="gr" id="hudBest">0</b>
+    </div>
+  </div>
+
+  <!-- Canvas Stage -->
+  <div class="nl-stage" id="nlStage">
+    <canvas id="nlCanvas" width="800" height="600"></canvas>
+
+    <!-- Start Overlay -->
+    <div class="nl-overlay" id="startOverlay">
+      <span class="nl-tag">HOW TO PLAY</span>
+      <h2>고리를 그려 한 번에 잡기!</h2>
+      <p>화면을 <b>드래그(터치 또는 마우스)</b>해 선이 서로 교차하도록 <b>닫힌 고리(⭕)</b>를 만들면, 그 안의 모든 네온 코어를 한 번에 포획합니다.</p>
+      <div class="nl-legend">
+        <div><i>🔵🔴🟡</i><span><b>코어</b> 한 고리에 많이 묶을수록 점수 폭발</span></div>
+        <div><i>✨</i><span><b>같은 색만</b> 2개 이상 묶으면 2배</span></div>
+        <div><i>💣</i><span><b>기뢰</b> 선에 닿거나 가두면 시간 감소</span></div>
+        <div><i>⏳🧲</i><span><b>시계</b> +4초 · <b>자석</b> 코어 모으기</span></div>
+      </div>
+      <div class="nl-cta-row">
+        <button type="button" class="nl-btn" id="btnStartGame">▶ 게임 시작</button>
+      </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div class="nl-overlay" id="overOverlay" hidden>
+      <span class="nl-tag" id="overBadge">STAGE CLEAR</span>
+      <h2 id="overTitle">TIME OVER!</h2>
+      <div class="nl-score-big" id="overScore">0 PTS</div>
+      <div class="nl-stats-row">
+        <span>최대 콤보 <b id="overMaxCombo">0</b></span>
+        <span>한 방 최다 포획 <b id="overMaxCatch">0개</b></span>
+        <span>순수 공명(x2) <b id="overPureCount">0회</b></span>
+        <span>보스 격파 <b id="overBossCount">0회</b></span>
+      </div>
+      <p id="overComment">한 번에 4개 이상 묶는 빅 루프(Big Loop)를 노리면 점수가 2배 이상 뜁니다!</p>
+      <div class="nl-cta-row">
+        <button type="button" class="nl-btn" id="btnRetry">🔄 다시 도전하기</button>
+        <button type="button" class="nl-btn ghost" id="btnShareResult">📤 내 기록 공유하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nl-footbar">
+    <span>📱 <b>모바일:</b> 손가락 하나로 원을 그리듯 쓱 포위 · 💻 <b>PC:</b> 마우스 드래그 또는 <b>방향키/WASD</b> 이동</span>
+    <span>⚡ <b>5마리 이상</b> 한 번에 묶으면 <b>SUPERNOVA (+3초 보너스)</b> 발동!</span>
+  </div>
+</section>
+<!--RANK-->
+<h2>규칙</h2>
+<ul class="list">
+<li>화면을 누른 채 선을 긋다가, 선이 이미 그은 선과 <b>교차</b>하거나 출발점 가까이 돌아오면 고리가 닫혀요. 그 안에 들어온 코어를 모두 잡습니다. 손을 떼면 그리던 선은 사라져요.</li>
+<li>한 고리 점수 = 잡은 코어 기본 점수의 합 × 잡은 개수 × 콤보 배율. 시안·핑크 100점, 황금 250점이라 같은 코어 4개를 한 번에 잡으면 4개를 따로 잡을 때의 4배예요.</li>
+<li>같은 색 코어만 2개 이상 묶으면 <b>순수 공명</b>으로 2배. 한 번에 5개 이상이면 <b>슈퍼노바</b>로 시간 +3초.</li>
+<li>💣 기뢰가 그리는 선에 닿으면 선이 끊기고 시간 -2초, 기뢰를 고리 안에 가두면 그 고리는 실패하고 시간 -4초. 둘 다 콤보가 0이 돼요.</li>
+<li>⏳ 초록 시계는 시간 +4초, 🧲 흰 자석은 3.8초 동안 코어를 가운데로 모아요. 45초·95초에 보스가 나오고, 고리로 3번 감싸면 +3,000점·+5초.</li>
+<li>PC는 마우스 대신 방향키·WASD로 선을 그릴 수 있고, 스페이스나 Shift를 누르면 빨라져요.</li>
+</ul>
+<h2>오늘의 판과 연습</h2>
+<p>'오늘의 판'은 날짜(한국 시간)로 시작 배치가 정해져서 모두 같은 판으로 시작하고, 끝나면 점수가 오늘의 순위에 올라가요. 코어를 잡는 순서에 따라 새로 나오는 코어는 사람마다 달라질 수 있어요. '연습'은 매번 새 배치이고 순위에는 올라가지 않아요. 휴대폰은 세로로 긴 화면, PC는 가로 화면에서 같은 넓이로 놀아요.</p>
