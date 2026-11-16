@@ -49,6 +49,18 @@ def rows_to_dict(js: dict) -> dict[str, dict]:
     return out
 
 
+def why(e: Exception) -> str:
+    """구글 오류 응답에서 원인만 꺼낸다 (토큰 값은 응답에 없음)."""
+    code = getattr(e, "code", "")
+    try:
+        js = json.loads(e.read())  # type: ignore[attr-defined]
+        err = js.get("error")
+        msg = err.get("message", "") if isinstance(err, dict) else f"{err} {js.get('error_description', '')}"
+    except Exception:
+        msg = type(e).__name__
+    return f"{code} {msg}".strip()[:200]
+
+
 def fetch(now: dt.datetime | None = None) -> int:
     now = now or dt.datetime.now(KST)
     cid, sec = os.environ.get("YT_CLIENT_ID", ""), os.environ.get("YT_CLIENT_SECRET", "")
@@ -60,11 +72,14 @@ def fetch(now: dt.datetime | None = None) -> int:
         if not (cid and sec and rt):
             print(f"{ch}: {env} 없음 → 건너뜀 (docs/YOUTUBE_SETUP.md 4장)")
             continue
+        step = "토큰 교환"
         try:
-            snap[ch] = rows_to_dict(query(access_token(cid, sec, rt), start.isoformat(), end.isoformat()))
+            tok = access_token(cid, sec, rt)
+            step = "분석 조회"
+            snap[ch] = rows_to_dict(query(tok, start.isoformat(), end.isoformat()))
             print(f"{ch}: {len(snap[ch])}편")
         except Exception as e:  # 한 채널 실패가 다른 채널을 막지 않게
-            print(f"{ch}: 분석 읽기 실패 ({type(e).__name__})")
+            print(f"{ch}: 분석 읽기 실패 [{step}] {why(e)}")
     if not snap:
         return 0
     data = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
