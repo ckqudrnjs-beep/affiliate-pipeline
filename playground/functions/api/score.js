@@ -10,7 +10,7 @@ import { normCode } from "./profile.js";
 const ADJ = ["빠른", "느긋한", "용감한", "졸린", "배고픈", "신난", "수줍은", "똑똑한", "엉뚱한", "반짝이는", "조용한", "씩씩한", "날쌘", "포근한", "명랑한", "꼼꼼한"];
 const ANI = ["수달", "고양이", "강아지", "판다", "펭귄", "다람쥐", "여우", "너구리", "부엉이", "고래", "토끼", "햄스터", "거북이", "사슴", "오리", "곰"];
 const MAX = { raid: 400000, spot: 30000, dodge: 20000, stop: 20000, range: 5000000, starlight: 9000000, tongtong: 200000, tower: 100000, survivor: 3000000, starcandy: 200000,
-  numpuzzle: 7000 }; // 숫자 퍼즐: 5판×1000 + 시간 보너스 최대 1800
+  numpuzzle: 7000, lasso: 5000000 }; // 숫자 퍼즐: 5판×1000 + 시간 보너스 최대 1800. 네온 올가미: 한 고리 = 기본점 합 × 개수 × 콤보(최대 4) × 공명 2
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const ago = (day, n) => new Date(Date.parse(day + "T00:00:00Z") - n * 864e5).toISOString().slice(0, 10);
