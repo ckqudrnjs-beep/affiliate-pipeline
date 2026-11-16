@@ -1099,9 +1099,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     trial = trial_box([g for g in allgames if g.get("hidden")])
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
-          f"<div class=\"cta\"><a class=\"btn\" href=\"/games/{games[0]['slug']}\">▶ {esc(games[0]['name'])}</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"
+          f"<div class=\"cta\"><a class=\"btn\" href=\"#games\">▶ 게임 고르기</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"
           f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
-          f"<div class=\"sec\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{trial}{grid}"
+          f"<div class=\"sec\" id=\"games\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{trial}{grid}"
           "<!--AD-->"
           f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
