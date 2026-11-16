@@ -1387,7 +1387,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           "<li>투표 비율과 순위는 실제 기록 그대로 보여 줍니다. 숫자를 사람이 고치거나 가짜 투표를 넣지 않습니다.</li>"
           "<li>회원 가입이 없고 이름·연락처를 받지 않습니다. 순위에는 자동으로 붙는 별명만 나옵니다.</li>"
           "<li>광고가 들어가더라도 게임 조작 화면과 떨어진 곳에만 두고 ‘광고’라고 표시합니다.</li></ul>"
-          f"<h2>운영자</h2><p>{esc(cfg['siteName'])}은 생활 정보 사이트 <a href=\"https://don3chon.com\">돈 줍는 삼촌</a>을 운영하는 사업자가 함께 운영합니다. "
+          f"<h2>운영자</h2><p>{esc(cfg['siteName'])}은 생활 정보 사이트 <a href=\"https://don3chon.com\">돈 줍는 삼촌</a>을 운영하는 사람이 함께 운영합니다. "
           "오류 제보와 건의는 <a href=\"/contact\">문의</a> 또는 <a href=\"/board\">게시판</a>으로 받습니다. 이용 규칙은 <a href=\"/terms\">이용약관</a>에 있습니다.</p>")
     write("contact", f"문의 | {cfg['siteName']}", f"{cfg['siteName']} 문의: 오류 제보, 밸런스게임 질문 제안, 게시물 신고, 광고·제휴 문의 방법.",
           f"<h1>문의</h1><p class=\"lead\">메일 또는 게시판으로 보내 주세요. 보통 2~3일 안에 답장합니다.</p>"
