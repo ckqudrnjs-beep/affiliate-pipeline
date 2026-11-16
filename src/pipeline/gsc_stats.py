@@ -23,6 +23,12 @@ OUT = pathlib.Path("data/seo/gsc.json")
 WEEKLY = pathlib.Path("docs/SEO_WEEKLY.md")
 API = "https://www.googleapis.com/webmasters/v3"
 LAG_DAYS = 3  # 서치콘솔 데이터는 2~3일 늦게 확정된다
+OURS = ("don3chon.com", "5raksil.com")  # 같은 계정의 다른 사이트는 모으지 않는다
+
+
+def ours(site: str) -> bool:
+    host = site.split(":", 1)[1] if site.startswith("sc-domain:") else site.split("//", 1)[-1].split("/")[0]
+    return host.removeprefix("www.") in OURS
 
 
 def _call(token: str, path: str, body: dict | None = None) -> dict:
@@ -70,11 +76,11 @@ def site_report(token: str, site: str, start: str, end: str) -> dict:
 def weekly_md(day: str, snap: dict, start: str, end: str) -> str:
     lines = [f"# 서치콘솔 현황 ({day} 수집, {start}~{end})", "",
              "자동 생성: python -m pipeline.gsc_stats (읽기 전용). 데이터는 2~3일 늦게 확정된다.", "",
-             "| 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 | 사이트맵 색인 |", "|---|---|---|---|---|---|"]
+             "색인된 페이지 수는 API가 주지 않는다(사이트맵 색인 값은 항상 0) → 서치콘솔 웹 '페이지' 보고서에서 확인.", "",
+             "| 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 URL |", "|---|---|---|---|---|"]
     for site, r in snap.items():
         sub = sum(m["submitted"] for m in r["sitemaps"])
-        idx = sum(m["indexed"] for m in r["sitemaps"])
-        lines.append(f"| {site} | {r['clicks']:,} | {r['impressions']:,} | {r['position']} | {sub:,} | {idx:,} |")
+        lines.append(f"| {site} | {r['clicks']:,} | {r['impressions']:,} | {r['position']} | {sub:,} |")
     for site, r in snap.items():
         lines += ["", f"## {site} 상위 검색어", "| 검색어 | 클릭 | 노출 | 순위 |", "|---|---|---|---|"]
         lines += [f"| {x['key']} | {x['clicks']} | {x['impressions']} | {x['position']} |" for x in r["top_query"]] or ["| (없음) | | | |"]
@@ -96,7 +102,7 @@ def main(now: dt.datetime | None = None) -> int:
         tok = access_token(cid, sec, rt)
         step = "사이트 목록"
         sites = [s["siteUrl"] for s in _call(tok, "/sites").get("siteEntry", [])
-                 if s.get("permissionLevel") != "siteUnverifiedUser"]
+                 if s.get("permissionLevel") != "siteUnverifiedUser" and ours(s["siteUrl"])]
     except Exception as e:
         print(f"서치콘솔 읽기 실패 [{step}] {why(e)}")
         return 0

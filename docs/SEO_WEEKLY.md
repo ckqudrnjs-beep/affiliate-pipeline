@@ -2,21 +2,12 @@
 
 자동 생성: python -m pipeline.gsc_stats (읽기 전용). 데이터는 2~3일 늦게 확정된다.
 
-| 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 | 사이트맵 색인 |
-|---|---|---|---|---|---|
-| https://vetromaterials.com/ | 0 | 5 | 52.0 | 1 | 0 |
-| sc-domain:don3chon.com | 0 | 20 | 11.1 | 65 | 0 |
-| sc-domain:5raksil.com | 0 | 1 | 8.0 | 57 | 0 |
+색인된 페이지 수는 API가 주지 않는다(사이트맵 색인 값은 항상 0) → 서치콘솔 웹 '페이지' 보고서에서 확인.
 
-## https://vetromaterials.com/ 상위 검색어
-| 검색어 | 클릭 | 노출 | 순위 |
-|---|---|---|---|
-| vetro | 0 | 4 | 64.8 |
-
-## https://vetromaterials.com/ 상위 페이지
-| 페이지 | 클릭 | 노출 | 순위 |
-|---|---|---|---|
-| https://vetromaterials.com/ | 0 | 5 | 52.0 |
+| 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 URL |
+|---|---|---|---|---|
+| sc-domain:don3chon.com | 0 | 20 | 11.1 | 65 |
+| sc-domain:5raksil.com | 0 | 1 | 8.0 | 57 |
 
 ## sc-domain:don3chon.com 상위 검색어
 | 검색어 | 클릭 | 노출 | 순위 |
