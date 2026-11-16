@@ -1861,7 +1861,7 @@ CHAPS[7] = ['Ch. 7 · First Wind Hill', 'Ride the Windway across (Lv 58–66)', 
 /* ---------- 엔딩 뒤: 난이도 먹구름·폭풍 + 떠도는 섬(항로 지도로 여는 반복 사냥터) ---------- */
 // 난이도: 7장 엔딩 뒤 먹구름, 먹구름에서 첫 이음꾼을 쓰러뜨리면 폭풍. 적이 세지는 만큼 경험치·골드·장비 레벨·좋은 물건 확률이 오른다.
 const DIFFT = [
-  { n: 'Common', hp: 1, dmg: 1, lv: 0, xp: 1, gold: 1, ilv: 0, find: 0, c: '#ece6d6' },
+  { n: 'Normal', hp: 1, dmg: 1, lv: 0, xp: 1, gold: 1, ilv: 0, find: 0, c: '#ece6d6' },
   { n: 'Stormcloud', hp: 2.4, dmg: 1.7, lv: 8, xp: 2, gold: 1.8, ilv: 8, find: 70, c: '#9fb4d8' },
   { n: 'Tempest', hp: 5, dmg: 2.6, lv: 16, xp: 3.5, gold: 2.8, ilv: 16, find: 150, c: '#c9a8ff' },
   // 2026-11-15 BK: 6단계로 늘림. 각 난이도에서 엔딩(7장 보스)을 깨면 다음 단계가 열린다.
