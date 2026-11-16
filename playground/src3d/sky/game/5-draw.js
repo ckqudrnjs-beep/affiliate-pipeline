@@ -243,6 +243,7 @@ function drawVane(sx, sy, on) { // 바람개비 표지: 나무 기둥 + 네 날�
 }
 function drawHero(P) {
   const [sx, sy] = iso(P.x, P.y); shadow(sx, sy, 16);
+  drawSkinUnder(P, sx, sy); // 5h-skin.js: 상점 꾸미기(겉모습만)
   if (P.buf.cloud) { x.fillStyle = 'rgba(240,248,255,.35)'; x.beginPath(); x.ellipse(sx, sy - 20, 22, 28, 0, 0, TAU); x.fill(); }
   drawClsHero(P, sx, sy);
   if (P.buf.hold) { x.strokeStyle = 'rgba(255,210,120,.7)'; x.lineWidth = 2; x.beginPath(); x.ellipse(sx, sy, 18, 9, 0, 0, TAU); x.stroke(); }

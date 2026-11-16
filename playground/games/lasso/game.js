@@ -115,6 +115,14 @@
   let trail = []; // [{x, y}]
   let isDrawing = false;
 
+  // 게임 전용 꾸미기(🛒 이 게임 상점, 2026-11-16): 겉모습만 — 판정·점수 영향 없음
+  let lnSkin = '', fxSkin = '';
+  function loadSkins() {
+    try { lnSkin = window.Bonus && Bonus.gitem ? Bonus.gitem('lasso', 'ln') : ''; fxSkin = window.Bonus && Bonus.gitem ? Bonus.gitem('lasso', 'fx') : ''; } catch(e) { lnSkin = fxSkin = ''; }
+  }
+  loadSkins();
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.gshop')) setTimeout(loadSkins, 50); });
+
   // Keyboard Cursor State
   let kbCursor = { x: W / 2, y: H / 2, active: false };
   let keys = {};
@@ -185,13 +193,13 @@
     });
   }
 
-  function addParticles(x, y, col, count) {
+  function addParticles(x, y, col, count, shape) {
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       const sp = 50 + Math.random() * 210;
       particles.push({
         x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-        r: 2.5 + Math.random() * 4, col, life: 0.45 + Math.random() * 0.35, maxLife: 0.8
+        r: 2.5 + Math.random() * 4, col, life: 0.45 + Math.random() * 0.35, maxLife: 0.8, shape, rot: Math.random() * 6.3
       });
     }
   }
@@ -205,6 +213,7 @@
   }
 
   function startGame() {
+    loadSkins();
     const seed = isDaily ? ('nl-daily-' + getKstDay()) : ('nl-free-' + Date.now() + '-' + Math.random());
     rng = createRng(seed);
 
@@ -308,6 +317,9 @@
 
     trail.push({ x, y });
     if (trail.length > MAX_TRAIL) trail.shift();
+    if (lnSkin === 'fire' && Math.random() < 0.5) {  // 불꽃 선: 끝에서 불씨가 튐(겉모습만)
+      particles.push({ x, y, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 70, r: 1.5 + Math.random() * 2.5, col: Math.random() < 0.5 ? '#ffd23f' : '#ff8a3d', life: 0.35 + Math.random() * 0.25, maxLife: 0.6 });
+    }
 
     // Check if the new segment intersects any earlier segment to form a closed loop!
     const n = trail.length;
@@ -385,7 +397,7 @@
     let baseSum = 0;
     caught.forEach(({ orb, idx }) => {
       baseSum += orb.basePts;
-      addParticles(orb.x, orb.y, orb.col, 16);
+      addParticles(orb.x, orb.y, orb.col, 16, fxSkin);
 
       if (orb.kind === 'clock') {
         timeLeft += 4.0;
@@ -402,7 +414,7 @@
           bossKillCount++;
           score += 3000;
           timeLeft += 5.0;
-          addParticles(orb.x, orb.y, '#ffd23f', 45);
+          addParticles(orb.x, orb.y, '#ffd23f', 45, fxSkin);
           addFloatText(orb.x, orb.y, '👑 보스 격파! +3,000점 & +5초!', '#ffd23f', 24);
           orbs.splice(idx, 1);
         } else {
@@ -667,25 +679,54 @@
       ctx.restore();
     });
 
-    // Draw Lasso Trail
+    // Draw Lasso Trail (lnSkin: '' 기본 청록 · fire 불꽃 · candy 사탕 줄무늬 · rainbow 무지개)
     if (trail.length >= 2) {
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.shadowColor = '#22d3ee';
-      ctx.shadowBlur = 14;
-      ctx.strokeStyle = '#22d3ee';
-      ctx.lineWidth = 5;
       ctx.beginPath();
       trail.forEach((pt, idx) => {
         if (idx === 0) ctx.moveTo(pt.x, pt.y);
         else ctx.lineTo(pt.x, pt.y);
       });
-      ctx.stroke();
+      const tnow = performance.now() / 1000;
+      if (lnSkin === 'rainbow') {
+        ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 12;
+        for (let i = 1; i < trail.length; i++) {
+          const a = trail[i - 1], b = trail[i];
+          ctx.strokeStyle = `hsl(${(i * 9 + tnow * 160) % 360},100%,62%)`;
+          ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.beginPath(); trail.forEach((pt, idx) => idx ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
+        ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 1.6; ctx.stroke();
+      } else if (lnSkin === 'candy') {
+        ctx.shadowColor = '#ff5fa8'; ctx.shadowBlur = 14;
+        ctx.strokeStyle = '#ff3d9a'; ctx.lineWidth = 7; ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.setLineDash([9, 9]); ctx.lineDashOffset = -tnow * 40;
+        ctx.strokeStyle = '#fff4fa'; ctx.lineWidth = 5; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1.5; ctx.stroke();
+      } else if (lnSkin === 'fire') {
+        ctx.shadowColor = '#ff6a1a'; ctx.shadowBlur = 18;
+        ctx.strokeStyle = '#ff4d1a'; ctx.lineWidth = 8; ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffb03a'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.strokeStyle = '#fff6c8'; ctx.lineWidth = 1.6; ctx.stroke();
+      } else {
+        ctx.shadowColor = '#22d3ee';
+        ctx.shadowBlur = 14;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 5;
+        ctx.stroke();
 
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
 
       // Start Anchor Ring so player sees where to close the loop
       const first = trail[0];
@@ -702,8 +743,25 @@
       ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
       ctx.fillStyle = p.col;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fill();
+      if (p.shape === 'star') {  // 별 터짐: 5각 별 + 흰 테두리
+        const R = p.r * 1.9, r2 = R * 0.45;
+        for (let k = 0; k < 10; k++) { const rr = k % 2 ? r2 : R, a = p.rot + k * Math.PI / 5; ctx.lineTo(p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr); }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#ffffffaa'; ctx.lineWidth = 1; ctx.stroke();
+      } else if (p.shape === 'heart') {  // 하트 뿅: 분홍 하트 + 하이라이트
+        const s = p.r * 0.75;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.sin(p.rot) * 0.4);
+        ctx.fillStyle = '#ff5fa8';
+        ctx.moveTo(0, s * 1.4);
+        ctx.bezierCurveTo(-s * 2.2, 0, -s * 1.3, -s * 1.9, 0, -s * 0.7);
+        ctx.bezierCurveTo(s * 1.3, -s * 1.9, s * 2.2, 0, 0, s * 1.4);
+        ctx.fill();
+        ctx.fillStyle = '#ffffffcc'; ctx.beginPath(); ctx.arc(-s * 0.6, -s * 0.6, s * 0.35, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
     });
     ctx.globalAlpha = 1;
 
