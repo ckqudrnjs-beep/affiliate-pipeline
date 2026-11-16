@@ -130,7 +130,11 @@ def description_of(g: dict, kind: str, voiced: bool) -> str:
 
 
 # ---------- 화면 ----------
-BOX = (40, 250, W - 40, H - 40)  # 게임 화면 자리 (최대한 크게)
+# 쇼츠 화면 안전영역 (2026-11-16 별사탕 합치기 밑부분 잘림 후): 유튜브 쇼츠 앱은 아래 약 20%(제목·채널·음악)를
+# 덮고, 위 약 120px 에 검색·메뉴 아이콘이 있다. 게임 화면은 이 안에만 놓고, 글자 띠도 아래쪽에는 두지 않는다.
+SAFE = (0, 120, W, 1540)
+BOX = (40, 250, W - 40, SAFE[3])  # 게임 화면 자리 (안전영역 안에서 최대한 크게)
+SUB_Y = 170  # 음성 자막 띠 (게임 이름 자리에 잠깐 덮음, 게임 화면은 안 가림)
 
 
 def frame_layer(g: dict, kind: str):
@@ -147,7 +151,12 @@ def frame_layer(g: dict, kind: str):
 def game_fit(path: pathlib.Path):
     """녹화 화면을 BOX 안에 비율 유지로 맞춤 → (이미지, 위치)."""
     from PIL import Image
-    g = Image.open(path).convert("RGB")
+    with Image.open(path) as im:
+        return game_fit_img(im.convert("RGB"))
+
+
+def game_fit_img(g):
+    from PIL import Image
     x0, y0, x1, y1 = BOX
     bw, bh = x1 - x0, y1 - y0
     s = min(bw / g.width, bh / g.height)
@@ -221,7 +230,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     if wide:  # 가로·정사각 게임: 위아래 빈 곳에 후킹 문구와 게임 소개
         gi0, pos0 = game_fit(frames[0])
         hook_y = (250 + pos0[1]) // 2 + 10
-        ybot = (pos0[1] + gi0.height + H) // 2
+        ybot = (pos0[1] + gi0.height + BOX[3]) // 2 + 40
         rs.glow_text(base, (W / 2, ybot - 40), rs.wrap(__import__("PIL.ImageDraw", fromlist=["x"]).Draw(base), g["short"], rs.font(60), W - 120),
                      rs.font(60), 60, rs.CYAN, glow=8)
     ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
@@ -236,7 +245,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
         if t < 2.4:  # 첫 화면부터 후킹 문구
             band(img, hook_y, hook, 96 if t > 0.12 else 104, rs.YEL)
         if v0[0] <= t < v0[1] + 0.3 and voiced:  # 음성 자막
-            band(img, 1700, say[0], 62, rs.WHITE)
+            band(img, SUB_Y, say[0], 62, rs.WHITE)
         ff.stdin.write(img.convert("RGB").tobytes())
     ctas = {}
     for i in range(int(cta_d * FPS)):
@@ -244,7 +253,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
         if k not in ctas:
             c = cta_card(g, k / 3)
             if voiced:
-                band(c, 1700, say[1], 58, rs.WHITE)
+                band(c, 300, say[1], 58, rs.WHITE)
             ctas[k] = c
         ff.stdin.write(ctas[k].convert("RGB").tobytes())
     ff.stdin.close()
@@ -261,6 +270,97 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     (out_dir / f"{key}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
+
+
+# ---------- 업로드 전 화면 검사 ----------
+# 2026-11-16 BK: "전체 화면을 검토하고 업로드 해야 돼". 하나라도 걸리면 업로드하지 않고 실패로 끝낸다.
+MAX_CUT = 0.01   # 게임 화면이 녹화 영역 밖으로 나간 비율 허용치
+MAX_DIFF = 14.0  # 완성 영상 속 게임 자리와 녹화 원본의 평균 밝기 차 (압축 오차보다 크면 잘림·밀림)
+
+
+def _summary(msg: str) -> None:
+    import os
+    p = os.environ.get("GITHUB_STEP_SUMMARY")
+    if p:
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(msg + "\n")
+
+
+def check_record(info: dict) -> list[str]:
+    """녹화 단계: 게임 캔버스가 녹화 영역 안에 다 들어왔는지 (시작·끝 두 번 잰 값)."""
+    errs = []
+    for k, when in (("cut", "시작"), ("cut_end", "끝")):
+        v = float(info.get(k) or 0)
+        if v > MAX_CUT:
+            errs.append(f"녹화 {when}에 게임 화면 {v:.0%} 가 잘림")
+    return errs
+
+
+def check_layout(size: tuple[int, int]) -> list[str]:
+    """배치 단계: 게임 화면이 쇼츠 안전영역 안에 있는지."""
+    from PIL import Image
+    gi, (x, y) = game_fit_img(Image.new("RGB", size))
+    if x < SAFE[0] or y < SAFE[1] or x + gi.width > SAFE[2] or y + gi.height > SAFE[3]:
+        return [f"게임 화면이 쇼츠 안전영역 밖 ({x},{y},{x + gi.width},{y + gi.height})"]
+    return []
+
+
+def sample_times(n_frames: int, k: int = 4) -> list[int]:
+    """자막·후킹 띠가 없는 구간(3.2초 이후)에서 고르게 k 장."""
+    lo, hi = int(3.2 * FPS), n_frames - FPS // 2
+    if hi <= lo:
+        return []
+    return [lo + (hi - lo) * j // max(1, k - 1) for j in range(k)]
+
+
+def check(rec: pathlib.Path, meta: dict) -> list[str]:
+    """업로드 전 검사: ① 녹화 잘림 ② 안전영역 ③ 완성 영상에서 프레임을 뽑아 게임 자리가 원본 녹화와 같은지(빈 화면 아님)."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    errs: list[str] = []
+    try:
+        info = json.loads((rec / "info.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        info = {}
+        errs.append("녹화 정보(info.json) 없음")
+    errs += check_record(info)
+    frames = sorted(rec.glob("f*.jpg"))[int(SKIP_START * FPS):][: int(MAX_PLAY * FPS)]
+    if not frames:
+        return errs + ["녹화 프레임 없음"]
+    with Image.open(frames[0]) as f0:
+        errs += check_layout(f0.size)
+    mp4 = pathlib.Path(meta["file"])
+    picks = sample_times(len(frames))
+    sheet = Image.new("RGB", (W // 4 * len(picks) or 1, H // 4), (0, 0, 0))
+    for j, i in enumerate(picks):
+        t = (i + 0.5) / FPS
+        raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{t:.3f}", "-i", str(mp4), "-frames:v", "1",
+                              "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
+        if len(raw) != W * H * 3:
+            errs.append(f"{t:.1f}초 프레임을 못 뽑음 (영상 크기가 {W}x{H} 아님?)")
+            continue
+        vid = np.frombuffer(raw, np.uint8).reshape(H, W, 3).astype(np.float32)
+        gi, (x, y) = game_fit(frames[i])
+        ref = np.asarray(gi, np.float32)
+        part = vid[y:y + gi.height, x:x + gi.width]
+        if ref.std() < 3:
+            errs.append(f"{t:.1f}초 게임 화면이 비어 있음")
+        d = float(np.abs(part - ref).mean())
+        if d > MAX_DIFF:
+            errs.append(f"{t:.1f}초 영상 속 게임 화면이 녹화와 다름 (차이 {d:.1f})")
+        # 검토용 미리보기: 안전영역 선을 그려 4장 나란히
+        im = Image.fromarray(vid.astype(np.uint8))
+        dr = ImageDraw.Draw(im)
+        dr.rectangle(SAFE, outline=(0, 255, 0), width=6)
+        dr.rectangle((x, y, x + gi.width - 1, y + gi.height - 1), outline=(255, 0, 255), width=4)
+        sheet.paste(im.resize((W // 4, H // 4)), (j * (W // 4), 0))
+    if not picks:
+        errs.append("검사할 프레임이 부족함")
+    try:
+        sheet.save(mp4.with_name(mp4.stem + "-check.jpg"), quality=85)
+    except OSError:
+        pass
+    return errs
 
 
 def load_log() -> dict:
@@ -283,6 +383,12 @@ def main(argv: list[str]) -> int:
     meta = render(rec, g, kind, day)
     if not meta:
         return 0
+    errs = check(rec, meta)
+    if errs:
+        print("업로드 보류 (화면 검사 실패):\n- " + "\n- ".join(errs))
+        _summary(f"5락실 게임 쇼츠 업로드 보류 ({meta['key']}): " + " / ".join(errs))
+        return 1
+    print("화면 검사 통과")
     return rs.upload_meta(meta) if cmd == "upload" else 0
 
 
