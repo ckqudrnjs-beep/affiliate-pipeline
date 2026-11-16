@@ -60,8 +60,11 @@ jobs:
           D="${{ github.event.inputs.date }}"
           F=""; [ "${{ github.event.inputs.force }}" = "true" ] && F="--force"
           PYTHONPATH=src python -m pipeline.textshort check $D
+          if [ "${{ github.event.inputs.preview }}" = "true" ]; then
+            TEXTSHORT_PREVIEW=1 PYTHONPATH=src python -m pipeline.textshort make $D --force | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           PYTHONPATH=src python -m pipeline.textshort make $D $F | tee -a "$GITHUB_STEP_SUMMARY"
-          if [ "${{ github.event.inputs.preview }}" = "true" ]; then mkdir -p preview && cp media/youtube/ep-*-prices.mp4 preview/ 2>/dev/null; git checkout -q -- . ; git clean -fdq data/episodes media/youtube; exit 0; fi
           git config user.name "textshort-bot"
           git config user.email "textshort-bot@users.noreply.github.com"
           git add media/youtube data/episodes
