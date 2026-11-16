@@ -44,21 +44,41 @@ const VIRTUAL_TIME = `(() => {
   }
   if (R.once) await page.evaluate(R.once).catch((e) => console.error('once', e.message));
   await step(15);
-  // 게임 화면 영역 = 보이는 것 중 가장 큰 canvas (없으면 main 첫 화면)
-  let box = await page.evaluate(() => {
+  // 게임 화면 영역 = 가장 큰 canvas (없으면 main 첫 화면).
+  // 2026-11-16 별사탕 합치기: 세로로 긴 canvas 아랫부분이 화면 밖이라 잘려 녹화됨 → 캔버스 전체가 보이도록
+  // 스크롤하고, 그래도 화면보다 길면 브라우저 창을 늘린 뒤 다시 잰다. 잘린 비율은 info.json 의 cut 에 남겨 업로드 전 검사에 씀.
+  const measure = () => page.evaluate(() => {
     let best = null, area = 0;
     for (const c of document.querySelectorAll('canvas')) {
-      const r = c.getBoundingClientRect(); const a = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
-      if (a > area) { area = a; best = r; }
+      const r = c.getBoundingClientRect(); const a = r.width * r.height;
+      if (r.width > 0 && r.height > 0 && a > area) { area = a; best = r; }
     }
     if (!best || area < innerWidth * innerHeight * 0.12) return null;
-    return { x: Math.max(0, best.left), y: Math.max(0, best.top), width: Math.min(best.width, innerWidth), height: Math.min(best.height, innerHeight - Math.max(0, best.top)) };
+    return { x: best.left, y: best.top, width: best.width, height: best.height, sy: scrollY, vw: innerWidth, vh: innerHeight };
   });
+  let vh = VH, cv = null;
+  for (let k = 0; k < 4; k++) {
+    cv = await measure();
+    if (!cv) break;
+    if (cv.height > vh + 0.5) { // 창보다 긴 캔버스: 창을 늘림 (게임이 창 크기에 맞춰 다시 그리면 다음 바퀴에 다시 잼)
+      vh = Math.ceil(cv.height) + 2; await page.setViewportSize({ width: VW, height: vh }); await step(3); continue;
+    }
+    if (cv.y < -0.5 || cv.y + cv.height > vh + 0.5) { // 캔버스가 화면 밖으로 나감: 가운데로 스크롤
+      await page.evaluate((y) => window.scrollTo(0, y), Math.max(0, cv.sy + cv.y - (vh - cv.height) / 2)); await step(2); continue;
+    }
+    break;
+  }
+  if (cv) cv = await measure();
+  const inside = (r) => ({ x: Math.max(0, r.x), y: Math.max(0, r.y), width: Math.min(r.x + r.width, VW) - Math.max(0, r.x), height: Math.min(r.y + r.height, vh) - Math.max(0, r.y) });
+  let box = cv ? inside(cv) : null;
   if (!box) {
     const m = await page.$('main');
     if (m) await m.scrollIntoViewIfNeeded();
-    box = { x: 0, y: 0, width: VW, height: VH };
+    box = { x: 0, y: 0, width: VW, height: vh };
   }
+  const cutOf = (r) => (r ? Math.max(0, 1 - (inside(r).width * inside(r).height) / (r.width * r.height)) : 0);
+  const cut = cutOf(cv);
+  if (cut > 0.005) console.error(`경고: 게임 화면 ${(cut * 100).toFixed(1)}% 가 녹화 영역 밖`);
   if (R.square) { const s = Math.min(box.width, box.height); box = { x: box.x + (box.width - s) / 2, y: box.y + (box.height - s) / 2, width: s, height: s }; }
   const n = Math.round(Number(SECS) * FPS);
   const tick = R.tick ? new Function('i', R.tick) : null;
@@ -68,8 +88,10 @@ const VIRTUAL_TIME = `(() => {
     await page.screenshot({ path: path.join(OUT, `f${String(i).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 88, clip: box });
     if (i % 90 === 0) console.log('frame', i);
   }
+  const boxCut = (r, b) => { if (!r) return 0; const w = Math.max(0, Math.min(r.x + r.width, b.x + b.width) - Math.max(r.x, b.x)); const h = Math.max(0, Math.min(r.y + r.height, b.y + b.height) - Math.max(r.y, b.y)); return Math.max(0, 1 - (w * h) / (r.width * r.height)); };
+  const cvEnd = cv ? await measure() : null; // 녹화 끝에 다시 재서 도중에 화면이 밀렸는지 확인
   const score = await page.evaluate(() => (window.__demo && typeof window.__demo.score === 'number') ? window.__demo.score : null);
-  fs.writeFileSync(path.join(OUT, 'info.json'), JSON.stringify({ slug: SLUG, demo, started: !!go, frames: n, fps: FPS, score, box }));
+  fs.writeFileSync(path.join(OUT, 'info.json'), JSON.stringify({ slug: SLUG, demo, started: !!go, frames: n, fps: FPS, score, box, view: [VW, vh], canvas: cv, cut, canvas_end: cvEnd, cut_end: boxCut(cvEnd, box) }));
   console.log('done', SLUG, 'demo', demo, 'frames', n);
   await browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

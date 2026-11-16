@@ -64,6 +64,25 @@ class T(unittest.TestCase):
         self.assertIn("https://5raksil.com/games/tower", d)
         self.assertIn("AI 음성", d)
 
+    # 2026-11-16 별사탕 합치기 밑부분 잘림 → 업로드 전 화면 검사
+    def test_check_record_cut(self):
+        self.assertEqual(rg.check_record({"cut": 0, "cut_end": 0.004}), [])
+        self.assertTrue(rg.check_record({"cut": 0.16}))  # 그날 별사탕: 775px 중 123px 잘림
+        self.assertTrue(rg.check_record({"cut": 0, "cut_end": 0.05}))
+
+    def test_layout_in_safe_area(self):
+        for size in ((912, 1550), (1080, 1920), (1080, 1080), (1920, 1080), (300, 2000)):
+            self.assertEqual(rg.check_layout(size), [], size)
+        self.assertLessEqual(rg.BOX[3], rg.SAFE[3])
+        self.assertLess(rg.SUB_Y + 60, rg.BOX[1])
+
+    def test_sample_times_skip_hook(self):
+        ts = rg.sample_times(390)
+        self.assertEqual(len(ts), 4)
+        self.assertGreaterEqual(min(ts), int(3.2 * rg.FPS))
+        self.assertLess(max(ts), 390)
+        self.assertEqual(rg.sample_times(60), [])
+
 
 if __name__ == "__main__":
     unittest.main()
