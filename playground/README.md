@@ -40,6 +40,9 @@
 ## 다음
 - 유형 테스트 주 1개.
 
+## 공략·가이드 글 (2026-11-16)
+- `guides/<slug>.md` → `/guide/<slug>`, 허브 `/guide`, 게임 페이지·홈에 자동 연결, 사이트맵 포함. 규칙·형식·검사 기준은 docs/RAKSIL_GUIDES.md.
+
 ## 3D 게임 (네온 사격장, 2026-11-13)
 - `games/range/` 는 다른 게임과 같은 구조(meta/body/game.js)지만, 3D 본체는 `static/js/range.js`(three.js 포함 번들, gzip 약 160KB)를 **시작 버튼을 누를 때** 불러온다.
 - 원본 코드: `src3d/range/*.js` (무기 모델 weapons.js, 맵·표적 world.js, 효과음 audio.js, 게임 main.js). 외부 모델·이미지·음원 없음(전부 코드로 생성).

@@ -220,6 +220,125 @@ def load_games() -> list[dict]:
     return sorted(games, key=lambda g: g.get("added") or now, reverse=True)
 
 
+# ── 공략·가이드 글(2026-11-16 BK: 애드센스 승인용 "글 깊이"). guides/<slug>.md, 앞머리(--- … ---) + 마크다운 일부.
+# 게임마다 직접 코드를 읽어 확인한 숫자(점수 공식·속도·판정 폭)로 쓴다. 틀에 단어만 바꿔 끼운 글은 빌드에서 막는다(아래 guide_check).
+GUIDE_MIN_CHARS = 1800   # 태그 뺀 본문 글자 수 하한
+GUIDE_MIN_H2 = 4
+GUIDE_MAX_SIM = 0.25     # 두 글의 5글자 조각 겹침(자카드) 상한: 넘으면 거의 같은 글로 보고 빌드 실패
+
+
+def _inline(t: str) -> str:
+    t = esc(t)
+    t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+    return re.sub(r"\[([^\]]+)\]\((/[^)\s]*|https://[^)\s]+)\)", r'<a href="\2">\1</a>', t)
+
+
+def md_html(md: str) -> tuple[str, list[tuple[str, str]]]:
+    """## 소제목, ### 작은 제목, - 목록, 1. 번호 목록, > 팁 상자, | 표 |, 빈 줄 = 문단. (html, [(id, 소제목)])"""
+    out, toc, buf, kind = [], [], [], None
+
+    def flush():
+        nonlocal buf, kind
+        if not buf:
+            return
+        if kind == "p":
+            out.append("<p>" + _inline(" ".join(buf)) + "</p>")
+        elif kind in ("ul", "ol"):
+            out.append(f'<{kind} class="list">' + "".join(f"<li>{_inline(x)}</li>" for x in buf) + f"</{kind}>")
+        elif kind == "tip":
+            out.append('<div class="gtip">' + _inline(" ".join(buf)) + "</div>")
+        elif kind == "table":
+            rows = [[c.strip() for c in r.strip().strip("|").split("|")] for r in buf if not re.fullmatch(r"\|?[\s:|-]+\|?", r.strip())]
+            out.append('<div class="gtw"><table class="gt"><thead><tr>' + "".join(f"<th>{_inline(c)}</th>" for c in rows[0]) + "</tr></thead><tbody>"
+                       + "".join("<tr>" + "".join(f"<td>{_inline(c)}</td>" for c in r) + "</tr>" for r in rows[1:]) + "</tbody></table></div>")
+        buf, kind = [], None
+
+    for line in md.strip().splitlines():
+        s = line.rstrip()
+        k, v = (None, None)
+        if not s.strip():
+            flush(); continue
+        if s.startswith("## "):
+            flush(); hid = f"s{len(toc) + 1}"; toc.append((hid, s[3:].strip())); out.append(f'<h2 id="{hid}">{_inline(s[3:].strip())}</h2>'); continue
+        if s.startswith("### "):
+            flush(); out.append(f"<h3>{_inline(s[4:].strip())}</h3>"); continue
+        if s.startswith("- "):
+            k, v = "ul", s[2:]
+        elif re.match(r"\d+\. ", s):
+            k, v = "ol", s.split(". ", 1)[1]
+        elif s.startswith("> "):
+            k, v = "tip", s[2:]
+        elif s.lstrip().startswith("|"):
+            k, v = "table", s
+        else:
+            k, v = "p", s.strip()
+        if kind != k:
+            flush(); kind = k
+        buf.append(v)
+    flush()
+    return "\n".join(out), toc
+
+
+def load_guides(games: list[dict]) -> list[dict]:
+    gdir = HERE / "guides"
+    if not gdir.exists():
+        return []
+    slugs = {g["slug"] for g in games}
+    out = []
+    for f in sorted(gdir.glob("*.md")):
+        raw = f.read_text(encoding="utf-8")
+        m = re.match(r"---\n(.*?)\n---\n(.*)", raw, re.S)
+        if not m:
+            raise ValueError(f"guides/{f.name}: 앞머리(--- … ---) 없음")
+        meta = dict(re.match(r"(\w+):\s*(.*)", ln).groups() for ln in m.group(1).splitlines() if ln.strip())
+        for k in ("title", "description", "updated"):
+            if not meta.get(k):
+                raise ValueError(f"guides/{f.name}: {k} 없음")
+        if meta.get("game") and meta["game"] not in slugs:
+            raise ValueError(f"guides/{f.name}: 없는 게임 {meta['game']}")
+        body, toc = md_html(m.group(2))
+        text = re.sub(r"<[^>]+>", "", body)
+        if len(text) < GUIDE_MIN_CHARS:
+            raise ValueError(f"guides/{f.name}: 본문 {len(text)}자, {GUIDE_MIN_CHARS}자 이상 필요")
+        if len(toc) < GUIDE_MIN_H2:
+            raise ValueError(f"guides/{f.name}: 소제목(##) {len(toc)}개, {GUIDE_MIN_H2}개 이상 필요")
+        out.append({**meta, "slug": f.stem, "body": body, "toc": toc, "text": text})
+    guide_check(out)
+    return sorted(out, key=lambda x: (x["updated"], x["slug"]), reverse=True)
+
+
+def guide_check(gs: list[dict]) -> None:
+    """거의 같은 글(틀에 이름만 바꾼 글) 막기: 공백 뺀 5글자 조각 집합의 겹침 비율."""
+    sh = {}
+    for g in gs:
+        t = re.sub(r"\s+", "", g["text"])
+        sh[g["slug"]] = {t[i:i + 5] for i in range(len(t) - 4)}
+    titles = [g["title"] for g in gs]
+    if len(set(titles)) != len(titles):
+        raise ValueError("guides: 같은 제목의 글이 있음")
+    keys = list(sh)
+    for i, a in enumerate(keys):
+        for b in keys[i + 1:]:
+            j = len(sh[a] & sh[b]) / max(1, len(sh[a] | sh[b]))
+            if j > GUIDE_MAX_SIM:
+                raise ValueError(f"guides: {a} 와 {b} 가 너무 비슷함({j:.2f})")
+
+
+GUIDE_CSS = (".rk-i{display:none}@media (max-width:420px){.rk-i{display:inline}.rk-t{display:none}nav{gap:3px!important}nav a{padding:5px 6px!important}}.gmeta{color:var(--muted);font-size:13px;margin:-6px 0 14px}.gtoc{background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 18px}"
+             ".gtoc b{font-size:13px;color:var(--y)}.gtoc ol{margin:6px 0 0;padding-left:20px}.gtoc a{color:var(--ink)}"
+             ".gbody h2{margin-top:28px}.gbody h3{margin:18px 0 6px;font-size:17px}.gbody p{line-height:1.75}"
+             ".gtip{border-left:4px solid var(--y);background:#ffd23f12;border-radius:8px;padding:10px 12px;margin:12px 0;line-height:1.7}"
+             ".gtw{overflow-x:auto;margin:12px 0}.gt{border-collapse:collapse;width:100%;font-size:14px}.gt th,.gt td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}.gt th{background:var(--bg2);color:var(--y);white-space:nowrap}"
+             ".gplay{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}.glist{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));padding:0;list-style:none}"
+             ".glist a{display:block;height:100%;text-decoration:none;color:var(--ink);background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:12px 14px}.glist a:hover{border-color:var(--y)}"
+             ".glist b{display:block;margin-bottom:4px}.glist small{color:var(--muted);line-height:1.5;display:block}.gcard{display:block;text-decoration:none;color:var(--ink);background:var(--bg2);border:2px solid var(--y);border-radius:12px;padding:12px 14px;margin:18px 0}.gcard b{color:var(--y)}")
+
+
+def guide_cards(gs: list[dict], games_by: dict) -> str:
+    return '<ul class="glist">' + "".join(
+        f'<li><a href="/guide/{g["slug"]}"><b>{(games_by[g["game"]].get("icon", "🎮") + " ") if g.get("game") in games_by else "📖 "}{esc(g["title"])}</b><small>{esc(g["description"])}</small></a></li>' for g in gs) + "</ul>"
+
+
 # 게임이 GENRE_MIN개 이상이면 홈·게임 목록을 장르별로 나눈다(BK 11/14). meta.json "genre" 값.
 GENRE_MIN = 15
 GENRES = [("action", "⚔️ 액션·슈팅"), ("brain", "🧩 퍼즐·두뇌"), ("timing", "🎵 타이밍·리듬")]
@@ -1051,8 +1170,8 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <title>{esc(title)}</title><meta name="description" content="{esc(desc)}"><link rel="canonical" href="{esc(url)}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(desc)}"><meta property="og:url" content="{esc(url)}"><meta property="og:site_name" content="{esc(cfg['siteName'])}"><meta property="og:type" content="website"><meta property="og:image" content="{esc(cfg['baseUrl'].rstrip('/'))}/{esc(og or 'og.png')}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#0c0620">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{esc(cfg['siteName'])}" href="/feed.xml">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}{BOARD_CSS if path in ('board', 'admin') else ''}</style>{head}</head><body>
-<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/archive">밸런스<span class="hs">게임</span></a><a href="/rank">순위</a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크·코인 상점, 보유 코인"><em>출석·상점</em>🪙<b>0</b></a></nav></div></header>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{GUIDE_CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}{BOARD_CSS if path in ('board', 'admin') else ''}</style>{head}</head><body>
+<header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/guide">공략</a><a href="/archive" aria-label="밸런스게임"><span class="rk-i">⚖️</span><span class="rk-t">밸런스<span class="hs">게임</span></span></a><a href="/rank" aria-label="순위"><span class="rk-i">🏆</span><span class="rk-t">순위</span></a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크·코인 상점, 보유 코인"><em>출석·상점</em>🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script><script>var VH={json.dumps(urlparse(cfg["baseUrl"]).hostname)};{VISIT_JS}</script>{kakao}</body></html>"""
@@ -1097,12 +1216,16 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     games = [g for g in allgames if not g.get("hidden")]
     grid = game_grid(games)
     trial = trial_box([g for g in allgames if g.get("hidden")])
+    guides = load_guides(allgames)
+    games_by = {g["slug"]: g for g in allgames}
+    gguide = {x["game"]: x for x in guides if x.get("game")}
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
           f"<div class=\"hero\"><p class=\"coin\">INSERT COIN ▶ PRESS START</p><h1><b>5</b>락실</h1><p>{esc(cfg['tagline'])}</p>"
           f"<div class=\"cta\"><a class=\"btn\" href=\"#games\">▶ 게임 고르기</a><a class=\"btn ghost\" href=\"#vs\">⚖️ 밸런스게임 투표</a><a class=\"btn ghost\" href=\"#\" data-pre=\"1\" data-u=\"/\" data-t=\"5락실 - 가입 없는 무료 오락실\" data-d=\"매일 새 판 미니게임·밸런스게임, 같이 해 볼래?\">📤 친구에게 공유</a></div>"
           f"<div class=\"ticker\" aria-hidden=\"true\"><div>" + "".join(f"{g.get('icon', '🎮')} {esc(g['name'])}<i>★</i>" for g in games) + "매일 0시 새 판<i>★</i>가입 없이 바로 플레이</div></div></div>"
           f"<div class=\"sec\" id=\"games\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{trial}{grid}"
           "<!--AD-->"
+          + (f"<div class=\"sec\" id=\"guides\"><h2>📖 공략·가이드</h2><span class=\"tag\">GUIDE</span></div>{guide_cards(guides[:4], games_by)}<p><a href=\"/guide\">공략 전체 보기 →</a></p>" if guides else "") +
           f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
           jsonld=[{"@context": "https://schema.org", "@type": "WebSite", "name": cfg["siteName"], "alternateName": "오락실", "url": cfg["baseUrl"].rstrip("/") + "/"}])
@@ -1143,6 +1266,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED or g["slug"] in DESIGN_GAMES or any(t["g"] == g["slug"] for t in THEMES):  # 게임별 미니 상점(그 게임 아이템만). DESIGNS·THEMES 만 있는 새 게임도 자동
             gs = f'<details id="gshop" class="gshop" data-g="{g["slug"]}"><summary>🛒 이 게임 상점 <small>· 보유 🪙 <b>0</b> · 눌러서 열기</small></summary><div class="gsb"></div></details>'
             body = body.replace("<!--RANK-->", gs + "<!--RANK-->") if "<!--RANK-->" in body else body + gs
+        if g["slug"] in gguide:  # 공략 글로 이어지는 카드(규칙 아래)
+            gd = gguide[g["slug"]]
+            body += f'<a class="gcard" href="/guide/{gd["slug"]}">📖 <b>{esc(gd["title"])}</b><br><small class="muted">{esc(gd["description"])}</small></a>'
         body += "<!--AD-->"  # 규칙·순위 아래(조작 버튼과 멀리)
         script = pre + COMMON_JS + g["js"]
         if not g.get("ownfs"):
@@ -1157,6 +1283,45 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
                        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}},
                       crumbs(cfg, [("게임", "games"), (g["name"], f"games/{g['slug']}")])], noindex=bool(g.get("hidden")),
               og=f"{g['og']}?v={static_ver(g['og'])}" if g.get("og") and (HERE / "static" / g["og"]).exists() else None)
+
+    if guides:
+        (out / "guide").mkdir(exist_ok=True)
+        base_u = cfg["baseUrl"].rstrip("/")
+        hub = ('<h1>📖 공략·가이드</h1><p class="lead">5락실 게임을 직접 만든 사람이 게임 코드에 들어 있는 실제 규칙(점수 계산, 속도가 빨라지는 방식, 판정 범위)을 바탕으로 쓴 공략입니다. '
+               '처음 하는 분은 각 글의 앞부분만 읽어도 충분하고, 순위를 노린다면 뒤쪽 요령과 숫자 표를 참고하세요.</p>')
+        known = [k for k, _ in GENRES]
+        for k, label in GENRES + [("etc", "🎮 기타")]:
+            part = [x for x in guides if x.get("game") in games_by and (games_by[x["game"]].get("genre") if games_by[x["game"]].get("genre") in known else "etc") == k]
+            if part:
+                hub += f'<h2>{label}</h2>' + guide_cards(part, games_by)
+        rest = [x for x in guides if x.get("game") not in games_by]
+        if rest:
+            hub += "<!--AD--><h2>📚 5락실 이야기·기초 안내</h2>" + guide_cards(rest, games_by)
+        else:
+            hub += "<!--AD-->"
+        write("guide", f"게임 공략·가이드 | {cfg['siteName']}", f"{cfg['siteName']} 무료 미니게임 공략 모음: 점수 계산법, 단계별 속도, 순위 올리는 요령을 게임마다 정리했어요.", hub,
+              jsonld=[crumbs(cfg, [("공략", "guide")])])
+        for x in guides:
+            g = games_by.get(x.get("game"))
+            toc = '<div class="gtoc" role="navigation" aria-label="목차"><b>목차</b><ol>' + "".join(f'<li><a href="#{i}">{esc(t)}</a></li>' for i, t in x["toc"]) + "</ol></div>"
+            body = x["body"]
+            h2s = [m.start() for m in re.finditer(r"<h2 ", body)]
+            if len(h2s) >= 3:  # 광고는 글 중간(세 번째 소제목 앞) 한 곳 + 끝
+                body = body[:h2s[2]] + "<!--AD-->" + body[h2s[2]:]
+            play = (f'<p class="gplay"><a class="btn" href="/games/{g["slug"]}">▶ {esc(g["name"])} 하러 가기</a><small class="muted">가입 없이 무료 · 매일 0시 새 판</small></p>' if g else "")
+            rel = [y for y in guides if y["slug"] != x["slug"] and (not g or games_by.get(y.get("game"), {}).get("genre") == g.get("genre"))][:4] or [y for y in guides if y["slug"] != x["slug"]][:4]
+            u = x["updated"]
+            page_body = (f'<h1>{esc(x["title"])}</h1><p class="gmeta">5락실 운영자 · {u[:4]}년 {int(u[5:7])}월 {int(u[8:10])}일 업데이트</p>'
+                         f'<p class="lead">{esc(x["description"])}</p>{play}{toc}<div class="gbody">{body}</div>{play}'
+                         + (f'<h2>다른 공략</h2>{guide_cards(rel, games_by)}' if rel else "") + '<p><a href="/guide">공략 전체 보기 →</a></p>')
+            trail = [("공략", "guide"), (x["title"], f"guide/{x['slug']}")]
+            write(f"guide/{x['slug']}", f"{x['title']} | {cfg['siteName']}", x["description"], page_body,
+                  jsonld=[{"@context": "https://schema.org", "@type": "Article", "headline": x["title"], "description": x["description"], "inLanguage": "ko",
+                           "datePublished": x.get("published", u), "dateModified": u, "author": {"@type": "Organization", "name": cfg["siteName"], "url": base_u + "/about"},
+                           "publisher": {"@type": "Organization", "name": cfg["siteName"]}, "mainEntityOfPage": f"{base_u}/guide/{x['slug']}",
+                           **({"about": {"@type": "VideoGame", "name": g["name"], "url": f"{base_u}/games/{g['slug']}"}} if g else {})},
+                          crumbs(cfg, trail)],
+                  og=f"{g['og']}?v={static_ver(g['og'])}" if g and g.get("og") and (HERE / "static" / g["og"]).exists() else None)
 
     ranked = [g for g in games if g.get("ranked")]
     tabs = "".join(f'<button class="share" type="button" data-g="{g["slug"]}">{esc(g["name"])}</button>' for g in ranked)
@@ -1201,7 +1366,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     gl = "".join(f'<li><a href="/games/{g["slug"]}">{esc(g["name"])}</a>: {esc(g["short"])}</li>' for g in games)
     write("about", f"소개 | {cfg['siteName']}", f"{cfg['siteName']} 소개: 직접 만든 무료 미니게임 {len(games)}종과 매일 새 밸런스게임. 운영 원칙과 운영자 안내.",
           f"<h1>소개</h1><p class=\"lead\">{esc(cfg['siteName'])}은 가입 없이 바로 즐기는 무료 웹 오락실입니다. 매일 0시(한국 시간)에 새 판이 열리고, 모두 같은 판으로 도전 순위를 겨룹니다.</p>"
-          f"<h2>무엇을 할 수 있나요</h2><ul class=\"list\"><li><a href=\"/archive\">밸런스게임</a>: 매일 질문 {cfg['questionsPerDay']}개, 익명 투표 후 실제 선택 비율 확인</li>{gl}</ul>"
+          f"<h2>무엇을 할 수 있나요</h2><ul class=\"list\"><li><a href=\"/guide\">공략·가이드</a>: 게임별 점수 계산법과 요령을 정리한 글</li><li><a href=\"/archive\">밸런스게임</a>: 매일 질문 {cfg['questionsPerDay']}개, 익명 투표 후 실제 선택 비율 확인</li>{gl}</ul>"
           "<h2>운영 원칙</h2><ul class=\"list\"><li>모든 게임은 이 사이트에서 직접 만든 오리지널 게임입니다. 다른 회사 게임의 이름·그림·음악을 가져오지 않습니다.</li>"
           "<li>밸런스게임 질문은 일상·음식·여행·상상 같은 가벼운 주제만 다룹니다. 정치·성별·지역·종교 갈등, 실존 인물 비하, 성적인 내용, 사고·참사는 올리지 않습니다.</li>"
           "<li>투표 비율과 순위는 실제 기록 그대로 보여 줍니다. 숫자를 사람이 고치거나 가짜 투표를 넣지 않습니다.</li>"
