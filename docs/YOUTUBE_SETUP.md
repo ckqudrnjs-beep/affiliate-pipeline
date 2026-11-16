@@ -48,3 +48,12 @@
 - 업로드는 먼저 **비공개(예약 없음)**. 유료 프로모션(paidProductPlacementDetails)을 켜고 다시 읽어 확인될 때만 예약 공개로 바꾼다.
 - 확인 안 되면 비공개 그대로 두고 실행 요약에 경고 + Studio 링크. BK가 체크 후 직접 예약 공개.
 - API 문서상 이 항목은 insert/update 에서 쓰기 가능 목록에 없다 → 실패할 가능성이 큼. 시도하려면 토큰 범위가 `https://www.googleapis.com/auth/youtube.force-ssl` 이어야 한다 (지금 토큰은 youtube.upload 만이라 수정·조회 불가 → 항상 비공개로 남음).
+
+## 4. 분석 읽기 토큰 (시청 비율·공유, 2026-11-16)
+업로드 토큰은 그대로 두고, **읽기 전용 토큰을 채널마다 하나 더** 받는다. 영상은 바꿀 수 없는 권한이다.
+1. https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com → **사용** (YouTube Analytics API)
+2. https://developers.google.com/oauthplayground → 톱니 → "Use your own OAuth credentials" → 기존 클라이언트 ID·비밀 입력
+3. 왼쪽 입력칸에 `https://www.googleapis.com/auth/yt-analytics.readonly` → Authorize APIs → **돈 줍는 삼촌** 채널 선택
+4. Exchange authorization code for tokens → Refresh token 복사 → GitHub Secrets `YT_ANALYTICS_REFRESH_TOKEN`
+5. 2~4를 한 번 더, 채널은 **5락실** → Secrets `RAKSIL_YT_ANALYTICS_REFRESH_TOKEN`
+6. 확인: Actions → yt-stats → Run workflow → 로그에 "uncle: N편", "5raksil: N편"
