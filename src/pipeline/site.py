@@ -326,6 +326,9 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     # 대가성 문구 띠: 제휴 링크(rel=sponsored)가 있는 페이지와 상품 페이지에만 (홈은 2026-11-16 BK 확인 후 상품 칸 옆 한 줄로 대체) (2026-11-16, 애드센스 심사 대비 — 계산기·소개처럼 링크 없는 페이지가 광고 페이지처럼 보이지 않게)
     adbar = (f'<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>'
              if ("sponsored" in body or path.startswith("p/")) else "")
+    # 바닥글의 가격·제휴 안내도 대가성 띠와 같은 조건일 때만 (2026-11-16: 계산기·퀴즈까지 제휴 사이트처럼 보이지 않게)
+    foot_note = ("가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요."
+                 f"<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다." if adbar else f"{BRAND} · 생활비를 숫자로 계산해 보는 개인 사이트")
     head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
             f'<meta property="og:locale" content="ko_KR"><meta property="og:image" content="{BASE}/{og}"><meta property="og:image:width" content="1200">'
@@ -342,7 +345,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
 <nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
-<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
+<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>{foot_note}</div></footer>
 <script>{VIDEO_JS};{VISIT_JS}</script>
 </body></html>"""
 
@@ -586,6 +589,18 @@ def calc_widget(c: dict, values: dict | None = None) -> str:
 {pre}const ids=[{ids}];readQS(ids);bindShare(ids);$('#f').addEventListener('input',run);run();</script>"""
 
 
+# 계산기별 근사치 안내 (2026-11-16 애드센스 점검: 퇴직금·월급 계산기에 '세관 부과액' 문구가 붙어 있던 것을 페이지에 맞게)
+CALC_NOTE_DEFAULT = "요금·세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 금액과 다를 수 있습니다."
+_ELEC = "전기요금은 2025~2026년 한전 주택용 요금표(누진제) 기준으로 만든 근사치입니다. 실제 고지서와 다를 수 있습니다."
+CALC_NOTE = {
+    "aliexpress": "환율·관세·부가세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 세관 부과액과 다를 수 있습니다.",
+    "electric": _ELEC, "heater": _ELEC, "humidifier": _ELEC, "standby": _ELEC,
+    "salary": "4대 보험료율·소득세는 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 급여명세서와 다를 수 있습니다.",
+    "severance": "법정 퇴직금 공식으로 계산한 세전 금액입니다. 회사 규정·퇴직연금 형태에 따라 실제 지급액은 다를 수 있습니다.",
+    "installment": "이자율·이자소득세(15.4%)는 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 만기 수령액은 은행 안내를 확인하세요.",
+}
+
+
 def calc_page(c: dict, products: list[dict], arts: list[dict] | None = None, qs: list[dict] | None = None) -> str:
     e = html.escape
     rel = "".join(card(p, "../") for p in products if c["category"] and p["category"] == c["category"])[:20000]
@@ -596,7 +611,7 @@ def calc_page(c: dict, products: list[dict], arts: list[dict] | None = None, qs:
 <h1>{e(c['h1'])}</h1><p class="lede">{e(c['lede'])}</p>
 {calc_widget(c)}
 {c['body']}
-<p class="small">요금·세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 고지서·세관 부과액과 다를 수 있습니다.</p>
+<p class="small">{CALC_NOTE.get(c['slug'], CALC_NOTE_DEFAULT)}</p>
 {qlinks}{alinks}
 {rel}"""
     return page(f"{c['title']} | {BRAND}", c["lede"], body, root="../", path=f"calc/{c['slug']}.html",
