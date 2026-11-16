@@ -52,9 +52,13 @@ def computed(q: dict) -> dict:
         _, c350 = add_cost(w, h, 350)
         hours = sorted({max(0.5, h / 2), h, min(24, h * 2)})
         rows = [[f"하루 {x:g}시간", f"{w * x * 30 / 1000:.0f}kWh", won(add_cost(w, x, 250)[1]), won(add_cost(w, x, 350)[1])] for x in hours]
+        # 두 집 모두 같은 누진 구간이면 금액이 같다 → "약 X원~X원" 대신 한 숫자로 (2026-11-16 애드센스 점검)
+        same = won(c250) == won(c350)
         lead = (f"{q['name']}({w:,}W)를 하루 {h:g}시간, 한 달 30일 쓰면 전기를 **{kwh:.0f}kWh** 더 써요. "
-                f"평소 한 달 250kWh를 쓰는 집은 요금이 **약 {won(c250)}**, 350kWh를 쓰는 집은 **약 {won(c350)}** 늘어나요.")
-        desc = f"{q['name']}({w:,}W)를 하루 {h:g}시간 쓰면 한 달 전기요금이 약 {won(c250)}~{won(c350)} 늘어요. 누진 구간별 계산표와 줄이는 법."
+                + (f"평소 한 달 250kWh를 쓰는 집도, 350kWh를 쓰는 집도 같은 누진 구간이라 요금이 **약 {won(c250)}** 늘어나요." if same else
+                   f"평소 한 달 250kWh를 쓰는 집은 요금이 **약 {won(c250)}**, 350kWh를 쓰는 집은 **약 {won(c350)}** 늘어나요."))
+        rng = f"약 {won(c250)}" if same else f"약 {won(c250)}~{won(c350)}"
+        desc = f"{q['name']}({w:,}W)를 하루 {h:g}시간 쓰면 한 달 전기요금이 {rng} 늘어요. 누진 구간별 계산표와 줄이는 법."
         table = [["사용 시간", "한 달 사용량", "250kWh 쓰는 집", "350kWh 쓰는 집"]] + rows
     elif k == "standby":
         w, off = p["a"] + p.get("b", 0) + p.get("c", 0), p["off"]
@@ -140,7 +144,14 @@ def body(q: dict, calc: dict, widget: str, related: str) -> str:
             f'<h1>{e(q["h1"])}</h1><p class="lede">{e(c["desc"])}</p>{A.render(md)}'
             f'<h2>내 조건으로 바꿔 보기</h2><p>아래 칸에 우리 집 고지서 사용량과 제품 소비전력을 넣으면 바로 다시 계산돼요.</p></article>'
             f'{widget}<article class="article"><h2>자주 묻는 질문</h2>{faq}'
-            f'<p class="small">요금·세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 고지서·세관 부과액과 다를 수 있습니다.</p>{related}</article>')
+            f'<p class="small">{note_text(q)}</p>{related}</article>')
+
+
+def note_text(q: dict) -> str:
+    """페이지 종류에 맞는 근사치 안내 (전기요금 페이지에 '세관'이 나오지 않게, 2026-11-16)."""
+    if q["kind"] == "ali":
+        return "환율·관세·부가세율은 2025~2026년 공개 기준으로 만든 근사치입니다. 실제 세관 부과액과 다를 수 있습니다."
+    return "전기요금은 2025~2026년 한전 주택용 요금표(누진제) 기준으로 만든 근사치입니다. 실제 고지서와 다를 수 있습니다."
 
 
 def faq_ld(q: dict) -> dict:
