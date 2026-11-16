@@ -27,3 +27,9 @@ MCP는 저장소 `.mcp.json` 에 버전 고정으로 넣었다. 키는 파일에
 플러그인(claude.ai 계정에서 설치): Security Guidance(Anthropic), Marketing(Anthropic, seo-audit 위주, 유료 Ahrefs·Similarweb 연결 안 함), rampstack-seo(커뮤니티, 지침만). 제외: Supermetrics·Windsor·Trackian·AdvisorPPC·Hyper(유료·외부로 데이터 전송), Krea(유료), playwright 플러그인(중복), GA MCP(사이트에 GA 없음).
 
 BK 연결 순서: plan/TOOLS_SETUP_BK.md.
+
+### 2026-11-16 23:30 실제 사용 결과
+- BK는 데스크톱 앱 Code 탭(원격 환경)을 쓰는데, 거기서는 플러그인이 막혀 있고 서치콘솔 MCP(브라우저 로그인 방식)도 붙지 않음.
+- 그래서 플러그인은 건너뜀(보안 점검은 security-review 스킬로 대신). 네이버는 NAVER API HUB로 이전·카드 필요 → BK 보류.
+- 서치콘솔은 GitHub Actions 읽기 전용 수집 `pipeline.gsc_stats` (매일 07:20 KST, docs/SEO_WEEKLY.md)로 대체. 설정은 docs/SEO_SETUP.md.
+- 유튜브 분석 토큰 두 채널 모두 연결 완료 (11/16 22:55).
