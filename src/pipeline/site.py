@@ -342,7 +342,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
 <nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
-<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
+<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요.<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다.</div></footer>
 <script>{VIDEO_JS};{VISIT_JS}</script>
 </body></html>"""
 
