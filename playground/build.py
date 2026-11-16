@@ -1416,9 +1416,12 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     shutil.copytree(HERE / "static", out, dirs_exist_ok=True)
     # 끊어진 하늘 영어판(레딧 베타, BK 11/15): games/sky/en.html → /en/sky (번역 결과물 static/js/sky-en.js 는 src3d/sky/i18n/build-en.mjs 로 만들어 커밋)
     if (HERE / "games/sky/en.html").exists() and (HERE / "static/js/sky-en.js").exists():
+        # 영어 제목 포스터·공유 미리보기가 있으면 그걸 쓴다(레딧 미리보기에 한글 제목이 뜨지 않게, posters.py 가 sky@en 으로 찍음)
+        sky_poster = "img/sky-en-poster.jpg" if (HERE / "static/img/sky-en-poster.jpg").exists() else "img/sky-poster.jpg"
+        sky_og = "og/sky-en.jpg" if (HERE / "static/og/sky-en.jpg").exists() else "og/sky.jpg"
         (out / "en").mkdir(exist_ok=True)
         v = lambda rel: (f"?v={static_ver(rel)}" if static_ver(rel) else "")
-        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("{{SKYV}}", v("js/sky-en.js")).replace("{{POSTERV}}", v("img/sky-poster.jpg")).replace("{{OGV}}", v("og/sky.jpg")), encoding="utf-8")
+        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("{{SKYV}}", v("js/sky-en.js")).replace("/img/sky-poster.jpg{{POSTERV}}", f"/{sky_poster}{v(sky_poster)}").replace("/og/sky.jpg{{OGV}}", f"/{sky_og}{v(sky_og)}"), encoding="utf-8")
         sm += f"<url><loc>{base}/en/sky</loc><lastmod>{lm}</lastmod></url>"
     (out / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>', encoding="utf-8")
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {base}/sitemap.xml\n", encoding="utf-8")

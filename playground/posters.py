@@ -134,7 +134,8 @@ def main(argv: list[str]) -> int:
             subprocess.run([sys.executable, str(HERE / "build.py"), str(site)], cwd=HERE, env=env, check=True, stdout=subprocess.DEVNULL)
             srv, base = serve(site)
         shots = tmp / "shots"
-        r = subprocess.run(["node", str(ROOT / "scripts" / "game_posters.js"), base, str(shots), *todo], cwd=ROOT)
+        langs = [f"{s}@en" for s in todo if games[s].get("poster_en")]  # 영어판 포스터·미리보기(레딧 등)
+        r = subprocess.run(["node", str(ROOT / "scripts" / "game_posters.js"), base, str(shots), *todo, *langs], cwd=ROOT)
         if srv:
             srv.shutdown()
         today = dt.datetime.now(KST).strftime("%Y-%m-%d")
@@ -145,6 +146,9 @@ def main(argv: list[str]) -> int:
                 print(f"{slug}: 찍지 못해서 예전 포스터를 그대로 둡니다", file=sys.stderr)
                 continue
             save_images(slug, png)
+            en = shots / f"{slug}-en.png"
+            if en.exists():
+                save_images(f"{slug}-en", en)
             man[slug] = {"src": src_hash(slug, games[slug]), "at": today}
             done.append(slug)
     MANIFEST.write_text(json.dumps(dict(sorted(man.items())), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
