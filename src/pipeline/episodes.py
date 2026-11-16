@@ -74,8 +74,9 @@ SHORT_FORMATS = {
         SKIT_RULE + "상품·브랜드 없음. 주제: 사이트 1인분 원가 레시피(site_path = recipe/…) 하나. 조카가 배달 앱을 켜는 순간 → "
         "삼촌이 재료비·배달비 차이를 숫자로 → 한 달(주 2번) 차이. 숫자는 그 레시피 페이지와 같게. 끝 = \"재료·순서는 돈삼촌 레시피에\"."),
     6: ("guide", "삼촌의 생활 정리", False,
-        "상품 없음, 카드형. 사이트 글 하나(site_path = guide/…)의 핵심 3가지를 30초로: hook(그 글의 질문) → list(핵심 3가지) → "
-        "calc(가장 큰 숫자 하나) → end(text=\"전체 정리는 돈삼촌 글에\"). 글에 있는 사실만."),
+        "상품 없음, 카드형. 사이트 글 하나(site_path = guide/…)의 핵심 3가지를 30초로: hook(작은 습관 하나 × 1년 = 통장 숫자, "
+        "예: \"커피 한 잔 2,000원, 1년이면?\" — 11/15 bank 형식 1일 937회로 1위) → calc(1년 누적 숫자를 크게) → list(핵심 3가지) → "
+        "end(text=\"전체 정리는 돈삼촌 글에\"). 글에 있는 사실만."),
 }
 SITE_PREFIX = {"prices": ("index.html", "report.html"), "quiz": ("quiz.html",), "skit-calc": ("calc/",), "skit-q": ("q/",),
                "skit-recipe": ("recipe/",), "guide": ("guide/",)}
