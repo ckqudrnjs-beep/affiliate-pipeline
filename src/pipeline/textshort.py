@@ -233,6 +233,10 @@ def make(d: dt.date, force: bool = False) -> str:
         return "체크 실패 → 기존 대본 그대로: " + "; ".join(fails)
     ep = EP_DIR / f"{d.isoformat()}-prices.json"
     spec = spec_for(rep, picks, d)
+    if os.environ.get("TEXTSHORT_PREVIEW") == "1":  # 확인용: 대본·대기열은 건드리지 않고 영상만
+        out = pathlib.Path("preview") / f"{spec['slug']}.mp4"
+        render(fill(rep, picks, d), out, soundtrack(rep, picks, voice=os.environ.get("TEXTSHORT_VOICE", "1") != "0"))
+        return f"미리보기: {out}"
     if spec["slug"] in uploaded_slugs():
         return f"{spec['slug']} 이미 업로드됨"
     others = [p for p in EP_DIR.glob(f"{d.isoformat()}-*.json") if not p.name.endswith(".meta.json") and p != ep]
