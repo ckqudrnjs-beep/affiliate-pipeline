@@ -5,7 +5,7 @@
 | 도구 | 판정 | 상태 |
 |---|---|---|
 | claude-video (bradautomates) | 도움됨 | `.claude/skills/watch` 설치 (커밋 고정, 키 없이 local) |
-| hyperframes (HeyGen) | 시험 | `tools/hyperframes/price_short` 시세 Shorts 시험, 0.9.56 고정, 통계 끔 |
+| hyperframes (HeyGen) | 조건부 사용 | 글자만으로 완결되는 정보 Shorts에만. 규칙은 SHORTS_GROWTH.md. 0.9.56 고정, 통계 끔 |
 | taste | 애매 | 애드센스 검토 중 디자인 큰 변경 보류 |
 | graphify, ecc, ponytail, headroom | 불필요 | 우리 규모에서 효과 미미, ecc는 설정 충돌 우려 |
 | omniroute | 거절 | 무료 계정 묶어 우회 → 약관 위반·계정 정보 노출 위험 |
