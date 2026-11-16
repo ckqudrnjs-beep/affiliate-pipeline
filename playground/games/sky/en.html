@@ -35,6 +35,9 @@ h2{font-size:20px;margin:28px 0 8px}.lead{font-size:17px;margin:0 0 14px}.muted{
 .st{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000;margin:0;padding:0 8px}
 ul{padding-left:20px}li{margin:4px 0}.card{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0}
 a{color:var(--acc)}
+.share{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}.share:hover{border-color:var(--acc)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0}th,td{border:1px solid var(--line);padding:5px 8px;text-align:left}th{background:var(--card)}
+footer{border-top:1.5px solid var(--line);margin-top:32px;padding-top:12px;font-size:13px;color:var(--mute)}footer a{margin-right:12px;color:var(--mute)}footer p{margin:6px 0}
 </style>
 </head>
 <body>
@@ -42,6 +45,7 @@ a{color:var(--acc)}
 <header><a href="/">5raksil</a><a href="/games/sky" hreflang="ko">한국어</a></header>
 <h1>Broken Sky <small>OPEN BETA</small></h1>
 <p class="lead">The great wind has stopped. The bridges between the sky islands have snapped, and the islands are slowly sinking into the sea of clouds. You are a <b>Mender</b>, who joins broken paths again. A free <b>isometric loot action RPG</b> that runs right in your browser, no install, no sign-up.</p>
+<p style="margin:0 0 12px"><button type="button" class="share" id="shr">📤 Share this game</button> <small class="muted" id="shm"></small></p>
 <div class="cab" id="cab"><img src="/img/sky-poster.jpg{{POSTERV}}" alt="Broken Sky gameplay: a Shieldkeeper fighting flufflings on a floating dandelion island" width="1280" height="720"><button class="go" type="button" id="go">▶ Play</button><p class="st">PC: keyboard + mouse · Phone: turn sideways for touch controls</p></div>
 <p id="msg" class="muted"></p>
 <!--SHOP--><!--GUIDE-->
@@ -49,13 +53,24 @@ a{color:var(--acc)}
 <h2>What's inside</h2>
 <ul>
 <li><b>5 classes</b>: the spear-and-shield <b>Shieldkeeper</b> who shoves foes off island edges, the twin-blade <b>Wandering Blade</b>, the wind-and-lightning <b>Windcaller</b>, the crossbow-and-trap <b>Trapper</b>, and the <b>Bellringer</b> who fights with shockwaves and echo clones.</li>
-<li><b>Branching skills</b>: 3 branches × 6 skills per class. At skill level 5 and 10 you pick a branch that changes how the skill works. Skills in the same branch boost each other.</li>
+<li><b>Branching skills</b>: 6 skills per class in 3 branches (2 per branch), plus an ultimate from Lv 6. At skill level 5 and again at 10, each skill forks: you pick one of two upgrades that changes how it works. Skills in the same branch boost each other.</li>
+<li><b>4 stats</b>: STR, AGI, VIT and BRE. You get 5 points to spend every level.</li>
 <li><b>14 gear slots</b>, five rarities, unique items with their own stories, sets, blessed and cursed gear, identifying, and hidden options that unlock as you fight.</li>
 <li><b>Enchanting up to +10</b> at the forge, with big success and failure moments. Weapons are safe to +6, armor to +4.</li>
 <li><b>7 chapters and an ending</b>: Dandelion Isle → Rusty Windmill Isles → Anchored Harbor → Upside-down Forest → Thunder Nest → The Sinking Old Capital → First Wind Hill.</li>
 <li><b>After the ending</b>: harder difficulty tiers that unlock one by one, plus <b>Drifting Isles</b> opened with Sky Charts.</li>
 <li><b>Daily stuff</b> (optional, no penalty for missing days): village board requests, today's island chest, a rotating peddler, airship errands.</li>
 </ul>
+<h2>Stats and enchanting odds</h2>
+<table><tr><th>Stat</th><th>Per point</th></tr>
+<tr><td>STR (Strength)</td><td>+1% melee damage, and the requirement for heavy gear</td></tr>
+<tr><td>AGI (Agility)</td><td>Attack speed, critical hits and evasion (+1% damage for the Trapper only)</td></tr>
+<tr><td>VIT (Vitality)</td><td>+4 life and resistance to status effects</td></tr>
+<tr><td>BRE (Breath)</td><td>+2 Wind and Wind recovery, +1% magic damage</td></tr></table>
+<p>Enchant at the forge with whetstones (weapons) and glue (armor) up to +10. Weapons are 100% safe to +6 and armor to +4. Above that, a failure drops the item one step. Blessed gear blocks one failure, and blessed whetstones or glue never drop a step.</p>
+<table><tr><th>Enchant step</th><th>Weapon success</th><th>Armor success</th></tr>
+<tr><td>+5</td><td>Safe</td><td>60%</td></tr><tr><td>+6</td><td>Safe</td><td>45%</td></tr><tr><td>+7</td><td>50%</td><td>30%</td></tr>
+<tr><td>+8</td><td>35%</td><td>20%</td></tr><tr><td>+9</td><td>20%</td><td>12%</td></tr><tr><td>+10</td><td>10%</td><td>8%</td></tr></table>
 <h2>Controls</h2>
 <ul>
 <li><b>PC</b>: left-click to move, right-click to attack, 1–4 skills (aimed at the mouse), Space to glide/dodge, Q/R potions, F talk, I bag, C character, S skills, M map, Esc pause.</li>
@@ -65,9 +80,10 @@ a{color:var(--acc)}
 <ul>
 <li>Your progress is saved in this browser. No account needed.</li>
 <li>No real-money purchases, no gacha, no trading.</li>
-<li>Free to play. The site may show ads.</li>
+<li>Free to play. Some 5raksil pages may show ads. See the <a href="/privacy">privacy policy</a> (in Korean) for what is stored.</li>
 </ul>
 <p class="muted">Broken Sky's world, classes, monsters, skills, items and systems are original designs by 5raksil. Some character, building and tree art is re-rendered by 5raksil from Kay Lousberg's free CC0 KayKit 3D models (Adventurers, Medieval Hexagon); monsters and items were modeled in 3D by 5raksil. The game was originally written in Korean; if a translation reads oddly, please tell us through the feedback button.</p>
+<footer><p><a href="/">5raksil home</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy">Privacy policy</a></p><p>No sign-up and no names collected. Game saves stay in your browser unless you create a 5raksil profile code. Some pages may show ads served by Google, which can use cookies. The policy pages are in Korean; questions in English are welcome via Contact.</p></footer>
 </main>
 <!--BONUSJS-->
 <script>
@@ -78,6 +94,7 @@ var CLS={warden:'Shieldkeeper',drifter:'Wandering Blade',windcaller:'Windcaller'
 function boot(){if(game)return game;game=SkyGame.boot({bonus:window.Bonus,onExit:function(r){$('go').textContent='▶ Continue';if(window.Bonus)Bonus.render();if(r)$('msg').textContent='Saved: '+(CLS[r.cls]||'')+' Lv '+r.lv}});return game}
 async function go(){if(!game){$('go').textContent='Loading…';try{await load()}catch(e){$('msg').textContent='Could not load the game. Please refresh and try again.';$('go').textContent='▶ Play';return}boot()}if(window.Bonus)Bonus.played('sky');game.open()}
 $('cab').onclick=go;
+$('shr').onclick=function(){var u=location.origin+'/en/sky',t='Broken Sky: a free browser loot ARPG, no install';if(navigator.share)navigator.share({title:'Broken Sky',text:t,url:u}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(t+' '+u).then(function(){$('shm').textContent='Link copied!'}).catch(function(){})};
 })();
 </script>
 </body>
