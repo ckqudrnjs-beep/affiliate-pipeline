@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@1.13.0", "--headless", "--isolated", "--usageStatistics=false"]
+    },
+    "search-console": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/AminForou/mcp-gsc@45291df024c7873b2042c83d7add70ced7bb621f", "mcp-search-console"],
+      "env": {
+        "GSC_OAUTH_CLIENT_SECRETS_FILE": "${GSC_OAUTH_CLIENT_SECRETS_FILE:-}",
+        "GSC_CREDENTIALS_PATH": "${GSC_CREDENTIALS_PATH:-}",
+        "GSC_ALLOW_DESTRUCTIVE": "false"
+      }
+    },
+    "naver-search": {
+      "command": "npx",
+      "args": ["-y", "@isnow890/naver-search-mcp@1.0.55"],
+      "env": {
+        "NAVER_CLIENT_ID": "${NAVER_CLIENT_ID:-}",
+        "NAVER_CLIENT_SECRET": "${NAVER_CLIENT_SECRET:-}"
+      }
+    },
+    "cloudflare": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp"
+    }
+  }
+}
