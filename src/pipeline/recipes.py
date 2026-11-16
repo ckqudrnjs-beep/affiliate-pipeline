@@ -105,7 +105,7 @@ def load(data_dir: str = "data", pantry: dict | None = None) -> list[dict]:
 
 def title(r: dict) -> str:
     if is_party(r):
-        return f"연말 홈파티 {r['name']} {yield_label(r)} 재료비 {won(r['batch'])}, 1인분 원가 {won(r['total'])} 레시피"
+        return f"홈파티 {r['name']} {yield_label(r)} 재료비 {won(r['batch'])}, 1인분 원가 {won(r['total'])}"  # 검색 결과에서 잘리지 않게 짧게 (2026-11-17)
     return f"{r['name']} 1인분 원가 {won(r['total'])}, 배달보다 {won(r['save'] // 100 * 100)} 아끼는 레시피"
 
 

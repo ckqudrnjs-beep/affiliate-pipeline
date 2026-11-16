@@ -337,7 +337,8 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     # 바닥글의 가격·제휴 안내도 대가성 띠와 같은 조건일 때만 (2026-11-16: 계산기·퀴즈까지 제휴 사이트처럼 보이지 않게)
     foot_note = ("가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요."
                  f"<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다." if adbar else f"{BRAND} · 생활비를 숫자로 계산해 보는 개인 사이트")
-    head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">'
+    og_type = "article" if ld.get("@type") in ("Article", "Recipe") else "website"  # 글·레시피는 article (2026-11-17 SEO 점검)
+    head = (f'<link rel="canonical" href="{url}"><meta property="og:type" content="{og_type}"><meta property="og:site_name" content="{BRAND}">'
             f'<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{url}">'
             f'<meta property="og:locale" content="ko_KR"><meta property="og:image" content="{BASE}/{og}"><meta property="og:image:width" content="1200">'
             f'<meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">{meta}'
@@ -769,13 +770,13 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             Q.body(q, c, calc_widget(c, Q.preset(q)), rel), root="../", path=f"q/{q['slug']}.html", ld=Q.faq_ld(q),
             og=S.og_path("q", q["slug"]), crumbs=[("계산기", "index.html#calcs"), (c["title"], f"calc/{c['slug']}.html"), (q["h1"], f"q/{q['slug']}.html")]),
             encoding="utf-8")
-    (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "개인정보처리방침", PRIVACY, path="privacy.html"), encoding="utf-8")
-    (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리 가격을 매일 기록해, 지금이 싼 편인지 판정합니다.",
+    (o / "privacy.html").write_text(page(f"개인정보처리방침 | {BRAND}", "돈 줍는 삼촌이 수집하는 정보(방문 통계·광고 쿠키·제휴 쿠키), 맞춤 광고 끄는 법과 문의처를 안내합니다.", PRIVACY, path="privacy.html"), encoding="utf-8")
+    (o / "prices.html").write_text(page(f"알리 가격 기록 | {BRAND}", "삼촌이 소개한 물건의 알리익스프레스 가격을 매일 기록해 최저가·최고가 그래프로 보여 주고, 지금 사도 되는지 판정합니다.",
         PR.page_body(products, HIST) + tg_box(), path="prices.html"), encoding="utf-8")
     (o / "admin.html").write_text(page(f"관리자 | {BRAND}", "관리자 전용", f"<style>{ADMIN_CSS}</style>{ADMIN_BODY}<script>{ADMIN_JS}</script>", path="admin.html", ads=False, noindex=True), encoding="utf-8")
     (o / "about.html").write_text(page(f"소개 | {BRAND}", "돈 줍는 삼촌은 사기 전에 한 번 계산해 보는 살림 사이트입니다. 운영 원칙과 광고·제휴 안내.", ABOUT, path="about.html"), encoding="utf-8")
     (o / "terms.html").write_text(page(f"이용약관 | {BRAND}", "돈 줍는 삼촌 이용약관: 서비스 범위, 정보의 한계, 광고·제휴 링크, 금지 행위, 저작권.", TERMS, path="terms.html"), encoding="utf-8")
-    (o / "contact.html").write_text(page(f"문의 | {BRAND}", "돈 줍는 삼촌에 글 오류, 계산기 문제, 제휴 문의를 보내는 방법.", contact_body(), path="contact.html"), encoding="utf-8")
+    (o / "contact.html").write_text(page(f"문의 | {BRAND}", "돈 줍는 삼촌에 글 오류, 계산기 숫자 문제, 제안·제휴 문의를 보내는 방법을 안내합니다.", contact_body(), path="contact.html"), encoding="utf-8")
     client = adsense_client()
     if client:  # ads.txt: 게시자 ID 가 있을 때만
         (o / "ads.txt").write_text(f"google.com, {client.removeprefix('ca-')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
@@ -790,7 +791,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         if d["slug"] not in live:
             (o / "p" / f"{d['slug']}.html").write_text(retired_page(d, products), encoding="utf-8")
     news = N.load_json("data/news.json")
-    (o / "news.html").write_text(page(f"삼촌 소식 | {BRAND}", "계산해서 아끼는 살림 소식을 날짜별로 모았습니다.",
+    (o / "news.html").write_text(page(f"삼촌 소식 | {BRAND}", "알리 가격 내림, 새 계산기·글, 공식 세일 일정처럼 계산해서 아끼는 살림 소식을 날짜별·분류별로 모았습니다.",
         N.archive_body(news), path="news.html"), encoding="utf-8")
     (o / "news").mkdir(exist_ok=True)
     for n in news:
@@ -801,7 +802,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             ads=not thin_news(n), noindex=thin_news(n)), encoding="utf-8")
     by_slug = {p["slug"]: p for p in products}
     (o / "guide").mkdir(exist_ok=True)
-    (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 직구 세금, 난방비처럼 사기 전에 궁금한 것을 계산으로 답합니다.",
+    (o / "guide.html").write_text(page(f"삼촌의 글 | {BRAND}", "가전 전기요금, 알리 직구 관세, 난방비처럼 사기 전·쓰기 전에 궁금한 것을 실제 숫자 계산으로 답하는 생활 글 모음입니다.",
         A.list_body(arts), path="guide.html"), encoding="utf-8")
     naver = A.load_naver()
     for a in arts:
@@ -822,7 +823,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
     reps = R.load_all()
     (o / "report").mkdir(exist_ok=True)
-    (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "기름값·장바구니 물가·환율을 공공 데이터로 매주 월요일 정리합니다.",
+    (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "휘발유·경유 가격, 장바구니 농산물 물가, 달러 환율을 공공 데이터로 매주 월요일 정리하고 지난주와 비교합니다.",
         R.list_body(reps), path="report.html", noindex=not reps), encoding="utf-8")  # 첫 리포트 전엔 빈 목록이라 색인 제외
     for r in reps:
         (o / "report" / f"{r['date']}.html").write_text(page(f"{R.title(r)} | {BRAND}", " ".join(r["lines"])[:150], R.body(r), root="../",
@@ -830,7 +831,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
             "datePublished": r["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
             crumbs=[("물가 리포트", "report.html"), (R.title(r), f"report/{r['date']}.html")]), encoding="utf-8")
     faq = N.load_json("data/faq.json")
-    (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크, 직구 세금, 전기요금 계산에 대해 자주 묻는 질문입니다.",
+    (o / "faq.html").write_text(page(f"자주 묻는 질문 | {BRAND}", "제휴 링크와 가격 기준, 알리 직구 관세·부가세, 가전 전기요금 누진제 계산에 대해 자주 묻는 질문과 답을 모았습니다.",
         N.faq_body(faq), path="faq.html", ld=N.faq_ld(faq)), encoding="utf-8")
     pantry = RC.load_pantry()
     recs = RC.load(pantry=pantry)

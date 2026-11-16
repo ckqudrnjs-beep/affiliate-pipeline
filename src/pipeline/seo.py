@@ -80,10 +80,15 @@ def article_cluster(a: dict) -> str:
 
 # ---------- 썸네일 만들기 (로컬·예약 작업에서만) ----------
 
+# 나눔 글꼴이 없는 환경(자동 글 작성 클라우드 등)에서도 글 썸네일이 기본 그림으로 빠지지 않게 (2026-11-17 SEO 점검)
+KO_FALLBACK = ["/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
+               "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"]
+
+
 def _font(size: int, bold: bool = True):
     from PIL import ImageFont
     names = ["NanumSquareEB.ttf", "NanumSquareB.ttf", "NanumGothicExtraBold.ttf", "NanumGothicBold.ttf"] if bold else ["NanumSquareR.ttf", "NanumGothic.ttf"]
-    for f in [os.environ.get("VIDEO_FONT", "")] + [f"/usr/share/fonts/truetype/nanum/{n}" for n in names] + ["C:/Windows/Fonts/malgunbd.ttf"]:
+    for f in [os.environ.get("VIDEO_FONT", "")] + [f"/usr/share/fonts/truetype/nanum/{n}" for n in names] + ["C:/Windows/Fonts/malgunbd.ttf"] + KO_FALLBACK:
         if f and os.path.exists(f):
             return ImageFont.truetype(f, size)
     raise SystemExit("한글 글꼴이 없습니다 (fonts-nanum 설치 또는 VIDEO_FONT 지정)")
