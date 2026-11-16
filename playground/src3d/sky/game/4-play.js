@@ -454,7 +454,7 @@ function addInv(it) { const P = G.P;
   if (it.g) { const h = P.inv.find(x => x.g === it.g); if (h) { h.n += it.n; return true; } }
   const k = stackKey(it), w0 = bagWeight(P), cap = bagCap(P);
   if (w0 + weightOf(it) > cap * 1.5) return false;
-  const h = k && P.inv.find(x => !x.g && stackKey(x) === k);
+  const h = k && P.inv.find(x => !x.g && !x.lk && stackKey(x) === k);
   if (h) h.n = (h.n || 1) + (it.n || 1); else { if (P.inv.length >= INV_MAX) return false; P.inv.push(it); }
   if (w0 <= cap && bagWeight(P) > cap) say('가방이 무거워졌어요! 걸음이 느려져요 (무게 ' + bagWeight(P) + '/' + cap + ')', '#ff9a8a');
   return true; }
