@@ -163,7 +163,7 @@ def page_body(r: dict, others: list[dict]) -> str:
     more = "".join(f'<li><a href="{o["slug"]}.html"><b>{e(o["name"])}</b><span>{yield_label(o) + " " + won(o["batch"]) if is_party(o) else "1인분 " + won(o["total"])}</span></a></li>'
                    for o in (same + [o for o in others if o not in same])[:4])
     return f"""<article class="recipe"><p class="small"><a href="../recipe.html{'#party' if party else ''}">{'연말 홈파티 레시피' if party else '1인분 원가 레시피'}</a></p>
-<h1>{e(title(r))}</h1><p class="meta">{d.year}년 {d.month}월 {d.day}일 · 돈 줍는 삼촌</p>
+<h1>{e(title(r))}</h1><p class="meta">{d.year}년 {d.month}월 {d.day}일 · <a href="../about.html">돈 줍는 삼촌</a></p>
 <p class="lede">{e(r["intro"])}</p>
 {hero}
 <h2>재료와 {yl} 원가</h2>

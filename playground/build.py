@@ -1261,7 +1261,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
 
     rows = "".join(f'<li>{q["date"][5:].replace("-", "/")} · <a href="/q/{q["id"]}">{esc(q["a"])} vs {esc(q["b"])}</a></li>' for q in qs)
     write("archive", f"밸런스게임 질문 모음 | {cfg['siteName']}", "5락실에 올라온 밸런스게임 질문 전체. 지금 투표해도 결과에 반영됩니다.",
-          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->")
+          f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->", noindex=True)  # 질문 목록뿐이고 각 질문 페이지도 noindex(2026-11-16)
 
     write("games", f"무료 미니게임 | {cfg['siteName']}", "5락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
           f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{trial}{grid}")
@@ -1387,7 +1387,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           "<li>투표 비율과 순위는 실제 기록 그대로 보여 줍니다. 숫자를 사람이 고치거나 가짜 투표를 넣지 않습니다.</li>"
           "<li>회원 가입이 없고 이름·연락처를 받지 않습니다. 순위에는 자동으로 붙는 별명만 나옵니다.</li>"
           "<li>광고가 들어가더라도 게임 조작 화면과 떨어진 곳에만 두고 ‘광고’라고 표시합니다.</li></ul>"
-          f"<h2>운영자</h2><p>{esc(cfg['siteName'])}은 생활 정보 사이트 <a href=\"https://don3chon.com\">돈 줍는 삼촌</a>을 운영하는 사업자가 함께 운영합니다. "
+          f"<h2>운영자</h2><p>{esc(cfg['siteName'])}은 생활 정보 사이트 <a href=\"https://don3chon.com\">돈 줍는 삼촌</a>을 운영하는 사람이 함께 운영합니다. "
           "오류 제보와 건의는 <a href=\"/contact\">문의</a> 또는 <a href=\"/board\">게시판</a>으로 받습니다. 이용 규칙은 <a href=\"/terms\">이용약관</a>에 있습니다.</p>")
     write("contact", f"문의 | {cfg['siteName']}", f"{cfg['siteName']} 문의: 오류 제보, 밸런스게임 질문 제안, 게시물 신고, 광고·제휴 문의 방법.",
           f"<h1>문의</h1><p class=\"lead\">메일 또는 게시판으로 보내 주세요. 보통 2~3일 안에 답장합니다.</p>"

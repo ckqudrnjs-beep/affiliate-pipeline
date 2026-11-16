@@ -105,7 +105,7 @@ def page_body(a: dict, cards: str, naver: str = "") -> str:
     ad = (f'<h2>삼촌이 고른 물건</h2><p class="ad">[광고] 아래 상품은 제휴 링크로 연결됩니다. 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다.</p>'
           f'<div class="grid">{cards}</div>') if cards else ""
     return (f'<article class="article"><p class="small"><a href="../guide.html">삼촌의 글</a></p><h1>{e(a["title"])}</h1>'
-            f'<p class="meta">{d.year}년 {d.month}월 {d.day}일 · 돈 줍는 삼촌</p><p class="lede">{e(a["desc"])}</p>'
+            f'<p class="meta">{d.year}년 {d.month}월 {d.day}일 · <a href="../about.html">돈 줍는 삼촌</a></p><p class="lede">{e(a["desc"])}</p>'
             f'{render(a["body"])}{ad}{naver}</article>')
 
 
