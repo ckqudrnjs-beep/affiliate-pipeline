@@ -239,7 +239,7 @@ function render(arg) {
   else if (k === 'rank') h = rankHtml(X);
   panel.innerHTML = h; bindPanel(arg);
   if (k === 'inv') fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 'b' ? SHOP[+c.slice(1)] : null);
-  if (k === 'stash') fillIcons(c => c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 's' ? (P.stash || [])[+c.slice(1)] : null);
+  if (k === 'stash') fillIcons(c => c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 's' ? (P.stash || [])[+c.slice(1)] : c[0] === 'l' ? (P.lost || [])[+c.slice(1)] : null);
   if (k === 'char') { fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : null); panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 150))); }
   if (k === 'map') drawMap(panel.querySelector('[data-map]'));
   if (k === 'board') CONF = null;
@@ -318,11 +318,13 @@ function bindPanel(arg) {
     if (t.dataset.sk) { SEL = t.dataset.sk; render(); return; }
     if (SEL && SEL[0] === 'i' && ['eq', 'drop', 'sell', 'lookit', 'ench', 'reroll', 'salv'].includes(a)) SEL = 'i' + single(+SEL.slice(1));
     if (a === 'x') { closePanel(); if (PANEL === null && G && G.endNext) { G.endNext = 0; openPanel('end'); } return; }
+    if (a === 'stv') { STV = t.dataset.v; render(); return; }
+    if (a === 'lostx') { const m = stashMove('lostx'); render(); if (m) toast(m); return; }
     if (a === 'eq') { equip(+SEL.slice(1)); SEL = null; render(); }
     else if (a === 'uneq') { unequip(SEL.slice(1)); SEL = null; render(); }
     else if (a === 'nosel') { SEL = null; render(); }
     else if (a === 'use') { const it = P.inv[+SEL.slice(1)]; drink(it.g); if (!P.inv.includes(it)) SEL = null; render(); }
-    else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
+    else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1, mine: 1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
     else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
     else if (a === 'selljunk') { let g = 0; P.inv = P.inv.filter(it => { if (!it.g && it.r === 0 && !it.lk) { g += priceOf(it) * (it.n || 1); return false; } return true; }); P.gold += g; SEL = null; sfx('coin'); render(); toast(g + 'G 받았어요'); }

@@ -632,7 +632,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13 || CHX[Wd.ch] && Wd.ch < 8 && !S.q[CHX[Wd.ch].qid[0]]) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam', 'lost', 'lostX']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
@@ -918,10 +918,11 @@ function update(dt) {
   // 지역 효과
   for (const a of G.areas) areaUpdate(a, dt); G.areas = G.areas.filter(a => a.k === 'delay' ? !a.done : a.t < a.life);
   for (const f of G.fx) f.t += dt; G.fx = G.fx.filter(f => f.t < f.life);
-  for (const t of G.txt) t.t += dt; G.txt = G.txt.filter(t => t.t < 1);
+  for (const t of G.txt) t.t += dt; G.txt = G.txt.filter(t => t.t < 1); if (G.txt.length > TXT_MAX) G.txt.splice(0, G.txt.length - TXT_MAX);
+  if (G.fx.length > FX_MAX) G.fx.splice(0, G.fx.length - FX_MAX);
   // 줍기
   for (const d of G.drops) { d.t += dt; if (P.dead || d.t < .35) continue; if (hyp(d.x - P.x, d.y - P.y) < .8) pickUp(d); else d.warn = 0; }
-  G.drops = G.drops.filter(d => !d.got);
+  for (const d of G.drops) if (!d.got && d.t >= dropLife(d)) toLost(d); G.drops = G.drops.filter(d => !d.got); if (G.drops.length > DROP_MAX) trimDrops();
   // 카메라
   const k = 1 - Math.exp(-dt * 8); G.cam[0] += (P.x - G.cam[0]) * k; G.cam[1] += (P.y - G.cam[1]) * k; G.shake = Math.max(0, G.shake - dt * 20);
   for (const s of G.msg) s.t += dt; G.msg = G.msg.filter(s => s.t < 4.5);
@@ -1036,6 +1037,22 @@ function areaUpdate(a, dt) {
       for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r + .6)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c, { kb: 10, fx: a.x, fy: a.y, col: '#9fe4ff' }); } } }
   if (a.k === 'mist' && a.fk === 1) { a.tick -= dt; if (a.tick <= 0) { a.tick = 1; for (const m of mobsIn(m => hyp(m.x - a.x, m.y - a.y) < a.r)) { const [d, c] = rollDmg(P, m, a.mult); hitMob(m, d, c); G.fx.push({ k: 'zap', x: a.x, y: a.y, x2: m.x, y2: m.y, t: 0, life: .2 }); } } }
 }
+// 땅에 떨어진 물건: 오래 두면 마을 창고의 「분실물」 칸으로 옮겨짐(가방이 차서 못 주운 게 땅에 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
+// 보통·손본·재료·금화 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 옮김. 금화는 바로 지갑으로.
+// 분실물은 LOST_N 칸까지, 넘치면 가장 오래된 낮은 등급 장비를 재료로 바꿔 둔다(잃는 것 없음, BK 11/16).
+const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160, LOST_N = 40, LOST_STEP = 10, LOST_XMAX = 6; // 분실물 칸: 금화로 10칸씩 6번까지(최대 100칸, BK 11/16)
+const lostCap = P => LOST_N + LOST_STEP * Math.min(LOST_XMAX, P.lostX || 0), lostXCost = P => 400 * ((P.lostX || 0) + 1);
+function dropLife(d) { return d.gold ? 120 : d.mine || d.it && !d.it.g && d.it.r >= 2 ? 600 : 120; }
+function dropRank(d) { return d.mine ? 9 : d.gold ? 1 : d.it.g ? 2 : 3 + (d.it.r || 0); }
+function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t);
+  for (const d of L) { if (G.drops.length - L.filter(q => q.got).length <= DROP_MAX) break; if (hyp(d.x - P.x, d.y - P.y) >= 1.2) toLost(d); } G.drops = G.drops.filter(d => !d.got); }
+function lostAdd(it) { const P = G.P, L = P.lost || (P.lost = []);
+  if (it.g) { const h = L.find(q => q.g === it.g); if (h) { h.n = (h.n || 1) + (it.n || 1); return; } }
+  L.push(it);
+  while (L.length > lostCap(P)) { let k = -1; for (let i = 0; i < L.length; i++) if (!L[i].g && !L[i].lk && (k < 0 || L[i].r < L[k].r)) k = i; if (k < 0) { L.shift(); continue; }
+    const s = salvageOf(L[k]); L.splice(k, 1); if (s) { const h = L.find(q => q.g === s[0]); if (h) h.n = (h.n || 1) + s[1]; else L.push(goods(s[0], s[1])); } } }
+function toLost(d) { const P = G.P; d.got = 1; if (d.gold) { P.gold += d.gold; return; } lostAdd(d.it);
+  if (!G.lostTold) { G.lostTold = 1; say('못 주운 물건은 마을 「내 집 창고」의 분실물 칸에 모아 둘게요', '#9fe4ff'); } }
 function pickUp(d) {
   const P = G.P;
   if (d.gold) { P.gold += d.gold; d.got = 1; G.txt.push({ x: d.x, y: d.y, z: 1, t: 0, s: '+' + d.gold + 'G', c: '#ffd166', small: 1 }); sfx('coin'); return; }
@@ -1654,9 +1671,12 @@ function salvage(i) { const P = G.P, it = P.inv[i], s = salvageOf(it); if (!s) r
 const STASH_N = 60;
 function stashMove(c) { const P = G.P; P.stash = P.stash || [];
   if (c[0] === 'i') { const it = P.inv[+c.slice(1)]; if (!it) return; { const k = stackKey(it), h = it.g ? P.stash.find(x2 => x2.g === it.g) : k && P.stash.find(x2 => !x2.g && stackKey(x2) === k); if (h) { h.n = (h.n || 1) + (it.n || 1); P.inv.splice(P.inv.indexOf(it), 1); sfx('pick'); return; } } if (P.stash.length >= STASH_N) { toast('창고가 가득 찼어요'); return; } P.inv.splice(P.inv.indexOf(it), 1); P.stash.push(it); sfx('pick'); }
-  else if (c[0] === 's') { const it = P.stash[+c.slice(1)]; if (!it) return; if (!addInv(it)) { toast('가방이 꽉 차거나 너무 무거워요'); return; } P.stash.splice(P.stash.indexOf(it), 1); sfx('pick'); } }
+  else if (c[0] === 's') { const it = P.stash[+c.slice(1)]; if (!it) return; if (!addInv(it)) { toast('가방이 꽉 차거나 너무 무거워요'); return; } P.stash.splice(P.stash.indexOf(it), 1); sfx('pick'); }
+  else if (c === 'lostx') { const n = P.lostX || 0, g = lostXCost(P); if (n >= LOST_XMAX) return; if (P.gold < g) return '금화가 모자라요 (' + g + 'G 필요)'; P.gold -= g; P.lostX = n + 1; sfx('coin'); save(); return '분실물 칸이 ' + lostCap(P) + '칸으로 늘었어요'; }
+  else if (c[0] === 'l') { const L = P.lost || [], it = L[+c.slice(1)]; if (!it) return; if (!addInv(it)) { toast('가방이 꽉 차거나 너무 무거워요'); return; } L.splice(L.indexOf(it), 1); sfx('pick'); } }
+let STV = 's'; // 창고 오른쪽 칸: s=창고, l=분실물
 function stashHtml(X) { const P = G.P, S = P.stash || [];
-  return `<div class="sk-bx">${X}<h3>내 집 창고 <small style="font-size:12px;color:#8a7458">누르면 옮겨요 · 장마다 같은 창고</small></h3><div class="sk-two"><div><h4>가방 ${P.inv.length}칸 · 무게 ${bagWeight(P)}/${bagCap(P)}</h4><div class="sk-grid">${[...Array(Math.max(INV_N, P.inv.length))].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div><h4>창고 ${S.length}/${STASH_N}</h4><div class="sk-grid">${[...Array(STASH_N)].map((_, i) => cell(S[i], 's' + i)).join('')}</div></div></div>${TOAST}</div>`; }
+  return `<div class="sk-bx">${X}<h3>내 집 창고 <small style="font-size:12px;color:#8a7458">누르면 옮겨요 · 장마다 같은 창고</small></h3><div class="sk-two"><div><h4>가방 ${P.inv.length}칸 · 무게 ${bagWeight(P)}/${bagCap(P)}</h4><div class="sk-grid">${[...Array(Math.max(INV_N, P.inv.length))].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div><h4><button class="sk-b${STV === 's' ? ' p' : ''}" data-a="stv" data-v="s" style="margin:0;padding:4px 10px;font-size:12px">창고 ${S.length}/${STASH_N}</button> <button class="sk-b${STV === 'l' ? ' p' : ''}" data-a="stv" data-v="l" style="margin:0;padding:4px 10px;font-size:12px">분실물 ${(P.lost || []).length}/${lostCap(P)}</button></h4>${STV === 'l' ? `<p style="font-size:11px;color:#8a7458;margin:0 0 4px">땅에 오래 남은 물건이 여기로 와요. 누르면 가방으로 · 넘치면 낮은 등급부터 재료로 바뀌어요</p>${(P.lostX || 0) < LOST_XMAX ? `<button class="sk-b g" data-a="lostx" style="margin:0 0 6px;padding:4px 10px;font-size:12px">칸 +${LOST_STEP} 늘리기 · ${lostXCost(P)}G (지금 ${P.gold}G)</button>` : ''}<div class="sk-grid">${[...Array(lostCap(P))].map((_, i) => cell((P.lost || [])[i], 'l' + i)).join('')}</div>` : `<div class="sk-grid">${[...Array(STASH_N)].map((_, i) => cell(S[i], 's' + i)).join('')}</div>`}</div></div>${TOAST}</div>`; }
 function drinkWell() { const P = G.P; P.hp = P.mhp; P.wind = P.mwind; P.buf.well = 120; G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .6, c: '#9fe4ff' }, { k: 'ring', x: P.x, y: P.y, r: 1.4, t: 0, life: .4, c: '#bfe8ff' }); sfx('lvl'); say('시원한 우물물! 생명·바람이 가득 차고, 2분 동안 생명이 천천히 차올라요', '#9fe4ff', 1); }
 function townNear(P, Wd) { if (Wd.stashAt && hyp(P.x - Wd.stashAt[0], P.y - Wd.stashAt[1]) < 1.6) return { k: 'stash', label: '내 집 창고 열기' }; if (Wd.wellAt && hyp(P.x - Wd.wellAt[0], P.y - Wd.wellAt[1]) < 1.5) return { k: 'well', label: '우물물 마시기' }; return null; }
 
@@ -2031,7 +2051,9 @@ function draw() {
   x.textAlign = 'center';
   drawTownMarks();
   { const LB = []; // 이름표: 겹치면 위로 비켜 쌓기
-    for (const d of G.drops) { if (!vis(d.x, d.y) || d.gold) continue; const [sx, sy] = iso(d.x, d.y), it = d.it, eq = !it.g, hi = eq && it.r >= 2; x.font = (hi ? '800 11px' : '600 10px') + ' system-ui'; const tag = eq && it.r >= 1 ? '[' + RAR[it.r].n + '] ' : '', s = tag + itemName(it), w = x.measureText(s).width + 10, hh = hi ? 16 : 14; LB.push({ sx, ty: sy - 24 - (hi ? 2 : 0), w, hh, s, it, eq, hi }); }
+    // 가까운 것부터 LB_MAX 개만(겹침 비키기가 개수²이라 많으면 느려짐). 글자·폭은 물건마다 한 번만 잼.
+    const DV = []; for (const d of G.drops) if (!d.gold && vis(d.x, d.y)) DV.push([hyp(d.x - P.x, d.y - P.y), d]); if (DV.length > LB_MAX) { DV.sort((a, b) => a[0] - b[0]); DV.length = LB_MAX; }
+    for (const [, d] of DV) { const [sx, sy] = iso(d.x, d.y), it = d.it, eq = !it.g, hi = eq && it.r >= 2; if (!d.lb) { x.font = (hi ? '800 11px' : '600 10px') + ' system-ui'; const tag = eq && it.r >= 1 ? '[' + RAR[it.r].n + '] ' : '', s = tag + itemName(it); d.lb = [s, x.measureText(s).width + 10]; } LB.push({ sx, ty: sy - 24 - (hi ? 2 : 0), w: d.lb[1], hh: hi ? 16 : 14, s: d.lb[0], it, eq, hi }); }
     LB.sort((a, b) => b.ty - a.ty); for (let i = 0; i < LB.length; i++) { const a = LB[i]; for (let k = 0; k < 8; k++) { let hit = 0; for (let j = 0; j < i; j++) { const o = LB[j]; if (Math.abs(o.sx - a.sx) < (o.w + a.w) / 2 + 2 && a.ty < o.ty + o.hh + 1 && a.ty + a.hh > o.ty - 1) { a.ty = o.ty - a.hh - 2; hit = 1; } } if (!hit) break; } }
     for (const a of LB) { x.font = (a.hi ? '800 11px' : '600 10px') + ' system-ui'; x.fillStyle = 'rgba(20,16,10,.8)'; rr(a.sx - a.w / 2, a.ty, a.w, a.hh, 4); x.fill(); if (a.eq && a.it.r >= 1) { x.strokeStyle = itemColor(a.it); x.lineWidth = a.hi ? 1.6 : 1; x.stroke(); } x.fillStyle = itemColor(a.it); x.fillText(a.s, a.sx, a.ty + a.hh - 3.5); } }
   for (const t of G.txt) { const [sx, sy] = iso(t.x, t.y), a = Math.min(1, (1 - t.t) * 2.2), sc = t.pop ? 1 + Math.max(0, .18 - t.t) * (t.big ? 6 : 3.5) : 1; x.globalAlpha = a; x.font = (t.big ? '900 19px ' : t.small ? '700 10px ' : '800 14px ') + 'system-ui'; x.lineWidth = t.big ? 4 : 3; x.strokeStyle = t.big ? 'rgba(90,30,0,.9)' : 'rgba(30,20,10,.8)';
@@ -2195,6 +2217,7 @@ function drawMob(m) {
     if (m.elite) { x.font = '700 9px system-ui'; x.textAlign = 'center'; x.fillStyle = m.E[1]; x.strokeStyle = 'rgba(20,14,10,.8)'; x.lineWidth = 2.5; const s = m.E[0] + ' ' + D.n; x.strokeText(s, sx, top - 4); x.fillText(s, sx, top - 4); } }
   if (m.stun > 0 && !m.dead) { x.fillStyle = '#ffe08a'; for (let i = 0; i < 3; i++) { const a2 = G.t * 5 + i * TAU / 3; x.beginPath(); x.arc(sx + Math.cos(a2) * 9, sy - c[3] * .42 + Math.sin(a2) * 3, 2, 0, TAU); x.fill(); } }
 }
+const LB_MAX = 24;
 function drawDrop(d) {
   const [sx, sy] = iso(d.x, d.y), b = Math.max(0, .35 - d.t) * 60;
   if (d.gold) { x.fillStyle = '#ffd166'; x.strokeStyle = '#8a6a1a'; x.lineWidth = 1; for (let i = 0; i < Math.min(4, 1 + d.gold / 10); i++) { x.beginPath(); x.ellipse(sx - 4 + i * 3, sy - 3 - b - i * 1.5, 4, 2.4, 0, 0, TAU); x.fill(); x.stroke(); } return; }
@@ -2985,7 +3008,7 @@ function render(arg) {
   else if (k === 'rank') h = rankHtml(X);
   panel.innerHTML = h; bindPanel(arg);
   if (k === 'inv') fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 'b' ? SHOP[+c.slice(1)] : null);
-  if (k === 'stash') fillIcons(c => c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 's' ? (P.stash || [])[+c.slice(1)] : null);
+  if (k === 'stash') fillIcons(c => c[0] === 'i' ? P.inv[+c.slice(1)] : c[0] === 's' ? (P.stash || [])[+c.slice(1)] : c[0] === 'l' ? (P.lost || [])[+c.slice(1)] : null);
   if (k === 'char') { fillIcons(c => c[0] === 'e' ? P.eq[c.slice(1)] : null); panel.querySelectorAll('[data-po]').forEach(el => el.replaceWith(portrait(el.dataset.po, 150))); }
   if (k === 'map') drawMap(panel.querySelector('[data-map]'));
   if (k === 'board') CONF = null;
@@ -3064,11 +3087,13 @@ function bindPanel(arg) {
     if (t.dataset.sk) { SEL = t.dataset.sk; render(); return; }
     if (SEL && SEL[0] === 'i' && ['eq', 'drop', 'sell', 'lookit', 'ench', 'reroll', 'salv'].includes(a)) SEL = 'i' + single(+SEL.slice(1));
     if (a === 'x') { closePanel(); if (PANEL === null && G && G.endNext) { G.endNext = 0; openPanel('end'); } return; }
+    if (a === 'stv') { STV = t.dataset.v; render(); return; }
+    if (a === 'lostx') { const m = stashMove('lostx'); render(); if (m) toast(m); return; }
     if (a === 'eq') { equip(+SEL.slice(1)); SEL = null; render(); }
     else if (a === 'uneq') { unequip(SEL.slice(1)); SEL = null; render(); }
     else if (a === 'nosel') { SEL = null; render(); }
     else if (a === 'use') { const it = P.inv[+SEL.slice(1)]; drink(it.g); if (!P.inv.includes(it)) SEL = null; render(); }
-    else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
+    else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1, mine: 1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
     else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
     else if (a === 'selljunk') { let g = 0; P.inv = P.inv.filter(it => { if (!it.g && it.r === 0 && !it.lk) { g += priceOf(it) * (it.n || 1); return false; } return true; }); P.gold += g; SEL = null; sfx('coin'); render(); toast(g + 'G 받았어요'); }
