@@ -44,6 +44,7 @@ a{color:var(--acc)}
 <p class="lead">The great wind has stopped. The bridges between the sky islands have snapped, and the islands are slowly sinking into the sea of clouds. You are a <b>Mender</b>, who joins broken paths again. A free <b>isometric loot action RPG</b> that runs right in your browser, no install, no sign-up.</p>
 <div class="cab" id="cab"><img src="/img/sky-poster.jpg{{POSTERV}}" alt="Broken Sky gameplay: a Shieldkeeper fighting flufflings on a floating dandelion island" width="1280" height="720"><button class="go" type="button" id="go">▶ Play</button><p class="st">PC: keyboard + mouse · Phone: turn sideways for touch controls</p></div>
 <p id="msg" class="muted"></p>
+<!--SHOP--><!--GUIDE-->
 <div class="card">🧪 <b>This is an open beta</b> made by a tiny indie team. Use <b>“💬 Send beta feedback”</b> in the menu (≡), or the button at the end of each chapter. Your chapter and level are sent along, which helps a lot. Every piece of feedback is read.</div>
 <h2>What's inside</h2>
 <ul>
@@ -68,13 +69,14 @@ a{color:var(--acc)}
 </ul>
 <p class="muted">Broken Sky's world, classes, monsters, skills, items and systems are original designs by 5raksil. Some character, building and tree art is re-rendered by 5raksil from Kay Lousberg's free CC0 KayKit 3D models (Adventurers, Medieval Hexagon); monsters and items were modeled in 3D by 5raksil. The game was originally written in Korean; if a translation reads oddly, please tell us through the feedback button.</p>
 </main>
+<!--BONUSJS-->
 <script>
 (function(){
 var $=function(id){return document.getElementById(id)},game=null,loading=null;
 function load(){if(window.SkyGame)return Promise.resolve();if(loading)return loading;loading=new Promise(function(ok,no){var s=document.createElement('script');s.src='/js/sky-en.js{{SKYV}}';s.onload=ok;s.onerror=function(){loading=null;no()};document.head.appendChild(s)});return loading}
 var CLS={warden:'Shieldkeeper',drifter:'Wandering Blade',windcaller:'Windcaller',trapper:'Trapper',ringer:'Bellringer'};
-function boot(){if(game)return game;game=SkyGame.boot({onExit:function(r){$('go').textContent='▶ Continue';if(r)$('msg').textContent='Saved: '+(CLS[r.cls]||'')+' Lv '+r.lv}});return game}
-async function go(){if(!game){$('go').textContent='Loading…';try{await load()}catch(e){$('msg').textContent='Could not load the game. Please refresh and try again.';$('go').textContent='▶ Play';return}boot()}game.open()}
+function boot(){if(game)return game;game=SkyGame.boot({bonus:window.Bonus,onExit:function(r){$('go').textContent='▶ Continue';if(window.Bonus)Bonus.render();if(r)$('msg').textContent='Saved: '+(CLS[r.cls]||'')+' Lv '+r.lv}});return game}
+async function go(){if(!game){$('go').textContent='Loading…';try{await load()}catch(e){$('msg').textContent='Could not load the game. Please refresh and try again.';$('go').textContent='▶ Play';return}boot()}if(window.Bonus)Bonus.played('sky');game.open()}
 $('cab').onclick=go;
 })();
 </script>

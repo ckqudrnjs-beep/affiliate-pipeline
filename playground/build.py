@@ -1157,6 +1157,69 @@ const d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);if(localStorage.
 setTimeout(function(){try{if(document.visibilityState==='hidden')return;localStorage.setItem('nr_vday',d);fetch('/api/visit',{method:'POST',keepalive:true}).catch(function(){})}catch(e){}},1500)}catch(e){}})();"""
 
 
+# 영어판 짝(2026-11-16 BK: 레딧 영어권 유입). 한국어 경로 → 영어 경로. build() 가 실제로 만든 것만 채운다.
+EN_ALT: dict[str, str] = {}
+
+# 끊어진 하늘 영어판 아이템 이름(겉모습만, 사는 법·가격·열쇠는 GAME_ITEMS 와 같다)
+SKY_ITEM_EN = {"au": "Aura", "tr": "Footstep trail", "wind": "Wind Ring", "bloom": "Petal Ring", "sun": "Golden Halo", "feather": "Feather Trail", "star": "Stardust Trail"}
+
+# 영어판 /en/sky 용 작은 코인 지갑: 한국어판 Bonus 와 같은 저장(localStorage nr_bonus)·같은 열쇠(g:sky:au:wind, gi["sky:au"])를 쓰므로 코인과 산 스킨이 공유된다.
+# 받는 법: 하루 출석 🪙1(7일째 🪙2, 연속 출석·보호권 규칙도 한국어판과 같음) + 이 게임 첫 플레이 🪙1. 현금·뽑기·거래 없음.
+SKY_EN_BONUS_JS = r"""
+window.Bonus=(function(){const K='nr_bonus',day=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);let s={};
+function ld(){try{s=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){s={}}s.coins=Math.max(0,Math.min(BONUS_MAX,+s.coins||0));s.days=+s.days||0;s.streak=+s.streak||0;s.ach=s.ach||{};s.own=s.own||{};s.shield=Math.max(0,Math.min(SHIELD[1],+s.shield||0));return s}
+function sv(){try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}}
+function add(n){const b=s.coins;s.coins=Math.min(BONUS_MAX,s.coins+n);return s.coins-b}
+const own=(k,p)=>p<=0||!!s.own[k],yday=()=>new Date(Date.parse(day()+'T00:00:00Z')-864e5).toISOString().slice(0,10);
+const B={coins:()=>ld().coins,done:()=>ld().last===day(),
+ checkin(){ld();if(s.last===day())return -1;let keep=s.last===yday();
+  if(!keep&&s.last&&s.shield>0){const miss=Math.round((Date.parse(day())-Date.parse(s.last))/864e5)-1;if(miss>0&&miss<=s.shield){s.shield-=miss;keep=true}}
+  s.streak=keep?s.streak+1:1;s.days++;s.last=day();const g=add(s.streak%7===0?2:1);sv();B.toast('🎁 Daily check-in! 🪙 +'+g+' (streak '+s.streak+')');B.render();return g},
+ spend(n){n=n||1;ld();if(s.coins<n)return false;s.coins-=n;sv();B.render();return true},
+ played(g){ld();if(s.ach['f'+g])return;s.ach['f'+g]=1;const n=add(1);sv();B.toast('🎮 First play bonus! 🪙 +'+n);B.render()},
+ gitem(g,k){ld();const id=(s.gi||{})[g+':'+k],d=GITEMS.find(x=>x.g===g&&x.k===k&&x.id===id);return d&&own('g:'+g+':'+k+':'+id,d.p)?id:''},
+ setGitem(g,k,id){ld();if(id){const d=GITEMS.find(x=>x.g===g&&x.k===k&&x.id===id);if(!d)return false;if(!own('g:'+g+':'+k+':'+id,d.p)){if(s.coins<d.p){B.toast('🪙 '+(d.p-s.coins)+' more coins needed');return false}s.coins-=d.p;s.own['g:'+g+':'+k+':'+id]=1;B.toast('✨ Got '+d.en+'! (🪙 -'+d.p+')')}}
+  s.gi=s.gi||{};if(id)s.gi[g+':'+k]=id;else delete s.gi[g+':'+k];sv();B.render();return true},
+ toast(t){const d=document.createElement('div');d.className='btoast';d.textContent=t;(document.fullscreenElement||document.body).appendChild(d);setTimeout(()=>d.remove(),2600)},
+ render(){ld();document.querySelectorAll('.gsc').forEach(e=>e.textContent=s.coins);const el=document.getElementById('gshop');if(!el)return;const g=el.dataset.g,ks=[...new Set(GITEMS.filter(d=>d.g===g).map(d=>d.k))];
+  let h='<p class="muted">Cosmetic only: no effect on stats or hits. Coins are free: 🪙1 for each daily check-in (🪙2 every 7th day in a row) and 🪙1 for your first play. Coins and cosmetics are shared with the Korean site in this browser. No real money.</p>';
+  h+=B.done()?'<p class="muted">✅ Checked in today. Come back tomorrow for another coin.</p>':'<p><button type="button" class="gsb-b p" data-ci="1">🎁 Daily check-in: 🪙 +1</button></p>';
+  for(const k of ks){const L=GITEMS.filter(d=>d.g===g&&d.k===k),cur=B.gitem(g,k);h+='<h4>'+L[0].kn+'</h4><div class="gsi">'+[{id:'',icon:'⚪',en:'Default',p:0}].concat(L).map(d=>{const o=!d.id||own('g:'+g+':'+k+':'+d.id,d.p),sel=cur===d.id;
+   return '<button type="button" data-k="'+k+'" data-i="'+d.id+'" class="'+(sel?'sel':o?'':'lock')+'"><span>'+d.icon+'</span><b>'+d.en+'</b><small>'+(sel?'In use':o?'Use':'<span class="pr">🪙 '+d.p+'</span>'+(s.coins<d.p?' not enough':' buy'))+'</small></button>'}).join('')+'</div>'}
+  el.querySelector('.gsb').innerHTML=h}};
+document.addEventListener('click',e=>{const t=e.target.closest('#gshop button');if(!t)return;if(t.dataset.ci)B.checkin();else B.setGitem(document.getElementById('gshop').dataset.g,t.dataset.k,t.dataset.i)});
+B.render();return B})();
+"""
+
+SKY_EN_SHOP_CSS = (".gshop{margin:14px 0;border:2px solid #e8b05a;border-radius:14px;background:var(--card);padding:0 12px}.gshop summary{cursor:pointer;padding:11px 0;font-weight:800;list-style:none}.gshop summary::-webkit-details-marker{display:none}.gshop summary small{color:var(--mute);font-weight:400}"
+                   ".gshop h4{margin:10px 0 6px;font-size:14px}.gshop .gsi{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin-bottom:10px}"
+                   ".gshop .gsi button,.gsb-b{font:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:center}"
+                   ".gsb-b{display:inline-block;padding:8px 14px;font-weight:700;border-color:#e8b05a}.gshop .gsi button span{font-size:24px;line-height:1.2}.gshop .gsi button b{font-size:12.5px}.gshop .gsi button small{font-size:11px;color:var(--mute)}.gshop .gsi button .pr{color:#b0702a;font-weight:800}"
+                   ".gshop .gsi button.lock{border-style:dashed}.gshop .gsi button.sel{border-color:#e8b05a;box-shadow:0 0 10px #e8b05a66}"
+                   ".btoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#3a2e22;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:99999;box-shadow:0 4px 16px #0006;max-width:90vw;text-align:center}"
+                   ".gcard{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:2px solid var(--acc);border-radius:12px;padding:12px 14px;margin:14px 0}.gcard b{color:var(--acc)}"
+                   ".gtoc{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 18px}.gtoc ol{margin:6px 0 0;padding-left:20px}.gtoc a{color:var(--ink)}"
+                   ".gbody h3{margin:18px 0 6px;font-size:17px}.gbody p{line-height:1.75}.gtip{border-left:4px solid #e8b05a;background:#e8b05a1a;border-radius:8px;padding:10px 12px;margin:12px 0;line-height:1.7}"
+                   ".gtw{overflow-x:auto;margin:12px 0}.gt{border-collapse:collapse;width:100%;font-size:14px}.gt th,.gt td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}.gt th{background:var(--card);white-space:nowrap}"
+                   ".btn{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;font-weight:800;padding:10px 18px;border-radius:12px}")
+
+
+def load_en_guides() -> list[dict]:
+    """guides/en/<slug>.md: 한국어 공략의 영어판(같은 앞머리, ko: 짝 한국어 공략 slug). 한국어 공략과 같은 깊이 기준(얇은 페이지 금지)."""
+    out = []
+    for f in sorted((HERE / "guides" / "en").glob("*.md")) if (HERE / "guides" / "en").exists() else []:
+        m = re.match(r"---\n(.*?)\n---\n(.*)", f.read_text(encoding="utf-8"), re.S)
+        if not m:
+            raise ValueError(f"guides/en/{f.name}: 앞머리 없음")
+        meta = dict(re.match(r"(\w+):\s*(.*)", ln).groups() for ln in m.group(1).splitlines() if ln.strip())
+        body, toc = md_html(m.group(2))
+        text = re.sub(r"<[^>]+>", "", body)
+        if len(text) < GUIDE_MIN_CHARS * 2 or len(toc) < GUIDE_MIN_H2:  # 영어는 같은 내용이 한글보다 글자 수가 2배쯤 많다
+            raise ValueError(f"guides/en/{f.name}: 본문 {len(text)}자·소제목 {len(toc)}개 — 너무 얇음")
+        out.append({**meta, "slug": f.stem, "body": body, "toc": toc})
+    return out
+
+
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
@@ -1175,6 +1238,9 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
         verify += f'<meta name="google-site-verification" content="{esc(cfg["googleSiteVerification"])}">'
     if noindex:
         head += '<meta name="robots" content="noindex,follow">'
+    if path in EN_ALT:  # 영어판이 있는 페이지는 한·영 hreflang 짝(영어판 쪽도 같은 짝을 단다)
+        b0 = cfg["baseUrl"].rstrip("/")
+        head += f'<link rel="alternate" hreflang="ko" href="{esc(url)}"><link rel="alternate" hreflang="en" href="{esc(b0 + "/" + EN_ALT[path])}">'
     for x in jsonld or []:
         head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
     ad = ad_slot(cfg)
@@ -1232,6 +1298,13 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
     grid = game_grid(games)
     trial = trial_box([g for g in allgames if g.get("hidden")])
     guides = load_guides(allgames)
+    en_guides = load_en_guides()
+    EN_ALT.clear()
+    if (HERE / "games/sky/en.html").exists() and (HERE / "static/js/sky-en.js").exists():
+        EN_ALT["games/sky"] = "en/sky"
+        for eg in en_guides:
+            if eg.get("ko") and any(x["slug"] == eg["ko"] for x in guides):
+                EN_ALT[f"guide/{eg['ko']}"] = f"en/guide/{eg['slug']}"
     games_by = {g["slug"]: g for g in allgames}
     gguide = {x["game"]: x for x in guides if x.get("game")}
     write("", f"{cfg['siteName']} | 오늘의 밸런스게임·틀린그림찾기·미니게임", cfg["description"],
@@ -1436,7 +1509,40 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         sky_og = "og/sky-en.jpg" if (HERE / "static/og/sky-en.jpg").exists() else "og/sky.jpg"
         (out / "en").mkdir(exist_ok=True)
         v = lambda rel: (f"?v={static_ver(rel)}" if static_ver(rel) else "")
-        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("{{SKYV}}", v("js/sky-en.js")).replace("/img/sky-poster.jpg{{POSTERV}}", f"/{sky_poster}{v(sky_poster)}").replace("/og/sky.jpg{{OGV}}", f"/{sky_og}{v(sky_og)}")
+        en_style = re.search(r"<style>(.*?)</style>", (HERE / "games/sky/en.html").read_text(encoding="utf-8"), re.S).group(1)
+        sky_eg = next((eg for eg in en_guides if eg.get("game") == "sky" and f"guide/{eg.get('ko')}" in EN_ALT), None)
+        # 영어 공략 /en/guide/<slug> (2026-11-16 BK): 한국어 공략의 영어판, hreflang 짝. 광고 없이 en.html 과 같은 모양.
+        for eg in en_guides:
+            if f"guide/{eg.get('ko')}" not in EN_ALT:
+                continue
+            (out / "en" / "guide").mkdir(parents=True, exist_ok=True)
+            u_en, u_ko = f"{base}/en/guide/{eg['slug']}", f"{base}/guide/{eg['ko']}"
+            toc = '<div class="gtoc" role="navigation" aria-label="Contents"><b>Contents</b><ol>' + "".join(f'<li><a href="#{i}">{esc(t)}</a></li>' for i, t in eg["toc"]) + "</ol></div>"
+            play = '<p><a class="btn" href="/en/sky">▶ Play Broken Sky free</a> <small class="muted">In your browser, no install, no sign-up</small></p>'
+            u = eg["updated"]
+            ld = {"@context": "https://schema.org", "@type": "Article", "headline": eg["title"], "description": eg["description"], "inLanguage": "en",
+                  "datePublished": eg.get("published", u), "dateModified": u, "author": {"@type": "Organization", "name": "5raksil", "url": base + "/about"},
+                  "publisher": {"@type": "Organization", "name": "5raksil"}, "mainEntityOfPage": u_en, "about": {"@type": "VideoGame", "name": "Broken Sky", "url": base + "/en/sky"}}
+            ld_s, ud = json.dumps(ld, ensure_ascii=False).replace("</", "<\\/"), date.fromisoformat(u)
+            (out / "en" / "guide" / f"{eg['slug']}.html").write_text(
+                f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                f'<title>{esc(eg["title"])} | 5raksil</title><meta name="description" content="{esc(eg["description"])}"><link rel="canonical" href="{u_en}">'
+                f'<link rel="alternate" hreflang="en" href="{u_en}"><link rel="alternate" hreflang="ko" href="{u_ko}">'
+                f'<meta property="og:title" content="{esc(eg["title"])}"><meta property="og:description" content="{esc(eg["description"])}"><meta property="og:url" content="{u_en}"><meta property="og:type" content="article">'
+                f'<meta property="og:image" content="{base}/{sky_og}{v(sky_og)}"><meta property="og:locale" content="en_US"><meta name="twitter:card" content="summary_large_image"><link rel="icon" href="/apple-touch-icon.png">'
+                f'<script type="application/ld+json">{ld_s}</script><style>{en_style}{SKY_EN_SHOP_CSS}</style></head><body><main>'
+                f'<header><a href="/en/sky">← Broken Sky</a><a href="/guide/{eg["ko"]}" hreflang="ko">한국어</a></header>'
+                f'<h1>{esc(eg["title"])}</h1><p class="muted">By the 5raksil developer · updated {ud:%B} {ud.day}, {ud.year}</p>'
+                f'<p class="lead">{esc(eg["description"])}</p>{play}{toc}<div class="gbody">{eg["body"]}</div>{play}</main>'
+                f'<script>var VH={json.dumps(urlparse(cfg["baseUrl"]).hostname)};{VISIT_JS}</script></body></html>', encoding="utf-8")
+            sm += f"<url><loc>{u_en}</loc><lastmod>{lm}</lastmod></url>"
+        gcard = (f'<a class="gcard" href="/en/guide/{sky_eg["slug"]}">📖 <b>{esc(sky_eg["title"])}</b><br><small class="muted">{esc(sky_eg["description"])}</small></a>' if sky_eg else "")
+        sky_items = [{**d, "en": SKY_ITEM_EN.get(d["id"], d["name"]), "kn": SKY_ITEM_EN.get(d["k"], d["kn"])} for d in GAME_ITEMS if d["g"] == "sky"]
+        shop = ('<details id="gshop" class="gshop" data-g="sky"><summary>🛒 Cosmetics shop for this game <small>· 🪙 <b class="gsc">0</b> · tap to open</small></summary><div class="gsb"></div></details>'
+                if sky_items else "")
+        shop_js = (f"<script>const BONUS_MAX={BONUS_MAX_COINS},SHIELD=[{SHIELD_PRICE},{SHIELD_MAX}],GITEMS={json.dumps(sky_items, ensure_ascii=False)};{SKY_EN_BONUS_JS}</script>" if sky_items else "")
+        (out / "en" / "sky.html").write_text((HERE / "games/sky/en.html").read_text(encoding="utf-8").replace("</style>", SKY_EN_SHOP_CSS + "</style>", 1)
+                                         .replace("<!--SHOP-->", shop).replace("<!--GUIDE-->", gcard).replace("<!--BONUSJS-->", shop_js).replace("{{SKYV}}", v("js/sky-en.js")).replace("/img/sky-poster.jpg{{POSTERV}}", f"/{sky_poster}{v(sky_poster)}").replace("/og/sky.jpg{{OGV}}", f"/{sky_og}{v(sky_og)}")
                                          # 순 방문자 신호(11/16): 이 페이지는 page()를 안 거쳐서 빠져 있었다 → 레딧 유입이 관리자 방문자 수에 안 잡혔음
                                          .replace("</body>", f'<script>var VH={json.dumps(urlparse(cfg["baseUrl"]).hostname)};{VISIT_JS}</script></body>', 1), encoding="utf-8")
         sm += f"<url><loc>{base}/en/sky</loc><lastmod>{lm}</lastmod></url>"
