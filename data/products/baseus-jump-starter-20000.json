@@ -16,6 +16,5 @@
  "check": "내 차 배기량(디젤 대형 SUV는 출력 확인), 집게 케이블 구성, 보관 온도",
  "commission": 7.0,
  "status": "active",
- "addedDate": "2026-11-10",
- "missingDays": 1
+ "addedDate": "2026-11-10"
 }
