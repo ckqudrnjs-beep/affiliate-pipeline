@@ -1,0 +1,299 @@
+<section class="d3c-diet">
+
+  <!-- Household Size & Preset Selector -->
+  <div class="top-bar">
+    <div class="lbl">
+      👨‍👩‍👧 가구원 수 기준 선택 <small>가구원 수에 맞춰 적정 기준선과 기본값이 자동으로 조정됩니다</small>
+    </div>
+    <div class="preset-btns" id="hhPresets">
+      <button type="button" class="pbtn" data-hh="1" aria-pressed="true">1인 가구 (자취·독립)</button>
+      <button type="button" class="pbtn" data-hh="2" aria-pressed="false">2인 가구 (신혼·부부)</button>
+      <button type="button" class="pbtn" data-hh="3" aria-pressed="false">3인 가구</button>
+      <button type="button" class="pbtn" data-hh="4" aria-pressed="false">4인 이상 가구</button>
+    </div>
+  </div>
+
+  <div class="calc-grid">
+    <!-- Left: Fixed Expense Inputs -->
+    <div class="form-card">
+      <h2>한 달 고정 지출 입력</h2>
+
+      <!-- 1. 통신비 -->
+      <div class="item-box">
+        <div class="item-head">
+          <b>📱 통신비 (휴대폰 요금 + 인터넷·TV)</b>
+          <span class="badge" id="bdg-telecom">적정 수준</span>
+        </div>
+        <div class="input-row">
+          <input type="range" id="rng-telecom" min="0" max="350000" step="5000" value="85000" aria-label="통신비 슬라이더">
+          <div class="num-wrap">
+            <input type="number" id="num-telecom" min="0" max="1000000" step="1000" value="85000" aria-label="통신비 금액">
+            <span>원</span>
+          </div>
+        </div>
+        <div class="sub-opts">
+          <span id="benchmark-telecom">1인 가구 점검 기준선: 월 45,000원</span>
+          <label>현재 요금제 형태:
+            <select id="opt-telecom">
+              <option value="carrier">통신 3사 일반 요금제</option>
+              <option value="contract">통신 3사 + 선택약정(25% 요금할인)·가족결합 적용 중</option>
+              <option value="mvno">알뜰폰(MVNO) 사용 중</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. 구독료 -->
+      <div class="item-box">
+        <div class="item-head">
+          <b>📺 정기 구독료 (OTT·음원·쇼핑 멤버십·앱)</b>
+          <span class="badge" id="bdg-sub">점검 필요</span>
+        </div>
+        <div class="input-row">
+          <input type="range" id="rng-sub" min="0" max="150000" step="2000" value="38000" aria-label="구독료 슬라이더">
+          <div class="num-wrap">
+            <input type="number" id="num-sub" min="0" max="500000" step="1000" value="38000" aria-label="구독료 금액">
+            <span>원</span>
+          </div>
+        </div>
+        <div class="sub-opts">
+          <span>영상·음악·멤버십 합산 금액</span>
+          <label>유료 구독 개수:
+            <select id="opt-sub">
+              <option value="1">1~2개 (꼭 쓰는 것만)</option>
+              <option value="3" selected>3~4개 (일부 중복)</option>
+              <option value="5">5개 이상 (안 보는 구독 포함)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. 보험료 -->
+      <div class="item-box">
+        <div class="item-head">
+          <b>🛡️ 보장성 보험료 (실손·종합·운전자·자녀보험)</b>
+          <span class="badge" id="bdg-ins">적정 수준</span>
+        </div>
+        <div class="input-row">
+          <input type="range" id="rng-ins" min="0" max="600000" step="10000" value="160000" aria-label="보험료 슬라이더">
+          <div class="num-wrap">
+            <input type="number" id="num-ins" min="0" max="2000000" step="5000" value="160000" aria-label="보험료 금액">
+            <span>원</span>
+          </div>
+        </div>
+        <div class="sub-opts">
+          <span id="benchmark-ins">저축성 제외한 순수 보장성 보험 기준</span>
+          <label>특약 점검 여부:
+            <select id="opt-ins">
+              <option value="unchecked" selected>가입 후 한 번도 정리 안 함</option>
+              <option value="checked">최근 2년 내 중복 특약 정리함</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- 4. 관리비·공과금 -->
+      <div class="item-box">
+        <div class="item-head">
+          <b>💡 관리비·공과금 (전기·도시가스·수도·아파트 관리비)</b>
+          <span class="badge" id="bdg-util">적정 수준</span>
+        </div>
+        <div class="input-row">
+          <input type="range" id="rng-util" min="0" max="500000" step="10000" value="150000" aria-label="관리비 슬라이더">
+          <div class="num-wrap">
+            <input type="number" id="num-util" min="0" max="1500000" step="5000" value="150000" aria-label="관리비 금액">
+            <span>원</span>
+          </div>
+        </div>
+        <div class="sub-opts">
+          <span>연평균 월 납부액 기준</span>
+          <label>에너지 환급·할인 신청:
+            <select id="opt-util">
+              <option value="none" selected>에너지 캐시백 등 절약 혜택 안 알아봄</option>
+              <option value="done">에너지 캐시백 등 이미 신청·적용 중</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- 5. 대출이자·할부 수수료 -->
+      <div class="item-box">
+        <div class="item-head">
+          <b>🏦 대출이자·카드 할부 수수료 (주담대·전세·신용·할부)</b>
+          <span class="badge" id="bdg-loan">점검 필요</span>
+        </div>
+        <div class="input-row">
+          <input type="range" id="rng-loan" min="0" max="1500000" step="10000" value="250000" aria-label="대출이자 슬라이더">
+          <div class="num-wrap">
+            <input type="number" id="num-loan" min="0" max="5000000" step="10000" value="250000" aria-label="대출이자 금액">
+            <span>원</span>
+          </div>
+        </div>
+        <div class="sub-opts">
+          <span>원금 상환액 제외 · 순수 이자 및 수수료</span>
+          <label>평균 금리 수준:
+            <select id="opt-loan">
+              <option value="low">연 3~4%대 (저금리·정책자금)</option>
+              <option value="mid" selected>연 5~6%대 (일반 신용·주담대)</option>
+              <option value="high">연 7% 이상 또는 유이자 카드할부 포함</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Uncle's Diet Receipt -->
+    <div class="fc-rcpt-col">
+      <div class="fc-rcpt" aria-live="polite">
+        <div class="r-top">
+          <b>🧾 고정비 다이어트 진단 영수증</b>
+          <small id="rcpMeta">1인 가구 기준 · 단위: 원</small>
+        </div>
+
+        <div id="rcpRows"></div>
+
+        <div class="r-divider"></div>
+        <div class="r-row">
+          <span class="k">현재 한 달 고정비 합계</span>
+          <span class="v" id="rcpCurMonth">0원</span>
+        </div>
+        <div class="r-row">
+          <span class="k">다이어트 후 고정비</span>
+          <span class="v" id="rcpTargetMonth">0원</span>
+        </div>
+
+        <div class="r-sum">
+          <div class="r-row">
+            <span class="k" style="color:var(--green);font-weight:600">한 달 아낄 수 있는 돈</span>
+            <span class="save-v" id="rcpSaveMonth">0원</span>
+          </div>
+          <div class="big">
+            <span>1년이면 총 절약</span>
+            <b id="rcpSaveYear">0원</b>
+          </div>
+          <div class="r-row">
+            <span class="k">매달 적금에 넣으면 3년 뒤 (연 3.5% 단리·세전)</span>
+            <span class="v" id="rcpSave3Yr">0원</span>
+          </div>
+        </div>
+
+        <div class="verdict-banner" id="rcpVerdict">
+          진단 결과를 불러오는 중입니다.
+        </div>
+        <p class="note">절약액은 아래 기준선과 고른 상황으로 어림한 <b>대략적인 추정치</b>예요. 실제 금액은 요금제·약관·금리 조건에 따라 달라집니다.</p>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn main" id="btnSavePng">🖼️ 영수증 이미지 저장</button>
+        <button type="button" class="btn" id="btnCopyText">📋 진단 결과 복사</button>
+      </div>
+      <canvas id="receiptCanvas" width="640" height="840" hidden></canvas>
+    </div>
+  </div>
+
+  <!-- Personalized Short Action Tips by Category -->
+  <div class="prescription">
+    <h2>항목별 고정비 줄이는 처방전</h2>
+    <p class="sub">추정 절감액이 큰 순서대로 정렬했어요. 위에서부터 하나씩만 실행해 보세요.</p>
+    <div class="tip-cards" id="tipCards"></div>
+  </div>
+
+  <!-- How to Use & Reference Guide Article -->
+  <section id="guide-sec">
+    <div class="sechead">
+      <h2>사용법과 고정비 점검 기준</h2>
+      <span>한 번 줄이면 매달 자동으로 남는 돈</span>
+    </div>
+
+    <div class="article">
+      <h3>1. 왜 생활비보다 '고정비'부터 줄여야 할까요?</h3>
+      <p>식비나 커피값을 아끼려면 매일 참아야 해서 요요 현상(보복 소비)이 오기 쉽습니다. 반면 <b>통신비·구독료·보험료·관리비·대출이자</b> 같은 고정비는 주말에 딱 30분만 시간을 내어 요금제를 바꾸거나 해지해 두면, 그다음 달부터는 신경 쓰지 않아도 <b>매달 같은 금액이 자동으로 저축</b>됩니다.</p>
+
+      <h3>2. 가구원 수별 한 달 고정비 점검 기준선</h3>
+      <p>아래 표는 공식 통계가 아니라, 삼촌이 "이 정도를 넘으면 한 번 들여다볼 만하다"고 잡은 <b>점검 기준선</b>입니다. 사는 지역·집 크기·가족 나이에 따라 얼마든지 달라질 수 있으니 절대 기준이 아닌 출발점으로 봐 주세요. 대출은 기준선 없이 이자·수수료만 따로 봅니다.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>1인 가구</th>
+            <th>2인 가구</th>
+            <th>3인 가구</th>
+            <th>4인 이상</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>📱 통신비 (인터넷 포함)</b></td>
+            <td>45,000원 이하</td>
+            <td>85,000원 이하</td>
+            <td>115,000원 이하</td>
+            <td>145,000원 이하</td>
+          </tr>
+          <tr>
+            <td><b>📺 정기 구독료</b></td>
+            <td>15,000원 이하</td>
+            <td>22,000원 이하</td>
+            <td>28,000원 이하</td>
+            <td>32,000원 이하</td>
+          </tr>
+          <tr>
+            <td><b>🛡️ 보장성 보험료</b></td>
+            <td>90,000원 이하</td>
+            <td>170,000원 이하</td>
+            <td>240,000원 이하</td>
+            <td>300,000원 이하</td>
+          </tr>
+          <tr>
+            <td><b>💡 관리비·공과금</b></td>
+            <td>110,000원 이하</td>
+            <td>180,000원 이하</td>
+            <td>230,000원 이하</td>
+            <td>280,000원 이하</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>3. 항목별로 바로 써먹는 절약 방법 5가지</h3>
+      <ol>
+        <li><b>통신비:</b> 통신 3사의 <b>선택약정 요금할인은 월 요금의 25%</b>예요. 공시지원금을 받지 않고 산 휴대폰이거나 약정이 끝난 휴대폰이면 고객센터(114)나 통신사 앱에서 신청할 수 있어요. 같은 통신망을 빌려 쓰는 <b>알뜰폰(MVNO)</b>은 비슷한 데이터 양의 요금제가 더 싼 경우가 많으니, 최근 3개월 데이터 사용량을 보고 비교해 보세요. 인터넷·TV는 약정이 끝날 때 재약정 혜택을 꼭 물어보세요.</li>
+        <li><b>구독료:</b> 한 달에 두 번도 안 여는 OTT·앱은 해지하고, 보고 싶은 작품이 모였을 때 한 달만 다시 구독하는 '순환 구독'이 효과적이에요. 통신사 요금제나 카드 혜택에 이미 들어 있는 구독이 없는지도 확인하세요. 카드 명세서에서 '정기결제'만 모아 보면 잊은 구독이 잘 보입니다.</li>
+        <li><b>보험료:</b> 흔히 보장성 보험료는 월 소득의 10% 안쪽을 권하지만 가족 건강·나이에 따라 달라요. 통째로 해지하기보다 여러 보험에 겹친 특약(입원일당·수술비 등)을 찾아 <b>특약 일부 해지나 감액</b>을 먼저 알아보세요. 실손보험처럼 나이가 들면 다시 가입하기 어려운 보장은 해지 전에 꼭 한 번 더 확인하세요.</li>
+        <li><b>관리비·공과금:</b> 한전 <b>에너지캐시백</b>과 지역 도시가스사의 <b>절약 캐시백</b>은 지난해보다 덜 쓴 만큼 돌려받는 제도예요. 대상·기간·금액이 해마다 바뀌니 한전ON과 사는 지역 도시가스사 공지에서 확인하고 신청하세요. 주택용 전기요금은 사용량이 많을수록 단가가 올라가는 누진 구간이 있어서, 경계 근처에 있는 집은 대기전력만 줄여도 효과가 커요.</li>
+        <li><b>대출이자·할부 수수료:</b> 카드 할부 수수료·현금서비스·리볼빙은 보통 금리가 가장 높으니 여유 자금이 생기면 이것부터 갚으세요. 신용대출·주택담보대출은 금융사 앱이나 대출 비교 서비스에서 <b>대출 갈아타기(대환)</b>로 더 낮은 금리가 있는지 조회해 보고, 소득이 늘거나 신용점수가 올랐다면 <b>금리인하요구권</b>을 신청할 수 있어요. 중도상환수수료가 있는지 먼저 확인하세요.</li>
+      </ol>
+
+      <h3>4. 절약 추정액은 이렇게 계산해요</h3>
+      <p>항목마다 입력한 금액을 위 점검 기준선과 비교하고, 고른 상황(요금제 형태, 구독 개수, 특약 정리 여부, 캐시백 신청 여부, 금리 수준)에 따라 줄일 수 있는 몫을 어림합니다. 예를 들어 통신 3사 일반 요금제인데 기준선을 넘으면 넘는 금액의 85%까지, 선택약정·가족결합을 이미 쓰면 65%까지, 알뜰폰이면 40%까지만 줄일 수 있다고 보고 계산해요. 대출은 금리 수준에 따라 이자의 6~28%를 금리를 낮추거나 고금리부터 갚았을 때의 예시로 잡았습니다.</p>
+      <p>그래서 이 숫자는 "이만큼 반드시 아낀다"가 아니라 <b>어디부터 들여다보면 좋은지 순서를 정하는 용도</b>예요. 실제로 줄어드는 금액은 바꾼 요금제·해지한 특약·새 금리를 넣어 다시 계산해 보세요. '매달 적금에 넣으면 3년 뒤' 금액은 한 달 절약액을 36개월 동안 연 3.5% 단리 적금에 넣었다고 가정한 세전 만기 금액이고, 실제로는 이자소득세(일반 15.4%)가 빠집니다.</p>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="faq">
+    <div class="sechead">
+      <h2>자주 묻는 질문</h2>
+      <span>고정비 진단 기준 안내</span>
+    </div>
+    <details open>
+      <summary>입력한 내 지출 금액이 서버에 저장되나요?</summary>
+      <p>전혀 저장되지 않습니다. 이 진단기는 외부 서버와 통신하지 않고, 지금 보시는 웹 브라우저 안에서만 즉시 계산합니다. 페이지를 닫으면 입력하신 숫자는 모두 사라집니다.</p>
+    </details>
+    <details>
+      <summary>대출 원리금 중 왜 '원금'은 빼고 '이자'만 입력하나요?</summary>
+      <p>원금 상환은 내 빚을 줄여 순자산을 늘리는 '저축' 성격이지만, 이자와 할부 수수료는 금융사에 내는 순수 비용이기 때문입니다. 고정비 다이어트에서는 사라지는 비용인 이자와 수수료를 줄이는 데 집중합니다.</p>
+    </details>
+    <details>
+      <summary>보험을 해지하면 손해 아닌가요? 어떻게 줄이는 게 맞나요?</summary>
+      <p>오래 유지해 온 핵심 보험(실손보험, 비갱신 암·뇌·심장 진단비)을 통째로 해지하는 것은 금물입니다. 대신 보험사 콜센터나 앱에서 불필요한 <b>선택 특약만 부분 해지(배서)</b>하거나, 보장 금액을 적정 수준으로 낮추는 <b>감액 제도</b>를 활용하면 원계약은 지키면서 월 보험료만 똑똑하게 낮출 수 있습니다.</p>
+    </details>
+  <details>
+      <summary>기준선은 어디서 나온 숫자인가요?</summary>
+      <p>공식 통계가 아니라 돈 줍는 삼촌이 정한 점검 기준선이에요. "이 정도를 넘으면 한 번 들여다볼 만하다"는 출발점일 뿐이고, 기준선보다 많이 쓴다고 잘못된 지출이라는 뜻은 아닙니다. 아이가 어리거나 단독주택에 살면 공과금이 기준선보다 높은 게 자연스러울 수 있어요.</p>
+    </details>
+    <details>
+      <summary>에너지캐시백은 누구나 받을 수 있나요?</summary>
+      <p>아니요. 한전 에너지캐시백과 도시가스 절약 캐시백은 지난해 같은 기간보다 사용량을 일정 비율 이상 줄였을 때 주는 제도이고, 신청해야 받을 수 있어요. 대상(아파트 단지·개인 가구 등)과 기간, 금액이 해마다 바뀌니 신청 전에 한전ON과 사는 지역 도시가스사 안내를 확인하세요.</p>
+    </details>
+  </section>
+</section>

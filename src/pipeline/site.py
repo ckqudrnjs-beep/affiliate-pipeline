@@ -16,6 +16,7 @@ import sys
 
 from .calcs import CALC_CSS, CALCS, COMMON_JS
 from . import photo_studio as PS
+from . import fixed_cost as FC
 from .compliance import ALLOWED_LINK_HOSTS
 from . import news as N
 from . import report as R
@@ -529,6 +530,7 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     qrow = f'<h3 class="qhead">많이 묻는 계산</h3><ul class="qlist">{qrow}</ul>' if qrow else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
     tools += f'<a href="calc/{PS.SLUG}.html"><b>{e(PS.CARD[0])}</b><span>{e(PS.CARD[1])}</span></a>'
+    tools += f'<a href="calc/{FC.SLUG}.html"><b>{e(FC.CARD[0])}</b><span>{e(FC.CARD[1])}</span></a>'
     hero = """<section class="hero slim"><div class="wrap"><p class="eyebrow">매일 아침 새 숫자로</p>
 <h1>오늘 아낄 돈,<br>삼촌이 먼저 계산해 뒀어요.</h1>
 <p>기름값·환율·장바구니 시세를 매일 아침 정리하고, 하루 한 문제로 생활 물가 감각을 키워요. 물건은 직접 계산해 보고 정말 괜찮을 때만 소개해요.</p></div></section>"""
@@ -726,6 +728,11 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         ld={"@context": "https://schema.org", "@type": "WebApplication", "name": PS.TITLE, "url": f"{BASE}/calc/{PS.SLUG}.html",
             "applicationCategory": "MultimediaApplication", "operatingSystem": "Web", "inLanguage": "ko", "description": PS.DESC,
             "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}}), encoding="utf-8")
+    (o / "calc" / f"{FC.SLUG}.html").write_text(page(f"{FC.TITLE} | {BRAND}", FC.DESC, FC.body(CALCS), root="../", path=f"calc/{FC.SLUG}.html",
+        og=S.og_path("calc", FC.SLUG), crumbs=[("계산기", "index.html#calcs"), (FC.TITLE, f"calc/{FC.SLUG}.html")],
+        ld={"@context": "https://schema.org", "@type": "WebApplication", "name": FC.TITLE, "url": f"{BASE}/calc/{FC.SLUG}.html",
+            "applicationCategory": "FinanceApplication", "operatingSystem": "Web", "inLanguage": "ko", "description": FC.DESC,
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KRW"}}), encoding="utf-8")
     (o / "q").mkdir(exist_ok=True)
     for q in qs:
         c = calc_by[Q.calc_of(q)]
@@ -830,7 +837,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
                + [(f"news/{n['id']}.html", n["date"]) for n in news if not thin_news(n)]
                + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
-               + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS] + [(f"calc/{PS.SLUG}.html", "2026-11-16")]
+               + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS] + [(f"calc/{PS.SLUG}.html", "2026-11-16"), (f"calc/{FC.SLUG}.html", "2026-11-16")]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
                + ([("recipe.html", max(max(r["date"], r["priceDate"]) for r in recs))] if recs else [])
                + [(f"recipe/{r['slug']}.html", max(r.get("updated", r["date"]), r["priceDate"])) for r in recs]
