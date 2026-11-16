@@ -56,7 +56,6 @@ jobs:
           HYPERFRAMES_NO_TELEMETRY: "1"
           DO_NOT_TRACK: "1"
         run: |
-          git pull -q origin main
           D="${{ github.event.inputs.date }}"
           F=""; [ "${{ github.event.inputs.force }}" = "true" ] && F="--force"
           PYTHONPATH=src python -m pipeline.textshort check $D
@@ -64,6 +63,7 @@ jobs:
             TEXTSHORT_PREVIEW=1 PYTHONPATH=src python -m pipeline.textshort make $D --force | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          git pull -q --ff-only origin main
           PYTHONPATH=src python -m pipeline.textshort make $D $F | tee -a "$GITHUB_STEP_SUMMARY"
           git config user.name "textshort-bot"
           git config user.email "textshort-bot@users.noreply.github.com"
