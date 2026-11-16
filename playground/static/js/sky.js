@@ -1056,7 +1056,7 @@ function addInv(it) { const P = G.P;
   if (it.g) { const h = P.inv.find(x => x.g === it.g); if (h) { h.n += it.n; return true; } }
   const k = stackKey(it), w0 = bagWeight(P), cap = bagCap(P);
   if (w0 + weightOf(it) > cap * 1.5) return false;
-  const h = k && P.inv.find(x => !x.g && stackKey(x) === k);
+  const h = k && P.inv.find(x => !x.g && !x.lk && stackKey(x) === k);
   if (h) h.n = (h.n || 1) + (it.n || 1); else { if (P.inv.length >= INV_MAX) return false; P.inv.push(it); }
   if (w0 <= cap && bagWeight(P) > cap) say('가방이 무거워졌어요! 걸음이 느려져요 (무게 ' + bagWeight(P) + '/' + cap + ')', '#ff9a8a');
   return true; }
@@ -1879,6 +1879,46 @@ function roamDrops(m, put) { const P = G.P; if (!endDone(P) || G.Wd.ch === 8) re
 // 랭킹용 기록(2026-11-15 BK): 엔딩 난이도·시각, 보통 엔딩까지 걸린 플레이 시간. 순위는 서버가 저장 기록에서 뽑는다(skysave → sky_rank)
 function skyRankEnd(d) { const P = G.P; if (d === 0 && P.flags.endT == null) P.flags.endT = Math.round(P.play || 0);
   if (P.flags.dmax == null || d > P.flags.dmax) { P.flags.dmax = d; P.flags.dmaxAt = Date.now(); } }
+
+// 일괄 분해(BK 11/16): 가방에서 장비를 여러 개 골라 한 번에 분해한다.
+// SALV: null(꺼짐) 또는 고른 물건 uid 의 Set. SALVC: 확인창을 띄운 상태.
+// 잠근 장비(it.lk)·재료·물약은 고를 수 없고, 입은 장비는 가방에 없으니 자연히 빠진다.
+let SALV = null, SALVC = 0;
+function salvOk(it) { return !!(it && !it.g && !it.lk && salvageOf(it)); }
+// 빠른 선택에서 빼는 것: 감정 안 된 것(좋은 것일 수 있음)·강화한 것. 직접 누르면 고를 수 있다.
+function salvQuick(it) { return salvOk(it) && it.id && !it.en; }
+function salvPicked() { return G.P.inv.filter(it => SALV && SALV.has(it.uid) && salvOk(it)); }
+function salvGain(list) { const g = {}; for (const it of list) { const s = salvageOf(it); g[s[0]] = (g[s[0]] || 0) + s[1] * (it.n || 1); } return g; }
+function salvGainTxt(g) { const t = Object.keys(g).map(k => GOODS[k].n + ' ' + g[k] + '개'); return t.length ? t.join(' · ') : '-'; }
+function salvToggle(i) { const it = G.P.inv[i]; if (!it) return;
+  if (it.g) { toast('재료·물약은 분해할 수 없어요'); return; }
+  if (it.lk) { toast('잠근 장비예요 · 잠금을 풀면 고를 수 있어요'); return; }
+  if (!salvOk(it)) return;
+  SALVC = 0; if (SALV.has(it.uid)) SALV.delete(it.uid); else SALV.add(it.uid); }
+// 빠른 선택 묶음: [이름, 거르는 함수]
+function salvGroups(P) { const G2 = RAR.map((r, i) => [r.n + ' 전부', it => it.r === i]);
+  G2.push(['못 끼는 장비', it => !!canWear(P, it)]);
+  return G2.map(([n, f], i) => { const L = P.inv.filter(it => salvQuick(it) && f(it)); return { n, i, L, all: L.length && L.every(it => SALV.has(it.uid)) }; }).filter(x => x.L.length); }
+function salvPick(gi) { const g = salvGroups(G.P).find(x => x.i === gi); if (!g) return; SALVC = 0; for (const it of g.L) g.all ? SALV.delete(it.uid) : SALV.add(it.uid); }
+function salvHtml() { const P = G.P, L = salvPicked(), gain = salvGain(L);
+  if (SALVC && L.length) { const warn = L.filter(it => it.r >= 2 || it.en || !it.id), show = L.slice(0, 10);
+    return `<h4>정말 분해할까요?</h4><p style="font-size:12.5px;margin:2px 0 6px">${L.length}개를 부숴서 <b>${salvGainTxt(gain)}</b>로 바꿔요. <b style="color:#c84a3a">되돌릴 수 없어요.</b></p>`
+      + `<div style="font-size:12px;line-height:1.55;background:#fffaf0;border:1px solid #e0cfae;border-radius:8px;padding:4px 8px;max-height:132px;overflow:auto">${show.map(it => `<div style="color:${shade(itemColor(it))}">${esc(itemName(it))}${it.n > 1 ? ' ×' + it.n : ''}</div>`).join('')}${L.length > show.length ? `<div class="m">외 ${L.length - show.length}개</div>` : ''}</div>`
+      + (warn.length ? `<p style="color:#c84a3a;font-size:12px;font-weight:700;margin:4px 0">이름난 등급 이상·강화한 것·감정 안 된 것이 ${warn.length}개 들어 있어요</p>` : '')
+      + `<div class="sk-acts"><button class="sk-b p" data-a="svgo">${L.length}개 분해하기</button><button class="sk-b" data-a="svback">다시 고르기</button></div>`; }
+  const gs = salvGroups(P);
+  return `<h4>여러 개 분해 <small style="color:#8a7458">${L.length}개 고름</small></h4><p class="m" style="font-size:11.5px;margin:0 0 4px">가방에서 분해할 장비를 눌러 고르세요. 다시 누르면 빠져요. 입은 장비·잠근 장비는 빠져요.</p>`
+    + (gs.length ? `<div class="sk-acts">${gs.map(g => `<button class="sk-b${g.all ? ' g' : ''}" data-a="svq" data-i="${g.i}">${g.all ? '✓ ' : ''}${esc(g.n)} ${g.L.length}</button>`).join('')}</div><p class="m" style="font-size:11px;margin:2px 0 4px">빠른 선택은 감정 안 된 것·강화한 것을 빼요. 그런 건 직접 눌러 고르세요.</p>` : '')
+    + `<p style="font-size:12.5px;margin:4px 0">받을 재료: <b>${salvGainTxt(gain)}</b></p>`
+    + `<div class="sk-acts"><button class="sk-b p" data-a="svok" ${L.length ? '' : 'disabled'}>분해하기</button>${L.length ? '<button class="sk-b" data-a="svnone">모두 빼기</button>' : ''}<button class="sk-b" data-a="svoff">그만하기</button></div>`; }
+function salvDo() { const P = G.P, L = salvPicked(); if (!L.length) return; const gain = salvGain(L);
+  P.inv = P.inv.filter(it => !L.includes(it)); for (const k in gain) addInv(goods(k, gain[k]));
+  SALV = null; SALVC = 0; SEL = null; sfx('ench'); save(); return L.length + '개 분해 → ' + salvGainTxt(gain); }
+// 패널 클릭 처리: 처리했으면 true
+function salvAct(a, t) { if (!SALV) return false;
+  if (a === 'svq') salvPick(+t.dataset.i); else if (a === 'svnone') { SALV.clear(); SALVC = 0; } else if (a === 'svok') SALVC = 1; else if (a === 'svback') SALVC = 0;
+  else if (a === 'svoff') { SALV = null; SALVC = 0; } else if (a === 'svgo') { const m = salvDo(); render(); if (m) toast(m); return true; } else return false;
+  render(); return true; }
 
 
 /* =================== 그리기 =================== */
@@ -2735,6 +2775,7 @@ function css() {
     + '.sk-gem{position:relative;width:30px;height:30px;transform:rotate(45deg);border-radius:6px;box-shadow:inset -4px -4px 0 rgba(0,0,0,.18),inset 3px 3px 0 rgba(255,255,255,.45),0 0 10px var(--g)}.sk-gem i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(-45deg);font-style:normal;font-size:11px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0008}'
     + '.sk-tray{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;padding:6px;border:1.5px dashed #c8b088;border-radius:12px;background:#f6eedc}.sk-tr{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid transparent}.sk-tr.on{border-color:#3a7fa8;background:#dff0fb}'
     + '.sk-c u{position:absolute;left:4px;right:4px;bottom:3px;height:3px;border-radius:2px;background:#d8c8e8;overflow:hidden;text-decoration:none}.sk-c u b{display:block;height:100%;background:#9a6ae8}.sk-c em{position:absolute;right:2px;top:0;font-style:normal;font-size:11px;color:#9a6ae8;text-shadow:0 0 3px #fff}'
+    + '.sk-c .lk{position:absolute;left:1px;top:-1px;font-size:10px;text-decoration:none;z-index:1}.sk-c.sv{border-color:#d0402a;box-shadow:0 0 0 2px #d0402a}.sk-c.sv::after{content:"✓";position:absolute;right:2px;top:-1px;font-size:13px;font-weight:900;color:#fff;background:#d0402a;border-radius:0 7px 0 7px;padding:0 3px;z-index:1}.sk-c.no{opacity:.35}'
     + '.sk-tame{height:7px;border-radius:4px;background:#e6dcf4;overflow:hidden;margin:3px 0}.sk-tame b{display:block;height:100%;background:linear-gradient(90deg,#b49aff,#7a4ae8)}';
   document.head.appendChild(st);
 }
@@ -2853,11 +2894,11 @@ function wind() { // 잔잔한 바람 + 가끔 피리 소리
 
 /* ---------- 창(패널) ---------- */
 function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function closePanel() { PANEL = null; SEL = null; SHOP = null; panel.hidden = true; panel.innerHTML = ''; last = performance.now(); if (G) { calc(G.P); save(); } }
+function closePanel() { PANEL = null; SEL = null; SHOP = null; SALV = null; SALVC = 0; panel.hidden = true; panel.innerHTML = ''; last = performance.now(); if (G) { calc(G.P); save(); } }
 function openPanel(k, arg) { PANEL = k; panel.hidden = false; SEL = arg != null && k !== 'talk' ? SEL : SEL; render(arg); }
 function iconCanvas(it, s) { const c = document.createElement('canvas'), d = Math.min(2, window.devicePixelRatio || 1); c.width = c.height = s * d; const g = c.getContext('2d'); g.scale(d, d); drawIcon(it, 0, 0, s, g); return c; }
 function tameBar(it) { if (!it || it.g || !it.hid || !it.id) return ''; return it.tame >= TAME_N ? '<em>✦</em>' : `<u><b style="width:${Math.round((it.tame || 0) / TAME_N * 100)}%"></b></u>`; }
-function cell(it, k, extra) { const r = it && !it.g ? ' r' + it.r : ''; return `<div class="sk-c${r}${it && it.st === -1 && it.id ? ' cu' : ''}${SEL === k ? ' on' : ''}" data-c="${k}">${extra || ''}${it ? '<span data-ic="' + k + '"></span>' : ''}${tameBar(it)}${it && it.n > 1 ? '<i>' + it.n + '</i>' : it && it.en ? '<i>+' + it.en + '</i>' : ''}</div>`; }
+function cell(it, k, extra) { const r = it && !it.g ? ' r' + it.r : '', sv = SALV && PANEL === 'inv' && k[0] === 'i' && it ? (SALV.has(it.uid) ? ' sv' : salvOk(it) ? '' : ' no') : ''; return `<div class="sk-c${r}${it && it.st === -1 && it.id ? ' cu' : ''}${SEL === k && !sv ? ' on' : ''}${sv}" data-c="${k}">${extra || ''}${it && it.lk ? '<s class="lk">🔒</s>' : ''}${it ? '<span data-ic="' + k + '"></span>' : ''}${tameBar(it)}${it && it.n > 1 ? '<i>' + it.n + '</i>' : it && it.en ? '<i>+' + it.en + '</i>' : ''}</div>`; }
 function fillIcons(map) { panel.querySelectorAll('[data-ic]').forEach(el => { const it = map(el.dataset.ic); if (it) el.replaceWith(iconCanvas(it, 40)); }); }
 function itemCard(it, P, cmp) {
   if (!it) return ''; const b = it.g ? null : BASE[it.b], L = [];
@@ -2900,10 +2941,11 @@ function render(arg) {
   if (k === 'inv') {
     const sel = SEL, si = sel && sel[0] === 'i' ? +sel.slice(1) : -1, ss = sel && sel[0] === 'e' ? sel.slice(1) : null, it = si >= 0 ? P.inv[si] : ss ? P.eq[ss] : null;
     h = `<div class="sk-bx sk-fit">${X}<h3>가방 <small style="font-size:12px;color:#8a7458">${P.gold.toLocaleString()}G · ${P.inv.length}칸 · ${bagWeight(P) > bagCap(P) ? '<b style="color:#d0402a">무게 ' + bagWeight(P) + '/' + bagCap(P) + ' · 무거워서 걸음이 느려요</b>' : '무게 ' + bagWeight(P) + '/' + bagCap(P)}${SHOP ? ' · 상점: 물건을 눌러 팔기' : ''}</small></h3><div class="sk-two"><div><h4>입은 장비</h4><div class="sk-eq">${SLOTS.map(([s, n]) => cell(P.eq[s], 'e' + s, '<b>' + n + '</b>')).join('')}</div><h4>가방</h4><div class="sk-grid">${[...Array(P.inv.length > INV_N ? INV_MAX : INV_N)].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div>`;
-    if (it) { const cmp = si >= 0 && !it.g ? P.eq[slotFor(P, it)] : null; let acts = '';
-      if (si >= 0) { if (it.g === 'pot' || it.g === 'wpot') acts += `<button class="sk-b g" data-a="use">마시기</button>`; if (!it.g) { const why = wearWhy(P, it); acts += `<button class="sk-b p" data-a="eq" ${why ? 'disabled' : ''}>${eqVerb(BASE[it.b].s)}</button>`; if (why) acts += `<p style="color:#c84a3a;font-size:12px;font-weight:700;margin:2px 4px;width:100%">${esc(why)}</p>`; } if (it.g === 'look') acts += '<p class="m" style="font-size:11.5px">감정 안 된 장비를 고른 뒤 「쪽지로 감정」</p>'; if (!it.g && !it.id && count('look')) acts += `<button class="sk-b" data-a="lookit">쪽지로 감정</button>`; if (it.g === 'pure' || !it.g && it.st === -1 && count('pure')) acts += ''; if (SHOP) acts += `<button class="sk-b" data-a="sell">팔기 ${priceOf(it)}G</button>`; else acts += `<button class="sk-b" data-a="drop">내려놓기</button>`; }
+    if (SALV) h += salvHtml();
+    else if (it) { const cmp = si >= 0 && !it.g ? P.eq[slotFor(P, it)] : null; let acts = '';
+      if (si >= 0) { if (it.g === 'pot' || it.g === 'wpot') acts += `<button class="sk-b g" data-a="use">마시기</button>`; if (!it.g) { const why = wearWhy(P, it); acts += `<button class="sk-b p" data-a="eq" ${why ? 'disabled' : ''}>${eqVerb(BASE[it.b].s)}</button>`; if (why) acts += `<p style="color:#c84a3a;font-size:12px;font-weight:700;margin:2px 4px;width:100%">${esc(why)}</p>`; } if (it.g === 'look') acts += '<p class="m" style="font-size:11.5px">감정 안 된 장비를 고른 뒤 「쪽지로 감정」</p>'; if (!it.g && !it.id && count('look')) acts += `<button class="sk-b" data-a="lookit">쪽지로 감정</button>`; if (it.g === 'pure' || !it.g && it.st === -1 && count('pure')) acts += ''; if (it.lk) {} else if (SHOP) acts += `<button class="sk-b" data-a="sell">팔기 ${priceOf(it)}G</button>`; else acts += `<button class="sk-b" data-a="drop">내려놓기</button>`; if (!it.g) acts += `<button class="sk-b" data-a="lock">${it.lk ? '🔓 잠금 풀기' : '🔒 잠그기'}</button>`; if (salvageOf(it)) acts += '<button class="sk-b" data-a="svon">여러 개 분해</button>'; }
       else acts += `<button class="sk-b" data-a="uneq">${eqVerb(ss, 1)}</button>` + (it.st === -1 && count('pure') ? `<button class="sk-b g" data-a="purify">샘물로 정화</button>` : '');
-      h += '<div class="sk-acts">' + acts + '</div>' + (cmp ? `<div class="sk-cmp"><div><div class="m">고른 것</div>${itemCard(it, P)}</div><div><div class="m">지금 낀 것</div>${itemCard(cmp, P)}</div></div>` : itemCard(it, P)); } else h += '<p class="m" style="font-size:12.5px;color:#8a7458">물건을 누르면 자세히 보여요. 같은 부위 장비와 비교해 줘요. 장비를 두 번 누르면 빈 칸에 바로 껴요.</p>';
+      h += '<div class="sk-acts">' + acts + '</div>' + (cmp ? `<div class="sk-cmp"><div><div class="m">고른 것</div>${itemCard(it, P)}</div><div><div class="m">지금 낀 것</div>${itemCard(cmp, P)}</div></div>` : itemCard(it, P)); } else h += '<p class="m" style="font-size:12.5px;color:#8a7458">물건을 누르면 자세히 보여요. 같은 부위 장비와 비교해 줘요. 장비를 두 번 누르면 빈 칸에 바로 껴요.</p><div class="sk-acts"><button class="sk-b" data-a="svon">여러 개 분해</button></div>';
     if (SHOP) h += shopHtml(); h += '</div></div>' + TOAST + '</div>';
   } else if (k === 'char') {
     const ss = SEL && SEL[0] === 'e' ? SEL.slice(1) : null, it = ss ? P.eq[ss] : null, sl = q => cell(P.eq[q], 'e' + q, '<b>' + SLOTN[q] + '</b>');
@@ -2975,7 +3017,7 @@ function boardHtml() {
     <h4>지금 얻는 힘</h4><div class="sk-card">${fxs}</div><h4>잇기 보너스</h4><div class="sk-card">${sets}</div>
     <button class="sk-b" data-a="skillp">← 스킬로</button></div></div>${TOAST}</div>`;
 }
-function shopHtml() { const td = SHOP.filter(it => it.today), jk = G.P.inv.filter(it => !it.g && it.r === 0), jg = jk.reduce((a, it) => a + priceOf(it) * (it.n || 1), 0); return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기 · 자정에 물건이 바뀌어요)</small></h4>${td.length ? '<p class="m" style="font-size:11.5px;color:#b0702a">오늘만: ' + td.map(it => it.g ? GOODS[it.g].n : itemName(it)).join(', ') + '</p>' : ''}<div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + (jk.length ? `<h4>한꺼번에 팔기</h4><button class="sk-b" data-a="selljunk">보통 장비 ${jk.length}개 팔기 (+${jg}G)</button>` : '') + coinHtml(); }
+function shopHtml() { const td = SHOP.filter(it => it.today), jk = G.P.inv.filter(it => !it.g && it.r === 0 && !it.lk), jg = jk.reduce((a, it) => a + priceOf(it) * (it.n || 1), 0); return `<h4>얼레의 물건 <small style="color:#8a7458">(누르면 사기 · 자정에 물건이 바뀌어요)</small></h4>${td.length ? '<p class="m" style="font-size:11.5px;color:#b0702a">오늘만: ' + td.map(it => it.g ? GOODS[it.g].n : itemName(it)).join(', ') + '</p>' : ''}<div class="sk-grid">${SHOP.map((it, i) => cell(it, 'b' + i)).join('')}</div>` + (SEL && SEL[0] === 'b' ? itemCard(SHOP[+SEL.slice(1)], G.P, null) + `<button class="sk-b g" data-a="buy">사기 ${buyPrice(SHOP[+SEL.slice(1)])}G</button>` : '') + (jk.length ? `<h4>한꺼번에 팔기</h4><button class="sk-b" data-a="selljunk">보통 장비 ${jk.length}개 팔기 (+${jg}G)</button>` : '') + coinHtml(); }
 function coinHtml() { const B = opts.bonus; if (!B) return ''; const day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), used = G.P.flags.coinDay === day ? G.P.flags.coinN || 0 : 0; return `<h4>5락실 코인 바꾸기</h4><p class="m" style="font-size:11.5px;color:#8a7458">코인 1개 = 200G, 하루 5개까지 (보유 ${B.coins()}개, 오늘 ${used}/5)</p><button class="sk-b" data-a="coin" ${B.coins() > 0 && used < 5 ? '' : 'disabled'}>🪙 1개 → 200G</button>`; }
 const buyPrice = it => it.pr ? it.pr : it.g ? GOODS[it.g].price : priceOf(it) * 4;
 function talkHtml(id) {
@@ -3000,9 +3042,9 @@ function smithHtml() {
     if (kind) { const next = it.en + 1, safe = next <= SAFE[kind], rate = safe ? 1 : (ENCH_RATE[kind][next] || 0); const mat = kind === 'weapon' ? ['hone', 'bhone'] : ['glue', 'bglue'];
       h += `<h4>강화 (+${it.en} → +${next}) · 성공 ${Math.round(rate * 100)}%${safe ? ' · 안전' : ' · 실패하면 한 단계 내려감'}</h4><button class="sk-b p" data-a="ench" data-m="${mat[0]}" ${count(mat[0]) && it.en < MAXENCH ? '' : 'disabled'}>${GOODS[mat[0]].n}로 강화</button><button class="sk-b g" data-a="ench" data-m="${mat[1]}" ${count(mat[1]) && it.en < MAXENCH ? '' : 'disabled'}>${GOODS[mat[1]].n}로 강화</button>`; }
     else h += '<p class="m" style="font-size:12px">장신구는 강화할 수 없어요.</p>';
-    { const sv = sel[0] === 'i' && salvageOf(it); if (sv) h += `<h4>분해하기</h4><p class="m" style="font-size:11.5px">이 장비를 부숴서 ${GOODS[sv[0]].n} ${sv[1]}개로 바꿔요. 되돌릴 수 없어요.</p><button class="sk-b" data-a="salv">분해하기</button>`; }
+    { const sv = sel[0] === 'i' && salvageOf(it); if (sv && it.lk) h += '<h4>분해하기</h4><p class="m" style="font-size:11.5px">🔒 잠근 장비예요. 가방에서 잠금을 풀면 분해할 수 있어요.</p>'; else if (sv) h += `<h4>분해하기</h4><p class="m" style="font-size:11.5px">이 장비를 부숴서 ${GOODS[sv[0]].n} ${sv[1]}개로 바꿔요. 되돌릴 수 없어요.</p><button class="sk-b" data-a="salv">분해하기</button><button class="sk-b" data-a="svon">여러 개 분해</button>`; }
     if ((it.r === 1 || it.r === 2) && it.id) { const cost = 40 + it.ilv * 15, mat = kind === 'weapon' ? 'hone' : 'glue'; h += `<h4>옵션 다시 굴리기</h4><p class="m" style="font-size:11.5px">무작위 옵션 하나를 새로 굴려요. ${cost}G${kind ? ' + ' + GOODS[mat].n + ' 1' : ''}</p><button class="sk-b" data-a="reroll" ${P.gold >= cost && (!kind || count(mat)) ? '' : 'disabled'}>다시 굴리기</button>`; }
-  } else h += '<p style="font-size:12.5px;color:#8a7458">강화하거나 옵션을 다시 굴릴 장비를 고르세요.<br>무기 +6 · 방어구 +4까지는 100% 성공, 그 위는 실패하면 한 단계 내려가요. 축복 받은 장비는 실패를 한 번 막아 줘요.</p>';
+  } else h += '<p style="font-size:12.5px;color:#8a7458">강화하거나 옵션을 다시 굴릴 장비를 고르세요.<br>무기 +6 · 방어구 +4까지는 100% 성공, 그 위는 실패하면 한 단계 내려가요. 축복 받은 장비는 실패를 한 번 막아 줘요.</p><button class="sk-b" data-a="svon">여러 개 분해</button>';
   return h + '</div></div>' + TOAST + '</div>';
 }
 function endHtml() { const P = G.P; if (G.Wd.ch >= 4) return endHtmlX(); if (G.Wd.ch === 3) return endHtml3(); if (G.Wd.ch === 2) return endHtml2(); if (P.q.q7 && P.q.q7.s === 3) return `<div class="sk-bx sk-talk" style="text-align:center"><h3>1장 「민들레 섬」 끝</h3><p>큰 왜가리의 날개 밑에 갇혀 있던 바람이 풀려나 섬 밑으로 스며들었다.</p><p>민들레 섬은 더는 가라앉지 않는다. 하지만 큰바람이 멎은 까닭은 아직 저 너머에 있다 — 녹슨 풍차 군도.</p><p style="font-size:13px;color:#8a7458">${CLASSES[P.cls].name} ${P.lv}레벨 · 쓰러뜨린 밑것들 ${P.kills}마리 · 플레이 ${Math.round(P.play / 60)}분<br>바람개비 표지(이동)의 「바람길」에서 2장 녹슨 풍차 군도로 건너갈 수 있어요.</p><button class="sk-b p" data-a="x">계속 둘러보기</button></div>`;
@@ -3015,6 +3057,8 @@ function bindPanel(arg) {
     if (a && a.startsWith('rk') && rkAct(a, t)) return;
     if (a === 'rank') { openPanel('rank'); return; }
     if (t.dataset.c && PANEL === 'stash') { stashMove(t.dataset.c); render(arg); return; }
+    if (a && a.startsWith('sv') && salvAct(a, t)) return;
+    if (t.dataset.c && PANEL === 'inv' && SALV) { if (t.dataset.c[0] === 'i') salvToggle(+t.dataset.c.slice(1)); else if (t.dataset.c[0] === 'e') { toast('입은 장비는 분해할 수 없어요 · 먼저 벗어 주세요'); return; } render(arg); return; }
     if (t.dataset.c && PANEL === 'inv' && t.dataset.c[0] === 'i') { const now = performance.now(), k = t.dataset.c, d = DBL.k === k && now - DBL.t < 400; DBL = { k: d ? null : k, t: now }; const m = d ? dblEquip(k) : null; if (m != null) { if (m) SEL = k; render(arg); if (m) toast(m); return; } }
     if (t.dataset.c) { SEL = t.dataset.c; if (SEL[0] === 'b' && PANEL === 'inv') {} render(arg); return; }
     if (t.dataset.sk) { SEL = t.dataset.sk; render(); return; }
@@ -3027,7 +3071,7 @@ function bindPanel(arg) {
     else if (a === 'drop') { const it = P.inv.splice(+SEL.slice(1), 1)[0]; G.drops.push({ x: P.x + .4, y: P.y + .4, it, t: -1 }); SEL = null; render(); }
     else if (a === 'sell') { const i = +SEL.slice(1), it = P.inv[i]; P.gold += priceOf(it); P.inv.splice(i, 1); SEL = null; sfx('coin'); render(); }
     else if (a === 'buy') { const it = SHOP[+SEL.slice(1)], pr = buyPrice(it); if (P.gold < pr) { toast('골드가 모자라요'); return; } const c = it.g ? goods(it.g) : it; if (!addInv(c)) { toast('가방이 가득 찼어요'); return; } P.gold -= pr; if (!it.g || it.sk) { shopBought(it); SHOP.splice(SHOP.indexOf(it), 1); SEL = null; } sfx('coin'); render(); }
-    else if (a === 'selljunk') { let g = 0; P.inv = P.inv.filter(it => { if (!it.g && it.r === 0) { g += priceOf(it) * (it.n || 1); return false; } return true; }); P.gold += g; SEL = null; sfx('coin'); render(); toast(g + 'G 받았어요'); }
+    else if (a === 'selljunk') { let g = 0; P.inv = P.inv.filter(it => { if (!it.g && it.r === 0 && !it.lk) { g += priceOf(it) * (it.n || 1); return false; } return true; }); P.gold += g; SEL = null; sfx('coin'); render(); toast(g + 'G 받았어요'); }
     else if (a === 'coin') { const B = opts.bonus, day = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10); if (P.flags.coinDay !== day) { P.flags.coinDay = day; P.flags.coinN = 0; } if (P.flags.coinN >= 5 || !B.spend(1)) return; P.flags.coinN++; P.gold += 200; sfx('coin'); render(); }
     else if (a === 'lookit') { const it = P.inv[+SEL.slice(1)]; if (useGood('look')) { it.id = true; sfx('ench'); SEL = 'i' + P.inv.indexOf(it); } render(); }
     else if (a === 'purify') { const it = P.eq[SEL.slice(1)]; if (useGood('pure')) { it.st = 0; calc(P); sfx('ench'); toast('정화했어요'); } render(); }
@@ -3037,7 +3081,9 @@ function bindPanel(arg) {
     else if (a === 'dclaim') { claimTask(+t.dataset.i); render(); }
     else if (a === 'errs') { errandSend(+t.dataset.i); render(); }
     else if (a === 'errc') { errandClaim(); render(); }
-    else if (a === 'salv') { if (SEL && SEL[0] === 'i') { salvage(+SEL.slice(1)); SEL = null; render(); } }
+    else if (a === 'salv') { if (SEL && SEL[0] === 'i' && !P.inv[+SEL.slice(1)].lk) { salvage(+SEL.slice(1)); SEL = null; render(); } }
+    else if (a === 'svon') { const it = SEL && SEL[0] === 'i' ? P.inv[+SEL.slice(1)] : null; PANEL = 'inv'; SALV = new Set(); SALVC = 0; if (salvOk(it)) SALV.add(it.uid); SEL = null; render(); }
+    else if (a === 'lock') { const it = SEL && SEL[0] === 'i' ? P.inv[+SEL.slice(1)] : null; if (it && !it.g) { if (it.lk) delete it.lk; else it.lk = 1; toast(it.lk ? '잠갔어요 · 팔기·분해·내려놓기에서 빠져요' : '잠금을 풀었어요'); } render(); }
     else if (a === 'slot') { const i = +t.dataset.i, o = P.slots.indexOf(SEL); if (o >= 0) P.slots[o] = P.slots[i]; P.slots[i] = SEL; render(); }
     else if (a === 'fork') { const s = SKILLS[P.cls].find(q => q.id === SEL); if ((P.sk[s.id] || 0) >= 5 && P.fork[s.id] == null) { P.fork[s.id] = +t.dataset.i; toast('「' + s.fork[+t.dataset.i][0] + '」 갈래를 골랐어요'); } render(); }
     else if (a === 'chap') { goChapter(+t.dataset.i); return; }
