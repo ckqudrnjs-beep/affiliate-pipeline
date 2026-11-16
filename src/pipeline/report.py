@@ -76,6 +76,13 @@ def fetch_fuel(key: str) -> dict | None:
 
 
 # ---------- 장바구니 (KAMIS) ----------
+def clean_name(raw: str) -> str:
+    """KAMIS '품목/품종' → '토마토' (같으면 하나) 또는 '오이(취청)'."""
+    a, _, b = raw.strip().partition("/")
+    a, b = a.strip(), b.strip()
+    return a if not b or b == a else f"{a}({b})"
+
+
 def parse_grocery(js: dict, top: int = 5) -> dict | None:
     items = []
     for r in js.get("price", []) if isinstance(js.get("price"), list) else []:
@@ -84,7 +91,7 @@ def parse_grocery(js: dict, top: int = 5) -> dict | None:
         now, month, year = num(r.get("dpr1")), num(r.get("dpr3")), num(r.get("dpr4"))
         if not now or not month:
             continue
-        name = (r.get("productName") or r.get("item_name") or "").strip()
+        name = clean_name(r.get("productName") or r.get("item_name") or "")
         unit = (r.get("unit") or "").strip()
         items.append({"name": name, "unit": unit, "price": round(now),
                       "m": round((now - month) / month * 100, 1),
