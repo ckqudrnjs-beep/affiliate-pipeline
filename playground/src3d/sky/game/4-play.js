@@ -30,7 +30,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13 || CHX[Wd.ch] && Wd.ch < 8 && !S.q[CHX[Wd.ch].qid[0]]) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam', 'lost']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam', 'lost', 'lostX']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
@@ -438,7 +438,8 @@ function areaUpdate(a, dt) {
 // 땅에 떨어진 물건: 오래 두면 마을 창고의 「분실물」 칸으로 옮겨짐(가방이 차서 못 주운 게 땅에 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
 // 보통·손본·재료·금화 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 옮김. 금화는 바로 지갑으로.
 // 분실물은 LOST_N 칸까지, 넘치면 가장 오래된 낮은 등급 장비를 재료로 바꿔 둔다(잃는 것 없음, BK 11/16).
-const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160, LOST_N = 40;
+const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160, LOST_N = 40, LOST_STEP = 10, LOST_XMAX = 6; // 분실물 칸: 금화로 10칸씩 6번까지(최대 100칸, BK 11/16)
+const lostCap = P => LOST_N + LOST_STEP * Math.min(LOST_XMAX, P.lostX || 0), lostXCost = P => 400 * ((P.lostX || 0) + 1);
 function dropLife(d) { return d.gold ? 120 : d.mine || d.it && !d.it.g && d.it.r >= 2 ? 600 : 120; }
 function dropRank(d) { return d.mine ? 9 : d.gold ? 1 : d.it.g ? 2 : 3 + (d.it.r || 0); }
 function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t);
@@ -446,7 +447,7 @@ function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRan
 function lostAdd(it) { const P = G.P, L = P.lost || (P.lost = []);
   if (it.g) { const h = L.find(q => q.g === it.g); if (h) { h.n = (h.n || 1) + (it.n || 1); return; } }
   L.push(it);
-  while (L.length > LOST_N) { let k = -1; for (let i = 0; i < L.length; i++) if (!L[i].g && !L[i].lk && (k < 0 || L[i].r < L[k].r)) k = i; if (k < 0) { L.shift(); continue; }
+  while (L.length > lostCap(P)) { let k = -1; for (let i = 0; i < L.length; i++) if (!L[i].g && !L[i].lk && (k < 0 || L[i].r < L[k].r)) k = i; if (k < 0) { L.shift(); continue; }
     const s = salvageOf(L[k]); L.splice(k, 1); if (s) { const h = L.find(q => q.g === s[0]); if (h) h.n = (h.n || 1) + s[1]; else L.push(goods(s[0], s[1])); } } }
 function toLost(d) { const P = G.P; d.got = 1; if (d.gold) { P.gold += d.gold; return; } lostAdd(d.it);
   if (!G.lostTold) { G.lostTold = 1; say('못 주운 물건은 마을 「내 집 창고」의 분실물 칸에 모아 둘게요', '#9fe4ff'); } }

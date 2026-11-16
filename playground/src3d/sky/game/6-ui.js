@@ -319,6 +319,7 @@ function bindPanel(arg) {
     if (SEL && SEL[0] === 'i' && ['eq', 'drop', 'sell', 'lookit', 'ench', 'reroll', 'salv'].includes(a)) SEL = 'i' + single(+SEL.slice(1));
     if (a === 'x') { closePanel(); if (PANEL === null && G && G.endNext) { G.endNext = 0; openPanel('end'); } return; }
     if (a === 'stv') { STV = t.dataset.v; render(); return; }
+    if (a === 'lostx') { const m = stashMove('lostx'); render(); if (m) toast(m); return; }
     if (a === 'eq') { equip(+SEL.slice(1)); SEL = null; render(); }
     else if (a === 'uneq') { unequip(SEL.slice(1)); SEL = null; render(); }
     else if (a === 'nosel') { SEL = null; render(); }

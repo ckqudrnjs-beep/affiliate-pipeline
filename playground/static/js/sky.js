@@ -632,7 +632,7 @@ function startGame(S) {
   dailyStart(); spawnAll(); restNote(S); if (Wd.ch === 1 && !S.q.q1 || Wd.ch === 2 && !S.q.q8 || Wd.ch === 3 && !S.q.q13 || CHX[Wd.ch] && Wd.ch < 8 && !S.q[CHX[Wd.ch].qid[0]]) setTimeout(() => talk('chief', true), 600); boardCheck();
   return G;
 }
-function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam', 'lost']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
+function snap() { const P = G.P, S = {}; for (const k of ['v', 'ch', 'cls', 'seed', 'lv', 'xp', 'sp', 'pts', 'skp', 'sk', 'fork', 'fork2', 'slots', 'eq', 'inv', 'gold', 'q', 'flags', 'board', 'shd', 'kills', 'rested', 'play', 'codex', 'daily', 'errand', 'shopD', 'stash', 'diff', 'roam', 'lost', 'lostX']) S[k] = P[k]; S.t = Date.now(); S.uid = UID; S.lang = LANG; return S; }
 function save() { if (!G) return; const P = G.P, S = snap();
   try { localStorage.setItem('sky_' + P.cls, JSON.stringify(S)); } catch (e) {} cloudQueue(S); }
 /* ---------- 서버에도 저장(5락실 프로필 복구 코드가 있을 때만) ---------- */
@@ -1040,7 +1040,8 @@ function areaUpdate(a, dt) {
 // 땅에 떨어진 물건: 오래 두면 마을 창고의 「분실물」 칸으로 옮겨짐(가방이 차서 못 주운 게 땅에 쌓이면 화면이 느려짐 — 30레벨 이후 렉 원인, 11/16).
 // 보통·손본·재료·금화 2분, 이름난 이상·직접 내려놓은 것 10분. 그래도 40개가 넘으면 등급 낮고 오래된 것부터 옮김. 금화는 바로 지갑으로.
 // 분실물은 LOST_N 칸까지, 넘치면 가장 오래된 낮은 등급 장비를 재료로 바꿔 둔다(잃는 것 없음, BK 11/16).
-const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160, LOST_N = 40;
+const DROP_MAX = 40, TXT_MAX = 50, FX_MAX = 160, LOST_N = 40, LOST_STEP = 10, LOST_XMAX = 6; // 분실물 칸: 금화로 10칸씩 6번까지(최대 100칸, BK 11/16)
+const lostCap = P => LOST_N + LOST_STEP * Math.min(LOST_XMAX, P.lostX || 0), lostXCost = P => 400 * ((P.lostX || 0) + 1);
 function dropLife(d) { return d.gold ? 120 : d.mine || d.it && !d.it.g && d.it.r >= 2 ? 600 : 120; }
 function dropRank(d) { return d.mine ? 9 : d.gold ? 1 : d.it.g ? 2 : 3 + (d.it.r || 0); }
 function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRank(a) - dropRank(b) || b.t - a.t);
@@ -1048,7 +1049,7 @@ function trimDrops() { const P = G.P, L = G.drops.slice().sort((a, b) => dropRan
 function lostAdd(it) { const P = G.P, L = P.lost || (P.lost = []);
   if (it.g) { const h = L.find(q => q.g === it.g); if (h) { h.n = (h.n || 1) + (it.n || 1); return; } }
   L.push(it);
-  while (L.length > LOST_N) { let k = -1; for (let i = 0; i < L.length; i++) if (!L[i].g && !L[i].lk && (k < 0 || L[i].r < L[k].r)) k = i; if (k < 0) { L.shift(); continue; }
+  while (L.length > lostCap(P)) { let k = -1; for (let i = 0; i < L.length; i++) if (!L[i].g && !L[i].lk && (k < 0 || L[i].r < L[k].r)) k = i; if (k < 0) { L.shift(); continue; }
     const s = salvageOf(L[k]); L.splice(k, 1); if (s) { const h = L.find(q => q.g === s[0]); if (h) h.n = (h.n || 1) + s[1]; else L.push(goods(s[0], s[1])); } } }
 function toLost(d) { const P = G.P; d.got = 1; if (d.gold) { P.gold += d.gold; return; } lostAdd(d.it);
   if (!G.lostTold) { G.lostTold = 1; say('못 주운 물건은 마을 「내 집 창고」의 분실물 칸에 모아 둘게요', '#9fe4ff'); } }
@@ -1671,10 +1672,11 @@ const STASH_N = 60;
 function stashMove(c) { const P = G.P; P.stash = P.stash || [];
   if (c[0] === 'i') { const it = P.inv[+c.slice(1)]; if (!it) return; { const k = stackKey(it), h = it.g ? P.stash.find(x2 => x2.g === it.g) : k && P.stash.find(x2 => !x2.g && stackKey(x2) === k); if (h) { h.n = (h.n || 1) + (it.n || 1); P.inv.splice(P.inv.indexOf(it), 1); sfx('pick'); return; } } if (P.stash.length >= STASH_N) { toast('창고가 가득 찼어요'); return; } P.inv.splice(P.inv.indexOf(it), 1); P.stash.push(it); sfx('pick'); }
   else if (c[0] === 's') { const it = P.stash[+c.slice(1)]; if (!it) return; if (!addInv(it)) { toast('가방이 꽉 차거나 너무 무거워요'); return; } P.stash.splice(P.stash.indexOf(it), 1); sfx('pick'); }
+  else if (c === 'lostx') { const n = P.lostX || 0, g = lostXCost(P); if (n >= LOST_XMAX) return; if (P.gold < g) return '금화가 모자라요 (' + g + 'G 필요)'; P.gold -= g; P.lostX = n + 1; sfx('coin'); save(); return '분실물 칸이 ' + lostCap(P) + '칸으로 늘었어요'; }
   else if (c[0] === 'l') { const L = P.lost || [], it = L[+c.slice(1)]; if (!it) return; if (!addInv(it)) { toast('가방이 꽉 차거나 너무 무거워요'); return; } L.splice(L.indexOf(it), 1); sfx('pick'); } }
 let STV = 's'; // 창고 오른쪽 칸: s=창고, l=분실물
 function stashHtml(X) { const P = G.P, S = P.stash || [];
-  return `<div class="sk-bx">${X}<h3>내 집 창고 <small style="font-size:12px;color:#8a7458">누르면 옮겨요 · 장마다 같은 창고</small></h3><div class="sk-two"><div><h4>가방 ${P.inv.length}칸 · 무게 ${bagWeight(P)}/${bagCap(P)}</h4><div class="sk-grid">${[...Array(Math.max(INV_N, P.inv.length))].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div><h4><button class="sk-b${STV === 's' ? ' p' : ''}" data-a="stv" data-v="s" style="margin:0;padding:4px 10px;font-size:12px">창고 ${S.length}/${STASH_N}</button> <button class="sk-b${STV === 'l' ? ' p' : ''}" data-a="stv" data-v="l" style="margin:0;padding:4px 10px;font-size:12px">분실물 ${(P.lost || []).length}/${LOST_N}</button></h4>${STV === 'l' ? `<p style="font-size:11px;color:#8a7458;margin:0 0 4px">땅에 오래 남은 물건이 여기로 와요. 누르면 가방으로 · 넘치면 낮은 등급부터 재료로 바뀌어요</p><div class="sk-grid">${[...Array(LOST_N)].map((_, i) => cell((P.lost || [])[i], 'l' + i)).join('')}</div>` : `<div class="sk-grid">${[...Array(STASH_N)].map((_, i) => cell(S[i], 's' + i)).join('')}</div>`}</div></div>${TOAST}</div>`; }
+  return `<div class="sk-bx">${X}<h3>내 집 창고 <small style="font-size:12px;color:#8a7458">누르면 옮겨요 · 장마다 같은 창고</small></h3><div class="sk-two"><div><h4>가방 ${P.inv.length}칸 · 무게 ${bagWeight(P)}/${bagCap(P)}</h4><div class="sk-grid">${[...Array(Math.max(INV_N, P.inv.length))].map((_, i) => cell(P.inv[i], 'i' + i)).join('')}</div></div><div><h4><button class="sk-b${STV === 's' ? ' p' : ''}" data-a="stv" data-v="s" style="margin:0;padding:4px 10px;font-size:12px">창고 ${S.length}/${STASH_N}</button> <button class="sk-b${STV === 'l' ? ' p' : ''}" data-a="stv" data-v="l" style="margin:0;padding:4px 10px;font-size:12px">분실물 ${(P.lost || []).length}/${lostCap(P)}</button></h4>${STV === 'l' ? `<p style="font-size:11px;color:#8a7458;margin:0 0 4px">땅에 오래 남은 물건이 여기로 와요. 누르면 가방으로 · 넘치면 낮은 등급부터 재료로 바뀌어요</p>${(P.lostX || 0) < LOST_XMAX ? `<button class="sk-b g" data-a="lostx" style="margin:0 0 6px;padding:4px 10px;font-size:12px">칸 +${LOST_STEP} 늘리기 · ${lostXCost(P)}G (지금 ${P.gold}G)</button>` : ''}<div class="sk-grid">${[...Array(lostCap(P))].map((_, i) => cell((P.lost || [])[i], 'l' + i)).join('')}</div>` : `<div class="sk-grid">${[...Array(STASH_N)].map((_, i) => cell(S[i], 's' + i)).join('')}</div>`}</div></div>${TOAST}</div>`; }
 function drinkWell() { const P = G.P; P.hp = P.mhp; P.wind = P.mwind; P.buf.well = 120; G.fx.push({ k: 'aura', x: P.x, y: P.y, t: 0, life: .6, c: '#9fe4ff' }, { k: 'ring', x: P.x, y: P.y, r: 1.4, t: 0, life: .4, c: '#bfe8ff' }); sfx('lvl'); say('시원한 우물물! 생명·바람이 가득 차고, 2분 동안 생명이 천천히 차올라요', '#9fe4ff', 1); }
 function townNear(P, Wd) { if (Wd.stashAt && hyp(P.x - Wd.stashAt[0], P.y - Wd.stashAt[1]) < 1.6) return { k: 'stash', label: '내 집 창고 열기' }; if (Wd.wellAt && hyp(P.x - Wd.wellAt[0], P.y - Wd.wellAt[1]) < 1.5) return { k: 'well', label: '우물물 마시기' }; return null; }
 
@@ -3086,6 +3088,7 @@ function bindPanel(arg) {
     if (SEL && SEL[0] === 'i' && ['eq', 'drop', 'sell', 'lookit', 'ench', 'reroll', 'salv'].includes(a)) SEL = 'i' + single(+SEL.slice(1));
     if (a === 'x') { closePanel(); if (PANEL === null && G && G.endNext) { G.endNext = 0; openPanel('end'); } return; }
     if (a === 'stv') { STV = t.dataset.v; render(); return; }
+    if (a === 'lostx') { const m = stashMove('lostx'); render(); if (m) toast(m); return; }
     if (a === 'eq') { equip(+SEL.slice(1)); SEL = null; render(); }
     else if (a === 'uneq') { unequip(SEL.slice(1)); SEL = null; render(); }
     else if (a === 'nosel') { SEL = null; render(); }
