@@ -35,3 +35,10 @@
 - 2026-11-16: 2차 8개 작성 → 16개 게임 모두 공략 보유, 색인 대상 약 41쪽.
 - 2026-11-16: 17번째 공략 `guides/pixelcard.md`(게이머 면허증·도트 프사, 도구형 페이지, genre etc → 허브 '기타' 칸).
 - 2026-11-16: 18번째 공략 `guides/lasso.md`(네온 올가미, 액션). 원본 공략의 틀린 숫자는 버리고 game.js 숫자로 작성.
+
+## 영어판 공략 (2026-11-16 BK)
+- `playground/guides/en/<slug>.md`: 한국어 공략의 영어판. 앞머리에 `ko: <한국어 slug>` 를 넣으면 `/en/guide/<slug>` 로 만들어지고, 한국어 공략·영어 공략 양쪽에 hreflang(ko/en) 짝이 붙는다(`EN_ALT`).
+- 깊이 기준: 영어 본문 3600자(한글 기준의 2배) 이상, 소제목(##) 4개 이상. 얇으면 빌드 실패.
+- 숫자·용어는 게임 영어판 번역표(`src3d/sky/i18n/en.json`)와 같게 쓴다(STR/AGI/VIT/BRE, Whetstone/Glue, Common→Refined→Famed→Legendary→Set, 난이도 Normal~Great Wind).
+- 한국어 공략 수치가 바뀌면 영어판도 같은 PR에서 고친다.
+- 현재: sky(끊어진 하늘 / Broken Sky). 영어판 /en/sky 에는 공략 카드 + 하늘 스킨 영어 상점(한국어판과 같은 코인·스킨 저장 공유, 하루 출석 🪙1·첫 플레이 🪙1)이 붙어 있다.
