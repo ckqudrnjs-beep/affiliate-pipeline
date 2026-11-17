@@ -47,7 +47,7 @@ SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 
 # 2026-11-14 오후 BK "상품편도 하지마, 우선 홈페이지 유입에 주력해": 쇼츠·롱폼 모두 상품 없음, 끝은 don3chon.com 으로.
 # 요일(월=0) → 쇼츠 형식. 2026-11-14 BK "덜 광고처럼": 상품 나오는 쇼츠는 월·목 상황극 주 2개만,
 # 화·금 = "오늘의 얼마게"(사이트 퀴즈와 같은 날 같은 문제, 코드가 그날 아침 자동으로 씀, 상품 없음), 수·토·일 상품 없음.
-QUIZ_DAYS = {1, 4}
+QUIZ_DAYS: set[int] = set()  # 2026-11-17 얼마게 쇼츠 쉼 (사이트 퀴즈는 그대로). 되살리면 {1, 4}
 # 2026-11-14 밤 BK: "돈 줍는 삼촌을 완벽하게 정보의 장으로". 모든 쇼츠 공통 규칙 (구매 유도 없음).
 INFO_RULE = ("[정보의 장 규칙] 시청자가 이 영상에서 얻는 것(얼마 아끼는지·왜 중요한지)을 먼저 세운다: "
              "takeaway = 한 줄 정보 가치(40자 이하, 예: \"멀티탭 스위치 하나로 1년 1만 7천 원\") → 설명란 첫 줄. "
@@ -57,29 +57,40 @@ INFO_RULE = ("[정보의 장 규칙] 시청자가 이 영상에서 얻는 것(�
              "페이지 숫자 출처: calc/ = src/pipeline/calcs.py, q/ = data/calc_questions.json, recipe/ = data/recipes/, "
              "guide/ = data/articles/<slug>.json, 시세 = data/daily/. 그 안의 숫자·가정만 쓴다. ")
 # 2026-11-14 밤 BK: 사이트 정보 페이지(시세·계산기·얼마게·질문·레시피·글)로 사람을 보내는 요일표. 요일마다 보낼 페이지 종류가 정해져 있다.
+# 2026-11-17 BK: "애니메이션·애완동물처럼 시선 끄는 것 + 주부 타깃 + 남들이 모르는 정보로 아하 포인트 + 구독·즐겨찾기 살짝".
+# → 형식 3개(장바구니 시세 / 살림 상황극 / 1년이면? 카드)로 줄이고, 상황극엔 마스코트 강아지 '동전이'(pipeline/pet.py)가 고정 출연.
+# 얼마게 퀴즈 쇼츠(화·금, 조회 82~294회)는 쉬고 사이트 퀴즈만 유지. 계획: plan/SHORTS_GROWTH.md "2026-11-17 새 기획".
+HOME_RULE = ("[주부 타깃·아하 규칙 2026-11-17] 보는 사람 = 장보기·살림을 맡은 30~50대(주부). 주제는 장바구니·집밥·전기/가스/난방·김장 같은 살림. "
+             "모든 편에 '아하' 1개: 흔한 믿음(\"보온은 전기 거의 안 먹지\")을 사이트 숫자로 뒤집는다 (예: 보온 1년 약 8만 9천 원, 무 한 달 -27%). "
+             "근거가 사이트에 없는 '아하'는 쓰지 않는다. 조카는 시청자 대신 묻고, 끝 펀치라인은 '엄마한테 전화' 같은 집안 장면이 좋다. "
+             "skit 줄에 pet(동전이 포즈 happy/shock/coin/curious/cry/sleep)·pet_say(8자 이하)를 넣을 수 있다. 안 넣으면 자동(반전 숫자 = 동전 물고 '짤랑!'). "
+             "end say 는 한 번만 가볍게 '구독해 두면 계속 알려줄게' 또는 '매일 아침 시세는 돈삼촌 즐겨찾기' 중 하나(보상 약속·화면 고정 문구 금지). ")
+BASKET_RULE = ("상품 없음. data/daily/ 최신 파일 grocery 의 m(한 달 변화 %)·price 만 쓴다. 가장 많이 내린 것 1~2개와 오른 것 1개를 고른다(±20% 이상 우선). "
+               "skit: 1줄 조카가 장보기 목록(숫자 cap) → 2줄 오답(\"김장철이라 무도 비싸겠지\") → 3줄 buzz + big(\"한 달 -27%\") + sub(KAMIS 소매가, 날짜) → "
+               "4~5줄 대신 살 것·미룰 것 → 끝. 4가지 체크(GROWTH 글자형 규칙)를 모두 통과하면 textshort 가 글자형으로 바꿀 수 있다. ")
 SHORT_FORMATS = {
-    0: ("prices", "이번 주 생활 시세", False,
-        "상품 없음, 카드형. data/daily/ 최근 7일 기름값(휘발유 전국 평균)·환율 숫자만 쓴다(없는 숫자 지어내기 금지). "
-        "hook(이번 주 기름값·환율 한 줄 질문) → versus 또는 bars(지난주 vs 이번 주) → calc(가득 주유 50L·100달러 직구로 환산한 차이) → "
-        "list(오늘 할 일: 주유는 언제·직구는 언제) → end(text=\"매일 아침 시세는 don3chon.com\"). site_path = index.html 또는 report.html."),
-    1: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
-    2: ("skit-calc", "삼촌 vs 조카 계산기", False,
-        SKIT_RULE + "상품 없음. 주제: 사이트 계산기 하나(site_path = calc/…)로 풀 수 있는 생활 고민 (전기요금·난방비·대기전력·가습기·할부·연봉 실수령·퇴직금). "
-        "조카가 틀리고 삼촌이 그 계산기 결과 숫자로 뒤집는다(숫자는 사이트 계산기와 같은 가정). 끝 = \"우리 집 숫자는 돈삼촌 계산기에\"."),
-    3: ("skit-q", "조카의 생활 질문", False,
-        SKIT_RULE + "상품 없음. 주제: 사이트 '계산해 본 질문'(site_path = q/…) 하나를 조카가 묻고 삼촌이 답한다 "
-        "(예: 셋톱박스 대기전력, 에어프라이어 전기요금). 그 페이지의 숫자·가정만 쓴다. 끝 = \"더 자세한 표는 돈삼촌에\"."),
-    4: ("quiz", "오늘의 얼마게", False, "자동 (python -m pipeline.episodes quiz). 예약 작업은 쓰지 않는다."),
-    5: ("skit-recipe", "배달 vs 집밥 1인분", False,
+    0: ("prices", "동전이네 장바구니 시세", False, SKIT_RULE + BASKET_RULE + "site_path = index.html 또는 report.html. 끝 = \"매일 아침 시세는 돈삼촌에\"."),
+    1: ("skit-calc", "동전이네 살림 계산", False,
+        SKIT_RULE + "상품 없음. 주제: 사이트 계산기 하나(site_path = calc/…)로 풀리는 살림 고민 (전기요금·난방비·가스·대기전력·가습기). "
+        "조카가 틀리고 삼촌이 그 계산기 결과 숫자로 뒤집는다(같은 가정). 끝 = \"우리 집 숫자는 돈삼촌 계산기에\"."),
+    2: ("guide", "1년이면 얼마?", False,
+        "상품 없음, 카드형. 사이트 글·계산 하나의 '작은 습관 × 1년 = 통장 숫자'(11/15 bank 형식 1,147회, 1위): hook(\"밥솥 보온, 1년이면?\") → "
+        "calc(1년 누적 숫자 크게) → list(핵심 3가지·오늘 할 행동) → end. 숫자는 사이트 페이지 값 × 12(달) 처럼 계산식을 sub 에 적는다. "
+        "site_path = guide/ 또는 q/ 또는 calc/ 중 그 숫자가 있는 페이지."),
+    3: ("skit-recipe", "배달 vs 집밥 1인분", False,
         SKIT_RULE + "상품·브랜드 없음. 주제: 사이트 1인분 원가 레시피(site_path = recipe/…) 하나. 조카가 배달 앱을 켜는 순간 → "
         "삼촌이 재료비·배달비 차이를 숫자로 → 한 달(주 2번) 차이. 숫자는 그 레시피 페이지와 같게. 끝 = \"재료·순서는 돈삼촌 레시피에\"."),
-    6: ("guide", "삼촌의 생활 정리", False,
-        "상품 없음, 카드형. 사이트 글 하나(site_path = guide/…)의 핵심 3가지를 30초로: hook(작은 습관 하나 × 1년 = 통장 숫자, "
-        "예: \"커피 한 잔 2,000원, 1년이면?\" — 11/15 bank 형식 1일 937회로 1위) → calc(1년 누적 숫자를 크게) → list(핵심 3가지) → "
-        "end(text=\"전체 정리는 돈삼촌 글에\"). 글에 있는 사실만."),
+    4: ("skit-q", "동전이네 살림 질문", False,
+        SKIT_RULE + "상품 없음. 주제: 사이트 '계산해 본 질문'(site_path = q/…) 하나 (밥솥 보온·건조기·제습기·전기포트·셋톱박스). "
+        "그 페이지의 숫자·가정만 쓴다. 끝 = \"더 자세한 표는 돈삼촌에\"."),
+    5: ("basket", "주말 장보기 아하", False, SKIT_RULE + BASKET_RULE + "월요일과 다른 품목. site_path = index.html. 끝 = \"매일 아침 시세는 돈삼촌에\"."),
+    6: ("guide", "1년이면 얼마?", False,
+        "상품 없음, 카드형. 수요일과 같은 '작은 습관 × 1년' 틀, 다른 주제(장보기·집밥·관리비). 글·페이지에 있는 사실만. "
+        "site_path = guide/ 또는 q/ 또는 calc/."),
 }
-SITE_PREFIX = {"prices": ("index.html", "report.html"), "quiz": ("quiz.html",), "skit-calc": ("calc/",), "skit-q": ("q/",),
-               "skit-recipe": ("recipe/",), "guide": ("guide/",)}
+SITE_PREFIX = {"prices": ("index.html", "report.html"), "basket": ("index.html", "report.html"), "quiz": ("quiz.html",),
+               "skit-calc": ("calc/",), "skit-q": ("q/",),
+               "skit-recipe": ("recipe/",), "guide": ("guide/", "q/", "calc/")}
 # 2026-11-14 BK: 롱폼 멈춤 (TTS 내레이션·슬라이드로는 재미가 없음) → 매일 쇼츠 1편 질에 집중. 다시 하면 여기 형식을 넣는다.
 LONG_FORMATS: dict = {}
 
@@ -157,7 +168,7 @@ def info_short(today: dt.date) -> dict:
     concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith("skit") else None
     return {"concept": concept, "concept_rule": "concept 의 상황·반전·루프를 이 형식에 맞게 쓰고 대본에 \"concept\": id 를 넣는다. "
             "썸네일 문구 공식은 docs/SHORTS_BANK.md." if concept else None,"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
-            "rules": INFO_RULE + rules, "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
+            "rules": INFO_RULE + HOME_RULE + rules, "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
             "recent_products": [u for u in used if u][-10:],
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg())}
 
@@ -786,8 +797,9 @@ def render(path: pathlib.Path) -> pathlib.Path:
                         img.paste(c, mask=c)
                     else:
                         img = photo_of(product, ss[0].get("photo", 1))
+                kw = {"pet": spec.get("pet", True)} if render_part is webtoon.render_part else {}  # 2026-11-17 마스코트 동전이
                 t_acc += render_part(ss[0]["lines"], ad, part, tmp, img, progress=lambda x, t0=t_acc: min(1.0, (t0 + x) / est),
-                                     bg=ss[0].get("bg", "room"), badge=ss[0].get("badge"))
+                                     bg=ss[0].get("bg", "room"), badge=ss[0].get("badge"), **kw)
             else:
                 before = len(ctx["durs"])
                 vs = [next(voices) for _ in ss]

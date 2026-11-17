@@ -91,8 +91,8 @@ def is_ad(row: dict) -> bool:
 
 
 # 쇼츠 해시태그: 주제 2개 + #Shorts (3개 넘기지 않음, 2026-11-15 조회수 규칙). 형식은 대본 format.
-HASHTAGS = {"prices": "#기름값 #환율", "quiz": "#생활비퀴즈 #물가", "skit-calc": "#전기요금 #생활비", "skit-q": "#생활비 #절약",
-        "skit-recipe": "#집밥 #배달비", "guide": "#생활비 #절약", "ox": "#생활비 #절약"}
+HASHTAGS = {"prices": "#장보기 #물가", "basket": "#장보기 #제철", "quiz": "#생활비퀴즈 #물가", "skit-calc": "#전기요금 #생활비", "skit-q": "#살림 #전기요금",
+        "skit-recipe": "#집밥 #배달비", "guide": "#살림 #절약", "ox": "#생활비 #절약"}
 
 
 def tags(row: dict) -> str:

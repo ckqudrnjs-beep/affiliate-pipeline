@@ -57,8 +57,53 @@ def _speed_lines(d, cx, cy, k):
                fill=(255, 255, 255, int(150 * k)), width=rnd.randint(3, 8))
 
 
+PET_SAY = {"coin": "짤랑!", "shock": "왈?!", "cry": "끼잉…", "curious": "멍?", "happy": "멍멍!"}
+
+
+def pet_pose(ln: dict) -> str:
+    """동전이 포즈: 줄에 pet 이 있으면 그것, 없으면 분위기로 자동 (반전 숫자 = 동전 물고 옴)."""
+    if ln.get("pet"):
+        return ln["pet"]
+    if ln.get("big"):
+        return "coin"
+    if ln.get("sfx") == "buzz" or ln.get("n") == "shock" or ln.get("u") == "wow":
+        return "shock"
+    if ln.get("n") in ("cold", "guilty") or ln.get("u") == "facepalm":
+        return "cry"
+    if ln.get("u") == "think" or ln.get("n") == "think":
+        return "curious"
+    return "happy"
+
+
+_PET_CACHE: dict = {}
+
+
+def _draw_pet(im, ln: dict, ds: float, tt: float, i: int):
+    """화면 아래 가운데 고정 마스코트. 줄이 바뀔 때 통 튀어 오르고, 첫 줄·반전 숫자에 말풍선."""
+    from PIL import ImageDraw
+    from .pet import draw
+    pose = pet_pose(ln)
+    key = (pose, int(tt * 10) % 20)  # 0.1초 단위로 꼬리·눈물 움직임, 20장 반복
+    if key not in _PET_CACHE:
+        _PET_CACHE[key] = draw(pose, 300, key[1] / 10)
+    sp = _PET_CACHE[key]
+    hop = int(70 * abs(math.sin(min(ds, 0.5) / 0.5 * math.pi)) * math.exp(-ds * 2))
+    x, y = (W - 300) // 2, 1520 - hop
+    im.paste(sp, (x, y), sp)
+    say = PET_SAY.get(pose) if (i == 0 or ln.get("big") or ln.get("pet_say")) else None
+    say = ln.get("pet_say") or say
+    if say and ds > 0.15:
+        d = ImageDraw.Draw(im)
+        fo = _font(44)
+        w = d.textlength(say, font=fo)
+        bx, by = x + 250, y + 10
+        d.rounded_rectangle([bx, by, bx + w + 40, by + 70], 30, fill="white", outline=INK, width=5)
+        d.polygon([(bx + 14, by + 50), (bx - 14, by + 84), (bx + 40, by + 66)], fill="white", outline=INK)
+        d.text((bx + 20 + w / 2, by + 35), say, font=fo, fill=INK, anchor="mm")
+
+
 def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Path, product_img=None,
-                progress=None, bg: str = "room", badge: str | None = None) -> float:
+                progress=None, bg: str = "room", badge: str | None = None, pet: bool = False) -> float:
     import numpy as np
     from PIL import Image, ImageDraw, ImageFilter
     from .uncle import write_wav
@@ -90,6 +135,8 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
             add(buzz(), st)
         if ln.get("big"):
             add(ding(1), st + 0.5)
+            if pet:  # 동전이가 동전 물고 오는 '짤랑'
+                add(ding(2) * 0.6, st + 0.85)
         elif ln.get("sfx") == "ding":
             add(ding(1), st)
     wav = tmp / f"{out.stem}.wav"
@@ -203,6 +250,9 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
             bx, by = W / 2, 1330 + int(8 * math.sin(tt * 9))
             d.rounded_rectangle([bx - wdt / 2 - 44, by - 88, bx + wdt / 2 + 44, by + 88], 36, fill=(255, 209, 102), outline=INK, width=8)
             d.text((bx, by), badge, font=fo, fill=(200, 30, 40), anchor="mm")
+        if pet:
+            _draw_pet(im, ln, ds, tt, i)
+            d = ImageDraw.Draw(im)
         d.text((W / 2, H - 100), "AI로 그린 가상 인물", font=_font(26), fill=(200, 200, 200), anchor="mm")
         if progress:
             d.rectangle((60, H - 60, 60 + (W - 120) * progress(tt), H - 54), fill="#d6452f")

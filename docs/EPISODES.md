@@ -70,6 +70,7 @@ react-nod "그치, 이거면 충분해.", outro-1/outro-2 (광고 링크·수수
 
 만화 상황극(skit): 포즈 삼촌 talk/wow/point/think(턱)/thumb(엄지척)/facepalm(이마), 조카 talk/shock/cold(덜덜)/happy/think.
 skit 장면 필드: bg (room 거실 / office 사무실 / store 편의점 / door 현관·택배), badge (첫 장면 노란 배지, 썸네일 겸 훅).
+줄 필드(2026-11-17): pet = 마스코트 강아지 동전이 포즈 happy/shock/coin/curious/cry/sleep (없으면 자동, 반전 숫자 = coin '짤랑!'), pet_say = 동전이 말풍선 8자 이하. 대본 맨 위 "pet": false 면 동전이 없음. 주부 타깃·아하 규칙은 SHORTS_GROWTH.md 2026-11-17.
 
 상황극 날은 `next` 결과의 concept(아이디어 은행 config/shorts_bank.json)을 바탕으로 쓰고 대본에 "concept": id 를 넣는다. 썸네일 문구 공식은 docs/SHORTS_BANK.md.
 

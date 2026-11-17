@@ -420,6 +420,10 @@ def check_lines(lines) -> list[str]:
             e.append(f"skit {j}: prop 은 product/heater")
         if ln.get("sfx") not in (None, "buzz", "ding"):
             e.append(f"skit {j}: sfx 는 buzz/ding")
+        if ln.get("pet") not in (None, "happy", "shock", "coin", "curious", "cry", "sleep"):
+            e.append(f"skit {j}: pet(동전이 포즈) 은 happy/shock/coin/curious/cry/sleep")
+        if len(ln.get("pet_say", "")) > 8:
+            e.append(f"skit {j}: pet_say 8자 이하")
     return e
 
 
