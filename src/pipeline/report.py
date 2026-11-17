@@ -99,7 +99,9 @@ def parse_grocery(js: dict, top: int = 5) -> dict | None:
     if len(items) < top * 2:
         return None
     items.sort(key=lambda x: x["m"])
-    return {"count": len(items), "down": [x for x in items if x["m"] < 0][:top], "up": [x for x in items[::-1] if x["m"] > 0][:top]}
+    # cheap: 장보기 리스트(shopping.py)가 부엌 재료를 고를 후보 15개, all: 다음 주들의 "기록 중 가장 싼 주" 비교용 전 품목 가격 (2026-11-17)
+    return {"count": len(items), "down": [x for x in items if x["m"] < 0][:top], "up": [x for x in items[::-1] if x["m"] > 0][:top],
+            "cheap": [x for x in items if x["m"] < 0][:15], "all": {f"{x['name']}|{x['unit']}": x["price"] for x in items}}
 
 
 def fetch_grocery(key: str, uid: str) -> dict | None:
@@ -229,6 +231,8 @@ def body(r: dict, root: str = "../") -> str:
                    f"<tr><td class='num'>{x['usd']:,}원</td><td class='num'>{x['week']:+,}원</td><td class='num'>{x['avg4w']:,}원</td>"
                    f"<td class='num'>{x['low']:,}~{x['high']:,}원</td></tr></table>"
                    f'<p>직구 세금은 <a href="{root}calc/aliexpress.html">직구 관세 계산기</a>로, 알리 상품 가격 흐름은 <a href="{root}prices.html">가격 기록</a>에서 볼 수 있어요.</p>')
+    if g and g.get("down"):
+        out.append(f'<p>이번 주 싼 재료로 만드는 반찬은 <a href="{root}shopping.html">이번 주 장보기 리스트</a>에 한 장으로 정리했어요.</p>')
     out.append(f'<p>난방·전기 고지서가 걱정되면 <a href="{root}calc/heater.html">난방비 계산기</a>와 <a href="{root}calc/electric.html">전기요금 계산기</a>도 같이 보세요.</p>')
     src = [SOURCES[k] for k in ("fuel", "grocery", "fx") if r.get(k)]
     out.append(f'<p class="src">출처: {", ".join(src)} 공개 API. 수치는 각 기관이 발표한 값을 반올림만 했고, 지역·매장에 따라 실제 가격은 다를 수 있어요.</p></article>')
@@ -244,7 +248,7 @@ def list_body(reports: list[dict]) -> str:
     if reports:
         r = reports[0]
         latest = (f'<h2>이번 주 요약 ({e(title(r))})</h2><ul>' + "".join(f"<li>{e(s)}</li>" for s in r["lines"]) +
-                  f'</ul><p><a href="report/{r["date"]}.html">이번 주 리포트 전체 보기</a></p>')
+                  f'</ul><p><a href="report/{r["date"]}.html">이번 주 리포트 전체 보기</a> · <a href="shopping.html">이번 주 장보기 리스트</a></p>')
     src = "".join(f"<li>{e(v)}</li>" for v in SOURCES.values())
     how = ('<h2>이 리포트는 이렇게 만들어요</h2>'
            '<p>매주 월요일 아침, 아래 공공 데이터에서 지난주 숫자를 가져와 지난주·지난달과 비교해요. '
@@ -264,7 +268,8 @@ def load_all(root: pathlib.Path = OUT) -> list[dict]:
 
 
 def telegram_text(r: dict, site: str = "https://don3chon.com") -> str:
-    return "\n".join([f"📊 {title(r)}", *[f"• {s}" for s in r["lines"]], f"자세히: {site}/report/{r['date']}",
+    shop = [f"🛒 이번 주 장보기 리스트: {site}/shopping"] if (r.get("grocery") or {}).get("down") else []
+    return "\n".join([f"📊 {title(r)}", *[f"• {s}" for s in r["lines"]], f"자세히: {site}/report/{r['date']}", *shop,
                       "출처: " + ", ".join(SOURCES[k] for k in ("fuel", "grocery", "fx") if r.get(k))])
 
 

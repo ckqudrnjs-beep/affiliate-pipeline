@@ -42,6 +42,8 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(g["up"][0]["name"], "품목11")
         self.assertEqual(g["up"][0]["m"], 110.0)
         self.assertEqual(g["down"], [])
+        self.assertEqual(g["cheap"], [])
+        self.assertEqual(g["all"]["품목3|1kg"], 1300)  # 장보기 리스트 '기록 중 최저' 비교용 전 품목 가격
         self.assertNotIn("내린 건", R.grocery_line(g))
         self.assertIsNone(R.parse_grocery(kamis(4)))
         self.assertIsNone(R.parse_grocery({"error_code": "200"}))
