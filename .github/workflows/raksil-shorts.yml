@@ -49,7 +49,7 @@ jobs:
           path: ~/.cache/supertonic3
           key: supertonic-3-v1
       - name: 검사
-        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range tests.test_raksil_games
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range tests.test_raksil_games tests.test_raksil_meme
       - name: 만들기 + 올리기
         env:
           RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
@@ -88,6 +88,24 @@ jobs:
             node scripts/game_rec.js http://localhost:8765 "$2" /tmp/rec 16
             PYTHONPATH=src python -m pipeline.raksil_games /tmp/rec upload "$2" "$3" "$D"
           fi
+      - name: 20:00 몽글이 공감극장 밈 쇼츠 (화·토, 게임 쇼츠가 없는 날만)
+        if: ${{ inputs.qid == '' || inputs.qid == null }}
+        env:
+          RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
+          RAKSIL_MEME: ${{ vars.RAKSIL_MEME }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+        run: |
+          [ "$RAKSIL_MEME" = off ] && { echo "밈 쇼츠 꺼짐 (RAKSIL_MEME=off)"; exit 0; }
+          D="${{ inputs.date }}"; D="${D:-$(TZ=Asia/Seoul date +%F)}"
+          GAME=$(PYTHONPATH=src python -m pipeline.raksil_games plan "$D")
+          [ "$GAME" != none ] && { echo "오늘 20시는 게임 쇼츠($GAME) → 밈 쉼"; exit 0; }
+          MEME=$(PYTHONPATH=src python -m pipeline.raksil_meme plan "$D")
+          echo "오늘 20시 밈: $MEME"
+          [ "$MEME" = none ] && exit 0
+          export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
+          PYTHONPATH=src python -m pipeline.raksil_meme upload "$D"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,7 +120,7 @@ jobs:
           ls media/raksil/*.mp4 >/dev/null 2>&1 || exit 0
           gh release view raksil-shorts >/dev/null 2>&1 || gh release create raksil-shorts --title "5락실 쇼츠 (틱톡 재업로드용)" --notes "매일 18:00 KST 자동 추가. 최근 14개만 보관. mp4 + 같은 이름 .txt(틱톡 설명)." --latest=false
           for j in media/raksil/*.json; do
-            python -c "import json,sys;m=json.load(open(sys.argv[1]));g='stage' in m or 'game' in m;print(m['title'].replace('#shorts','').strip()+'\n\n'+('무료 웹게임 하기: 프로필 링크 5raksil.com\n#웹게임 #무료게임 #5락실' if g else '오늘의 밸런스게임 투표: 프로필 링크 5raksil.com\n#밸런스게임 #너라면 #5락실')+('\nAI 음성' if m.get('voiced') else ''))" "$j" > "${j%.json}.txt"
+            python -c "import json,sys;m=json.load(open(sys.argv[1]));g=('stage' in m or 'game' in m) and 'meme' not in m;print(m['title'].replace('#shorts','').strip()+'\n\n'+('몽글이 직접 키우기: 프로필 링크 5raksil.com\n#몽글이 #공감 #5락실' if m.get('meme') else '무료 웹게임 하기: 프로필 링크 5raksil.com\n#웹게임 #무료게임 #5락실' if g else '오늘의 밸런스게임 투표: 프로필 링크 5raksil.com\n#밸런스게임 #너라면 #5락실')+('\nAI 음성' if m.get('voiced') else ''))" "$j" > "${j%.json}.txt"
           done
           gh release upload raksil-shorts media/raksil/*.mp4 media/raksil/*.txt --clobber
           gh release view raksil-shorts --json assets -q '.assets[].name' | sort | grep -E '^[0-9]{4}-' | cut -c1-10 | sort -u | head -n -14 | while read d; do
