@@ -25,6 +25,7 @@ from . import articles as A
 from . import prices as PR
 from . import questions as Q
 from . import recipes as RC
+from . import shopping as SH
 from . import seo as S
 from urllib.parse import urlparse
 
@@ -349,10 +350,10 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">{head}<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}{DY.CSS}</style></head><body>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}{DY.CSS}{SH.CSS}</style></head><body>
 {adbar}
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
+<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}shopping.html">장보기 리스트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>{foot_note}</div></footer>
 <script>{VIDEO_JS};{VISIT_JS}</script>
@@ -841,6 +842,11 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "recipe").mkdir(exist_ok=True)
     (o / "recipe.html").write_text(page(f"1인분 원가 레시피 | {BRAND}", "김치찌개·제육볶음 같은 한 그릇과 연말 홈파티 메뉴를 재료비로 계산하고 배달보다 얼마나 아끼는지 정리했어요.",
         RC.list_body(recs, pantry), path="recipe.html"), encoding="utf-8")
+    # 이번 주 장보기 리스트: 최신 리포트 시세 + 레시피. 리포트가 커밋되면 자동으로 바뀐다. 제휴 링크 없음 (2026-11-17)
+    shop_r = SH.latest(reps)
+    shop_t = f"이번 주 장보기 리스트 ({SH.week_label(shop_r['date'])})" if shop_r else "이번 주 장보기 리스트"
+    (o / "shopping.html").write_text(page(f"{shop_t} | {BRAND}", SH.DESC, SH.body(reps, recs), path="shopping.html", noindex=not shop_r,
+        crumbs=[("물가 리포트", "report.html"), ("이번 주 장보기 리스트", "shopping.html")]), encoding="utf-8")
     for r in recs:
         og = S.og_path("recipe", r["slug"])
         others = [x for x in recs if x is not r]
@@ -864,6 +870,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
                + [(f"news/{n['id']}.html", n["date"]) for n in news if not thin_news(n)]
                + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
+               + ([("shopping.html", shop_r["date"])] if shop_r else [])
                + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS] + [(f"calc/{PS.SLUG}.html", "2026-11-16"), (f"calc/{FC.SLUG}.html", "2026-11-16")]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
                + ([("recipe.html", max(max(r["date"], r["priceDate"]) for r in recs))] if recs else [])
