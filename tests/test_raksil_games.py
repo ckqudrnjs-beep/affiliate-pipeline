@@ -2,6 +2,7 @@ import datetime as dt
 import json
 import pathlib
 import tempfile
+import importlib.util
 import unittest
 
 from pipeline import raksil_games as rg
@@ -70,6 +71,8 @@ class T(unittest.TestCase):
         self.assertTrue(rg.check_record({"cut": 0.16}))  # 그날 별사탕: 775px 중 123px 잘림
         self.assertTrue(rg.check_record({"cut": 0, "cut_end": 0.05}))
 
+    # Pillow 는 쇼츠·인스타 워크플로에만 설치된다 → 거기서 돌고, 가벼운 워크플로(curate 등)에서는 건너뜀
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow 없음")
     def test_layout_in_safe_area(self):
         for size in ((912, 1550), (1080, 1920), (1080, 1080), (1920, 1080), (300, 2000)):
             self.assertEqual(rg.check_layout(size), [], size)

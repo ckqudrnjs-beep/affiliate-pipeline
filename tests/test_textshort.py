@@ -1,4 +1,5 @@
 import datetime as dt
+import importlib.util
 import json
 import pathlib
 import unittest
@@ -39,6 +40,8 @@ class TextShortTest(unittest.TestCase):
         self.assertFalse(T.is_trial_week(dt.date(2026, 11, 24)))
 
 
+# numpy 는 쇼츠 워크플로에만 설치된다 → 거기서 돌고, 가벼운 워크플로(curate 등)에서는 건너뜀
+@unittest.skipUnless(importlib.util.find_spec("numpy"), "numpy 없음")
 class SoundTest(unittest.TestCase):
     def test_soundtrack_fits_12s_with_long_voice(self):
         import numpy as np
