@@ -156,5 +156,182 @@
     }
    ]
   }
+ },
+ "2026-11-17": {
+  "sc-domain:5raksil.com": {
+   "clicks": 0,
+   "impressions": 1,
+   "position": 8.0,
+   "top_query": [],
+   "top_page": [
+    {
+     "key": "https://5raksil.com/games/tongtong",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 8.0
+    }
+   ],
+   "sitemaps": [
+    {
+     "path": "https://5raksil.com/feed.xml",
+     "last_read": "2026-11-16",
+     "errors": 0,
+     "submitted": 16,
+     "indexed": 0
+    },
+    {
+     "path": "https://5raksil.com/sitemap.xml",
+     "last_read": "2026-11-16",
+     "errors": 0,
+     "submitted": 41,
+     "indexed": 0
+    }
+   ]
+  },
+  "sc-domain:don3chon.com": {
+   "clicks": 0,
+   "impressions": 27,
+   "position": 14.2,
+   "top_query": [
+    {
+     "key": "1kwh 가격",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 8.0
+    },
+    {
+     "key": "ep10 nc",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 21.0
+    },
+    {
+     "key": "라디에이터 전기세",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 53.0
+    },
+    {
+     "key": "알리 달러 원화 차이",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 5.0
+    },
+    {
+     "key": "알리 원화 달러 차이",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 5.0
+    },
+    {
+     "key": "알리 직구 관세",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 69.0
+    },
+    {
+     "key": "알리익스프레스 관세 계산기",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 55.0
+    },
+    {
+     "key": "알리익스프레스 무이자 할부",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 2.0
+    },
+    {
+     "key": "알리익스프레스 어필리에이트",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 4.0
+    },
+    {
+     "key": "전기요 전기장판 차이",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 13.0
+    }
+   ],
+   "top_page": [
+    {
+     "key": "https://don3chon.com/calc/aliexpress",
+     "clicks": 0,
+     "impressions": 10,
+     "position": 17.5
+    },
+    {
+     "key": "https://don3chon.com/calc/electric",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 8.0
+    },
+    {
+     "key": "https://don3chon.com/calc/heater",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 6.0
+    },
+    {
+     "key": "https://don3chon.com/guide/ali-black-friday-checklist",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 2.0
+    },
+    {
+     "key": "https://don3chon.com/guide/electric-blanket-vs-mat-bill",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 36.5
+    },
+    {
+     "key": "https://don3chon.com/news",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 3.0
+    },
+    {
+     "key": "https://don3chon.com/news/drop-baseus-ep10-nc-earbuds-2026-11-11",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 21.0
+    },
+    {
+     "key": "https://don3chon.com/news/drop-baseus-ep10-nc-earbuds-2026-11-11.html",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 41.0
+    },
+    {
+     "key": "https://don3chon.com/news/drop-qcy-melobuds-pro-anc-2026-11-11.html",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 5.0
+    },
+    {
+     "key": "https://don3chon.com/prices",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 3.0
+    }
+   ],
+   "sitemaps": [
+    {
+     "path": "https://don3chon.com/feed.xml",
+     "last_read": "2026-11-17",
+     "errors": 0,
+     "submitted": 41,
+     "indexed": 0
+    },
+    {
+     "path": "https://don3chon.com/sitemap.xml",
+     "last_read": "2026-11-16",
+     "errors": 0,
+     "submitted": 65,
+     "indexed": 0
+    }
+   ]
+  }
  }
 }
