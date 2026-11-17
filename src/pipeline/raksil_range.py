@@ -36,7 +36,7 @@ def stage_for(day: dt.date) -> int:
 
 
 def lines(stage: int) -> list[str]:
-    return [f"{stage}단계, 좀비 나온다.", "너는 몇 단계까지 갈 수 있어? 오락실 닷컴에서 도전해 봐!"]
+    return [f"{stage}단계, 좀비 나온다.", "너는 몇 단계까지 갈 수 있어? 오락실 닷컴 즐겨찾기 해 두고 도전해!"]  # 2026-11-17 BK
 
 
 def heads(events: list[dict]) -> list[float]:

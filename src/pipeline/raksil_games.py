@@ -106,7 +106,7 @@ def hook_of(g: dict, day: dt.date) -> str:
 
 def lines(g: dict, kind: str) -> list[str]:
     first = f"5락실 신작, {g['name']}!" if kind == "new" else f"{g['name']}, 설치 없이 바로 돼."
-    return [first, "프로필 링크, 오락실 닷컴에서 바로 해 봐!"]
+    return [first, "오락실 닷컴에서 바로 해 봐! 새 게임 계속 나오니까 즐겨찾기!"]  # 2026-11-17 BK: 끝 한 줄
 
 
 def title_of(g: dict, kind: str, hook: str = "") -> str:
@@ -184,7 +184,7 @@ def cta_card(g: dict, t: float):
     rs.glow_text(img, (W / 2, 900), ["5raksil.com"], rs.font(130), 130, blink, glow=20)
     rs.glow_text(img, (W / 2, 1140), ["프로필 링크에서 바로 플레이"], rs.font(64), 64, rs.CYAN, glow=12)
     rs.glow_text(img, (W / 2, 1300), ["설치 없음, 무료"], rs.font(56), 56, rs.YEL, glow=8)
-    rs.glow_text(img, (W / 2, 1460), ["구독하면 매일 새 게임 소식"], rs.font(56), 56, rs.PINK, glow=8)
+    rs.glow_text(img, (W / 2, 1460), ["새 게임 계속 · 즐겨찾기·구독"], rs.font(56), 56, rs.PINK, glow=8)
     return img
 
 
