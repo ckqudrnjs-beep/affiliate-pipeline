@@ -313,6 +313,7 @@ def cta(t: dict, ep: int, tt: float):
     rs.glow_text(img, (W / 2, 1080), ["몽글이 직접 키우기"], rs.font(70), 70, rs.WHITE, glow=8)
     rs.glow_text(img, (W / 2, 1230), ["5raksil.com"], rs.font(120), 120, blink, glow=18)
     rs.glow_text(img, (W / 2, 1400), ["무료 · 설치 없음 · 프로필 링크"], rs.font(52), 52, rs.CYAN, glow=6)
+    rs.glow_text(img, (W / 2, 1540), ["다음 화도 보려면 구독"], rs.font(56), 56, rs.PINK, glow=8)  # 2026-11-17 BK: 끝 화면에만
     return img
 
 

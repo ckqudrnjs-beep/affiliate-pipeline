@@ -71,7 +71,7 @@ def result_of(q: dict | None, votes: dict | None) -> dict | None:
 
 def script(q: dict, res: dict | None) -> list[str]:
     """장면별 대사 (빈 문자열 = 대사 없음)."""
-    last = "투표는 오락실 닷컴에서. 댓글로 너의 선택도 알려줘!"
+    last = "투표는 오락실 닷컴에서! 매일 새 질문 올라오니까 구독해 둬."  # 2026-11-17 BK: 끝에 한 번, 이유와 함께
     if res:
         win, pct = (res["a"], res["pa"]) if res["pa"] >= res["pb"] else (res["b"], res["pb"])
         mid = f"참고로 어제는 {pct}퍼센트가 {win}을 골랐어."
