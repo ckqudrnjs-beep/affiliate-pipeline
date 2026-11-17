@@ -46,3 +46,18 @@ class SeoOutputTest(unittest.TestCase):
     def test_og_fallback(self):
         self.assertEqual(S.og_path("guide", "없는-글"), "og/default.png")
         self.assertTrue(pathlib.Path("static/og/default.png").exists())
+
+
+class FeedNoindexTest(unittest.TestCase):
+    def test_built_feed_skips_noindex_pages(self):
+        import tempfile, re
+        from pipeline import site
+        with tempfile.TemporaryDirectory() as d:
+            site.build(d)
+            feed = (pathlib.Path(d) / "feed.xml").read_text(encoding="utf-8")
+            links = re.findall(r"<link>https://don3chon\.com/([^<]+)</link>", feed)
+            self.assertTrue(links)
+            for u in links:
+                page = pathlib.Path(d) / f"{u}.html"
+                self.assertTrue(page.exists(), u)
+                self.assertNotIn('name="robots" content="noindex', page.read_text(encoding="utf-8"), u)
