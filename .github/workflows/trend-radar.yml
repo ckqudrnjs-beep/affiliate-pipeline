@@ -1,0 +1,36 @@
+name: trend-radar
+
+# 쇼츠 기획용 트렌드 레이더 (2026-11-17). 매주 월 06:50 KST, 우리 키워드로 지난 7일 한국 쇼츠 상위를
+# 유튜브 공식 API(읽기 전용 키)로 모아 docs/SHORTS_TRENDS_WEEKLY.md 를 만든다. 영상은 받지 않는다.
+on:
+  schedule:
+    - cron: "50 21 * * 0"   # 월 06:50 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 트렌드
+        env:
+          YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}
+        run: PYTHONPATH=src python -m pipeline.trend_radar >> "$GITHUB_STEP_SUMMARY"
+      - name: 저장
+        run: |
+          git config user.name "trend-radar-bot"
+          git config user.email "trend-radar-bot@users.noreply.github.com"
+          git add docs/SHORTS_TRENDS_WEEKLY.md data/youtube/trends 2>/dev/null || true
+          git commit -m "쇼츠 트렌드 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase -q origin main
+          git push origin HEAD:main

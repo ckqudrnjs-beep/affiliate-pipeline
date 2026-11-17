@@ -33,3 +33,19 @@ BK 연결 순서: plan/TOOLS_SETUP_BK.md.
 - 그래서 플러그인은 건너뜀(보안 점검은 security-review 스킬로 대신). 네이버는 NAVER API HUB로 이전·카드 필요 → BK 보류.
 - 서치콘솔은 GitHub Actions 읽기 전용 수집 `pipeline.gsc_stats` (매일 07:20 KST, docs/SEO_WEEKLY.md)로 대체. 설정은 docs/SEO_SETUP.md.
 - 유튜브 분석 토큰 두 채널 모두 연결 완료 (11/16 22:55).
+
+## 3차 설치: 쇼츠 기획 도구 (2026-11-17, BK "쇼츠 컨텐츠 기획을 위한 스킬·MCP 찾아서 설치")
+
+모두 무료, 새 키 없음. 플러그인·MCP는 BK 앱 환경에서 막혀 있어 **저장소 스킬 + GitHub Actions** 로만 넣었다.
+
+| 도구 | 출처·고정 | 하는 일 |
+|---|---|---|
+| `shorts-planner` (자체 스킬) | - | 우리 규칙(주부·아하·숫자 훅·상품 없음)을 먼저 적용하고 아래 도구를 순서대로 쓰게 하는 기획 순서표 |
+| `viral-youtube-shorts`, `viral-hooks`, `viral-captions-and-ctas`, `viral-short-form-ideas` | vyralcontent/content-skills (MIT) 커밋 349e495 | 쇼츠 길이·루프·첫 3초, 훅 후보, 첫 줄·해시태그·고정 댓글, 아이디어 기둥. 글만 있음(코드·네트워크 없음), 광고 배너 줄만 삭제 |
+| 트렌드 레이더 `pipeline.trend_radar` + `trend-radar.yml` | 자체, 유튜브 공식 Data API | 매주 월 06:50 KST, 키워드(`config/trend_keywords.json`)별 지난 7일 한국 쇼츠 상위 → `docs/SHORTS_TRENDS_WEEKLY.md`. 기존 `YOUTUBE_API_KEY` 사용, 할당량 약 1,500/주 |
+
+검토 후 뺀 것:
+- AgriciDaniel/claude-youtube (MIT): 내용은 좋지만 유료 DataForSEO 전제가 많고, 자막 수집 스크립트가 비공식 방식. 우리 수집기와 겹침.
+- vidIQ 커넥터: 유료 구독 중심 + BK 앱 환경에서 커넥터 막힘. 필요하면 BK가 무료판을 웹에서 직접.
+- 구글 트렌드 비공식 라이브러리(pytrends): 스크래핑이라 제외. 공개 RSS(KR 인기 검색어)만 레이더에 붙임(실패 시 건너뜀).
+- 네이버 데이터랩: 카드 등록 필요 → 11/16 BK 보류 그대로.
