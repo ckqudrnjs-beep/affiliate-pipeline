@@ -1,0 +1,1268 @@
+{
+ "groups": {
+  "돈 줍는 삼촌 (주부·살림)": {
+   "장보기 물가": [
+    {
+     "id": "7rQhO_jNEd8",
+     "title": "아직도 물가 적응 못한 사람",
+     "channel": "짱콩담",
+     "views": 3367,
+     "per_day": 1398,
+     "sec": 30,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "_wII1xiI2zw",
+     "title": "70대 할머니 김장 장보기! 별거 산 것도 없는데 30만원 실화인가요?",
+     "channel": "70대할머니의 밥상",
+     "views": 1413,
+     "per_day": 934,
+     "sec": 11,
+     "published": "2026-11-16",
+     "hook": "질문"
+    },
+    {
+     "id": "l_bQUD6lljc",
+     "title": "2026 호주 장보기 물가",
+     "channel": "Vivienne Kim",
+     "views": 679,
+     "per_day": 877,
+     "sec": 109,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "bp3WWC8CBy4",
+     "title": "뉴질랜드 마트 물가 체감하기 💸💸🇳🇿 #뉴질랜드 #마트물가 #woolworths #groceryshopping #auckland",
+     "channel": "베키위키 Beckywiki",
+     "views": 981,
+     "per_day": 676,
+     "sec": 26,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "NSFxhCnVAK8",
+     "title": "장보기 센스 3단계 🛒 거스름돈·할인·묶음 가격 | 한눈한판",
+     "channel": "한눈한판",
+     "views": 934,
+     "per_day": 556,
+     "sec": 31,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "83ReVCKW6D4",
+     "title": "🚶‍♀️Seoul Vlog | 강북 물가투어｜중국산 빵이 이렇게 많다고? | 전통시장 빵부터 애슐리 VIP, 국산 바나나 가격까지",
+     "channel": "키키바코 kikibacko",
+     "views": 1581,
+     "per_day": 515,
+     "sec": 142,
+     "published": "2026-11-14",
+     "hook": "질문"
+    },
+    {
+     "id": "AaGv9cDljY0",
+     "title": "🇫🇷 물가 비싼 파리에서 1유로로 살 수 있는 것들🛒 #shorts",
+     "channel": "Couya 꾸야",
+     "views": 1116,
+     "per_day": 291,
+     "sec": 22,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "0WTreQO5Hns",
+     "title": "미국맘 일상- 비싼 미국 물가에 정신줄 잡고 코스코 장보기 💸#미국일상vlog",
+     "channel": "Happy Lyn 해피린",
+     "views": 1625,
+     "per_day": 253,
+     "sec": 40,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "f-8Hlx2MBN0",
+     "title": "미국 물가 구경하고 왔습니다",
+     "channel": "SIKITV 싴이",
+     "views": 1256,
+     "per_day": 207,
+     "sec": 43,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "bMsg_LHYN4o",
+     "title": "치솟는 장바구니 생활비 절약 팁 #물가상승 #장보기 #절약꿀팁",
+     "channel": "머니뉴스",
+     "views": 1089,
+     "per_day": 181,
+     "sec": 24,
+     "published": "2026-11-11",
+     "hook": "기타"
+    }
+   ],
+   "김장 비용": [
+    {
+     "id": "v27aHXXeg00",
+     "title": "'김장 스트레스' 대신 간편함…\"허리 펴고 사 먹을래요\" [머니브리핑] / 머니뭅TV",
+     "channel": "머니뭅TV",
+     "views": 121251,
+     "per_day": 84221,
+     "sec": 118,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "_a0g9UW_dgM",
+     "title": "싸다 했더니 역시…4인가족 김장 '30만 원도 안 든다' 2020년대 들어 최저 [MBN 뉴스7]",
+     "channel": "MBN News",
+     "views": 9470,
+     "per_day": 8749,
+     "sec": 117,
+     "published": "2026-11-16",
+     "hook": "질문"
+    },
+    {
+     "id": "vYtqGKSbGaY",
+     "title": "김장 끝나고 서운하지 않게, 비용은 이렇게 나눠요",
+     "channel": "오늘 인생수업",
+     "views": 28775,
+     "per_day": 6496,
+     "sec": 6,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "gYoH-pXPlz0",
+     "title": "김장 비용 감소에도 지갑이 꾹 닫힌 이유는?",
+     "channel": "SBS Biz 뉴스",
+     "views": 3180,
+     "per_day": 6360,
+     "sec": 76,
+     "published": "2026-11-17",
+     "hook": "질문"
+    },
+    {
+     "id": "gVazkBfHuRg",
+     "title": "김장 비용 내렸지만…'사 먹는 김치' 비중 40% 넘었다 / 연합뉴스TV (YonhapnewsTV)",
+     "channel": "연합뉴스TV",
+     "views": 13457,
+     "per_day": 5321,
+     "sec": 118,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "KFHLna8RZGs",
+     "title": "김장 비용 때문에 시댁과의 갈등",
+     "channel": "빨간맛",
+     "views": 8528,
+     "per_day": 2502,
+     "sec": 21,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "XX8HmLyEkHs",
+     "title": "배추값은 26% 내렸는데…오른 재료도 있습니다",
+     "channel": "내돈내돈",
+     "views": 1313,
+     "per_day": 1113,
+     "sec": 56,
+     "published": "2026-11-16",
+     "hook": "숫자"
+    },
+    {
+     "id": "X9YaGH5tQ9o",
+     "title": "배추 반값이라고 덜컥 주문하면 세 번 놀라요 #김장비용 #배추값 #김장할까사먹을까",
+     "channel": "과거편집실",
+     "views": 2057,
+     "per_day": 492,
+     "sec": 162,
+     "published": "2026-11-13",
+     "hook": "질문"
+    },
+    {
+     "id": "L9q7ZdW-YGg",
+     "title": "2026 김장비용",
+     "channel": "그래서얼만교?",
+     "views": 1839,
+     "per_day": 317,
+     "sec": 52,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "trBU9vPeBGs",
+     "title": "김장 사전점검 영상",
+     "channel": "인생도움-정보1스푼",
+     "views": 1357,
+     "per_day": 205,
+     "sec": 45,
+     "published": "2026-11-10",
+     "hook": "기타"
+    }
+   ],
+   "전기요금 절약": [
+    {
+     "id": "ntWwCOm3HBg",
+     "title": "전기요금 아끼는 법, 오늘 바로 바꿀 가전 사용법 10가지",
+     "channel": "인생다큐 오늘",
+     "views": 54856,
+     "per_day": 52035,
+     "sec": 6,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "p9WQp6c5dC0",
+     "title": "전기요금 폭탄의 범인은 따로 있었다 😱 99%가 모르고 켜두는 전기 먹는 하마 14가지",
+     "channel": "지혜人TV",
+     "views": 95175,
+     "per_day": 27672,
+     "sec": 6,
+     "published": "2026-11-14",
+     "hook": "반전·금지"
+    },
+    {
+     "id": "Cp5_FawpEj8",
+     "title": "💰 겨울 전기요금 줄이는 방법 8가지! 모르면 계속 돈이 나갑니다 #청춘은바로지금 #생활정보",
+     "channel": "청춘은 바로 지금",
+     "views": 17729,
+     "per_day": 7361,
+     "sec": 6,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "SN9SuyXiIyE",
+     "title": "전기장판 밤새 틀면 얼마일까 #전기장판전기세 #난방비절약 #전기요금절약",
+     "channel": "플레이앤라이프",
+     "views": 1041,
+     "per_day": 872,
+     "sec": 30,
+     "published": "2026-11-16",
+     "hook": "질문"
+    },
+    {
+     "id": "-M4SNojaTr4",
+     "title": "이지현 전기세 폭탄 맞고 결국 전기밥통 치워 버린 이지현의 살림 꿀팁",
+     "channel": "스타손민수",
+     "views": 3991,
+     "per_day": 773,
+     "sec": 15,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "qO98BsedfIE",
+     "title": "전기요금 폭탄, 누진제 때문이 아닐 수도 있습니다 #전기요금#전기세#누진제#요금절약#생활팁#꿀정보#전기요금고지서#전기사용량#절약팁#가계부#정보채널#살림노하우",
+     "channel": "엔테이 정보공장",
+     "views": 1176,
+     "per_day": 737,
+     "sec": 43,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "9gn7SbbX2GU",
+     "title": "TV 밝기만 낮춰도 전기요금 달라져",
+     "channel": "혼생활연구소",
+     "views": 1225,
+     "per_day": 472,
+     "sec": 26,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "zGV14W0YwLQ",
+     "title": "겨울 전기요금 폭탄 원은 따로 있습니다! 전기 도둑 8가지 #전기요금 #생활꿀팁 #shorts  #쇼츠",
+     "channel": "Why LAB",
+     "views": 1201,
+     "per_day": 395,
+     "sec": 13,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "MWtIPtPumhQ",
+     "title": "효율적인 전기세 절약 보일러",
+     "channel": "기찬보일러",
+     "views": 1486,
+     "per_day": 241,
+     "sec": 42,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "Qx3ob2WXiKU",
+     "title": "에어컨보다 무서운 전기도둑 #전기세절약 #대기전력차단 #전기밥솥보온 #생활꿀팁",
+     "channel": "살림마니아",
+     "views": 1442,
+     "per_day": 234,
+     "sec": 94,
+     "published": "2026-11-11",
+     "hook": "기타"
+    }
+   ],
+   "난방비 절약": [
+    {
+     "id": "YH0es9wjBvI",
+     "title": "난방비 아끼려다 가스비 폭탄? 지금 당장 멈춰야 할 겨울철 보일러 실수 7가지 | 겨울철 난방비 30% 절약 꿀팁",
+     "channel": "인생보물창고",
+     "views": 470933,
+     "per_day": 90926,
+     "sec": 7,
+     "published": "2026-11-12",
+     "hook": "질문"
+    },
+    {
+     "id": "W9XMdtjGJOs",
+     "title": "외출할 때 보일러 끄면 가스비 폭탄 맞습니다! 난방비 아끼는 올바른 보일러 사용법 9가지 #보일러가스비절약 #난방비절약 #겨울철꿀팁",
+     "channel": "오늘의 기준",
+     "views": 113623,
+     "per_day": 53682,
+     "sec": 6,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "H9xkG_RCb_o",
+     "title": "보일러만 만지고 계셨나요? 😮 난방비 확 줄이는 겨울 절약 방법 10가지",
+     "channel": "지혜人TV",
+     "views": 72433,
+     "per_day": 11248,
+     "sec": 6,
+     "published": "2026-11-11",
+     "hook": "질문"
+    },
+    {
+     "id": "3KlW3p4m3S0",
+     "title": "#겨울난방비#난방비절약#보일러외출모드#보일러동파방지#겨울살림꿀팁##지혜#생활#습관#공감#위로#꿀팁#방법#지식#정보#좋은글#공감글귀#멋진글귀#50대#60대#70대#노후#노년#중년#",
+     "channel": "지혜로운 생활",
+     "views": 34444,
+     "per_day": 7828,
+     "sec": 6,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "Kc3rq9X8zqk",
+     "title": "올겨울 난방비 아껴주는 백지영 문신템, 지인들 연락 폭주해서 결국 공개",
+     "channel": "찐템창고",
+     "views": 14333,
+     "per_day": 6640,
+     "sec": 21,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "JDZdOUaOhbE",
+     "title": "난방비 폭탄 맞기 전에 창가부터 막으세요",
+     "channel": "홈딱",
+     "views": 25622,
+     "per_day": 4743,
+     "sec": 28,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "osJpn3sB8uI",
+     "title": "난방비 30만원 아꼈어요",
+     "channel": "수미네집",
+     "views": 22283,
+     "per_day": 4457,
+     "sec": 19,
+     "published": "2026-11-12",
+     "hook": "숫자"
+    },
+    {
+     "id": "uE_dtmlMcJY",
+     "title": "침대 난방텐트 하나로 우풍 차단, 보일러 안 틀고 따뜻하게 자는 법",
+     "channel": "홈앤코지",
+     "views": 11427,
+     "per_day": 3666,
+     "sec": 18,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "LcJprsu0orI",
+     "title": "난방비 폭탄 피하는 방법! #난방비절약 #난방비절감",
+     "channel": "살림노트",
+     "views": 15659,
+     "per_day": 2428,
+     "sec": 21,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "uCXENmpPQZo",
+     "title": "문틈 찬바람 차단! 끼우기만 하는 양면 문풍지 #문풍지 #외풍차단 #난방비절약 #겨울꿀템  #살림꿀템",
+     "channel": "살림고수언니",
+     "views": 7145,
+     "per_day": 1709,
+     "sec": 25,
+     "published": "2026-11-13",
+     "hook": "기타"
+    }
+   ],
+   "관리비 줄이기": [
+    {
+     "id": "alFInvY_Z3w",
+     "title": "겨울 관리비 폭탄, 이렇게 줄이세요! 난방비·온수비 아끼는 겨울 생활 습관 10가지",
+     "channel": "땡큐손머치 스튜디오",
+     "views": 16639,
+     "per_day": 3292,
+     "sec": 6,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "5YsBfeBMSWs",
+     "title": "아파트 관리비 줄이기 꿀팁",
+     "channel": "최은유 원흥역하나부동산",
+     "views": 3,
+     "per_day": 6,
+     "sec": 61,
+     "published": "2026-11-17",
+     "hook": "기타"
+    }
+   ],
+   "집밥 가격": [
+    {
+     "id": "jxjmPif2Le8",
+     "title": "밥 한 공기 가격 차이 실화?!",
+     "channel": "씀띵",
+     "views": 1198,
+     "per_day": 202,
+     "sec": 46,
+     "published": "2026-11-11",
+     "hook": "질문"
+    },
+    {
+     "id": "1TXIqcqry0A",
+     "title": "배달 vs 집밥, 1년이면 얼마 차이? (2026년 가격으로 계산)",
+     "channel": "비교 랩",
+     "views": 333,
+     "per_day": 54,
+     "sec": 175,
+     "published": "2026-11-11",
+     "hook": "질문"
+    }
+   ],
+   "살림 꿀팁": [
+    {
+     "id": "8ZqQ5Ttrh9E",
+     "title": "평생 써먹는 ‘바세린’ 생활 꿀팁 12가지 2탄",
+     "channel": "살림왕 석서방",
+     "views": 265382,
+     "per_day": 196055,
+     "sec": 84,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "3JBmKboT8ZI",
+     "title": "20년 짬밥 동대문 이모가 알려준 진짜 꿀팁",
+     "channel": "재밌는 꼼수, 살림",
+     "views": 146832,
+     "per_day": 66743,
+     "sec": 41,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "fwl9c2jySIw",
+     "title": "#옷장정리 #생활꿀팁 #정리정돈 #살림노하우",
+     "channel": "hewady bwq",
+     "views": 214104,
+     "per_day": 49503,
+     "sec": 131,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "8jwscQtQsqA",
+     "title": "택배 뽁뽁이 제발 그냥 버리지 마세요! 30년 차 살림 고수가 기름때 설거지부터 냉장고·싱크대 정리까지 평생 써먹는 놀라운 재활용 비법 3가지 #생활꿀팁 #살림노하우 #주방정리",
+     "channel": "띵까띵까",
+     "views": 280036,
+     "per_day": 42355,
+     "sec": 59,
+     "published": "2026-11-10",
+     "hook": "기타"
+    },
+    {
+     "id": "LSI-VkaxYs0",
+     "title": "알아두면 평생 써먹는 생활 꿀팁 10가지 #살림팁 #꿀팁 #생활꿀팁",
+     "channel": "진짜꿀팁 Realtips",
+     "views": 155741,
+     "per_day": 38059,
+     "sec": 108,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "Oo1a6uMHczE",
+     "title": "아무도 알려주지 않는 청소 꿀팁 13가지 #청소꿀팁 #살림노하우 #집안청소 #생활꿀팁 #주방청소 #청소방법 #살림팁",
+     "channel": "Lomas",
+     "views": 67222,
+     "per_day": 18804,
+     "sec": 169,
+     "published": "2026-11-13",
+     "hook": "반전·금지"
+    },
+    {
+     "id": "dTvv4lur9nU",
+     "title": "90%가 모르는 비닐봉지 활용법! 생활에 유용한 꿀팁 13가지 #생활꿀팁 #비닐봉지활용법 #살림꿀팁 #생활정보 #절약꿀팁",
+     "channel": "Lomas",
+     "views": 109697,
+     "per_day": 18098,
+     "sec": 153,
+     "published": "2026-11-11",
+     "hook": "숫자"
+    },
+    {
+     "id": "nfBJt07QhKo",
+     "title": "#생활꿀팁 #살림꿀팁 #쌀포대재활용 #재활용꿀팁 #생활정보 #정리정돈 #식재료보관 #살림노하우 #주부지혜 #살림숏츠 #건강 #건강",
+     "channel": "Trinh Khai",
+     "views": 75133,
+     "per_day": 12367,
+     "sec": 28,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "WE_oKAjtwe8",
+     "title": "마트에서 ‘이 새우젓’ 고르면 100% 후회합니다!🚨 #살림꿀팁 #새우젓",
+     "channel": "코코네",
+     "views": 50817,
+     "per_day": 11994,
+     "sec": 40,
+     "published": "2026-11-13",
+     "hook": "기타"
+    }
+   ],
+   "마트 장보기 꿀팁": [
+    {
+     "id": "LKCBKNxA7r8",
+     "title": "김숙이 직접 고른 이마트 밀키트 TOP3 리얼 후기",
+     "channel": "위시",
+     "views": 1150,
+     "per_day": 992,
+     "sec": 22,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "7VUt-d7noN8",
+     "title": "'이 표시' 50%는 거짓입니다. 마트에서 장보기 전에 기억해야 할 꿀팁입니다.",
+     "channel": "먹킷리스트",
+     "views": 445,
+     "per_day": 890,
+     "sec": 60,
+     "published": "2026-11-17",
+     "hook": "숫자"
+    },
+    {
+     "id": "xFnb_99Bmy0",
+     "title": "마트 직원이 절대 안 알려주는 물건 배치 비밀 #꿀팁 #쇼핑 #마트",
+     "channel": "채널300",
+     "views": 1272,
+     "per_day": 366,
+     "sec": 50,
+     "published": "2026-11-14",
+     "hook": "반전·금지"
+    },
+    {
+     "id": "c4bxJMznzEg",
+     "title": "마트에서 '이것' 안 보고 사면 무조건 손해입니다 #쇼츠 #꿀팁",
+     "channel": "채널300",
+     "views": 670,
+     "per_day": 149,
+     "sec": 44,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "m_qdpo2gjLM",
+     "title": "노브랜드 가기 전 할인부터 확인! 신선식품부터 생활용품까지 장보기 정보를 모았어요. 품목별 행사기간과 할인 조건 꼭 확인하세요. #노브랜드 #할인정보 #장보기 #마트할인 #꿀팁집사",
+     "channel": "꿀팁집사",
+     "views": 744,
+     "per_day": 145,
+     "sec": 5,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "9w1nemPgDqE",
+     "title": "동네마트 갈 때 꼭 찾는 할인템 6가지! 장바구니 물가 아끼는 알뜰 쇼핑 꿀팁 🛒",
+     "channel": "직장인Jang튜브ㅣOffice worker Jang Tube",
+     "views": 724,
+     "per_day": 134,
+     "sec": 19,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "2vD3y_YDu5s",
+     "title": "같은 여섯 봉지가 11,578원 차이, 온라인 장보기는 왜 비쌀까요",
+     "channel": "장바구니요리사",
+     "views": 198,
+     "per_day": 57,
+     "sec": 160,
+     "published": "2026-11-14",
+     "hook": "질문"
+    },
+    {
+     "id": "5GfTD84y_to",
+     "title": "​식자재마트인데 과일을 하나씩 살 수 있다고?! 😲#세종식자재마트 #포항마트 #장보기 #흥해마트 #식자재마트",
+     "channel": "포라이",
+     "views": 261,
+     "per_day": 43,
+     "sec": 19,
+     "published": "2026-11-11",
+     "hook": "질문"
+    },
+    {
+     "id": "UwO_OdPvL-c",
+     "title": "식용유, 이것 모르고 사면 튀김이 탑니다! 마트 식용유 고르는 3가지#식용유 #올리브유 #엑스트라버진 #발연점 #카놀라유 #포도씨유 #마트꿀팁 #장보기 #생활꿀팁 #만능정보통",
+     "channel": "만능정보통",
+     "views": 47,
+     "per_day": 10,
+     "sec": 57,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "bDJDy68of94",
+     "title": "김장재료는 여기서 준비땅~~~​#김장준비 #식자재마트 #포항맛집 #흥해맛집 #세종식자재마트 #포항장보기 #가성비마트 #자취생꿀팁",
+     "channel": "포라이",
+     "views": 24,
+     "per_day": 4,
+     "sec": 18,
+     "published": "2026-11-12",
+     "hook": "기타"
+    }
+   ],
+   "가스요금": [
+    {
+     "id": "YH0es9wjBvI",
+     "title": "난방비 아끼려다 가스비 폭탄? 지금 당장 멈춰야 할 겨울철 보일러 실수 7가지 | 겨울철 난방비 30% 절약 꿀팁",
+     "channel": "인생보물창고",
+     "views": 470933,
+     "per_day": 90925,
+     "sec": 7,
+     "published": "2026-11-12",
+     "hook": "질문"
+    },
+    {
+     "id": "hdHjSuSJ8qw",
+     "title": "묶어둔 석유·전기·가스요금…재정 부담 확대 / 연합뉴스TV (YonhapnewsTV)",
+     "channel": "연합뉴스TV",
+     "views": 14577,
+     "per_day": 6814,
+     "sec": 117,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "xcS_Eigy4eo",
+     "title": "70% 뛴 LNG 가격…\"가스요금 걱정인데 겨울도 다가오네\" 자영업자 한숨 [굿모닝 MBN]",
+     "channel": "MBN News",
+     "views": 18700,
+     "per_day": 2868,
+     "sec": 134,
+     "published": "2026-11-11",
+     "hook": "숫자"
+    },
+    {
+     "id": "uPDC4dnC5Fc",
+     "title": "산업용 가스값 66% 보도에 정부 반박…동결한 민수용 원가는 누가 내나",
+     "channel": "뉴스광산",
+     "views": 1152,
+     "per_day": 564,
+     "sec": 19,
+     "published": "2026-11-15",
+     "hook": "숫자"
+    },
+    {
+     "id": "mGnQlVkIRp0",
+     "title": "가스요금 23만 원에 놀란 엄마, 옆집에 물어본 이유 답은 문풍지",
+     "channel": "트렌디 할미",
+     "views": 1196,
+     "per_day": 554,
+     "sec": 37,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "zuRdcOdPhac",
+     "title": "정치가 손 데면 작살? #가스요금 #가스값 #난방비 #LNG",
+     "channel": "정완진TV",
+     "views": 2980,
+     "per_day": 508,
+     "sec": 37,
+     "published": "2026-11-11",
+     "hook": "질문"
+    },
+    {
+     "id": "x3W9Dhl3tOY",
+     "title": "전기·가스요금 폭탄 온다? 한전 빚 210조, 14분기 동결의 청구서 #shorts",
+     "channel": "꿀통경제",
+     "views": 1301,
+     "per_day": 498,
+     "sec": 34,
+     "published": "2026-11-14",
+     "hook": "질문"
+    },
+    {
+     "id": "oY6Q6vhXP5g",
+     "title": "산업용 가스요금 작년보다 66% 인상, 기업에 떠넘겼나? | 산업통상부 \"LNG 원가 상승 때문\"",
+     "channel": "1분 세상",
+     "views": 1122,
+     "per_day": 428,
+     "sec": 39,
+     "published": "2026-11-14",
+     "hook": "질문"
+    },
+    {
+     "id": "RPN5mIX9S9E",
+     "title": "이란, 영하 5도 교실.. 전국 가스 공급 비상",
+     "channel": "희망지성TV",
+     "views": 1062,
+     "per_day": 302,
+     "sec": 161,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "aHYpR3MV-xg",
+     "title": "lpg기초패드공사",
+     "channel": "가스탱크  김일범 ",
+     "views": 1036,
+     "per_day": 259,
+     "sec": 66,
+     "published": "2026-11-13",
+     "hook": "기타"
+    }
+   ]
+  },
+  "5락실 (게임)": {
+   "웹게임 추천": [
+    {
+     "id": "cOAjVONAwHU",
+     "title": "글로벌판 캐치마인드ㅋㅋ영어를 잘해야함ㅠㅠ #게임추천 #캐치마인드",
+     "channel": "멸치뱃살",
+     "views": 1160,
+     "per_day": 2320,
+     "sec": 27,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "pIeDShdpBqk",
+     "title": "무설치 웹 게임 추천 | 지뢰 사냥꾼",
+     "channel": "겜치볶음밥",
+     "views": 992,
+     "per_day": 1984,
+     "sec": 61,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "dLnRg84KX-w",
+     "title": "[웹게임] 내 몸속 암세포 vs 백혈구 1마리 🦠 백혈구 대작전",
+     "channel": "에버링크 랩스",
+     "views": 464,
+     "per_day": 928,
+     "sec": 16,
+     "published": "2026-11-17",
+     "hook": "비교"
+    },
+    {
+     "id": "vZ-nG3pKYhQ",
+     "title": "클로드만으로 게임개발 카드별 이펙트효과 업데이트!",
+     "channel": "Alone_Korea",
+     "views": 251,
+     "per_day": 502,
+     "sec": 39,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "9yiVJff7KHY",
+     "title": "팀장님 몰래 회사에서 하는 웹게임 🔥 | 오늘의 직업 원소술사 #shorts",
+     "channel": "잿불의 순례자",
+     "views": 76,
+     "per_day": 152,
+     "sec": 20,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "MQ5Bq_0nRA0",
+     "title": "[웹게임] 설치 없이 바로 한 판 🎮 에버링크 웹게임",
+     "channel": "에버링크 랩스",
+     "views": 73,
+     "per_day": 146,
+     "sec": 18,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "srUI5P1KjR0",
+     "title": "[웹게임] 거대 폭격기 접근! 방어선을 지켜라 ✈️ 3D 공중전",
+     "channel": "에버링크 랩스",
+     "views": 57,
+     "per_day": 114,
+     "sec": 16,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "d3AcGIN1_G4",
+     "title": "[웹게임] 쇠공 한 방에 무너지는 탑 🔨 마블 블록 크러셔",
+     "channel": "에버링크 랩스",
+     "views": 40,
+     "per_day": 80,
+     "sec": 16,
+     "published": "2026-11-17",
+     "hook": "기타"
+    },
+    {
+     "id": "pNCf-rrJhB4",
+     "title": "[웹게임] 같은 그림인데 왜 안 없어져?! 🀄 원통 사천성",
+     "channel": "에버링크 랩스",
+     "views": 36,
+     "per_day": 72,
+     "sec": 18,
+     "published": "2026-11-17",
+     "hook": "질문"
+    }
+   ],
+   "밸런스 게임": [
+    {
+     "id": "hU92o4baO3M",
+     "title": "월500 백수 vs 월2천 직장인? 🤔",
+     "channel": "코리수의게임세상",
+     "views": 107149,
+     "per_day": 75281,
+     "sec": 36,
+     "published": "2026-11-16",
+     "hook": "질문"
+    },
+    {
+     "id": "K9GGovIHZUM",
+     "title": "밸런스게임에 재미들린 이창섭 ㅋㅋ #이창섭 #전과자 #ootbstudio",
+     "channel": "예스맨은예스",
+     "views": 42959,
+     "per_day": 74693,
+     "sec": 59,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "aSN9-a9nPYQ",
+     "title": "마크 먼작귀 밸런스 게임💕",
+     "channel": "노다",
+     "views": 435715,
+     "per_day": 70277,
+     "sec": 42,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "oEfh9dzWp2I",
+     "title": "로블록스 밸런스 게임",
+     "channel": "싸모스",
+     "views": 265601,
+     "per_day": 61858,
+     "sec": 37,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "3v6F9auMGnU",
+     "title": "생존게임! 끝까지 살아남아 봐~! ep01",
+     "channel": "젤칸님",
+     "views": 146183,
+     "per_day": 42049,
+     "sec": 53,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "QLwKdKix7f4",
+     "title": "게임 캐릭터 이름이 전 애인 이름이라고?! 과연 박진영은 이 상황을 어떻게 생각할까? 👀",
+     "channel": "이러쿵 저러쿵",
+     "views": 122254,
+     "per_day": 17596,
+     "sec": 81,
+     "published": "2026-11-10",
+     "hook": "질문"
+    },
+    {
+     "id": "3VhfwALI9HI",
+     "title": "생존게임! 끝까지 살아남아 봐~! ep02",
+     "channel": "젤칸님",
+     "views": 46214,
+     "per_day": 14900,
+     "sec": 51,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "8qAfC6Wpmac",
+     "title": "\"고기 굽는 내 여자친구를 왜 네가 챙겨???? 그 쌈 내려놔.” 박진영의 질투 버튼 눌린 순간ㅋㅋ",
+     "channel": "이러쿵 저러쿵",
+     "views": 94034,
+     "per_day": 13539,
+     "sec": 67,
+     "published": "2026-11-10",
+     "hook": "질문"
+    },
+    {
+     "id": "ocmO5oTx81c",
+     "title": "생존게임! 끝까지 살아남아 봐~! ep03",
+     "channel": "젤칸님",
+     "views": 25650,
+     "per_day": 10357,
+     "sec": 59,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "-dDLYY5NIgE",
+     "title": "밸런스게임 모음! ep25",
+     "channel": "젤칸님",
+     "views": 29832,
+     "per_day": 4542,
+     "sec": 38,
+     "published": "2026-11-10",
+     "hook": "기타"
+    }
+   ],
+   "반응속도 테스트": [
+    {
+     "id": "LRddBeyDZ6c",
+     "title": "반응속도 테스트 17",
+     "channel": "브마장",
+     "views": 26312,
+     "per_day": 4684,
+     "sec": 8,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "u0xoEdOd9ng",
+     "title": "반응속도 5번 쟀더니 0.250초 #shorts",
+     "channel": "노방장",
+     "views": 1028,
+     "per_day": 741,
+     "sec": 9,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "9uAbtE71VqU",
+     "title": "F1 드라이버는 0.2초, 당신은? ⚡ 반응속도 테스트 3라운드 #shorts",
+     "channel": "1분 상식 퀴즈랩",
+     "views": 638,
+     "per_day": 643,
+     "sec": 57,
+     "published": "2026-11-16",
+     "hook": "질문"
+    },
+    {
+     "id": "3CC3aDTTJvE",
+     "title": "친구랑 반응 속도 대결… 0.6초 실화? #쇼츠",
+     "channel": "벨빵",
+     "views": 1152,
+     "per_day": 320,
+     "sec": 20,
+     "published": "2026-11-13",
+     "hook": "질문"
+    },
+    {
+     "id": "fqW3jfR8GZU",
+     "title": "반응속도 테스트, 몇 ms 나와요? 0.273초 #shorts",
+     "channel": "노방장",
+     "views": 1120,
+     "per_day": 277,
+     "sec": 7,
+     "published": "2026-11-13",
+     "hook": "질문"
+    },
+    {
+     "id": "1ug8fVlwN5Y",
+     "title": "당신의 반응속도는 몇 ms? ⚡ 12가지 미니게임 도전 #Shorts",
+     "channel": "LittleWing Soft Official",
+     "views": 596,
+     "per_day": 156,
+     "sec": 60,
+     "published": "2026-11-13",
+     "hook": "질문"
+    },
+    {
+     "id": "1IqOTwsYvBA",
+     "title": "반응속도 테스트, 친구보다 빨라요? 0.246초 #shorts",
+     "channel": "노방장",
+     "views": 345,
+     "per_day": 103,
+     "sec": 7,
+     "published": "2026-11-14",
+     "hook": "질문"
+    },
+    {
+     "id": "EKFSFqWHrUI",
+     "title": "반응속도 5번 쟀더니 0.248초와 0.751초 #shorts",
+     "channel": "노방장",
+     "views": 220,
+     "per_day": 93,
+     "sec": 8,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "1qMgEIJguMI",
+     "title": "당신의 반응속도는? 🔔 캐럴 속 벨 소리, 바로 탭! #shorts",
+     "channel": "Quiz Orchard",
+     "views": 167,
+     "per_day": 69,
+     "sec": 17,
+     "published": "2026-11-15",
+     "hook": "질문"
+    },
+    {
+     "id": "oKUZBK_gg_Q",
+     "title": "당신의 반응속도는 몇 ms? ⚡ 프로게이머 입단테스트 | 12가지 미니게임",
+     "channel": "LittleWing Soft Official",
+     "views": 8,
+     "per_day": 2,
+     "sec": 60,
+     "published": "2026-11-13",
+     "hook": "질문"
+    }
+   ],
+   "캐주얼 게임": [
+    {
+     "id": "J_RA8vlMEKQ",
+     "title": "지메 반응속도 필요한 게임이었네;#geometrydash",
+     "channel": "랑께님",
+     "views": 124340,
+     "per_day": 121187,
+     "sec": 38,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "miwXxDL7VKI",
+     "title": "데드록을 아주 쉽게 잡는 특이한 방법",
+     "channel": "사장못",
+     "views": 126816,
+     "per_day": 60456,
+     "sec": 16,
+     "published": "2026-11-15",
+     "hook": "기타"
+    },
+    {
+     "id": "A3Mcz5fz4lo",
+     "title": "반대로 행동하면 500로벅스!🙅",
+     "channel": "도어입니다",
+     "views": 52224,
+     "per_day": 42057,
+     "sec": 20,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "j6ZjjQMlNhs",
+     "title": "맛없는 거북이 상자들",
+     "channel": "동희",
+     "views": 40527,
+     "per_day": 32104,
+     "sec": 36,
+     "published": "2026-11-16",
+     "hook": "기타"
+    },
+    {
+     "id": "eKZ0m4hKchw",
+     "title": "아..예..?? 줴줴이야 ㅠ",
+     "channel": "동희",
+     "views": 106875,
+     "per_day": 31167,
+     "sec": 17,
+     "published": "2026-11-14",
+     "hook": "질문"
+    },
+    {
+     "id": "sEIlQ2Jqpec",
+     "title": "라이벌 랭크 초기화, 근데 상대가 신생 마노 피그켓..?",
+     "channel": "현삔",
+     "views": 48891,
+     "per_day": 22733,
+     "sec": 60,
+     "published": "2026-11-15",
+     "hook": "질문"
+    },
+    {
+     "id": "EDZGaNprPJY",
+     "title": "디바인보다 심상치않은 이터널",
+     "channel": "아델리오 AdelioS•Chicago",
+     "views": 72772,
+     "per_day": 20724,
+     "sec": 55,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "TCvu3QwRs6E",
+     "title": "[아이온2]🔥악몽 눈동자 기믹 팁 #shorts",
+     "channel": "강코딩",
+     "views": 46372,
+     "per_day": 15100,
+     "sec": 19,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "X3VzzASXGOA",
+     "title": "게임 개발사가 제대로 빡친 이유",
+     "channel": "테드TV",
+     "views": 67807,
+     "per_day": 14688,
+     "sec": 39,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "5BJMaVZIxtU",
+     "title": "계란을훔치다 외계인 디바인 3마리 낚시로 잡는법! 꼭 다잡자!",
+     "channel": "폴라베어&샤샤",
+     "views": 54436,
+     "per_day": 8653,
+     "sec": 44,
+     "published": "2026-11-11",
+     "hook": "기타"
+    }
+   ],
+   "브라우저 게임": [
+    {
+     "id": "MqN63knnXY8",
+     "title": "일본에서 난리난 절대색감 게임! 미술인 100% 도전하기",
+     "channel": "[햄픽]Hampick Art",
+     "views": 385468,
+     "per_day": 150738,
+     "sec": 55,
+     "published": "2026-11-14",
+     "hook": "반전·금지"
+    },
+    {
+     "id": "rmawv-zBBUs",
+     "title": "Han creado un STREET FIGHTER con POLÍTICOS 🥊😅 #moncloasfighter",
+     "channel": "Vandal",
+     "views": 296273,
+     "per_day": 72749,
+     "sec": 35,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "D2DWdnEnW5k",
+     "title": "😭It’s time to pack it up Doc #gaming #funny #flashgames #kinglynerd #spiderman",
+     "channel": "KinglyNerd",
+     "views": 273848,
+     "per_day": 50483,
+     "sec": 63,
+     "published": "2026-11-12",
+     "hook": "기타"
+    },
+    {
+     "id": "-XlGK4WbSGY",
+     "title": "sub for more squiggle game #squigdle #dailygame #webgame #indiegame #cozygamer",
+     "channel": "harryponderslive",
+     "views": 77992,
+     "per_day": 27609,
+     "sec": 64,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "S_r64SMB-cs",
+     "title": "POV: Mining Diamonds In Bloxd.io",
+     "channel": "Not Joha YT",
+     "views": 55119,
+     "per_day": 17865,
+     "sec": 21,
+     "published": "2026-11-14",
+     "hook": "기타"
+    },
+    {
+     "id": "F6-hSkYtPpc",
+     "title": "be so fr right now #skifriedrice #indiegame #webgame #videogame #cozygamer",
+     "channel": "harryponderslive",
+     "views": 60616,
+     "per_day": 15847,
+     "sec": 35,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "RFVNSVUnGzk",
+     "title": "This Flash Game was like South Park on MS-DOS",
+     "channel": "Some Big Kid",
+     "views": 75076,
+     "per_day": 13482,
+     "sec": 22,
+     "published": "2026-11-11",
+     "hook": "기타"
+    },
+    {
+     "id": "2EehWjZB2_M",
+     "title": "PRE-release silksong quiz? #silksong  #hollowknightsilksong",
+     "channel": "Bleached Red",
+     "views": 56515,
+     "per_day": 11663,
+     "sec": 75,
+     "published": "2026-11-12",
+     "hook": "질문"
+    },
+    {
+     "id": "PtYDCAry_fo",
+     "title": "Top 3 Free Browser Games to Play in 2026! 🔥 | #shorts",
+     "channel": "BASU GAMING",
+     "views": 38422,
+     "per_day": 9709,
+     "sec": 65,
+     "published": "2026-11-13",
+     "hook": "기타"
+    },
+    {
+     "id": "nMEYsYvraWU",
+     "title": "😭Guess I’m seeing Uncle Ben soon #gaming #funny #flashgames #kinglynerd #spiderman",
+     "channel": "KinglyNerd",
+     "views": 49132,
+     "per_day": 7489,
+     "sec": 20,
+     "published": "2026-11-10",
+     "hook": "기타"
+    }
+   ]
+  }
+ },
+ "google_trends": [
+  "mbk 파트너스",
+  "엔비디아 우회 수출 의혹 및 젠슨 황 복귀 논의에 대한 최신 뉴스 알려줘",
+  "최희",
+  "박정훈",
+  "singapore đấu với brasil",
+  "심우정",
+  "로베르트 모레노",
+  "권순우",
+  "미스터트롯3",
+  "원주 db 대 안양 정관장"
+ ]
+}
