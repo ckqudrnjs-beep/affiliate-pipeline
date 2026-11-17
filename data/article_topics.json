@@ -104,8 +104,9 @@
  },
  {
   "q": "전기히터 vs 온풍기 vs 라디에이터 전기요금",
-  "done": false,
-  "format": "비교"
+  "done": true,
+  "format": "비교",
+  "slug": "electric-heater-vs-fan-heater-vs-radiator-bill"
  },
  {
   "q": "삼촌의 일기: 겨울 아침 시동이 안 걸릴 때 할 일",
