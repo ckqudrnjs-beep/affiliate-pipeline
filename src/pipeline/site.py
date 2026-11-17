@@ -847,7 +847,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "recipe" / f"{r['slug']}.html").write_text(page(f"{RC.title(r)} | {BRAND}", RC.desc(r), RC.page_body(r, others), root="../",
             path=f"recipe/{r['slug']}.html", ld=RC.ld(r, BASE, og), og=og,
             crumbs=[("1인분 원가 레시피", "recipe.html"), (f"{r['name']} {RC.yield_label(r)}", f"recipe/{r['slug']}.html")]), encoding="utf-8")
-    (o / "feed.xml").write_text(S.feed(BASE, BRAND, news, arts, recs), encoding="utf-8")
+    (o / "feed.xml").write_text(S.feed(BASE, BRAND, [n for n in news if not thin_news(n)], arts, recs), encoding="utf-8")  # 색인 제외(얇은) 소식은 RSS에도 안 넣는다(2026-11-17)
     (o / "manifest.webmanifest").write_text(json.dumps(N.MANIFEST, ensure_ascii=False), encoding="utf-8")
     # 아이콘은 static/ 에 미리 만들어 둔다 (Cloudflare 빌드 환경에는 Pillow 가 없다)
     for f in pathlib.Path("static").rglob("*"):  # 하위 폴더(video/ 등)도 그대로 복사

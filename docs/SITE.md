@@ -59,7 +59,7 @@ BK: "영상은 손이 많이 가고 비효율적, 문제없다면 알리·쿠팡
 ## 검색·공유 보강 (2026-11-11, 유입 계획 plan/TRAFFIC.md)
 - 공유 썸네일: `static/og/<종류>-<slug>.png` (1200x630). `PYTHONPATH=src python -m pipeline.seo og` 가 빠진 것만 만든다(`--all` 전부). 없으면 `og/default.png`.
 - 사이트맵 lastmod: 글은 `updated`/`date`, 소식은 날짜, 고정 페이지는 site.py 의 `SITE_PAGES` 날짜. 고정 페이지를 고치면 그 날짜도 바꾼다.
-- RSS(feed.xml): 삼촌의 글 + 소식 합쳐 최근 40개. 네이버 서치어드바이저에 제출.
+- RSS(feed.xml): 삼촌의 글 + 소식 + 레시피 합쳐 최근 40개(색인 제외된 얇은 소식·가격 내림 알림은 뺀다, 2026-11-17). 네이버 서치어드바이저·구글 서치콘솔(사이트맵)에 제출.
 - BreadcrumbList JSON-LD: 글·소식·계산기·질문 페이지.
 - 주제 묶음 `seo.CLUSTER_KEYS` (가습기·난방·대기전력·직구·전기요금): 글 끝에 관련 계산기 + 같은 묶음 글/질문, 계산기 페이지에 관련 질문·글.
 - 계산기 질문 페이지 `q/<slug>.html` ← `data/calc_questions.json`. 숫자는 빌드 때 bill()로 계산, 페이지마다 설명·팁·FAQ를 따로 쓴다(검사: questions.validate, 고유 글 250자 이상). 홈 계산기 칸 아래 "많이 묻는 계산"에 목록.
