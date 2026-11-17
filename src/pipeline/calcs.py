@@ -102,6 +102,46 @@ function run(){const hd=$('#h').value*$('#d').value/1000, base=+$('#base').value
         "category": "heat",
     },
     {
+        "slug": "heating",
+        "title": "난방비 계산기 (보일러 온도 1도·외출 모드·온풍기 비교)",
+        "h1": "보일러 1도 낮추면, 외출 모드 쓰면 한 달 얼마 아낄까?",
+        "lede": "지난달 도시가스 고지서 금액만 넣으면 됩니다. 설정 온도를 낮출 때, 외출 모드를 쓸 때 아끼는 돈과 온풍기로 같은 열을 낼 때 드는 돈을 한 번에 계산합니다.",
+        "form": """
+<label>지난달 도시가스 요금 (원, 고지서)<input id="gb" type="number" inputmode="numeric" value="150000" min="0" step="1000"></label>
+<label>설정 온도를 몇 도 낮출까요 (℃)<input id="dn" type="number" inputmode="decimal" value="1" min="0" max="5" step="0.5"></label>
+<label>하루 외출 시간 (집이 비는 시간)<input id="oh" type="number" inputmode="decimal" value="9" min="0" max="24" step="0.5"></label>
+<label>외출 중 낮추는 온도 (℃, 외출 모드)<input id="od" type="number" inputmode="decimal" value="3" min="0" max="10" step="0.5"></label>
+<label>온풍기 소비전력 (W)<input id="hw" type="number" inputmode="numeric" value="2000" min="0"></label>
+<label>온풍기 하루 사용 시간<input id="hh" type="number" inputmode="decimal" value="3" min="0" max="24" step="0.5"></label>
+<label>우리 집 평소 월 전기 사용량 (kWh)<input id="base" type="number" inputmode="numeric" value="300" min="0"></label>
+<label>보일러 효율 (%, 제품 표시값)<input id="eff" type="number" inputmode="numeric" value="90" min="50" max="110"></label>""",
+        "ids": ["gb", "dn", "oh", "od", "hw", "hh", "base", "eff"],
+        "js": """
+// 서울도시가스 주택용 단가 22.5268원/MJ, 기본요금 월 1,250원(2026-11-01 단가표). 부가세 10%를 더해 계산.
+// 정책브리핑(2017-12-06): 실내 온도 1도 낮추면 난방비 약 7% 절약 → 외출 시간만큼 비례해서 적용.
+const GAS=22.5268, GBASE=1250, PER=0.07, won=n=>Math.round(n/10)*10;
+function run(){const gb=+$('#gb').value, dn=Math.max(0,+$('#dn').value), oh=Math.min(24,Math.max(0,+$('#oh').value)), od=Math.max(0,+$('#od').value);
+ const use=Math.max(0,gb/1.1-GBASE), mj=use/GAS, var1=use*1.1;
+ const r1=Math.min(PER*dn,.5), r2=Math.min(PER*od*oh/24,.5), s1=var1*r1, s2=var1*r2, both=var1*Math.min(r1+r2,.6);
+ const kwh=$('#hw').value/1000*$('#hh').value*30, base=+$('#base').value, eff=Math.max(.5,$('#eff').value/100);
+ const elec=bill(base+kwh)-bill(base), gas=kwh*3.6/eff*GAS*1.1, x=gas>0?elec/gas:0;
+ $('#out').innerHTML=`<div><span>지난달 가스 사용량 (추정)</span><span>${Math.round(mj).toLocaleString('ko-KR')} MJ</span></div>
+ <div><span>설정 온도 ${dn}도 낮추기</span><span>−${fmt(won(s1))}</span></div>
+ <div><span>외출 모드 (하루 ${oh}시간, ${od}도 낮춤)</span><span>−${fmt(won(s2))}</span></div>
+ <div class="sum"><span>둘 다 하면 한 달</span><span>−${fmt(won(both))}</span></div>
+ <div><span>겨울 4달(12~3월)이면</span><span>−${fmt(won(both*4))}</span></div>
+ <div><span>온풍기 한 달 전기요금 (${kwh.toFixed(0)} kWh)</span><span>${fmt(elec)}</span></div>
+ <div><span>같은 열을 보일러로 내면</span><span>${fmt(won(gas))}</span></div>`;
+ $('#cmp').textContent= (dn>0?`설정 온도 ${dn}도만 낮춰도 한 달 ${fmt(won(s1))} 아껴요.`:`외출 모드만 써도 한 달 ${fmt(won(s2))} 아껴요.`)
+  +(x>=1.2?` 같은 열이면 온풍기가 보일러보다 ${x.toFixed(1)}배 비싸요.`:'');}""",
+        "body": """<h2>삼촌의 설명</h2>
+<p>도시가스 요금은 쓴 양(MJ)에 단가를 곱하고 기본요금과 부가세를 더해서 나옵니다. 서울도시가스의 2026년 11월 1일 단가표를 보면 주택용(난방·취사)은 1MJ에 22.5268원, 기본요금은 한 달 1,250원입니다. 이 계산기는 고지서 금액에서 부가세 10%와 기본요금을 빼서 지난달에 쓴 가스양을 거꾸로 추정합니다.</p>
+<p>정부 정책브리핑(2017년 12월 6일)은 "1도만 낮춰도 난방비의 7%를 절약할 수 있다"고 안내합니다. 겨울철 적정 실내 온도는 18~20도이고, 짧게 나갈 때는 2~3도 낮게 틀거나 외출 모드로 바꾸라고 합니다. 보일러를 완전히 껐다가 다시 켜면 집을 데우는 데 에너지가 많이 들기 때문이에요. 외출 모드 절약액은 이 7% 기준을 집이 비는 시간만큼 나눠 적용한 어림값입니다.</p>
+<p>온풍기는 전기를 거의 그대로 열로 바꾸지만 전기요금 단가가 높고 누진제가 붙습니다. 그래서 같은 양의 열이라도 보일러로 내는 것보다 비싸게 듭니다. 방 하나만 잠깐 데울 때는 온풍기가 편하지만, 오래 켤수록 차이가 커져요. 전기요·라디에이터까지 비교하려면 <a href="heater.html">난방기기 전기요금 비교 계산기</a>를 써 보세요.</p>
+<p>계산에 쓴 자료: <a href="https://www.seoulgas.co.kr/mobile/payment/gasPayTable" rel="nofollow noopener" target="_blank">서울도시가스 요금표</a>(2026-11-01 시행), <a href="https://www.korea.kr/briefing/policyBriefingView.do?newsId=148845570" rel="nofollow noopener" target="_blank">정책브리핑 '알쏭달쏭 난방비 절약법 Q&amp;A'</a>(2017-12-06), 전기요금은 한전 주택용 누진 요금 근사치. 경기·인천 등 다른 지역은 단가가 조금 다르고, 고지서에는 온수·취사에 쓴 가스도 섞여 있어서 실제 절약액은 이보다 적을 수 있습니다.</p>""",
+        "category": "",
+    },
+    {
         "slug": "standby",
         "title": "대기전력 전기요금 계산기 (꽂아만 둔 가전)",
         "h1": "꽂아만 둔 가전, 1년에 얼마 샐까?",
