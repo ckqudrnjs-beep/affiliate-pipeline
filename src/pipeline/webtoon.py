@@ -178,7 +178,7 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
         im = base.copy()
         ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         od = ImageDraw.Draw(ov)
-        hot = ln.get("sfx") == "buzz" or ln.get("big") or (ln.get(who) in ("wow", "shock"))
+        hot = i == 0 or ln.get("sfx") == "buzz" or ln.get("big") or (ln.get(who) in ("wow", "shock"))  # 첫 줄은 항상 움직임(집중선·흔들림)
         if hot:
             _speed_lines(od, W / 2, 1080, min(1, ds / 0.2))
         im.paste(ov, (0, 0), ov)

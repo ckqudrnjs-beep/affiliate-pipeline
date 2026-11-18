@@ -67,6 +67,8 @@ HOME_RULE = ("[주부 타깃·아하 규칙 2026-11-17] 보는 사람 = 장보�
              "[11/17 셋톱박스 편 82회 교훈] 1년 3만 원 미만 숫자·대기전력·셋톱박스처럼 이미 다 아는 절약 팁은 쓰지 않는다. "
              "첫 줄(첫 1초)은 삼촌의 '얼마게?' 퀴즈 질문이 아니라 조카의 놀란 상황 + 숫자 비교(\"밥솥 보온 1년 = 쌀 한 포대 값?\", \"온풍기 4만 8천 vs 담요 480원\")로 시작한다. "
              "비교 대상은 장바구니처럼 손에 잡히는 것(쌀·치킨·한 달 장보기)으로, 숫자는 사이트 데이터만. "
+             "[11/18 교훈, 11/25 편부터] 길이 20~25초(내레이션 100~150자, skit 4~5줄 + end). 제목은 답을 말하지 않고 궁금증으로 끝낸다(\"온풍기 vs 전기장판, 한 달 차이 얼마?\"), "
+             "답 숫자(big)는 영상 안에서만. 삼촌 얼굴 영상(uncle) 장면은 쓰지 않는다(첫 화면 정지 얼굴 = 넘김). "
              "end say 는 한 번만 가볍게 '구독해 두면 계속 알려줄게' 또는 '매일 아침 시세는 돈삼촌 즐겨찾기' 중 하나(보상 약속·화면 고정 문구 금지). ")
 BASKET_RULE = ("상품 없음. data/daily/ 최신 파일 grocery 의 m(한 달 변화 %)·price 만 쓴다. 가장 많이 내린 것 1~2개와 오른 것 1개를 고른다(±20% 이상 우선). "
                "skit: 1줄 조카가 장보기 목록(숫자 cap) → 2줄 오답(\"김장철이라 무도 비싸겠지\") → 3줄 buzz + big(\"한 달 -27%\") + sub(KAMIS 소매가, 날짜) → "
@@ -365,6 +367,39 @@ TYPES = {"hook", "photo", "calc", "versus", "countdown", "ox", "counter", "list"
 BANNED = ["써 봤", "써봤", "직접 사용", "무조건", "100%", "최고의", "완치", "효능"]
 
 
+SHORT_V3 = "2026-11-25"  # 20~25초·답 없는 제목 규칙 시작일 (BK 2026-11-18)
+
+
+def _nums(text: str) -> set[str]:
+    import re
+    return {x.replace(",", "") for x in re.findall(r"\d[\d,]*", text or "")}
+
+
+def title_errors(spec: dict) -> list[str]:
+    """제목은 궁금증(?)으로 끝나고, 영상 속 답 숫자(big·calc value·counter·end text)를 미리 말하지 않는다.
+    첫 줄 자막(질문에 나오는 조건 숫자, 예 '8시간')은 써도 된다."""
+    e = []
+    title = spec.get("title", "").strip()
+    if not title.endswith("?"):
+        e.append("제목은 '?'로 끝나는 궁금증 (예: '온풍기 vs 전기장판, 한 달 차이 얼마?')")
+    answers, setup = set(), set()
+    for i, s in enumerate(spec.get("scenes") or []):
+        for j, ln in enumerate(s.get("lines") or []):
+            answers |= _nums(ln.get("big", ""))
+            if i == 0 and j == 0:
+                setup |= _nums(" ".join(ln.get("cap", [])))
+        answers |= _nums(str(s.get("value", ""))) | _nums(str(s.get("to", "")))
+        if s.get("type") == "end":
+            answers |= _nums(s.get("text", ""))
+    leak = (_nums(title) & answers) - setup
+    if leak:
+        e.append(f"제목에 답 숫자 {sorted(leak)} — 답은 영상 안에서만 (제목은 '얼마?'·'몇 배?'로)")
+    for w in ("배 차이", "분의 1"):
+        if w in title and not title.endswith("?"):
+            e.append(f"제목에 답('{w}') 금지")
+    return e
+
+
 def check(spec: dict) -> list[str]:
     if spec.get("engine") == "hyperframes":  # 2026-11-16 글자형 Shorts (pipeline.textshort): 장면·내레이션 없음
         return check_textshort(spec)
@@ -455,6 +490,13 @@ def check(spec: dict) -> list[str]:
         e.append("제목에 # 넣지 않기 (해시태그는 설명란에 자동)")
     if new and scenes and scenes[0].get("type") == "skit" and not scenes[0].get("badge"):
         e.append("첫 장면 skit 에 badge (썸네일·첫 1초 훅) 필수")
+    # 2026-11-18 BK: 11/18 '온풍기 대신 전기장판, 한 달 차이가 10배?' 2회(37초, 첫 화면 삼촌 얼굴, 제목에 답).
+    # → 11/25 편부터: 20~25초, 제목은 답 없이 궁금증으로 끝(?), 첫 화면·영상 안 정지된 실사 얼굴(삼촌 영상) 금지.
+    if kind == "short" and spec.get("format") != "quiz" and spec.get("date", "") >= SHORT_V3:
+        chars = (100, 150)
+        e.extend(title_errors(spec))
+        if any(s.get("type") == "uncle" for s in scenes):
+            e.append("쇼츠에 삼촌 얼굴 영상(uncle) 금지 — 첫 화면이 정지된 얼굴이면 넘김 (skit·hook 로 시작)")
     if not chars[0] <= words <= chars[1]:
         e.append(f"내레이션 글자 수 {words} (권장 {chars[0]}~{chars[1]})")
     if has_ad and not any(s.get("type") == "end" for s in scenes):
