@@ -1,0 +1,80 @@
+{
+ "date": "2026-11-25",
+ "kind": "short",
+ "format": "skit-calc",
+ "format_name": "동전이네 살림 계산",
+ "style": "live",
+ "slug": "sample-live-heating",
+ "title": "보일러 1도 낮추면 한 달 얼마? 난방비 아하",
+ "takeaway": "보일러 1도만 낮춰도 한 달 약 1만 400원",
+ "site_path": "calc/heating.html",
+ "description": "고지서 15만 원, 서울 도시가스 단가 기준 돈삼촌 난방비 계산기 기본값으로 계산했어요. 우리 집 고지서 금액을 넣으면 바로 다시 계산돼요.",
+ "scenes": [
+  {
+   "type": "skit",
+   "badge": "1도 = 얼마?",
+   "lines": [
+    {
+     "who": "n",
+     "n": "cold",
+     "u": "think",
+     "clip": "snowy street",
+     "cap": [
+      "추워지는데",
+      "보일러 1도 = 얼마?"
+     ],
+     "say": "삼촌, 이제 진짜 춥다. 보일러 1도 올리면 얼마나 더 나와?"
+    },
+    {
+     "who": "n",
+     "n": "happy",
+     "clip": "radiator",
+     "cap": [
+      "에이, 1도 차이는",
+      "티도 안 나지?"
+     ],
+     "say": "에이, 1도 차이는 요금에 티도 안 나지?"
+    },
+    {
+     "who": "u",
+     "u": "wow",
+     "n": "shock",
+     "sfx": "buzz",
+     "clip": "gas boiler",
+     "cap": [
+      "땡! 1도 낮추면"
+     ],
+     "big": "월 약 1만 400원",
+     "sub": "고지서 15만 원 · 서울 단가 · 돈삼촌 난방비 계산기",
+     "say": "땡! 1도만 낮춰도 한 달 약 만 사백 원 아껴."
+    },
+    {
+     "who": "u",
+     "u": "point",
+     "clip": "cozy blanket home",
+     "layout": "focus",
+     "cap": [
+      "겨울 4달 + 외출 모드",
+      "= 약 8만 8천 원"
+     ],
+     "say": "외출 모드까지 하면 겨울 넉 달에 팔만 팔천 원이야."
+    },
+    {
+     "who": "n",
+     "n": "happy",
+     "clip": "warm socks",
+     "cap": [
+      "오늘부터",
+      "1도 내리고 양말!"
+     ],
+     "say": "오늘부터 1도 내리고 수면양말 신을게!"
+    }
+   ]
+  },
+  {
+   "type": "end",
+   "say": "우리 집 숫자는 돈삼촌 계산기에. 구독해 두면 계속 알려줄게.",
+   "text": "1도 ↓ = 월 약 1만 400원"
+  }
+ ]
+}

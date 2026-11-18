@@ -1,0 +1,43 @@
+name: live-sample
+
+# 실사 배경 쇼츠 샘플 (2026-11-18). main 에 올리지 않고 결과 mp4 를 Actions 아티팩트로만 남긴다.
+on:
+  pull_request:
+    paths: ["src/pipeline/live.py", "tools/live_sample/*.json", ".github/workflows/live-sample.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+          pip install -q pillow numpy supertonic==1.3.1
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/supertonic3
+          key: supertonic-3-v1
+      - name: 샘플 만들기
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        run: |
+          test -n "$PEXELS_API_KEY$PIXABAY_API_KEY" || { echo "스톡 키 없음"; exit 1; }
+          PYTHONPATH=src python -c "import pathlib;from pipeline.episodes import render;render(pathlib.Path('tools/live_sample/heating.json'))"
+          cat tools/live_sample/heating.meta.json
+          grep -q credits tools/live_sample/heating.meta.json || { echo "실사 배경 실패 (웹툰으로 바뀜)"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-sample
+          path: |
+            media/youtube/sample-live-heating.mp4
+            tools/live_sample/heating.meta.json
