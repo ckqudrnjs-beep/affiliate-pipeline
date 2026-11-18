@@ -220,16 +220,31 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
     today = dt.date.fromisoformat(date) if date else dt.date.today()
     used = load_used(today)
     files, taken = {}, set()
+    missing = []
     for q in dict.fromkeys(queries):
         if clips and q in clips:
             files[q] = pathlib.Path(clips[q])
             continue
         dest = tmp / f"stock-{len(files)}.mp4"
-        c = fetch(q, used, taken, dest)
+        try:
+            c = fetch(q, used, taken, dest)
+        except RuntimeError as ex:  # 맞는 영상이 없는 장면은 앞 장면을 이어 쓴다 (엉뚱한 그림보다 낫다)
+            print(f"{ex} → 앞 장면 이어 쓰기")
+            missing.append(q)
+            continue
         files[q] = dest
         if credits is not None:
-            credits.append({"id": c["id"], "credit": c["credit"], "page": c["page"], "query": q,
-                            "lines": [i for i, x in enumerate(queries) if x == q]})
+            credits.append({"id": c["id"], "credit": c["credit"], "page": c["page"], "query": q, "lines": []})
+    if not files:
+        raise RuntimeError("실사 장면을 하나도 못 찾음")
+    prev = None
+    for i, q in enumerate(queries):  # 못 찾은 장면 → 바로 앞(없으면 첫) 찾은 장면
+        if q in files:
+            prev = q
+        else:
+            queries[i] = prev or next(iter(files))
+    for c in credits or []:
+        c["lines"] = [i for i, x in enumerate(queries) if x == c["query"]]
     vc = voices(lines)
     starts, t = [], LEAD
     for c in vc:

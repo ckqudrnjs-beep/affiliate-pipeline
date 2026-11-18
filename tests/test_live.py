@@ -67,6 +67,24 @@ class LiveTest(unittest.TestCase):
                 s["clip"] = "warm-blanket"
         self.assertFalse(any("clip" in x for x in check(spec)))
 
+    def test_missing_scene_reuses_previous(self):
+        import numpy as np
+        with tempfile.TemporaryDirectory() as d:
+            tmp = pathlib.Path(d)
+            src = tmp / "src.mp4"
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=720x1280:d=1:r=30", str(src)], check=True)
+            cr = []
+            fake = [np.zeros(int(0.3 * live.SR), dtype=np.float32)] * 2
+
+            def fetch(q, used, taken, dest):
+                if q == "boiler":
+                    raise RuntimeError("없음")
+                dest.write_bytes(src.read_bytes())
+                return {"id": "x1", "credit": "Pixabay · a", "page": "p"}
+            with mock.patch.object(live, "voices", return_value=fake), mock.patch.object(live, "fetch", side_effect=fetch):
+                live.render_part(LINES, False, tmp / "o.mp4", tmp, date="2026-11-18", credits=cr)
+            self.assertEqual(cr[0]["lines"], [0, 1])
+
     def test_render_with_local_clip(self):
         import numpy as np
         with tempfile.TemporaryDirectory() as d:
