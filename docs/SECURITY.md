@@ -17,6 +17,7 @@
 | 2 | 관리자 비밀번호 추측 (/admin) | 비밀번호 1개 + IP당 하루 5번 제한. IP를 바꾸면 계속 시도 가능 | 코인·프로필·게시판 조작 | BK + Claude |
 | 3 | 자동 작업이 조용히 멈춤 | GitHub 실패 메일뿐. 글 자동 작성(05:13·17:13) 같은 예약 작업은 알림 없음 | 글·시세·쇼츠 공백 → 트래픽 하락 | Claude |
 | 4 | 안 쓰는 키가 남아 있음 | Meta 자동 게시는 중단했는데 refresh-tokens 작업이 매월 1·15일 계속 돌고, Threads·IG 토큰과 저장소 Secrets 쓰기용 PAT(SECRETS_PAT)가 그대로 있음 | 키 유출 시 피해 범위만 큼 | BK + Claude |
+| 0 | **저장소가 공개(Public)** (11/18 발견) | 코드·작업 기록·Actions 결과물을 누구나 볼 수 있음. Secret 값은 안 보임 | 백업 같은 결과물이 새면 개인정보성 데이터 노출 | Claude: 백업은 암호화만 올림 |
 | 5 | 5락실 데이터 손실 (D1 5raksil-db) | 따로 백업 없음. Cloudflare 기본 되돌리기(Time Travel)만 있음(무료 플랜 7일로 알고 있음, 확인 필요) | 프로필·코인·게시판 유실 | Claude |
 | 6 | 순위 점수·코인 조작 | 점수는 게임별 최대값 안이면 서버가 그대로 믿음. 코인(최대 199)·꾸미기 아이템도 기기 값을 믿음 | 순위 신뢰도. 돈 가치는 없음(코인 현금화 금지 원칙 유지) | Claude(선택) |
 | 7 | 트래픽 폭주·과금 | 이미 대비함: 엣지 캐시, 503 안내, API_PAUSE 비상 스위치, 3시간마다 사용량 텔레그램 알림 (plan/SCALING.md 8장) | 순위·저장 잠시 멈춤 | 완료 |
@@ -26,6 +27,9 @@
 | 11 | 정책 위반 (AdSense 무효 클릭, 광고 표기) | COMPLIANCE.md 규칙 있음 | 광고 계정 정지 | BK |
 
 ## BK가 직접 할 일 (계정은 BK만 가능)
+
+클릭 단위 상세 가이드: [SECURITY_BK_GUIDE.md](SECURITY_BK_GUIDE.md)
+
 
 1. **2단계 인증 켜기** (인증 앱 또는 패스키, 문자 X). 순서대로:
    1. Cloudflare: https://dash.cloudflare.com/profile/authentication
@@ -57,7 +61,7 @@
 ## PR 머지 뒤 설정 (BK, 한 번만)
 
 1. **텔레그램 알림** (A): 이미 cf-usage용으로 넣은 `TELEGRAM_BOT_TOKEN`·`TELEGRAM_ADMIN_CHAT_ID`를 그대로 쓴다. 추가 설정 없음. Actions > health > Run workflow로 한 번 돌려 보기.
-2. **D1 백업 토큰** (C): https://dash.cloudflare.com/profile/api-tokens > 토큰 만들기 > 사용자 지정 > 권한 `계정 / D1 / 편집` 하나만 > 만든 값을 GitHub Secret `CF_D1_TOKEN`에 넣기. Actions > d1-backup > Run workflow로 확인.
+2. **D1 백업 토큰** (C): https://dash.cloudflare.com/profile/api-tokens > 토큰 만들기 > 사용자 지정 > 권한 `계정 / D1 / 편집` 하나만 > 만든 값을 GitHub Secret `CF_D1_TOKEN`에 넣기. 저장소가 공개라서 Secret `BACKUP_PASSPHRASE`(20자 이상 무작위, 비밀번호 관리자에 따로 보관)도 넣어야 백업이 돈다(암호화한 파일만 올림). Actions > d1-backup > Run workflow로 확인.
 3. **Cloudflare Access** (D): Zero Trust > Access > Applications > Add > Self-hosted > 도메인 `5raksil.com` 경로 `admin`, 같은 앱에 `5raksil.com` 경로 `api/admin` 추가 > 정책 Allow, 포함 조건 Emails = BK 메일. 저장 뒤 앱 화면의 'Application Audience (AUD) Tag'와 팀 이름을 Pages 5raksil > 설정 > 변수에 `ACCESS_AUD`, `ACCESS_TEAM`으로 넣고 재배포. 넣기 전까지는 지금처럼 비밀번호만 확인한다.
 4. **Dependabot 경고** (F): 저장소 Settings > Code security > Dependabot alerts, Dependabot security updates 켜기.
 
@@ -71,4 +75,5 @@
 ## 변경 기록
 
 - 2026-11-15: 최초 작성 (점검 + 위험 순위 + 역할 구분).
-- 2026-11-15: BK 승인으로 A~F PR: health.yml(매일 10:30 KST 점검, 월요일 정상 보고), refresh-tokens.yml 삭제, d1-backup.yml(일 04:20 KST, 90일), lib/access.js(Access 증표 확인), _headers 두 사이트, dependabot.yml. G(점수 조작 완화)는 보류.
+- 2026-11-15: BK 승인으로 A~F PR: health.yml(매일 10:30 KST 점검, 월요일 정상 보고), refresh-tokens.yml 삭제, d1-backup.yml(일 04:20 KST, 90일), lib/access.js(Access 증표 확인), _headers 두 사이트, dependabot.yml. G(점수 조작 완화)는 보류. 11/15 10:30 KST PR #169 머지.
+- 2026-11-18: 저장소가 Public 인 것 확인 → d1-backup 을 AES256 암호화(BACKUP_PASSPHRASE)한 파일만 올리게 변경. 공개 유지 이유: Actions 무료 무제한(비공개면 월 2,000분). 'Protect this branch'는 봇이 main 에 직접 올리는 작업이 막힐 수 있어 보류.
