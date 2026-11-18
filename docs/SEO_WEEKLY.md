@@ -1,4 +1,4 @@
-# 서치콘솔 현황 (2026-11-17 수집, 2026-10-18~2026-11-14)
+# 서치콘솔 현황 (2026-11-18 수집, 2026-10-19~2026-11-15)
 
 자동 생성: python -m pipeline.gsc_stats (읽기 전용). 데이터는 2~3일 늦게 확정된다.
 
@@ -6,8 +6,8 @@
 
 | 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 URL |
 |---|---|---|---|---|
-| sc-domain:5raksil.com | 0 | 1 | 8.0 | 57 |
-| sc-domain:don3chon.com | 0 | 27 | 14.2 | 106 |
+| sc-domain:5raksil.com | 2 | 3 | 3.3 | 57 |
+| sc-domain:don3chon.com | 1 | 35 | 16.2 | 112 |
 
 ## sc-domain:5raksil.com 상위 검색어
 | 검색어 | 클릭 | 노출 | 순위 |
@@ -17,7 +17,11 @@
 ## sc-domain:5raksil.com 상위 페이지
 | 페이지 | 클릭 | 노출 | 순위 |
 |---|---|---|---|
-| https://5raksil.com/games/tongtong | 0 | 1 | 8.0 |
+| https://5raksil.com/ | 2 | 2 | 1.0 |
+| http://5raksil.com/ | 0 | 2 | 6.0 |
+| https://5raksil.com/games/range | 0 | 2 | 3.0 |
+| https://5raksil.com/games/starlight | 0 | 2 | 5.5 |
+| https://5raksil.com/games/tongtong | 0 | 3 | 6.7 |
 
 ## sc-domain:don3chon.com 상위 검색어
 | 검색어 | 클릭 | 노출 | 순위 |
@@ -36,13 +40,13 @@
 ## sc-domain:don3chon.com 상위 페이지
 | 페이지 | 클릭 | 노출 | 순위 |
 |---|---|---|---|
-| https://don3chon.com/calc/aliexpress | 0 | 10 | 17.5 |
+| https://don3chon.com/news/drop-baseus-tire-inflator-2026-11-11 | 1 | 1 | 3.0 |
+| https://don3chon.com/ | 0 | 1 | 27.0 |
+| https://don3chon.com/calc/aliexpress | 0 | 13 | 19.5 |
 | https://don3chon.com/calc/electric | 0 | 1 | 8.0 |
 | https://don3chon.com/calc/heater | 0 | 2 | 6.0 |
+| https://don3chon.com/guide | 0 | 2 | 35.5 |
 | https://don3chon.com/guide/ali-black-friday-checklist | 0 | 2 | 2.0 |
 | https://don3chon.com/guide/electric-blanket-vs-mat-bill | 0 | 2 | 36.5 |
 | https://don3chon.com/news | 0 | 2 | 3.0 |
 | https://don3chon.com/news/drop-baseus-ep10-nc-earbuds-2026-11-11 | 0 | 1 | 21.0 |
-| https://don3chon.com/news/drop-baseus-ep10-nc-earbuds-2026-11-11.html | 0 | 1 | 41.0 |
-| https://don3chon.com/news/drop-qcy-melobuds-pro-anc-2026-11-11.html | 0 | 1 | 5.0 |
-| https://don3chon.com/prices | 0 | 2 | 3.0 |
