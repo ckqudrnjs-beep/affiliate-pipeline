@@ -18,17 +18,16 @@
      "who": "n",
      "n": "cold",
      "u": "think",
-     "clip": "snowy street",
      "cap": [
       "추워지는데",
       "보일러 1도 = 얼마?"
      ],
-     "say": "삼촌, 이제 진짜 춥다. 보일러 1도 올리면 얼마나 더 나와?"
+     "say": "삼촌, 이제 진짜 춥다. 보일러 1도 올리면 얼마나 더 나와?",
+     "clip": "snow-street"
     },
     {
      "who": "n",
      "n": "happy",
-     "clip": "radiator",
      "cap": [
       "에이, 1도 차이는",
       "티도 안 나지?"
@@ -40,18 +39,17 @@
      "u": "wow",
      "n": "shock",
      "sfx": "buzz",
-     "clip": "gas boiler",
      "cap": [
       "땡! 1도 낮추면"
      ],
      "big": "월 약 1만 400원",
      "sub": "고지서 15만 원 · 서울 단가 · 돈삼촌 난방비 계산기",
-     "say": "땡! 1도만 낮춰도 한 달 약 만 사백 원 아껴."
+     "say": "땡! 1도만 낮춰도 한 달 약 만 사백 원 아껴.",
+     "clip": "thermostat"
     },
     {
      "who": "u",
      "u": "point",
-     "clip": "cozy blanket home",
      "layout": "focus",
      "cap": [
       "겨울 4달 + 외출 모드",
@@ -62,12 +60,12 @@
     {
      "who": "n",
      "n": "happy",
-     "clip": "warm socks",
      "cap": [
       "오늘부터",
       "1도 내리고 양말!"
      ],
-     "say": "오늘부터 1도 내리고 수면양말 신을게!"
+     "say": "오늘부터 1도 내리고 수면양말 신을게!",
+     "clip": "warm-socks"
     }
    ]
   },

@@ -3,7 +3,10 @@
 - 영상 출처는 상업 이용 무료 스톡만: Pexels(PEXELS_API_KEY) → 없으면 Pixabay(PIXABAY_API_KEY). 남의 유튜브·뉴스·연예인 영상 금지.
 - 스톡 원본은 저장소(공개)에 올리지 않는다: 렌더할 때 내려받아 쓰고 버린다. 쓴 영상 id 만 data/stock_used.json 에 남겨
   30일 안에는 같은 영상을 다시 안 쓴다(반복 콘텐츠로 안 보이게). 출처(촬영자·페이지)는 meta.json credits → 설명란.
-- 대본은 기존 skit 과 같고, 대본 맨 위 "style": "live" + 줄(또는 장면)마다 "clip": 영어 검색어(예 "snowy street").
+- 대본은 기존 skit 과 같고, 대본 맨 위 "style": "live" + 첫 줄(또는 장면)에 "clip": 장면 이름(config/stock_scenes.json).
+  clip 이 없는 줄은 앞 줄 영상을 이어서 쓴다. 한 편에 장면 3개까지.
+  2026-11-18 BK 샘플 피드백("1도 차이는 티도 안 나지"에 지구본, "겨울 4달"에 흐린 산장): 자유 검색어 → 장면 사전 + 태그 검사
+  (need 하나 이상, ban_all·ban 없음) + 눈으로 확인한 ok 목록 우선 + bad 목록 제외.
   줄 "src": 화면 아래 작은 출처(예 "기상청 11/18 중기예보"), "layout": "focus" 면 배경을 흐리게 하고 숫자만 크게.
 - 키가 없거나 내려받기 실패 → 예외. episodes.render 가 웹툰 그림체로 대신 만든다 (영상이 빠지는 날 없음).
 """
@@ -26,7 +29,12 @@ INK = (25, 25, 28)
 USED = pathlib.Path("data/stock_used.json")
 REUSE_DAYS = 30
 LABEL = "돈삼촌 살림 아하"
-QUERY_RE = re.compile(r"^[a-z][a-z \-]{1,39}$")
+SCENES = pathlib.Path("config/stock_scenes.json")
+MAX_SCENES = 3
+
+
+def scenes_cfg() -> dict:
+    return json.loads(SCENES.read_text(encoding="utf-8"))
 
 
 def _font(n):
@@ -45,19 +53,39 @@ def available() -> bool:
     return bool(os.environ.get("PEXELS_API_KEY") or os.environ.get("PIXABAY_API_KEY"))
 
 
+def line_clips(lines: list[dict], scene: dict) -> list[str]:
+    """줄마다 쓸 장면 이름 (없으면 앞 줄 것을 이어서)."""
+    out, cur = [], (scene.get("clip") or "").strip()
+    for ln in lines or []:
+        cur = (ln.get("clip") or "").strip() or cur
+        out.append(cur)
+    return out
+
+
 def check_lines(lines: list[dict], scene: dict) -> list[str]:
     e = []
-    for i, ln in enumerate(lines or []):
-        q = (ln.get("clip") or scene.get("clip") or "").strip()
-        if not q:
-            e.append(f"줄 {i}: 실사(live)는 clip(영어 검색어) 필요 — 줄이나 장면에")
-        elif not QUERY_RE.match(q):
-            e.append(f"줄 {i}: clip 은 영어 소문자 2~40자 ('{q}')")
+    names = scenes_cfg()["scenes"]
+    qs = line_clips(lines, scene)
+    if qs and not qs[0]:
+        e.append("실사(live)는 첫 줄(또는 장면)에 clip(장면 이름) 필요")
+    for i, (ln, q) in enumerate(zip(lines or [], qs)):
+        if q and q not in names:
+            e.append(f"줄 {i}: clip '{q}' 은 config/stock_scenes.json 장면 이름이 아님")
         if len(ln.get("src", "")) > 30:
             e.append(f"줄 {i}: src(출처)는 30자 이하")
         if ln.get("layout", "full") not in ("full", "focus"):
             e.append(f"줄 {i}: layout 은 full/focus")
+    if len(set(q for q in qs if q)) > MAX_SCENES:
+        e.append(f"실사 장면은 한 편에 {MAX_SCENES}개까지 (대사에 딱 맞는 그림이 없으면 clip 을 빼서 앞 장면을 이어 쓰기)")
     return e
+
+
+def relevant(words: str, sc: dict, cfg: dict) -> bool:
+    """태그(또는 주소 글자)에 need 중 하나가 있고 ban 이 없어야."""
+    w = " " + re.sub(r"[^a-z]+", " ", words.lower()) + " "
+    if any(f" {b} " in w for b in cfg.get("ban_all", []) + sc.get("ban", [])):
+        return False
+    return any(f" {n} " in w for n in sc["need"])
 
 
 # ---------------- 스톡 영상 고르기 ----------------
@@ -79,14 +107,14 @@ def pexels_candidates(q: str, data: dict | None = None) -> list[dict]:
             continue
         f = min(files, key=lambda f: f.get("height") or 9999)  # 1280~ 중 가장 작은 것 (빨리 받기)
         out.append({"id": f"pexels-{v['id']}", "url": f["link"], "credit": f"Pexels · {v.get('user', {}).get('name', '')}".strip(" ·"),
-                    "page": v.get("url", "")})
+                    "page": v.get("url", ""), "words": v.get("url", "").rstrip("/").rsplit("/", 1)[-1]})
     return out
 
 
 def pixabay_candidates(q: str, data: dict | None = None) -> list[dict]:
     if data is None:
         data = _get("https://pixabay.com/api/videos/?" + urllib.parse.urlencode(
-            {"key": os.environ["PIXABAY_API_KEY"], "q": q, "per_page": 20, "safesearch": "true"}))
+            {"key": os.environ["PIXABAY_API_KEY"], "q": q, "per_page": 50, "safesearch": "true", "video_type": "film"}))
     out = []
     for v in data.get("hits", []):
         vs = v.get("videos", {})
@@ -94,7 +122,7 @@ def pixabay_candidates(q: str, data: dict | None = None) -> list[dict]:
         if not f.get("url") or (v.get("duration") or 0) < 4:
             continue
         out.append({"id": f"pixabay-{v['id']}", "url": f["url"], "credit": f"Pixabay · {v.get('user', '')}".strip(" ·"),
-                    "page": v.get("pageURL", "")})
+                    "page": v.get("pageURL", ""), "words": v.get("tags", "")})
     return out
 
 
@@ -106,29 +134,37 @@ def load_used(today: dt.date) -> dict:
     return {k: v for k, v in d.items() if v >= old}
 
 
-def pick(cands: list[dict], used: dict, taken: set) -> dict | None:
-    for c in cands:
-        if c["id"] not in used and c["id"] not in taken:
+def pick(cands: list[dict], used: dict, taken: set, sc: dict | None = None, cfg: dict | None = None) -> dict | None:
+    """ok(눈으로 확인한 것) 먼저, 그다음 태그가 맞는 것. bad·최근 사용·이번 편 사용은 뺀다."""
+    cfg = cfg or {}
+    bad = set(cfg.get("bad", []))
+    ok = (sc or {}).get("ok", [])
+    free = [c for c in cands if c["id"] not in used and c["id"] not in taken and c["id"] not in bad]
+    for c in sorted(free, key=lambda c: ok.index(c["id"]) if c["id"] in ok else len(ok)):
+        if c["id"] in ok or sc is None or relevant(c.get("words", ""), sc, cfg):
             return c
     return None
 
 
-def fetch(q: str, used: dict, taken: set, dest: pathlib.Path) -> dict:
-    """검색어 하나 → 안 쓴 영상 하나를 dest 로 내려받고 정보 반환."""
+def fetch(name: str, used: dict, taken: set, dest: pathlib.Path) -> dict:
+    """장면 이름 하나 → 맞는 영상 하나를 dest 로 내려받고 정보 반환."""
+    cfg = scenes_cfg()
+    sc = cfg["scenes"][name]
     cands = []
-    for name, fn in (("PEXELS_API_KEY", pexels_candidates), ("PIXABAY_API_KEY", pixabay_candidates)):
-        if os.environ.get(name):
+    for key, fn in (("PIXABAY_API_KEY", pixabay_candidates), ("PEXELS_API_KEY", pexels_candidates)):
+        if os.environ.get(key):
             try:
-                cands += fn(q)
+                cands += fn(sc["q"])
             except Exception as ex:  # noqa: BLE001 한쪽이 막혀도 다른 쪽
-                print(f"스톡 검색 실패({name[:-8]}): {ex}")
-    c = pick(cands, used, taken)
+                print(f"스톡 검색 실패({key[:-8]}): {ex}")
+    c = pick(cands, used, taken, sc, cfg)
     if not c:
-        raise RuntimeError(f"스톡 영상 없음: {q}")
+        raise RuntimeError(f"맞는 스톡 영상 없음: {name}")
     req = urllib.request.Request(c["url"], headers={"User-Agent": "don3chon-shorts"})
     with urllib.request.urlopen(req, timeout=120) as r, open(dest, "wb") as f:
         f.write(r.read())
     taken.add(c["id"])
+    print(f"실사 {name}: {c['id']} ({c.get('words', '')[:60]})")
     return c
 
 
@@ -171,27 +207,44 @@ def _shade():
 
 def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Path, product_img=None, progress=None,
                 bg: str = "room", badge: str | None = None, pet: bool = True, scene: dict | None = None,
-                date: str = "", credits: list | None = None, clips: dict | None = None) -> float:
-    """clips 를 주면(테스트) 내려받지 않고 {검색어: 파일} 을 쓴다. credits 리스트에 출처를 채운다."""
+                date: str = "", credits: list | None = None, clips: dict | None = None, sheet: pathlib.Path | None = None) -> float:
+    """clips 를 주면(테스트) 내려받지 않고 {장면: 파일} 을 쓴다. credits 리스트에 출처를 채운다.
+    sheet 를 주면 줄마다 가운데 프레임을 모은 확인용 그림(대사·장면·영상 id)을 저장한다 (어색한 장면 찾기)."""
     import numpy as np
     from PIL import Image, ImageDraw, ImageFilter
     from .uncle import write_wav
     from .shorts import fit
     from .webtoon import DIR, N_MAP, U_MAP, _draw_pet
     scene = scene or {}
-    queries = [(ln.get("clip") or scene.get("clip") or "").strip() for ln in lines]
+    queries = line_clips(lines, scene)
     today = dt.date.fromisoformat(date) if date else dt.date.today()
     used = load_used(today)
     files, taken = {}, set()
+    missing = []
     for q in dict.fromkeys(queries):
         if clips and q in clips:
             files[q] = pathlib.Path(clips[q])
             continue
         dest = tmp / f"stock-{len(files)}.mp4"
-        c = fetch(q, used, taken, dest)
+        try:
+            c = fetch(q, used, taken, dest)
+        except RuntimeError as ex:  # 맞는 영상이 없는 장면은 앞 장면을 이어 쓴다 (엉뚱한 그림보다 낫다)
+            print(f"{ex} → 앞 장면 이어 쓰기")
+            missing.append(q)
+            continue
         files[q] = dest
         if credits is not None:
-            credits.append({"id": c["id"], "credit": c["credit"], "page": c["page"], "query": q})
+            credits.append({"id": c["id"], "credit": c["credit"], "page": c["page"], "query": q, "lines": []})
+    if not files:
+        raise RuntimeError("실사 장면을 하나도 못 찾음")
+    prev = None
+    for i, q in enumerate(queries):  # 못 찾은 장면 → 바로 앞(없으면 첫) 찾은 장면
+        if q in files:
+            prev = q
+        else:
+            queries[i] = prev or next(iter(files))
+    for c in credits or []:
+        c["lines"] = [i for i, x in enumerate(queries) if x == c["query"]]
     vc = voices(lines)
     starts, t = [], LEAD
     for c in vc:
@@ -318,15 +371,31 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
                            "-r", str(FPS), "-i", "-", "-i", str(wav), "-c:v", "libx264", "-crf", "21", "-preset", "veryfast",
                            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ar", str(SR), "-ac", "1",
                            "-t", f"{total:.2f}", str(out)], stdin=subprocess.PIPE)
+    ids = {c["query"]: c["id"] for c in credits or []}
+    mids = {int((st + (len(c) / SR) / 2) * FPS): i for i, (st, c) in enumerate(zip(starts, vc))}
+    shots = {}
     try:
         for f in range(n):
-            ff.stdin.write(frame(f).tobytes())
+            im = frame(f)
+            if f in mids:
+                shots[mids[f]] = im.resize((W // 4, H // 4))
+            ff.stdin.write(im.tobytes())
     finally:
         ff.stdin.close()
         for r in readers.values():
             r.close()
     if ff.wait():
         raise RuntimeError("ffmpeg 실패")
+    if sheet and shots:
+        cw, chh = W // 4, H // 4
+        grid = Image.new("RGB", (cw * len(shots), chh + 120), "white")
+        d = ImageDraw.Draw(grid)
+        for k, i in enumerate(sorted(shots)):
+            grid.paste(shots[i], (k * cw, 0))
+            d.text((k * cw + 8, chh + 8), f"{i + 1}. {queries[i]}", font=_font(20), fill=INK)
+            d.text((k * cw + 8, chh + 36), ids.get(queries[i], ""), font=_font(18), fill=(90, 90, 90))
+            d.text((k * cw + 8, chh + 64), " ".join(lines[i].get("cap", []))[:16], font=_font(18), fill=(90, 90, 90))
+        grid.save(sheet, quality=80)
     return total
 
 

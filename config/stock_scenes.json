@@ -1,0 +1,288 @@
+{
+ "_doc": "실사 배경 장면 사전 (2026-11-18). 대본 clip 은 여기 이름만. q=검색어, need=태그에 하나 이상 있어야, ban=있으면 버림. ok=눈으로 확인한 영상 id(먼저 씀), bad=어색해서 빼는 영상 id(전체). 수정: docs/SHORTS_GROWTH.md 실사 배경.",
+ "ban_all": [
+  "globe",
+  "earth",
+  "planet",
+  "space",
+  "abstract",
+  "animation",
+  "cgi",
+  "3d",
+  "render",
+  "logo",
+  "text",
+  "particles",
+  "fantasy",
+  "cabin",
+  "forest",
+  "mountain",
+  "sea",
+  "beach",
+  "drone",
+  "aerial",
+  "woman model",
+  "fashion",
+  "christmas"
+ ],
+ "bad": [],
+ "scenes": {
+  "snow-street": {
+   "q": "snow city street",
+   "need": [
+    "snow",
+    "snowing",
+    "winter"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "cold-window": {
+   "q": "frosted window winter",
+   "need": [
+    "window",
+    "frost",
+    "frosted"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "boiler": {
+   "q": "gas boiler",
+   "need": [
+    "boiler",
+    "heating"
+   ],
+   "ban": [
+    "ship",
+    "factory",
+    "industry"
+   ],
+   "ok": []
+  },
+  "radiator": {
+   "q": "radiator heating home",
+   "need": [
+    "radiator"
+   ],
+   "ban": [
+    "car",
+    "engine"
+   ],
+   "ok": []
+  },
+  "thermostat": {
+   "q": "thermostat",
+   "need": [
+    "thermostat",
+    "temperature",
+    "heating"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "electric-heater": {
+   "q": "electric heater",
+   "need": [
+    "heater"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "warm-blanket": {
+   "q": "blanket sofa home",
+   "need": [
+    "blanket",
+    "sofa",
+    "couch"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "warm-socks": {
+   "q": "socks",
+   "need": [
+    "socks",
+    "sock",
+    "slippers",
+    "feet"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "gas-stove": {
+   "q": "gas stove kitchen",
+   "need": [
+    "stove",
+    "burner",
+    "gas"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "kitchen-cooking": {
+   "q": "cooking kitchen pan",
+   "need": [
+    "cooking",
+    "kitchen",
+    "pan",
+    "cook"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "rice-cooker": {
+   "q": "rice cooker",
+   "need": [
+    "rice"
+   ],
+   "ban": [
+    "field",
+    "paddy",
+    "farm"
+   ],
+   "ok": []
+  },
+  "grocery-market": {
+   "q": "vegetable market",
+   "need": [
+    "market",
+    "vegetables",
+    "grocery"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "supermarket": {
+   "q": "supermarket shopping cart",
+   "need": [
+    "supermarket",
+    "shopping",
+    "cart",
+    "grocery"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "vegetables": {
+   "q": "fresh vegetables",
+   "need": [
+    "vegetables",
+    "vegetable"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "cabbage": {
+   "q": "cabbage",
+   "need": [
+    "cabbage"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "radish": {
+   "q": "radish",
+   "need": [
+    "radish"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "fruit": {
+   "q": "fruit market",
+   "need": [
+    "fruit",
+    "fruits",
+    "apple"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "home-meal": {
+   "q": "family dinner table",
+   "need": [
+    "dinner",
+    "table",
+    "meal",
+    "food"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "money-coins": {
+   "q": "coins money",
+   "need": [
+    "coins",
+    "coin",
+    "money"
+   ],
+   "ban": [
+    "bitcoin",
+    "crypto"
+   ],
+   "ok": []
+  },
+  "calculator": {
+   "q": "calculator bills",
+   "need": [
+    "calculator",
+    "bills",
+    "finance"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "apartment": {
+   "q": "apartment building",
+   "need": [
+    "apartment",
+    "building",
+    "residential"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "laundry": {
+   "q": "washing machine laundry",
+   "need": [
+    "laundry",
+    "washing"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "humidifier": {
+   "q": "humidifier",
+   "need": [
+    "humidifier",
+    "steam",
+    "vapor"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "refrigerator": {
+   "q": "refrigerator food",
+   "need": [
+    "refrigerator",
+    "fridge"
+   ],
+   "ban": [],
+   "ok": []
+  },
+  "light-switch": {
+   "q": "light switch",
+   "need": [
+    "switch",
+    "light",
+    "lamp"
+   ],
+   "ban": [
+    "stage",
+    "concert"
+   ],
+   "ok": []
+  }
+ }
+}
