@@ -108,5 +108,64 @@ class LiveTest(unittest.TestCase):
             self.assertGreater(total, 1)
 
 
+    def test_ai_pick_rotation(self):
+        import datetime as dt
+        clips = [{"id": "ai-dongjeon-01", "file": "a.mp4", "scene": "dongjeon", "tool": "Veo"},
+                 {"id": "ai-dongjeon-02", "file": "b.mp4", "scene": "dongjeon", "realistic": True},
+                 {"id": "ai-boiler-01", "file": "c.mp4", "scene": "boiler"}]
+        day = dt.date(2026, 11, 25)
+        a = live.ai_pick("dongjeon", day, set(), clips, used={})
+        self.assertEqual((a["id"], a["credit"], a["ai"]), ("ai-dongjeon-01", "AI 생성(Veo)", True))
+        a = live.ai_pick("dongjeon", day, set(), clips, used={"ai-dongjeon-01": "2026-11-20"})
+        self.assertEqual(a["id"], "ai-dongjeon-02")
+        self.assertTrue(a["realistic"])
+        # 둘 다 7일 안에 썼으면 없음 → 스톡/앞 장면
+        self.assertIsNone(live.ai_pick("dongjeon", day, set(), clips,
+                                       used={"ai-dongjeon-01": "2026-11-20", "ai-dongjeon-02": "2026-11-22"}))
+        # 8일 지나면 오래된 것부터 다시
+        a = live.ai_pick("dongjeon", day, set(), clips, used={"ai-dongjeon-01": "2026-11-10", "ai-dongjeon-02": "2026-11-12"})
+        self.assertEqual(a["id"], "ai-dongjeon-01")
+        self.assertIsNone(live.ai_pick("snow-street", day, set(), clips, used={}))
+
+    def test_render_ai_clip_first_no_keys(self):
+        import numpy as np
+        with tempfile.TemporaryDirectory() as d:
+            tmp = pathlib.Path(d)
+            src = tmp / "ai.mp4"
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=720x1280:d=1:r=30", str(src)], check=True)
+            lines = [dict(LINES[0], clip="dongjeon"), dict(LINES[1], clip="kimjang")]
+            clips = [{"id": "ai-dongjeon-01", "file": str(src), "scene": "dongjeon", "tool": "Veo", "realistic": True}]
+            cr = []
+            fake = [np.zeros(int(0.3 * live.SR), dtype=np.float32)] * 2
+            with mock.patch.dict("os.environ", {"PEXELS_API_KEY": "", "PIXABAY_API_KEY": ""}), \
+                    mock.patch.object(live, "voices", return_value=fake), mock.patch.object(live, "ai_clips", return_value=clips), \
+                    mock.patch.object(live, "USED", tmp / "used.json"):
+                self.assertTrue(live.available())
+                live.render_part(lines, False, tmp / "o.mp4", tmp, date="2026-11-25", credits=cr)
+            self.assertEqual(len(cr), 1)
+            self.assertEqual((cr[0]["id"], cr[0]["ai"], cr[0]["realistic"], cr[0]["lines"]), ("ai-dongjeon-01", True, True, [0, 1]))
+
+    def test_youtube_ai_clip_disclosure(self):
+        from pipeline import youtube
+        with tempfile.TemporaryDirectory() as d:
+            ep = pathlib.Path(d)
+            spec = {"title": "t?", "description": "설명", "date": "2026-11-25", "kind": "short", "scenes": []}
+            (ep / "2026-11-25-skit-calc.json").write_text(json.dumps(spec), encoding="utf-8")
+            meta = {"slug": "s", "credits": [{"id": "ai-dongjeon-01", "credit": "AI 생성(Veo)", "page": "", "query": "dongjeon",
+                                              "lines": [0], "ai": True, "realistic": True},
+                                             {"id": "pixabay-1", "credit": "Pixabay · a", "page": "https://p", "query": "boiler", "lines": [1]}]}
+            (ep / "2026-11-25-skit-calc.meta.json").write_text(json.dumps(meta), encoding="utf-8")
+            row = youtube.episode_rows(ep)[0]
+            self.assertTrue(youtube.is_synthetic(row))
+            self.assertEqual(row["credits"], "Pixabay · a https://p")
+            desc = youtube.build_description(row)
+            self.assertIn("AI로 생성한 영상", desc)
+            meta["credits"][0]["realistic"] = False
+            (ep / "2026-11-25-skit-calc.meta.json").write_text(json.dumps(meta), encoding="utf-8")
+            row = youtube.episode_rows(ep)[0]
+            self.assertFalse(youtube.is_synthetic(row))
+            self.assertIn("일부 배경 영상은 AI로 생성했어요.", youtube.build_description(row))
+
+
 if __name__ == "__main__":
     unittest.main()

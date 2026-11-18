@@ -109,3 +109,5 @@ skit 장면 필드: bg (room 거실 / office 사무실 / store 편의점 / door 
 - 상품 편은 비공개로 올라가고, 유료 프로모션을 자동으로 켤 수 없어 BK가 Studio에서 체크 후 공개 (BK 규칙).
 - 상품 없는 편은 유료 프로모션과 무관해 바로 예약 공개.
 - 삼촌 영상이 들어가면 "변경되거나 합성된 콘텐츠" + 화면 "AI로 만든 가상 인물" + 설명란 AI 문구 자동.
+
+6. (2026-11-19) AI 클립: info 의 `ai_scenes` 에 있는 장면(BK 제작 AI 영상)은 주제에 맞으면 첫 줄 clip 으로 먼저 쓴다. ai_only 장면(dongjeon, kimjang)은 클립이 있을 때만. docs/AI_CLIPS.md.

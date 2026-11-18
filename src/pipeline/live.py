@@ -8,6 +8,9 @@
   2026-11-18 BK 샘플 피드백("1도 차이는 티도 안 나지"에 지구본, "겨울 4달"에 흐린 산장): 자유 검색어 → 장면 사전 + 태그 검사
   (need 하나 이상, ban_all·ban 없음) + 눈으로 확인한 ok 목록 우선 + bad 목록 제외.
   줄 "src": 화면 아래 작은 출처(예 "기상청 11/18 중기예보"), "layout": "focus" 면 배경을 흐리게 하고 숫자만 크게.
+- 2026-11-19 BK 가 구독(제미나이 Flow·Veo, ChatGPT Sora) 크레딧으로 손수 만든 AI 클립: media/ai_clips/ + config/ai_clips.json.
+  장면 이름이 같으면 스톡보다 먼저 쓰고, 같은 클립은 AI_GAP 일 안에 다시 안 쓴다(돌려 쓰기, 오래 안 쓴 것부터).
+  "realistic": true 인 클립이 들어간 편은 유튜브 '변경·합성 콘텐츠' 표시(containsSyntheticMedia)를 켠다. 웹 화면 자동 조작·유료 API 는 안 씀.
 - 키가 없거나 내려받기 실패 → 예외. episodes.render 가 웹툰 그림체로 대신 만든다 (영상이 빠지는 날 없음).
 """
 from __future__ import annotations
@@ -28,6 +31,8 @@ W, H, FPS, SR = 1080, 1920, 30, 44100
 INK = (25, 25, 28)
 USED = pathlib.Path("data/stock_used.json")
 REUSE_DAYS = 30
+AI_CLIPS = pathlib.Path("config/ai_clips.json")
+AI_GAP = 7  # 같은 AI 클립은 7일 안에 다시 안 쓴다
 LABEL = "돈삼촌 살림 아하"
 SCENES = pathlib.Path("config/stock_scenes.json")
 MAX_SCENES = 3
@@ -50,7 +55,29 @@ def _fit(d, text: str, size: int, maxw: int = W - 140):
 
 
 def available() -> bool:
-    return bool(os.environ.get("PEXELS_API_KEY") or os.environ.get("PIXABAY_API_KEY"))
+    return bool(os.environ.get("PEXELS_API_KEY") or os.environ.get("PIXABAY_API_KEY") or ai_clips())
+
+
+def ai_clips() -> list[dict]:
+    """BK 가 만든 AI 클립 중 파일이 있는 것."""
+    if not AI_CLIPS.exists():
+        return []
+    return [c for c in json.loads(AI_CLIPS.read_text(encoding="utf-8")).get("clips", []) if pathlib.Path(c["file"]).exists()]
+
+
+def ai_pick(name: str, today: dt.date, taken: set, clips: list[dict] | None = None, used: dict | None = None) -> dict | None:
+    """장면 name 의 AI 클립 중 AI_GAP 일 안에 안 쓴 것, 오래 안 쓴 것부터."""
+    if used is None:
+        used = json.loads(USED.read_text(encoding="utf-8")) if USED.exists() else {}
+    gap = (today - dt.timedelta(days=AI_GAP)).isoformat()
+    free = [c for c in (ai_clips() if clips is None else clips)
+            if c.get("scene") == name and c["id"] not in taken and used.get(c["id"], "") < gap]
+    if not free:
+        return None
+    c = min(free, key=lambda c: (used.get(c["id"], ""), c["id"]))
+    tool = c.get("tool", "")
+    return {"id": c["id"], "file": c["file"], "credit": f"AI 생성({tool})" if tool else "AI 생성", "page": "",
+            "ai": True, "realistic": bool(c.get("realistic"))}
 
 
 def line_clips(lines: list[dict], scene: dict) -> list[str]:
@@ -71,6 +98,8 @@ def check_lines(lines: list[dict], scene: dict) -> list[str]:
     for i, (ln, q) in enumerate(zip(lines or [], qs)):
         if q and q not in names:
             e.append(f"줄 {i}: clip '{q}' 은 config/stock_scenes.json 장면 이름이 아님")
+        elif q and names[q].get("ai_only") and not any(c.get("scene") == q for c in ai_clips()):
+            e.append(f"줄 {i}: clip '{q}' 은 AI 클립 전용인데 아직 클립이 없음 (info 의 ai_scenes 만)")
         if len(ln.get("src", "")) > 30:
             e.append(f"줄 {i}: src(출처)는 30자 이하")
         if ln.get("layout", "full") not in ("full", "focus"):
@@ -225,6 +254,18 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
         if clips and q in clips:
             files[q] = pathlib.Path(clips[q])
             continue
+        a = ai_pick(q, today, taken)
+        if a:  # BK 가 만든 AI 클립이 먼저 (돌려 쓰기)
+            taken.add(a["id"])
+            files[q] = pathlib.Path(a["file"])
+            print(f"AI 클립 {q}: {a['id']}")
+            if credits is not None:
+                credits.append({**{k: a[k] for k in ("id", "credit", "page", "ai", "realistic")}, "query": q, "lines": []})
+            continue
+        if scenes_cfg()["scenes"][q].get("ai_only"):
+            print(f"{q}: AI 클립 없음 → 앞 장면 이어 쓰기")
+            missing.append(q)
+            continue
         dest = tmp / f"stock-{len(files)}.mp4"
         try:
             c = fetch(q, used, taken, dest)
@@ -360,8 +401,12 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
             box = sub_im.crop((W // 2 - 160, 1360, W // 2 + 460, 1900)).resize((434, 378))
             im.alpha_composite(box, (W - 470, 1450))
             d = ImageDraw.Draw(im)
-        cr = credits[0]["credit"] if credits else ""
-        d.text((W / 2, H - 110), f"배경 영상 {cr}" if cr else "배경 영상: 무료 스톡", font=_font(24), fill=(210, 210, 210), anchor="mm")
+        cur = next((c for c in credits or [] if c["query"] == queries[i]), None)  # 지금 줄의 배경 출처
+        if cur and cur.get("ai"):
+            d.text((W / 2, H - 110), "배경 영상: AI 생성", font=_font(24), fill=(210, 210, 210), anchor="mm")
+        else:
+            cr = cur["credit"] if cur else ""
+            d.text((W / 2, H - 110), f"배경 영상 {cr}" if cr else "배경 영상: 무료 스톡", font=_font(24), fill=(210, 210, 210), anchor="mm")
         d.text((W / 2, H - 78), "AI 음성 · AI로 그린 가상 캐릭터", font=_font(24), fill=(210, 210, 210), anchor="mm")
         if progress:
             d.rectangle((60, H - 46, 60 + (W - 120) * progress(tt), H - 40), fill="#d6452f")

@@ -100,7 +100,9 @@ LIVE_RULE = ("[실사 배경 규칙 2026-11-18] 대본 맨 위 \"style\": \"live
              "(예 snow-street, boiler, thermostat, grocery-market, cabbage, home-meal). 장면은 한 편에 1~3개, 대사에 그 물건·장소가 실제로 나올 때만 바꾼다. "
              "'티도 안 나지'·'겨울 4달' 같은 말·숫자 줄은 clip 을 빼서 앞 장면을 이어 쓰고, 숫자만 크게 보일 줄은 \"layout\": \"focus\"(배경 흐림). "
              "주제는 그 주의 시기 이슈(한파·김장·요금 인상·명절)에 사이트 숫자를 붙인다. 시기 이슈의 사실(기온·인상 시점)은 줄 \"src\"(30자 이하)로 "
-             "출처를 달고, 확인 안 된 것·겁주기 과장은 쓰지 않는다. 금액·퍼센트는 여전히 사이트 숫자만. ")
+             "출처를 달고, 확인 안 된 것·겁주기 과장은 쓰지 않는다. 금액·퍼센트는 여전히 사이트 숫자만. "
+             "[AI 클립 2026-11-19] info 의 ai_scenes 에 있는 장면(BK 가 만든 AI 영상, 예 dongjeon=동전이 오프닝)은 그 주제에 맞을 때 "
+             "첫 줄 clip 으로 먼저 쓴다(움직이는 첫 화면). ai_scenes 에 없는 ai_only 장면(dongjeon, kimjang)은 쓰지 않는다. ")
 SITE_PREFIX = {"prices": ("index.html", "report.html"), "basket": ("index.html", "report.html"), "quiz": ("quiz.html",),
                "skit-calc": ("calc/",), "skit-q": ("q/",),
                "skit-recipe": ("recipe/",), "guide": ("guide/", "q/", "calc/")}
@@ -184,7 +186,13 @@ def info_short(today: dt.date) -> dict:
             "rules": INFO_RULE + HOME_RULE + rules + (LIVE_RULE if d.weekday() in LIVE_DAYS and key != "guide" else ""),
             "style": "live" if d.weekday() in LIVE_DAYS and key != "guide" else "webtoon", "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
             "recent_products": [u for u in used if u][-10:],
-            "products": products_with_photos(), "clips": sorted(k for k in clips_cfg())}
+            "products": products_with_photos(), "clips": sorted(k for k in clips_cfg()),
+            "ai_scenes": sorted({c["scene"] for c in live_ai_clips()})}
+
+
+def live_ai_clips() -> list[dict]:
+    from .live import ai_clips
+    return ai_clips()
 
 
 def info_long(today: dt.date) -> dict:
@@ -861,7 +869,7 @@ def render(path: pathlib.Path) -> pathlib.Path:
                     from . import live
                     try:
                         if not live.available():
-                            raise RuntimeError("PEXELS_API_KEY/PIXABAY_API_KEY 없음")
+                            raise RuntimeError("PEXELS_API_KEY/PIXABAY_API_KEY·AI 클립 없음")
                         cr: list = []
                         done = live.render_part(ss[0]["lines"], ad, part, tmp, img, progress=prog, badge=ss[0].get("badge"),
                                                 pet=spec.get("pet", True), scene=ss[0], date=spec["date"], credits=cr,
@@ -890,7 +898,7 @@ def render(path: pathlib.Path) -> pathlib.Path:
                         "-b:a", "128k", "-movflags", "+faststart", str(out)], check=True)
     meta = {"slug": slug, "seconds": round(t_acc, 1), "chapters": [[round(a, 1), b] for a, b in chapters]}
     if credits:  # 실사 배경 출처 → 설명란 (youtube.episode_rows)
-        meta["credits"] = [{k: c[k] for k in ("id", "credit", "page", "query", "lines")} for c in credits]
+        meta["credits"] = [{k: c[k] for k in ("id", "credit", "page", "query", "lines", "ai", "realistic") if k in c} for c in credits]
         from .live import remember
         remember(credits, spec["date"])
     path.with_suffix(".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
