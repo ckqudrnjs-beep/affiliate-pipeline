@@ -91,3 +91,19 @@ class QuizShortTest(unittest.TestCase):
         import datetime as dt
         d = ep.next_short_date(dt.date(2026, 11, 14))
         self.assertNotIn(d.weekday(), ep.QUIZ_DAYS)
+
+
+class ShortV3Test(unittest.TestCase):
+    """2026-11-18 BK: 20~25초, 답 없는 제목, 삼촌 얼굴 영상 금지 (11/25 편부터)."""
+
+    def spec(self, title):
+        return {"date": "2026-11-25", "title": title, "scenes": [
+            {"type": "skit", "lines": [{"cap": ["하루 8시간", "한 달 얼마?"]}, {"big": "약 4만 8천 원"}]},
+            {"type": "end", "text": "담요는 480원"}]}
+
+    def test_title(self):
+        from pipeline.episodes import title_errors
+        self.assertEqual(title_errors(self.spec("온풍기 하루 8시간, 한 달 얼마?")), [])
+        self.assertTrue(title_errors(self.spec("온풍기 한 달 4만 8천 원?")))
+        self.assertTrue(title_errors(self.spec("온풍기 vs 담요, 480원 차이")))
+        self.assertTrue(title_errors(self.spec("온풍기 vs 담요 비교")))

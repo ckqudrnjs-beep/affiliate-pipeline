@@ -8,6 +8,7 @@
 2. `docs/SHORTS_WEEKLY.md` 우리 상위 편의 형식·훅을 참고한다.
 3. `.claude/skills/viral-hooks` 로 첫 1초 훅 후보 5개 → 숫자 비교형(badge 숫자+물음표) 1개. `.claude/skills/viral-youtube-shorts` 의 루프 원칙(끝이 처음으로 이어짐). 롱폼 유도 없음.
 4. 설명란 첫 줄 40자 이하 핵심 + 해시태그 3개(`.claude/skills/viral-captions-and-ctas`, 참여 낚시 금지).
+5. (11/25 편부터) 20~25초(내레이션 100~150자), 제목은 답 없이 '?'로 끝, 삼촌 얼굴 영상(uncle) 금지 — `episodes.check` 가 막음.
 
 ## 0. 요일 로테이션 (2026-11-14, 오후 개정)
 **롱폼 멈춤 (2026-11-14 BK 결정): TTS 내레이션·슬라이드 롱폼은 재미가 없어 중단. 매일 쇼츠 1편의 질(훅·짧은 대사·반전)에 집중.**
