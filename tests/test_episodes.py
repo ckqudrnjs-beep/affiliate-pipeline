@@ -74,13 +74,16 @@ class QuizShortTest(unittest.TestCase):
         self.assertEqual(ep.speak("약 1,385.2원 (참고)"), "약 천삼백팔십오 점 이원")
 
     def test_quiz_matches_site_and_passes_check(self):
-        import datetime as dt
+        import datetime as dt, json
         from pipeline import daily
         for i in range(14):
             d = dt.date(2026, 11, 17) + dt.timedelta(days=i)
             spec = ep.quiz_spec(d)
             self.assertEqual(ep.check(spec), [], d)
-            q = daily.schedule(d, 1, None)[d.isoformat()]
+            # 사이트처럼 그날 시세 데이터가 있으면 같이 넘긴다 (2026-11-18: 시세 들어온 날 시세 문제로 바뀌어 실패했음)
+            f = daily.OUT / f"{d.isoformat()}.json"
+            latest = json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+            q = daily.schedule(d, 1, latest)[d.isoformat()]
             self.assertEqual(spec["quiz_id"], q["id"])
             self.assertNotIn("product", spec)
 
