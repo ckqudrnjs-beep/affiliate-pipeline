@@ -37,8 +37,9 @@
  },
  {
   "q": "알리 합배송 관세 합산 기준",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "ali-combined-shipping-customs-sum"
  },
  {
   "q": "삼촌의 일기: 알리 장바구니 정리하다 깨달은 것",
