@@ -95,7 +95,7 @@ SHORT_FORMATS = {
 # 웹툰 상황극(목·금)과 2주 비교 (판단 12/7, docs/SHORTS_GROWTH.md). 키가 없으면 자동으로 웹툰.
 LIVE_DAYS = {0, 1, 5}
 LIVE_RULE = ("[실사 배경 규칙 2026-11-18] 대본 맨 위 \"style\": \"live\". 첫 skit 줄에 \"clip\": config/stock_scenes.json 장면 이름 "
-             "(예 snow-street, boiler, thermostat, grocery-market, cabbage, warm-socks). 장면은 한 편에 1~3개, 대사에 그 물건·장소가 실제로 나올 때만 바꾼다. "
+             "(예 snow-street, boiler, thermostat, grocery-market, cabbage, home-meal). 장면은 한 편에 1~3개, 대사에 그 물건·장소가 실제로 나올 때만 바꾼다. "
              "'티도 안 나지'·'겨울 4달' 같은 말·숫자 줄은 clip 을 빼서 앞 장면을 이어 쓰고, 숫자만 크게 보일 줄은 \"layout\": \"focus\"(배경 흐림). "
              "주제는 그 주의 시기 이슈(한파·김장·요금 인상·명절)에 사이트 숫자를 붙인다. 시기 이슈의 사실(기온·인상 시점)은 줄 \"src\"(30자 이하)로 "
              "출처를 달고, 확인 안 된 것·겁주기 과장은 쓰지 않는다. 금액·퍼센트는 여전히 사이트 숫자만. ")

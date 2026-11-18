@@ -1,5 +1,5 @@
 {
- "_doc": "실사 배경 장면 사전 (2026-11-18). 대본 clip 은 여기 이름만. q=검색어, need=태그에 하나 이상 있어야, ban=있으면 버림. ok=눈으로 확인한 영상 id(먼저 씀), bad=어색해서 빼는 영상 id(전체). 수정: docs/SHORTS_GROWTH.md 실사 배경.",
+ "_doc": "실사 배경 장면 사전 (2026-11-18). 대본 clip 은 여기 이름만. q=검색어, need=태그에 하나 이상 있어야, ban=있으면 버림. ok=눈으로 확인한 영상 id(먼저 씀), bad=어색해서 빼는 영상 id(전체). 수정: docs/SHORTS_GROWTH.md 실사 배경. 11/18: warm-socks 는 두 번 다 엉뚱(매달린 천, 하늘에 나는 양말)해 사전에서 뺌.",
  "ban_all": [
   "globe",
   "earth",
@@ -25,7 +25,10 @@
   "fashion",
   "christmas"
  ],
- "bad": [],
+ "bad": [
+  "pixabay-127215",
+  "pixabay-258547"
+ ],
  "scenes": {
   "snow-street": {
    "q": "snow city street",
@@ -35,7 +38,9 @@
     "winter"
    ],
    "ban": [],
-   "ok": []
+   "ok": [
+    "pixabay-63970"
+   ]
   },
   "cold-window": {
    "q": "frosted window winter",
@@ -69,7 +74,9 @@
     "car",
     "engine"
    ],
-   "ok": []
+   "ok": [
+    "pixabay-42014"
+   ]
   },
   "thermostat": {
    "q": "thermostat",
@@ -79,7 +86,9 @@
     "heating"
    ],
    "ban": [],
-   "ok": []
+   "ok": [
+    "pixabay-42014"
+   ]
   },
   "electric-heater": {
    "q": "electric heater",
@@ -95,17 +104,6 @@
     "blanket",
     "sofa",
     "couch"
-   ],
-   "ban": [],
-   "ok": []
-  },
-  "warm-socks": {
-   "q": "socks",
-   "need": [
-    "socks",
-    "sock",
-    "slippers",
-    "feet"
    ],
    "ban": [],
    "ok": []
