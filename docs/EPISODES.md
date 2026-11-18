@@ -35,7 +35,7 @@ Claude 예약 작업이 이 문서를 보고 `data/episodes/<날짜>-<형식>.js
 - 영상 안에 오늘 할 수 있는 행동 1개 + 숫자의 가정(근거). 끝은 사이트에 가면 무엇을 더 얻는지. 상품·구매·할인 유도 없음.
 
 ### 실사 배경 (2026-11-18)
-`next` 결과에 `"style": "live"` 가 있으면(월·화·토) 대본 맨 위에 `"style": "live"` 를 넣고, skit 줄마다 `clip`(무료 스톡 영어 검색어), 바깥 사실엔 `src`(출처 30자 이하)를 단다. 규칙은 `episodes.LIVE_RULE`·SHORTS_GROWTH.md "실사 배경 상황극". 키가 없으면 웹툰으로 자동.
+`next` 결과에 `"style": "live"` 가 있으면(월·화·토) 대본 맨 위에 `"style": "live"` 를 넣고, 첫 skit 줄에 `clip`(config/stock_scenes.json 장면 이름, 한 편 1~3개, 물건·장소가 대사에 나올 때만 바꿈), 바깥 사실엔 `src`(출처 30자 이하)를 단다. 규칙은 `episodes.LIVE_RULE`·SHORTS_GROWTH.md "실사 배경 상황극". 키가 없으면 웹툰으로 자동.
 
 ## 1. 순서 (예약 작업)
 1. `PYTHONPATH=src python -m pipeline.episodes next` (롱폼은 `next-long`) → 날짜·형식·규칙·쓸 파일 이름·상품 목록·삼촌 영상 이름이 나온다.
