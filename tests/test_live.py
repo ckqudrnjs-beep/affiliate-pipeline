@@ -8,6 +8,22 @@ from unittest import mock
 from pipeline import live
 from pipeline.episodes import check
 
+
+def _has_font():
+    """한글 폰트·ffmpeg 가 없는 CI(예: curate 워크플로)에서는 렌더 테스트를 건너뛴다."""
+    import shutil
+    if not shutil.which("ffmpeg"):
+        return False
+    try:
+        from pipeline import shorts
+        shorts.font(10)
+        return True
+    except (SystemExit, Exception):
+        return False
+
+
+NEEDS_RENDER = unittest.skipUnless(_has_font(), "한글 폰트 또는 ffmpeg 없음")
+
 LINES = [
     {"who": "n", "n": "cold", "cap": ["한파 오는데", "난방비 얼마나 나와?"], "say": "삼촌, 이번 주 한파래.", "clip": "snow-street"},
     {"who": "u", "u": "wow", "cap": ["땡!"], "big": "한 달 약 1만 원", "sub": "1도 낮추면 · 계산기 기본값", "sfx": "buzz",
@@ -67,6 +83,7 @@ class LiveTest(unittest.TestCase):
                 s["clip"] = "warm-blanket"
         self.assertFalse(any("clip" in x for x in check(spec)))
 
+    @NEEDS_RENDER
     def test_missing_scene_reuses_previous(self):
         import numpy as np
         with tempfile.TemporaryDirectory() as d:
@@ -85,6 +102,7 @@ class LiveTest(unittest.TestCase):
                 live.render_part(LINES, False, tmp / "o.mp4", tmp, date="2026-11-18", credits=cr)
             self.assertEqual(cr[0]["lines"], [0, 1])
 
+    @NEEDS_RENDER
     def test_render_with_local_clip(self):
         import numpy as np
         with tempfile.TemporaryDirectory() as d:
