@@ -66,6 +66,9 @@ class LiveTest(unittest.TestCase):
     def test_spec_check_live(self):
         spec = json.loads(pathlib.Path("data/episodes/2026-11-24-skit-calc.json").read_text(encoding="utf-8"))
         spec["style"] = "live"
+        for s in spec["scenes"]:  # 11/24 편은 실사로 다시 만들어 clip 이 있음 → 지워서 '첫 줄 clip 필요' 확인
+            for ln in s.get("lines", []):
+                ln.pop("clip", None)
         self.assertTrue(any("clip" in x for x in check(spec)))
         for s in spec["scenes"]:
             if s["type"] == "skit":

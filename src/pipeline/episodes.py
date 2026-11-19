@@ -95,7 +95,7 @@ SHORT_FORMATS = {
 }
 # 2026-11-18 BK "실사 영상이 좋아, 기획안 돌려 쓰면 지겨울 것": 상황극 일부를 무료 스톡 실사 배경(pipeline/live.py)으로.
 # 웹툰 상황극(목·금)과 2주 비교 (판단 12/7, docs/SHORTS_GROWTH.md). 키가 없으면 자동으로 웹툰.
-LIVE_DAYS = {0, 1, 5}
+LIVE_DAYS = {0, 1, 2, 3, 4, 5, 6}  # 2026-11-19 BK "스토리와 첨단 도구": 매일 실사·AI 배경 (예전 월·화·토)
 LIVE_RULE = ("[실사 배경 규칙 2026-11-18] 대본 맨 위 \"style\": \"live\". 첫 skit 줄에 \"clip\": config/stock_scenes.json 장면 이름 "
              "(예 snow-street, boiler, thermostat, grocery-market, cabbage, home-meal). 장면은 한 편에 1~3개, 대사에 그 물건·장소가 실제로 나올 때만 바꾼다. "
              "'티도 안 나지'·'겨울 4달' 같은 말·숫자 줄은 clip 을 빼서 앞 장면을 이어 쓰고, 숫자만 크게 보일 줄은 \"layout\": \"focus\"(배경 흐림). "
@@ -103,6 +103,9 @@ LIVE_RULE = ("[실사 배경 규칙 2026-11-18] 대본 맨 위 \"style\": \"live
              "출처를 달고, 확인 안 된 것·겁주기 과장은 쓰지 않는다. 금액·퍼센트는 여전히 사이트 숫자만. "
              "[AI 클립 2026-11-19] info 의 ai_scenes 에 있는 장면(BK 가 만든 AI 영상, 예 dongjeon=동전이 오프닝)은 그 주제에 맞을 때 "
              "첫 줄 clip 으로 먼저 쓴다(움직이는 첫 화면). ai_scenes 에 없는 ai_only 장면(dongjeon, kimjang)은 쓰지 않는다. ")
+STORY_RULE = ("[스토리 2026-11-19 BK] 글자 카드(hook·list·calc)만 이어 붙이지 말고 type skit 4~5줄 + end 로 쓴다(정리 guide·시세 prices 도). "
+              "흐름: ① 조카의 착각·문제(첫 줄, 움직이는 clip) → ② 삼촌 '땡!' 반전 큰 숫자(focus) → ③ 두 번째 숫자나 비교(focus) → ④ 오늘 바로 할 일 한 가지. "
+              "예시는 data/episodes/2026-11-20-skit-q.json(11/19 다시 만든 6편). ")
 SITE_PREFIX = {"prices": ("index.html", "report.html"), "basket": ("index.html", "report.html"), "quiz": ("quiz.html",),
                "skit-calc": ("calc/",), "skit-q": ("q/",),
                "skit-recipe": ("recipe/",), "guide": ("guide/", "q/", "calc/")}
@@ -183,8 +186,8 @@ def info_short(today: dt.date) -> dict:
     concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith("skit") else None
     return {"concept": concept, "concept_rule": "concept 의 상황·반전·루프를 이 형식에 맞게 쓰고 대본에 \"concept\": id 를 넣는다. "
             "썸네일 문구 공식은 docs/SHORTS_BANK.md." if concept else None,"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
-            "rules": INFO_RULE + HOME_RULE + rules + (LIVE_RULE if d.weekday() in LIVE_DAYS and key != "guide" else ""),
-            "style": "live" if d.weekday() in LIVE_DAYS and key != "guide" else "webtoon", "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
+            "rules": INFO_RULE + HOME_RULE + rules + (LIVE_RULE + STORY_RULE if d.weekday() in LIVE_DAYS else ""),
+            "style": "live" if d.weekday() in LIVE_DAYS else "webtoon", "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
             "recent_products": [u for u in used if u][-10:],
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg()),
             "ai_scenes": sorted({c["scene"] for c in live_ai_clips()})}

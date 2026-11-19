@@ -297,6 +297,22 @@
    "ban": [],
    "ok": [],
    "note": "김장(배추 절이기·양념 버무리기) — BK AI 클립 전용"
+  },
+  "gas-station": {
+   "q": "gas station fuel pump",
+   "need": [
+    "gas station",
+    "fuel",
+    "petrol",
+    "gasoline",
+    "refuel",
+    "pump"
+   ],
+   "ban": [
+    "night club",
+    "cartoon"
+   ],
+   "ok": []
   }
  }
 }
