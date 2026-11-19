@@ -36,6 +36,15 @@
    "realistic": true,
    "added": "2026-11-19",
    "note": "노란 장판·이불 밑 수면양말·김 나는 머그 (BK 11/19 Flow)"
+  },
+  {
+   "id": "ai-cabbage-01",
+   "file": "media/ai_clips/cabbage-01.mp4",
+   "scene": "cabbage",
+   "tool": "Veo",
+   "realistic": true,
+   "added": "2026-11-19",
+   "note": "겨울 전통시장 배추·무 더미, 사람 흐릿 (BK 11/19 Flow)"
   }
  ]
 }
