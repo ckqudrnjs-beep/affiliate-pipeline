@@ -72,6 +72,7 @@ def episode_rows(ep_dir: pathlib.Path = pathlib.Path("data/episodes")) -> list[d
                     "synthetic": "1" if (any(x.get("type") == "uncle" for x in spec.get("scenes", []))
                                          or any(c.get("realistic") for c in mj.get("credits") or [])) else "",
                     "ai_clip": "1" if any(c.get("ai") for c in mj.get("credits") or []) else "",
+                    "ai_note": mj.get("ai_note", ""),  # 손으로 만든 편(만화 등)의 AI 표시 문구 (2026-11-19)
                     "ad": "1" if (spec.get("product") or spec.get("products")) else "0",
                     "date": spec["date"], "kind": spec.get("kind", "short"), "episode": str(ep),
                     "takeaway": spec.get("takeaway", ""), "site": spec.get("site_path", ""), "format": spec.get("format", ""),
@@ -109,6 +110,8 @@ def is_long(row: dict) -> bool:
 
 
 def ai_line(row: dict) -> str:
+    if row.get("ai_note"):
+        return row["ai_note"]
     if is_synthetic(row) and row.get("ai_clip"):  # BK 가 만든 실사풍 AI 클립 (2026-11-19)
         return "AI로 생성한 영상과 AI 음성, AI 가상 캐릭터가 나오는 영상입니다."
     return ("AI로 만든 가상 인물과 AI 음성이 나오는 영상입니다." if is_synthetic(row)
@@ -149,7 +152,7 @@ def build_description(row: dict) -> str:
             "",
             ai_line(row),
         ] + ([f"배경 영상(무료 스톡): {row['credits']}"] if row.get("credits") else []) + (  # 2026-11-18 실사 배경 출처
-            ["일부 배경 영상은 AI로 생성했어요."] if row.get("ai_clip") and not is_synthetic(row) else []) + [
+            ["일부 배경 영상은 AI로 생성했어요."] if row.get("ai_clip") and not is_synthetic(row) and not row.get("ai_note") else []) + [
             tags(row),
         ])
     lines = [DISCLOSURE, row["intro"].strip()]

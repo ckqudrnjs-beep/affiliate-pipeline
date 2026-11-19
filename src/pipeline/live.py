@@ -7,7 +7,7 @@
   clip 이 없는 줄은 앞 줄 영상을 이어서 쓴다. 한 편에 장면 3개까지.
   2026-11-18 BK 샘플 피드백("1도 차이는 티도 안 나지"에 지구본, "겨울 4달"에 흐린 산장): 자유 검색어 → 장면 사전 + 태그 검사
   (need 하나 이상, ban_all·ban 없음) + 눈으로 확인한 ok 목록 우선 + bad 목록 제외.
-  줄 "src": 화면 아래 작은 출처(예 "기상청 11/18 중기예보"), "layout": "focus" 면 배경을 흐리게 하고 숫자만 크게.
+  줄 "src": 화면 아래 작은 출처(예 "기상청 11/18 중기예보"), "layout": "focus" 면 배경을 살짝 어둡게 하고 숫자만 크게(흐리게는 안 함, BK 11/19).
 - 2026-11-19 BK 가 구독(제미나이 Flow·Veo, ChatGPT Sora) 크레딧으로 손수 만든 AI 클립: media/ai_clips/ + config/ai_clips.json.
   장면 이름이 같으면 스톡보다 먼저 쓰고, 같은 클립은 AI_GAP 일 안에 다시 안 쓴다(돌려 쓰기, 오래 안 쓴 것부터).
   "realistic": true 인 클립이 들어간 편은 유튜브 '변경·합성 콘텐츠' 표시(containsSyntheticMedia)를 켠다. 웹 화면 자동 조작·유료 API 는 안 씀.
@@ -240,7 +240,7 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
     """clips 를 주면(테스트) 내려받지 않고 {장면: 파일} 을 쓴다. credits 리스트에 출처를 채운다.
     sheet 를 주면 줄마다 가운데 프레임을 모은 확인용 그림(대사·장면·영상 id)을 저장한다 (어색한 장면 찾기)."""
     import numpy as np
-    from PIL import Image, ImageDraw, ImageFilter
+    from PIL import Image, ImageDraw
     from .uncle import write_wav
     from .shorts import fit
     from .webtoon import DIR, N_MAP, U_MAP, _draw_pet
@@ -346,8 +346,9 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
         cw, ch = W / z, H / z
         im = raw.crop((int((W - cw) / 2), int((H - ch) / 2), int((W + cw) / 2), int((H + ch) / 2))).resize((W, H))
         focus = ln.get("layout") == "focus" or (ln.get("big") and ds > 0.45)
-        if focus:
-            im = im.filter(ImageFilter.GaussianBlur(14)).point(lambda v: int(v * 0.7))
+        if focus:  # 11/19 BK: 흐리게(blur)는 보기 안 좋음 → 선명하게 두고 살짝 어둡게만 (0.3초에 걸쳐)
+            k = 1.0 - 0.35 * min(1.0, (ds - (0 if ln.get("layout") == "focus" else 0.45)) / 0.3)
+            im = im.point(lambda v, k=k: int(v * k))
         im = im.convert("RGBA")
         im.alpha_composite(shade)
         d = ImageDraw.Draw(im)

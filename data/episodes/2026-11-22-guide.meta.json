@@ -1,5 +1,37 @@
 {
  "slug": "ep-2026-11-22-guide",
- "seconds": 32.7,
- "chapters": []
+ "seconds": 21.2,
+ "chapters": [],
+ "credits": [
+  {
+   "id": "ai-warm-blanket-01",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "warm-blanket",
+   "lines": [
+    0
+   ],
+   "ai": true,
+   "realistic": true
+  },
+  {
+   "id": "pixabay-3802",
+   "credit": "Pixabay · sferrario1968",
+   "page": "https://pixabay.com/videos/id-3802/",
+   "query": "boiler",
+   "lines": [
+    1
+   ]
+  },
+  {
+   "id": "pixabay-42014",
+   "credit": "Pixabay · USA-Reiseblogger",
+   "page": "https://pixabay.com/videos/id-42014/",
+   "query": "thermostat",
+   "lines": [
+    2,
+    3
+   ]
+  }
+ ]
 }
