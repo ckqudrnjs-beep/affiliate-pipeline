@@ -12,7 +12,9 @@ spec = {
              "sfx": [["ding", 2.8], ["flop", 5.0]]}, ...],
   "hold": 1.5,                      # 마지막 컷 끝에서 멈춤 + 어두워짐
   "small": "돈 줍는 삼촌 · AI 생성 영상",
-  "outro": true                     # 끝 멈춤 화면에 다음 편 예고 + 구독·좋아요 (기본 켬, false 로 끔)
+  "outro": true,                    # 끝 멈춤 화면에 다음 편 예고 + 구독·좋아요 (기본 켬, false 로 끔)
+  "ending": {"clip": "toon-ending-01.mp4", "ss": 0, "t": 6, "at": 1.5}  # 고정 엔딩 클립(BK 11/19, 매 편 재사용):
+                                    # 있으면 멈춤 예고 대신 이 클립을 끝에 붙이고 at 초(버튼 누르는 순간)부터 예고·구독 자막
 }
 숫자는 한 편에 한 번만(big). 숫자·사실은 사이트 데이터만.
 """
@@ -81,8 +83,12 @@ def assemble(spec: dict) -> pathlib.Path:
         a = tmp / f"a{i}.png"
         layer(c.get("lines", []), small=spec.get("small") if last else None).save(a)
         inputs = ["-ss", str(c.get("ss", 0)), "-t", str(c.get("t", 8)), "-i", c["clip"], "-i", str(a)]
-        outro = last and spec.get("outro", True)
-        hold = (max(spec.get("hold", 1.5), OUTRO["hold"]) if outro else spec.get("hold", 1.5)) if last else 0
+        ending = spec.get("ending")
+        outro = last and spec.get("outro", True) and not ending
+        if ending and last:
+            hold = 0
+        else:
+            hold = (max(spec.get("hold", 1.5), OUTRO["hold"]) if outro else spec.get("hold", 1.5)) if last else 0
         dur = float(c.get("t", 8)) + hold
         base = "[0:v]scale=1080:1920,setsar=1,fps=30"
         if hold:
@@ -110,6 +116,21 @@ def assemble(spec: dict) -> pathlib.Path:
         p = tmp / f"p{i}.mp4"
         run(*inputs, "-filter_complex", fc, "-map", "[o]", "-an", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(p))
         sfx += [(k, t0 + s) for k, s in c.get("sfx", [])]
+        parts.append(p)
+        t0 += dur
+    if spec.get("ending"):  # 고정 엔딩 클립: 버튼 누르는 순간부터 예고 + 구독·좋아요, 끝에 멈춤·어두워짐
+        en = spec["ending"]
+        e = tmp / "outro.png"
+        layer(OUTRO["lines"], OUTRO["big"], OUTRO["sub"], spec.get("small"), bigy=OUTRO["big_y"]).save(e)
+        hold = spec.get("hold", 1.5)
+        dur = float(en.get("t", 6)) + hold
+        at = en.get("at", 1.5)
+        fc = (f"[0:v]scale=1080:1920,setsar=1,fps=30,tpad=stop_mode=clone:stop_duration={hold},"
+              f"fade=t=out:st={dur - 0.9}:d=0.9[v];[v][1:v]overlay=enable='gte(t,{at})'[o]")
+        p = tmp / "pend.mp4"
+        run("-ss", str(en.get("ss", 0)), "-t", str(en.get("t", 6)), "-i", en["clip"], "-i", str(e),
+            "-filter_complex", fc, "-map", "[o]", "-an", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(p))
+        sfx.append(("ding", t0 + at + 0.1))
         parts.append(p)
         t0 += dur
     v = tmp / "v.mp4"
