@@ -118,3 +118,4 @@
 - 2026-11-07: 새 Meta 앱은 인스타 '통합 로그인'(시스템 사용자 토큰)만 제공 → 발행기가 해당 토큰(graph.facebook.com + IG_USER_ID) 지원, 가이드 갱신.
 - 2026-11-10: 인스타 하루 1개 자동 게시(공식 Graph API, 생활 팁 릴스·카드뉴스, 게시마다 승인 없음, 비용 0원). 제휴 초안의 인스타 발행은 끔. [INSTAGRAM_AUTO.md](INSTAGRAM_AUTO.md)
 - 2026-11-17: don3chon 난방비 계산기(/calc/heating) 추가. 이것을 끝으로 애드센스 승인 전까지 새 분야·새 페이지 종류 확장은 멈춘다(BK). 승인 뒤 분야 확대는 [CATEGORY_EXPANSION.md](CATEGORY_EXPANSION.md).
+- 2026-11-19: Claude API 크레딧(매월 100달러로 보임) 활용 계획. 추천 1) 쇼츠 대본 여러 안+채점 2) 기존 글 품질 손질 PR 3) 올리기 전 정책 검사관. 합계 월 ~$10. 키는 BK가 GitHub Secrets에 직접. [CLAUDE_API_CREDIT.md](CLAUDE_API_CREDIT.md)
