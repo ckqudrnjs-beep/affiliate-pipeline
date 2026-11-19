@@ -1,7 +1,7 @@
 {
  "slug": "ep-2026-11-21-skit-recipe",
  "out": "media/youtube/ep-2026-11-21-skit-recipe.mp4",
- "hold": 1.5,
+ "hold": 1.0,
  "small": "돈 줍는 삼촌 · AI 생성 영상",
  "cuts": [
   {
@@ -90,5 +90,11 @@
     ]
    ]
   }
- ]
+ ],
+ "ending": {
+  "clip": "toon-ending-A.mp4 (BK Flow 11/19, 매 편 재사용, 저장소에 안 올림)",
+  "ss": 1.0,
+  "t": 7.0,
+  "at": 0.5
+ }
 }
