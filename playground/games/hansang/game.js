@@ -28,6 +28,10 @@ const UPS=[
  {id:'veg',n:'아침 장보기',d:'시금치 2장 + 두부 1장',add:{veg:2,tofu:1}},{id:'hand',n:'넓은 도마',d:'손에 드는 재료 8 → 9장'},
  {id:'disc',n:'부지런한 손',d:'하루 버리기 4 → 6번'},{id:'pat',n:'보리차 서비스',d:'손님이 1턴 더 기다려요'},
  {id:'combo',n:'단골 장부',d:'연속 서빙 보너스 20% → 30%'},{id:'sauce',n:'비법 소스',d:'모든 요리 값 +10'}];
+// 하루 마감 '재료 룰렛'(8칸): 하루 1번 공짜, 다시 돌리기는 가게 매출(게임 점수)로 30원 → 60원 → 90원. 현금·코인은 안 써요.
+const WH=[{n:'고기 2장',add:{meat:2},c:'#ff7a8a'},{n:'꽝',c:'#5a4a7a'},{n:'계란 2장',add:{egg:2},c:'#ffd86a'},{n:'팁 +50원',cash:50,c:'#3ddc84'},
+ {n:'김·당면',add:{gim:1,noodle:1},c:'#7ddc6a'},{n:'꽝',c:'#5a4a7a'},{n:'시금치 2장',add:{veg:2},c:'#22d3ee'},{n:'연속 +2',streak:2,c:'#ff9db5'}];
+const WCOST=30;
 // ── 꾸미기(겉모습만): 상차림 tb, 요리 완성 효과 fx
 let TB='',FX='';
 function look(){const B=window.Bonus;try{TB=B&&B.gitem?B.gitem('hansang','tb')||'':'';FX=B&&B.gitem?B.gitem('hansang','fx')||'':''}catch(e){TB=FX=''}}
@@ -45,16 +49,17 @@ const sTake=()=>{tone('triangle',440,0.12,0.12);tone('triangle',392,0.1,0.14,0,0
 const sAngry=()=>{tone('sawtooth',160,0.1,0.3,90);noise(0.06,0.2,'lowpass',500)};
 const sBad=()=>{tone('square',150,0.07,0.1);tone('square',120,0.07,0.1,0,0.07)};
 const sDay=()=>{[392,440,523,587,659,784].forEach((f,i)=>tone('triangle',f,0.14,0.2,0,i*0.08))};
+const sTickW=()=>tone('square',1400,0.035,0.02),sWin=()=>{[659,784,988,1319].forEach((f,i)=>tone('square',f,0.07,0.12,0,i*0.07))},sMissW=()=>{tone('triangle',330,0.12,0.15,300);tone('triangle',262,0.12,0.25,220,0.14)};
 const sOver=()=>{tone('triangle',392,0.2,0.4,294);tone('triangle',294,0.2,0.6,196,0.3)};
 const PENT=[392,440,523,587,659,784,880];let bgmT=null,bgmI=0;
 function bgm(on){if(bgmT){clearInterval(bgmT);bgmT=null}if(!on)return;bgmT=setInterval(()=>{if(MUTE||!AC||phase==='idle'||phase==='pause')return;const k=(bgmI*5+(bgmI>>2)*3)%7;if(bgmI%4!==3)tone('triangle',PENT[k],0.04,0.35);if(bgmI%8===0)tone('sine',196,0.05,0.8);bgmI++},300)}
 // ── 상태
-let phase='idle',run,hand=[],sel=new Set(),draw=[],disc=[],seats=[],cq=[],R,RC2,parts=[],pops=[],flies=[],shake=0,T=0,best=0,newBest=false,lastRun=null,book=false,banner=null,offer=null,daySum=null,prevPhase='play',seedOverride=null;
+let phase='idle',wheel=null,run,hand=[],sel=new Set(),draw=[],disc=[],seats=[],cq=[],R,RC2,parts=[],pops=[],flies=[],shake=0,T=0,best=0,newBest=false,lastRun=null,book=false,banner=null,offer=null,daySum=null,prevPhase='play',seedOverride=null;
 function bestLoad(){try{best=+localStorage.getItem('nr_best_hansang_'+KST)||0}catch(e){}}
 function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function genRun(seed){R=seeded(seed);RC2=seeded(seed+'#손님');const offs=[];for(let d=0;d<DAYS-1;d++)offs.push(shuffle(UPS.map(u=>u.id),R));
  const deck=[];for(const k in DECK0)for(let i=0;i<DECK0[k];i++)deck.push(k);
- return {day:0,cash:0,hearts:3,streak:0,maxStreak:0,served:0,lost:0,take:0,up:{},offs,deck}}
+ return {day:0,cash:0,hearts:3,streak:0,maxStreak:0,served:0,lost:0,take:0,up:{},offs,deck,wr:seeded(seed+'#룰렛'),ws:{spins:0,paid:0,miss:0,hit:0}}}
 const handN=()=>run.up.hand?9:8,discN=()=>run.up.disc?6:4,patN=()=>Math.max(4,7-Math.floor(run.day*0.75))+(run.up.pat?1:0);
 function newCust(){const pool=Math.min(RC.length,5+run.day*1.5|0),r=RC[Math.floor(RC2()*pool)],c=Math.floor(RC2()*6);return {o:r.id,pat:patN(),max:patN(),c,t:0,leave:0,mood:0}}
 function newDay(){if(run.day>0)run.hearts=Math.min(3,run.hearts+1);draw=shuffle(run.deck.slice(),R);disc=[];hand=[];sel=new Set();run.turn=0;run.dleft=discN();run.dayCash=0;run.dayServed=0;run.dayLost=0;
@@ -92,12 +97,22 @@ function pickFor(i){const s=seats[i];if(phase!=='play'||!s||s.leave)return;const
 function endDay(){if(!run||run.hearts<=0)return;sDay();daySum={t:0,day:run.day,cash:run.dayCash,served:run.dayServed,lost:run.dayLost};
  if(run.day>=DAYS-1){phase='daysum';return}phase='daysum'}
 function afterDay(){if(phase!=='daysum'||!daySum||daySum.t<0.6)return;daySum=null;if(run.day>=DAYS-1){run.clear=1;run.cash+=run.hearts*100;over();return}
+ phase='wheel';wheel={t:0,ang:-Math.PI/2-Math.PI/8,a0:0,a1:0,dur:0,res:-1,spinning:false,first:true,n:0,last:-1}}
+function wCost(){return WCOST*wheel.n}
+function wSpin(){if(phase!=='wheel'||!wheel||wheel.spinning)return;if(!wheel.first){const c=wCost();if(run.cash<c){sBad();return}run.cash-=c;run.ws.paid+=c;pops.push({x:VW/2,y:130,t:0,s:'-'+c+'원',c:'#ff9db5'})}
+ wheel.first=false;wheel.n++;run.ws.spins++;const i=Math.floor(run.wr()*WH.length),seg=Math.PI*2/WH.length;
+ // 포인터(위쪽, -90°)에 i번째 칸 가운데가 오도록: ang + (i+0.5)*seg = -90° (mod 360)
+ let tgt=-Math.PI/2-(i+0.5)*seg;const base=wheel.ang;while(tgt<base+Math.PI*2*3)tgt+=Math.PI*2;tgt+=(run.wr()-0.5)*seg*0.6;
+ wheel.a0=base;wheel.a1=tgt;wheel.t=0;wheel.dur=2.1;wheel.spinning=true;wheel.res=-1;wheel.pend=i;wheel.last=-1;sTap()}
+function wTake(){if(phase!=='wheel'||!wheel)return;if(wheel.first){wSpin();return}if(wheel.spinning)return;const w=WH[wheel.res];
+ if(w.add)for(const k in w.add)for(let j=0;j<w.add[k];j++)run.deck.push(k);if(w.cash){run.cash+=w.cash}if(w.streak){run.streak+=w.streak;run.maxStreak=Math.max(run.maxStreak,run.streak)}
+ if(w.add||w.cash||w.streak)run.ws.hit++;else run.ws.miss++;wheel=null;
  phase='up';offer={t:0,ids:run.offs[run.day].filter(id=>!run.up[id]||UPS.find(u=>u.id===id).add).slice(0,3)}}
 function pickUp(i){if(phase!=='up'||!offer||offer.t<0.35||!offer.ids[i])return;const u=UPS.find(x=>x.id===offer.ids[i]);run.up[u.id]=(run.up[u.id]||0)+1;
  if(u.add)for(const k in u.add)for(let j=0;j<u.add[k];j++)run.deck.push(k);sServe(3);offer=null;run.day++;phase='play';newDay()}
 function over(){if(phase==='over')return;phase='over';bgm(false);newBest=false;const sc=run.cash;
  if(sc>best){newBest=sc>0;best=sc;try{localStorage.setItem('nr_best_hansang_'+KST,sc)}catch(e){}}
- lastRun={sc,day:run.day+1,served:run.served,streak:run.maxStreak,lost:run.lost,take:run.take,clear:!!run.clear};
+ lastRun={sc,day:run.day+1,served:run.served,streak:run.maxStreak,lost:run.lost,take:run.take,clear:!!run.clear,ws:Object.assign({},run.ws)};
  if(!DEBUG){if(window.Bonus)Bonus.played('hansang');if(sc>0&&window.submitScore)submitScore(sc)}
  run.clear?sDay():sOver();
  setTimeout(()=>{if(phase==='over'){$('hs-go').textContent='↻ 다시 장사하기';$('hs-go').style.display='';$('hs-ov').style.display='flex'}},900);
@@ -112,7 +127,7 @@ function full(on){if(on){cab.classList.add('on');document.body.style.overflow='h
 let runT0=0;
 function start(){ac();look();bestLoad();full(true);run=genRun(seedOverride||('hansang'+KST));newDay();phase='play';parts=[];pops=[];flies=[];book=false;offer=null;daySum=null;runT0=T;
  $('hs-go').style.display='none';$('hs-ov').style.display='none';$('hs-msg').textContent='재료 카드를 골라 요리하고, 손님 주문과 맞춰 내 주세요.';bgm(true)}
-function pause(){if(['play','up','daysum'].indexOf(phase)>=0){prevPhase=phase;phase='pause';$('hs-go').textContent='▶ 이어 하기';$('hs-go').style.display=''}}
+function pause(){if(['play','up','daysum','wheel'].indexOf(phase)>=0){prevPhase=phase;phase='pause';$('hs-go').textContent='▶ 이어 하기';$('hs-go').style.display=''}}
 function resume(){if(phase!=='pause')return;phase=prevPhase;$('hs-go').style.display='none'}
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&cab.classList.contains('on')&&!IOS){pause();cab.classList.remove('on');document.body.style.overflow='';setTimeout(size,60)}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
@@ -120,6 +135,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 const BT_COOK={x:236,y:246,w:112,h:44},BT_DISC={x:236,y:296,w:112,h:40},BT_BOOK={x:12,y:582,w:336,h:42};
 function cardRect(i){const n=hand.length,per=Math.max(1,Math.ceil(n/2)),row=i<per?0:1,inRow=row?n-per:Math.min(per,n),col=row?i-per:i,gap=4,cw=Math.min(80,(336-gap*(per-1))/per),ch=98,tw=inRow*cw+(inRow-1)*gap;
  const lift=sel.has(i)?-10:0;return {x:(VW-tw)/2+col*(cw+gap),y:356+row*(ch+8)+lift,w:cw,h:ch}}
+const BW_SPIN={x:70,y:470,w:220,h:52},BW_RE={x:30,y:470,w:144,h:52},BW_TAKE={x:186,y:470,w:144,h:52};
 function upRect(i){return {x:24,y:220+i*92,w:VW-48,h:80}}
 const inR=(p,b)=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h;
 function toW(e){const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left-OX)/S,y:(e.clientY-r.top-OY)/S}}
@@ -128,6 +144,7 @@ cab.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;e.pr
  if(phase==='idle'){start();return}if(phase==='pause'){resume();return}
  if(book){book=false;return}
  if(phase==='daysum'){afterDay();return}
+ if(phase==='wheel'&&wheel){if(wheel.first){wSpin();return}if(wheel.spinning)return;if(inR(p,BW_RE)){wSpin();return}if(inR(p,BW_TAKE)){wTake();return}return}
  if(phase==='up'){for(let i=0;i<3;i++)if(inR(p,upRect(i))){pickUp(i);return}return}
  if(phase!=='play')return;
  if(inR(p,BT_COOK)){cook();return}if(inR(p,BT_DISC)){discard();return}if(inR(p,BT_BOOK)){book=true;sTap();return}
@@ -139,6 +156,7 @@ addEventListener('keydown',e=>{if(!cab.classList.contains('on')&&phase==='idle')
  if(phase==='play'){if(k>='1'&&k<='8')toggle(+k-1);else if(k==='Enter'||k===' '){e.preventDefault();cook()}else if(k==='d'||k==='D')discard();else if(k==='q'||k==='Q')pickFor(0);else if(k==='w'||k==='W')pickFor(1);else if(k==='e'||k==='E')pickFor(2);else if(k==='b'||k==='B')book=true}
  else if(phase==='daysum'&&(k==='Enter'||k===' ')){e.preventDefault();afterDay()}
  else if(phase==='up'&&k>='1'&&k<='3')pickUp(+k-1);
+ else if(phase==='wheel'&&wheel){if(k==='Enter'||k===' '){e.preventDefault();wTake()}else if(k==='r'||k==='R')wSpin()}
  else if(phase==='over'&&k==='Enter'&&$('hs-go').style.display!=='none')start();
  else if(phase==='pause'&&(k==='Enter'||k===' '))resume();
  if(k==='Escape'&&phase!=='play')full(false)});
@@ -278,10 +296,27 @@ function drawUp(){cx.fillStyle='#050214bb';cx.fillRect(0,0,W,H);txt('내일 장�
   cx.fillStyle=lg(y,y+r.h*S,'#4a2a1a','#2a140a');rr(x,y,r.w*S,r.h*S,14*S);cx.fill();cx.strokeStyle='#ffb040';cx.lineWidth=2*S;cx.stroke();
   if(u.add){const ks=Object.keys(u.add);ks.slice(0,2).forEach((k,j)=>ing(k,x+30*S+j*14*S,y+40*S+j*6*S,30*S))}else{glow(GL.o,x+36*S,y+40*S,26*S,0.6);txt('★',x+36*S,y+48*S,22*S,'#ffd86a',FK)}
   txt(u.n,x+72*S,y+34*S,16*S,'#fff',FK,'left');txt(u.d,x+72*S,y+58*S,11.5*S,'#ffd8b0',FK,'left');cx.globalAlpha=1}}
+function drawWheel(){const w=wheel;cx.fillStyle='#050214ec';cx.fillRect(0,0,W,H);txt('재료 룰렛',X(VW/2),Y(112),24*S,'#fff',FK);txt('하루 1번 공짜 · 다시 돌리면 매출에서 '+WCOST+'원씩 더',X(VW/2),Y(136),11*S,'#ffd86acc',FK);
+ const cxw=X(VW/2),cyw=Y(296),R0=118*S,seg=Math.PI*2/WH.length;glow(GL.o,cxw,cyw,R0*1.35,0.35);
+ cx.fillStyle='#2a140a';cx.beginPath();cx.arc(cxw,cyw,R0+10*S,0,7);cx.fill();cx.strokeStyle='#ffb040';cx.lineWidth=3*S;cx.stroke();
+ for(let i=0;i<WH.length;i++){const a=w.ang+i*seg,h=WH[i],hit=!w.spinning&&w.res===i;cx.fillStyle=hit?'#fff3c8':i%2?h.c+'cc':h.c;cx.beginPath();cx.moveTo(cxw,cyw);cx.arc(cxw,cyw,R0,a,a+seg);cx.closePath();cx.fill();cx.strokeStyle='#2a140a';cx.lineWidth=2*S;cx.stroke();
+  cx.save();cx.translate(cxw,cyw);cx.rotate(a+seg/2);cx.translate(R0*0.64,0);cx.rotate(Math.sin(a+seg/2)>0.15?-Math.PI/2:Math.PI/2);
+  if(h.add){const ks=Object.keys(h.add);ing(ks[0],0,-6*S,22*S)}else{txt(h.cash?'₩':h.streak?'🔥':'✕',0,2*S,16*S,'#1a0f00',FK)}
+  txt(h.n,0,18*S,9.5*S,'#1a0f00',FK);cx.restore()}
+ // 가운데 단추 + 등불
+ for(let i=0;i<16;i++){const a=i/16*Math.PI*2,on=((T*6|0)+i)%2===0||!w.spinning;cx.fillStyle=on?'#ffe08a':'#7a4a1a';cx.beginPath();cx.arc(cxw+Math.cos(a)*(R0+5*S),cyw+Math.sin(a)*(R0+5*S),2.6*S,0,7);cx.fill()}
+ cx.fillStyle=lg(cyw-22*S,cyw+22*S,'#ffd86a','#c87a10');cx.beginPath();cx.arc(cxw,cyw,22*S,0,7);cx.fill();cx.strokeStyle='#2a140a';cx.lineWidth=2*S;cx.stroke();txt('한 상',cxw,cyw+4*S,11*S,'#2a140a',FK);
+ // 포인터
+ cx.fillStyle='#ff4d6d';cx.beginPath();cx.moveTo(cxw,cyw-R0+14*S);cx.lineTo(cxw-11*S,cyw-R0-16*S);cx.lineTo(cxw+11*S,cyw-R0-16*S);cx.closePath();cx.fill();cx.strokeStyle='#fff';cx.lineWidth=2*S;cx.stroke();
+ if(!w.spinning&&w.res>=0){const h=WH[w.res],miss=!(h.add||h.cash||h.streak);txt(miss?'꽝! 이번엔 아무것도 없어요':h.n+(h.add?' 덱에 추가':h.cash?'':' (지금 바로)'),X(VW/2),Y(442),16*S,miss?'#ff8aa0':'#ffd86a',FK)}
+ const B=(b,s,c,on,sub)=>{cx.fillStyle=on?c:'#2a1d4c';rr(X(b.x),Y(b.y),b.w*S,b.h*S,13*S);cx.fill();cx.strokeStyle=c;cx.lineWidth=2*S;cx.stroke();txt(s,X(b.x+b.w/2),Y(b.y+b.h/2+(sub?0:6)),16*S,on?'#1a0f00':c,FK);if(sub)txt(sub,X(b.x+b.w/2),Y(b.y+b.h/2+16),9.5*S,on?'#1a0f00aa':c,FK)};
+ if(w.first)B(BW_SPIN,'🎡 돌리기!','#ffd86a',true,'오늘 1번 공짜');
+ else if(!w.spinning){const c=wCost();B(BW_RE,'다시 돌리기',run.cash>=c?'#22d3ee':'#6a6a8a',false,'매출 -'+c+'원');B(BW_TAKE,'받기 ▶','#ffd86a',true);txt('다시 돌리면 지금 결과는 사라져요 · 매출 ₩'+run.cash,X(VW/2),Y(546),10.5*S,'#ffffff88',FK)}}
 function drawOver(){const r=lastRun||{sc:0,day:1,served:0,streak:0,lost:0};cx.fillStyle='#050214c4';cx.fillRect(0,0,W,H);panel(110,300);
  txt(r.clear?'5일 장사 완주!':'오늘은 여기까지',X(VW/2),Y(150),22*S,'#fff',FK);txt('₩'+r.sc,X(VW/2),Y(204),28*S,'#ffd23f',FN);txt(newBest?'NEW BEST!':'오늘 최고 ₩'+best,X(VW/2),Y(232),10*S,newBest?'#3ddc84':'#ffffff99',FN);
  const st=[['장사한 날',r.day+'일'],['서빙',r.served+'그릇'],['최대 연속',r.streak+'번']];for(let i=0;i<3;i++){const x=X(36+i*100);cx.fillStyle='#ffffff10';rr(x,Y(256),92*S,62*S,10*S);cx.fill();txt(st[i][0],x+46*S,Y(278),11*S,'#ffffffaa',FK);txt(st[i][1],x+46*S,Y(306),15*S,'#fff',FK)}
- txt(r.lost?'놓친 손님 '+r.lost+'명 · 급한 손님 먼저!':'손님을 한 명도 안 놓쳤어요!',X(VW/2),Y(346),12*S,r.lost?'#ff8aa0':'#3ddc84',FK);txt('PC는 Enter로 다시 시작',X(VW/2),Y(384),10*S,'#ffffff66',FK)}
+ if(r.ws&&r.ws.spins)txt('룰렛 '+r.ws.spins+'번 · 당첨 '+r.ws.hit+' · 꽝 '+r.ws.miss+(r.ws.paid?' · 다시 돌리기 '+r.ws.paid+'원':''),X(VW/2),Y(334),10.5*S,'#ffd86acc',FK);
+ txt(r.lost?'놓친 손님 '+r.lost+'명 · 급한 손님 먼저!':'손님을 한 명도 안 놓쳤어요!',X(VW/2),Y(356),12*S,r.lost?'#ff8aa0':'#3ddc84',FK);txt('PC는 Enter로 다시 시작',X(VW/2),Y(384),10*S,'#ffffff66',FK)}
 function drawIdle(){cx.fillStyle='#120a24cc';rr(X(28),Y(150),(VW-56)*S,250*S,18*S);cx.fill();txt('한 상 콤보',X(VW/2),Y(214),42*S,'#fff',FK);txt('주문 맞춰 한 그릇씩, 포장마차 카드 요리',X(VW/2),Y(244),13*S,'#ffd86a',FK);
  ['bibim','kstew','gimbap','tteok'].forEach((d,i)=>dish(d,X(78+i*68),Y(300),50*S));if(best)txt('오늘 내 최고 ₩'+best,X(VW/2),Y(372),13*S,'#3ddc84',FK)}
 function drawPause(){cx.fillStyle='#120a24';cx.fillRect(0,0,W,H);txt('잠깐 쉬는 중',X(VW/2),Y(300),26*S,'#fff',FK);txt('누르면 이어서 장사해요',X(VW/2),Y(330),13*S,'#ffffffaa',FK)}
@@ -289,6 +324,8 @@ function drawPause(){cx.fillStyle='#120a24';cx.fillRect(0,0,W,H);txt('잠깐 쉬
 let last=performance.now();
 function step(dt){T+=dt;for(const p of parts){p.t+=dt;p.vy+=240*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}parts=parts.filter(p=>p.t<p.l);pops.forEach(p=>p.t+=dt);pops=pops.filter(p=>p.t<1);flies.forEach(f=>f.t+=dt);flies=flies.filter(f=>f.t<0.5);
  for(const c of hand)c.t+=dt;if(banner)banner.t+=dt;if(shake>0)shake=Math.max(0,shake-dt);if(offer)offer.t+=dt;if(daySum)daySum.t+=dt;
+ if(wheel&&wheel.spinning){wheel.t+=dt;const k=Math.min(1,wheel.t/wheel.dur),e=1-Math.pow(1-k,3);wheel.ang=wheel.a0+(wheel.a1-wheel.a0)*e;const seg=Math.PI*2/WH.length,cur=Math.floor((wheel.ang-wheel.a0)/seg);if(cur!==wheel.last){wheel.last=cur;sTickW()}
+  if(k>=1){wheel.spinning=false;wheel.res=wheel.pend;const h=WH[wheel.res];if(h.add||h.cash||h.streak){sWin();burst(VW/2,200,16)}else sMissW()}}
  for(let i=0;i<seats.length;i++){const s=seats[i];if(!s)continue;s.t+=dt;if(s.shake>0)s.shake-=dt;if(s.leave&&s.t>0.7&&phase!=='over'){seats[i]=newCust()}}}
 function frame(now){const dt=Math.min(0.05,(now-last)/1000);last=now;if(DEBUG&&DBG.bot&&phase!=='idle')botStep();
  const k=DEBUG&&DBG.fast?DBG.fast:1;for(let i=0;i<k;i++)step(dt);if(!W)size();cx.setTransform(dpr,0,0,dpr,0,0);
@@ -300,10 +337,10 @@ function frame(now){const dt=Math.min(0.05,(now-last)/1000);last=now;if(DEBUG&&D
   const can=previewCache&&!previewCache.fail;btn(BT_COOK,'요리하기',  '#ffd23f',!!can);btn(BT_DISC,run.dleft>0?'버리기 '+run.dleft:'턴 쓰고 버리기','#22d3ee',sel.size>0);
   drawHand();btn(BT_BOOK,'레시피 수첩 보기','#ff9d3d',false);
   if(T<runT0+4&&run.day===0&&run.turn===0)txt(COARSE?'카드를 눌러 고르고 요리하기 · 손님을 누르면 자동 선택':'1~8 카드 · Q/W/E 손님 주문 · Enter 요리 · D 버리기',X(VW/2),Y(348),10.5*S,'#fff',FK);
-  drawFx();if(book)drawBook();if(phase==='daysum'&&daySum)drawDaySum();if(phase==='up'&&offer)drawUp();if(phase==='over')drawOver()}
+  drawFx();if(book)drawBook();if(phase==='daysum'&&daySum)drawDaySum();if(phase==='wheel'&&wheel)drawWheel();if(phase==='up'&&offer)drawUp();if(phase==='over')drawOver()}
  requestAnimationFrame(frame)}
 // ── 디버그: 봇(급한 손님 주문 우선, 없으면 가장 비싼 요리, 그래도 없으면 버리기)
-const DBG={bot:false,fast:0,acc:0};
+const DBG={bot:false,fast:0,acc:0,reroll:1};
 function botMove(){const order=seats.map((s,i)=>({s,i})).filter(o=>o.s&&!o.s.leave).sort((a,b)=>a.s.pat-b.s.pat);
  for(const o of order){const need=RCI[o.s.o].need,ns=new Set(),used=new Set();let ok=true;for(const k in need){let c=need[k];for(let j=0;j<hand.length&&c>0;j++)if(!used.has(j)&&hand[j].k===k){used.add(j);ns.add(j);c--}if(c>0){ok=false;break}}if(ok){sel=ns;cook();return}}
  let b=null;const n=hand.length;for(let m=1;m<(1<<n);m++){const idx=[];for(let j=0;j<n;j++)if(m&(1<<j))idx.push(j);if(idx.length>5)continue;const r=recipeOf(idx);if(r&&idx.length===nNeed(r)&&(!b||r.p>b.p))b={p:r.p,idx}}
@@ -311,8 +348,9 @@ function botMove(){const order=seats.map((s,i)=>({s,i})).filter(o=>o.s&&!o.s.lea
  if(run.dleft>0){const want=new Set();for(const o of order)for(const k in RCI[o.s.o].need)want.add(k);const d=[];hand.forEach((c,j)=>{if(!want.has(c.k))d.push(j)});sel=new Set(d.length?d.slice(0,4):[0,1]);discard();return}
  if(b){sel=new Set(b.idx);cook();return}sel=new Set([0,1,2]);discard()}
 function botStep(){DBG.acc++;if(DBG.acc%(DBG.fast?2:10))return;
- if(phase==='play')botMove();else if(phase==='daysum'&&daySum&&daySum.t>0.6)afterDay();else if(phase==='up'&&offer&&offer.t>0.4)pickUp(0)}
-if(DEBUG)window.__hs={dbg:DBG,start,bot(on){DBG.bot=!!on},seed(s){seedOverride=s},state:()=>({phase,day:run?run.day:0,cash:run?run.cash:0,turn:run?run.turn:0,hearts:run?run.hearts:0,last:lastRun}),
- sel(a){sel=new Set(a)},pick:pickFor,move(n){for(let i=0;i<(n||1)&&phase==='play';i++)botMove()},setLook(t,f){TB=t||'';FX=f||''},book(on){book=!!on}};
+ if(phase==='play')botMove();else if(phase==='daysum'&&daySum&&daySum.t>0.6)afterDay();else if(phase==='up'&&offer&&offer.t>0.4)pickUp(0);
+ else if(phase==='wheel'&&wheel&&!wheel.spinning){if(wheel.first)wSpin();else{const h=WH[wheel.res];if(!(h.add||h.cash||h.streak)&&DBG.reroll&&wheel.n<=DBG.reroll&&run.cash>=wCost())wSpin();else wTake()}}}
+if(DEBUG)window.__hs={dbg:DBG,start,bot(on){DBG.bot=!!on},seed(s){seedOverride=s},state:()=>({wheel:wheel?{res:wheel.res,spinning:wheel.spinning,n:wheel.n}:null,phase,day:run?run.day:0,cash:run?run.cash:0,turn:run?run.turn:0,hearts:run?run.hearts:0,last:lastRun}),
+ sel(a){sel=new Set(a)},pick:pickFor,move(n){for(let i=0;i<(n||1)&&phase==='play';i++)botMove()},setLook(t,f){TB=t||'';FX=f||''},book(on){book=!!on},spin:wSpin,take:wTake};
 look();bestLoad();size();requestAnimationFrame(frame);
 })();
