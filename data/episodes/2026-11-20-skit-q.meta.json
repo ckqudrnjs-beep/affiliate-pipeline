@@ -1,37 +1,19 @@
 {
  "slug": "ep-2026-11-20-skit-q",
- "seconds": 22.3,
+ "seconds": 30.0,
  "chapters": [],
+ "style": "toon",
  "credits": [
   {
-   "id": "ai-dongjeon-01",
+   "id": "ai-toon-rice-01-04",
    "credit": "AI 생성(Veo)",
    "page": "",
-   "query": "dongjeon",
-   "lines": [
-    0
-   ],
+   "query": "toon",
+   "lines": [],
    "ai": true,
    "realistic": false
-  },
-  {
-   "id": "pixabay-101957",
-   "credit": "Pixabay · PhotoSP",
-   "page": "https://pixabay.com/videos/id-101957/",
-   "query": "rice-cooker",
-   "lines": [
-    1,
-    2
-   ]
-  },
-  {
-   "id": "pixabay-172686",
-   "credit": "Pixabay · Eaktas06",
-   "page": "https://pixabay.com/videos/id-172686/",
-   "query": "home-meal",
-   "lines": [
-    3
-   ]
   }
- ]
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-19 BK: 동전이 만화 샘플(주아 글꼴)로 교체. 대본 json 은 이전 실사판 기록."
 }
