@@ -1,0 +1,119 @@
+"""동전이 만화 쇼츠 조립 (BK 2026-11-19 "재미 먼저, 정보는 곁들이기").
+
+BK 가 Flow(Veo)로 만든 클립 4개 + 자막(주아 글꼴) + 효과음 → media/youtube/<slug>.mp4.
+세계관·구도 규칙: 동전이네 세계관 바이블 (Claude Doc), docs/AI_CLIPS.md 제작 지침.
+
+사용: python tools/toon_assemble.py spec.json
+spec = {
+  "slug": "ep-2026-11-21-skit-recipe", "out": "media/youtube/ep-....mp4",
+  "cuts": [ {"clip": "path.mp4", "ss": 0, "t": 6, "lines": ["위 자막", "둘째 줄"],
+             "big": "숫자 상자", "sub": "작은 설명", "big_at": 5.3, "big_y": 900,  # 동작이 끝난 뒤 숫자 (캐릭터 가리지 않게)
+             "after": ["숫자 뜰 때 위 자막"],
+             "sfx": [["ding", 2.8], ["flop", 5.0]]}, ...],
+  "hold": 1.5,                      # 마지막 컷 끝에서 멈춤 + 어두워짐
+  "small": "돈 줍는 삼촌 · AI 생성 영상"
+}
+숫자는 한 편에 한 번만(big). 숫자·사실은 사이트 데이터만.
+"""
+from __future__ import annotations
+
+import json
+import pathlib
+import subprocess
+import sys
+import tempfile
+
+W, H, FPS = 1080, 1920, 30
+FONT = pathlib.Path(__file__).resolve().parent.parent / "config/fonts/Jua-Regular.ttf"  # OFL, '…' 글자 없음 → '...'
+BROWN = (70, 40, 20)
+
+
+def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92):
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont
+    f = lambda n: ImageFont.truetype(str(FONT), n)  # noqa: E731
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d, sd = ImageDraw.Draw(im), ImageDraw.Draw(sh)
+    y = 190
+    for t in lines:
+        t = t.replace("…", "...")
+        sd.text((W / 2 + 4, y + 8), t, font=f(size), fill=(0, 0, 0, 150), anchor="mm", stroke_width=10, stroke_fill=(0, 0, 0, 150))
+        d.text((W / 2, y), t, font=f(size), fill="white", anchor="mm", stroke_width=10, stroke_fill=BROWN)
+        y += size + 24
+    if big:
+        bw = min(W - 40, d.textlength(big, font=f(92)) + 90)
+        sd.rounded_rectangle([W / 2 - bw / 2 + 6, bigy + 10, W / 2 + bw / 2 + 6, bigy + 170], 44, fill=(0, 0, 0, 130))
+        d.rounded_rectangle([W / 2 - bw / 2, bigy, W / 2 + bw / 2, bigy + 160], 44, fill=(255, 213, 60), outline=BROWN, width=7)
+        d.text((W / 2, bigy + 82), big, font=f(92), fill=(215, 40, 30), anchor="mm")
+        if sub:
+            d.text((W / 2, bigy + 225), sub, font=f(54), fill="white", anchor="mm", stroke_width=7, stroke_fill=BROWN)
+    if small:
+        d.text((W / 2, 1790), small, font=f(40), fill="white", anchor="mm", stroke_width=5, stroke_fill=BROWN)
+    sh = sh.filter(ImageFilter.GaussianBlur(6))
+    sh.alpha_composite(im)
+    return sh
+
+
+SFX = {  # 합성 효과음 (저작권 없음)
+    "ding": "0.5*sin(2*PI*2600*t)*exp(-9*t)+0.3*sin(2*PI*3900*t)*exp(-12*t)",
+    "flop": "0.6*sin(2*PI*(500-300*t)*t)*exp(-4*t)",
+}
+
+
+def run(*a):
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *a], check=True)
+
+
+def assemble(spec: dict) -> pathlib.Path:
+    out = pathlib.Path(spec["out"])
+    tmp = pathlib.Path(tempfile.mkdtemp())
+    parts, t0, sfx = [], 0.0, []
+    n = len(spec["cuts"])
+    for i, c in enumerate(spec["cuts"]):
+        last = i == n - 1
+        a = tmp / f"a{i}.png"
+        layer(c.get("lines", []), small=spec.get("small") if last else None).save(a)
+        inputs = ["-ss", str(c.get("ss", 0)), "-t", str(c.get("t", 8)), "-i", c["clip"], "-i", str(a)]
+        hold = spec.get("hold", 1.5) if last else 0
+        dur = float(c.get("t", 8)) + hold
+        base = "[0:v]scale=1080:1920,setsar=1,fps=30"
+        if hold:
+            base += f",tpad=stop_mode=clone:stop_duration={hold},fade=t=out:st={dur - 0.9}:d=0.9"
+        if c.get("big"):
+            b = tmp / f"b{i}.png"
+            layer(c.get("after", c.get("lines", [])), c["big"], c.get("sub"), spec.get("small") if last else None,
+                  bigy=c.get("big_y", 900)).save(b)
+            at = c.get("big_at", 0)
+            inputs += ["-i", str(b)]
+            fc = f"{base}[v];[v][1:v]overlay=enable='lt(t,{at})'[x];[x][2:v]overlay=enable='gte(t,{at})'[o]"
+            sfx.append(("ding", t0 + at + 0.2))
+        else:
+            fc = f"{base}[v];[v][1:v]overlay[o]"
+        p = tmp / f"p{i}.mp4"
+        run(*inputs, "-filter_complex", fc, "-map", "[o]", "-an", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(p))
+        sfx += [(k, t0 + s) for k, s in c.get("sfx", [])]
+        parts.append(p)
+        t0 += dur
+    v = tmp / "v.mp4"
+    run(*sum((["-i", str(p)] for p in parts), []), "-filter_complex", f"concat=n={len(parts)}:v=1:a=0[v]",
+        "-map", "[v]", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(v))
+    ins, fl = [], []
+    for j, (k, s) in enumerate(sfx):
+        w = tmp / f"{k}.wav"
+        if not w.exists():
+            run("-f", "lavfi", "-i", f"aevalsrc='{SFX[k]}':s=44100:d=0.7", str(w))
+        ins += ["-i", str(w)]
+        ms = int(s * 1000)
+        fl.append(f"[{j + 1}]adelay={ms}|{ms}[s{j}]")
+    if sfx:
+        fc = ";".join(fl) + ";" + "".join(f"[s{j}]" for j in range(len(sfx))) + \
+            f"amix=inputs={len(sfx)}:normalize=0,apad[a]"
+    else:
+        fc = "anullsrc=r=44100:cl=mono[a]"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    run("-i", str(v), *ins, "-filter_complex", fc, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", str(out))
+    return out
+
+
+if __name__ == "__main__":
+    print(assemble(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))))
