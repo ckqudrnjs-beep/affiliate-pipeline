@@ -438,6 +438,8 @@ def render(day: dt.date, tid: str, ep: int, out_dir: pathlib.Path = rs.OUT) -> d
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
+    from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
+    total += add_ending(mp4, day)
     meta = {"date": day.isoformat(), "qid": f"meme-{tid}-{day.isoformat()}", "key": key, "file": str(mp4),
             "title": title_of(t, ep), "description": description_of(t, ep), "voiced": False, "hour": HOUR,
             "schedule": True, "category": "24", "game": "mongle", "meme": tid,

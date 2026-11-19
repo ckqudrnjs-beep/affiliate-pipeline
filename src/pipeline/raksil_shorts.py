@@ -144,9 +144,15 @@ def fit(dr, s: str, maxw: int, maxh: int, start: int = 130) -> tuple:
     return f, wrap(dr, s, f, maxw)[:4], 40
 
 
+def no_middot(s: str) -> str:
+    """Black Han Sans 에는 가운뎃점(·) 글자가 없어 빈칸으로 나온다 (2026-11-20 확인) → 쉼표로."""
+    return s.replace(" · ", ", ").replace("·", ", ")
+
+
 def glow_text(img, xy_center, lines: list[str], f, size: int, color, glow: int = 18, stroke: int = 0):
     """네온 글씨: 흐린 빛 + 본 글씨."""
     from PIL import Image, ImageDraw, ImageFilter
+    lines = [no_middot(ln) for ln in lines]
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     dr = ImageDraw.Draw(layer)
     cx, cy = xy_center
@@ -408,6 +414,8 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
+    from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
+    total += add_ending(mp4, day)
     meta = {"date": day.isoformat(), "qid": q["id"], "file": str(mp4), "title": title_of(q),
             "description": description_of(q, res, voiced), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")

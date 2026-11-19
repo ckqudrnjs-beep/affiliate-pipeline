@@ -260,6 +260,8 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
+    from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
+    total += add_ending(mp4, day)
     tags = ["5락실", g["name"].replace(" ", ""), "웹게임", "무료게임", "브라우저게임", "미니게임", "shorts"]
     if g.get("genre"):
         tags.insert(2, str(g["genre"]).replace(" ", ""))
