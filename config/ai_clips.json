@@ -27,6 +27,15 @@
    "realistic": true,
    "added": "2026-11-19",
    "note": "빨간 고무장갑 손이 절인 배추에 양념 바르기, 위에서 (BK 11/19 Flow)"
+  },
+  {
+   "id": "ai-warm-blanket-01",
+   "file": "media/ai_clips/warm-blanket-01.mp4",
+   "scene": "warm-blanket",
+   "tool": "Veo",
+   "realistic": true,
+   "added": "2026-11-19",
+   "note": "노란 장판·이불 밑 수면양말·김 나는 머그 (BK 11/19 Flow)"
   }
  ]
 }
