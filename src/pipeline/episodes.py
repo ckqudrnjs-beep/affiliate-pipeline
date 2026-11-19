@@ -47,6 +47,8 @@ SKIT_RULE = ("skit 장면 하나(lines 4~7줄)로 거의 전부 채운다: 1줄 
 # 2026-11-14 오후 BK "상품편도 하지마, 우선 홈페이지 유입에 주력해": 쇼츠·롱폼 모두 상품 없음, 끝은 don3chon.com 으로.
 # 요일(월=0) → 쇼츠 형식. 2026-11-14 BK "덜 광고처럼": 상품 나오는 쇼츠는 월·목 상황극 주 2개만,
 # 화·금 = "오늘의 얼마게"(사이트 퀴즈와 같은 날 같은 문제, 코드가 그날 아침 자동으로 씀, 상품 없음), 수·토·일 상품 없음.
+# 2026-11-19 BK "쇼츠를 2일에 하나씩", "1편의 컨텐츠 품질이 사이트의 운명을 좌우해": 삼촌 쇼츠는 이틀에 1편(19:00 공개).
+SHORT_EVERY_DAYS = 2
 QUIZ_DAYS: set[int] = set()  # 2026-11-17 얼마게 쇼츠 쉼 (사이트 퀴즈는 그대로). 되살리면 {1, 4}
 # 2026-11-14 밤 BK: "돈 줍는 삼촌을 완벽하게 정보의 장으로". 모든 쇼츠 공통 규칙 (구매 유도 없음).
 INFO_RULE = ("[정보의 장 규칙] 시청자가 이 영상에서 얻는 것(얼마 아끼는지·왜 중요한지)을 먼저 세운다: "
@@ -134,7 +136,7 @@ def pending_dates() -> list[dt.date]:
 
 
 def next_short_date(today: dt.date) -> dt.date:
-    """다음에 대본이 필요한 쇼츠 공개일: 업로드 기록·대기열·대본 중 가장 늦은 날 + 1일 (최소 모레)."""
+    """다음에 대본이 필요한 쇼츠 공개일: 업로드 기록·대기열·대본 중 가장 늦은 날 + SHORT_EVERY_DAYS일."""
     last = today + dt.timedelta(days=1)
     for v in load_log().values():
         last = max(last, dt.datetime.fromisoformat(v["publish_at"]).astimezone(KST).date())
@@ -143,7 +145,7 @@ def next_short_date(today: dt.date) -> dt.date:
     last = last + dt.timedelta(days=len(pending))
     for d in pending_dates():
         last = max(last, d)
-    d = last + dt.timedelta(days=1)
+    d = last + dt.timedelta(days=SHORT_EVERY_DAYS)
     while d.weekday() in QUIZ_DAYS:  # 얼마게 날은 코드가 그날 아침 자동으로 씀
         d += dt.timedelta(days=1)
     return d
