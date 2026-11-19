@@ -1,0 +1,57 @@
+name: api-check
+
+# 외부 API 직접 점검 (2026-11-19 BK). 하루 4번 시세(오피넷·ECOS·KAMIS)·알리·쿠팡·구글 연결(유튜브·서치콘솔·드라이브)·
+# 유튜브 키·Claude 키·텔레그램 봇에 한 번씩 접속해 키 만료·인증 거절·응답 오류를 미리 잡는다. 비용 0원(무료 호출).
+# 문제가 있을 때만 텔레그램으로 BK 개인 대화에 알린다(같은 문제는 하루 1번, 고쳐지면 "복구" 한 줄). 코드: src/pipeline/api_check.py
+on:
+  schedule:
+    - cron: "20 21,2,7,12 * * *"   # 06:20 · 11:20 · 16:20 · 21:20 KST (05:50 시세 수집 뒤, 07:40 쇼츠 대본 전)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: src
+      - name: 지난 점검 상태 불러오기
+        uses: actions/cache/restore@v4
+        with:
+          path: .apicheck
+          key: apicheck-${{ github.run_id }}
+          restore-keys: apicheck-
+      - name: 점검
+        env:
+          OPINET_KEY: ${{ secrets.OPINET_KEY }}
+          ECOS_KEY: ${{ secrets.ECOS_KEY }}
+          KAMIS_KEY: ${{ secrets.KAMIS_KEY }}
+          KAMIS_ID: ${{ secrets.KAMIS_ID }}
+          ALI_APP_KEY: ${{ secrets.ALI_APP_KEY }}
+          ALI_APP_SECRET: ${{ secrets.ALI_APP_SECRET }}
+          ALI_TRACKING_ID: ${{ secrets.ALI_TRACKING_ID }}
+          COUPANG_ACCESS_KEY: ${{ secrets.COUPANG_ACCESS_KEY }}
+          COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          YT_ANALYTICS_REFRESH_TOKEN: ${{ secrets.YT_ANALYTICS_REFRESH_TOKEN }}
+          RAKSIL_YT_ANALYTICS_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_ANALYTICS_REFRESH_TOKEN }}
+          GSC_REFRESH_TOKEN: ${{ secrets.GSC_REFRESH_TOKEN }}
+          DRIVE_REFRESH_TOKEN: ${{ secrets.DRIVE_REFRESH_TOKEN }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: PYTHONPATH=src python3 -m pipeline.api_check
+      - name: 점검 상태 저장
+        if: always() && hashFiles('.apicheck/state.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .apicheck
+          key: apicheck-${{ github.run_id }}
