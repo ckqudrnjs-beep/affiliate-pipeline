@@ -1,37 +1,19 @@
 {
  "slug": "ep-2026-11-21-skit-recipe",
- "seconds": 22.8,
+ "seconds": 30.0,
  "chapters": [],
+ "style": "toon",
  "credits": [
   {
-   "id": "ai-dongjeon-02",
+   "id": "ai-toon-stew-01-04",
    "credit": "AI 생성(Veo)",
    "page": "",
-   "query": "dongjeon",
-   "lines": [
-    0
-   ],
+   "query": "toon",
+   "lines": [],
    "ai": true,
    "realistic": false
-  },
-  {
-   "id": "pixabay-59785",
-   "credit": "Pixabay · DavlatTursunov",
-   "page": "https://pixabay.com/videos/id-59785/",
-   "query": "kitchen-cooking",
-   "lines": [
-    1,
-    2
-   ]
-  },
-  {
-   "id": "pixabay-227137",
-   "credit": "Pixabay · kurt_BID",
-   "page": "https://pixabay.com/videos/id-227137/",
-   "query": "home-meal",
-   "lines": [
-    3
-   ]
   }
- ]
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-19 BK: 동전이 만화로 교체 (tools/toon_assemble.py, data/toon/2026-11-21.json). 대본 json 은 이전 실사판 기록."
 }
