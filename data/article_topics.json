@@ -111,8 +111,9 @@
  },
  {
   "q": "삼촌의 일기: 겨울 아침 시동이 안 걸릴 때 할 일",
-  "done": false,
-  "format": "일기"
+  "done": true,
+  "format": "일기",
+  "slug": "winter-morning-car-wont-start-diary"
  },
  {
   "q": "전기요금 누진제 400kWh 넘으면 얼마",
