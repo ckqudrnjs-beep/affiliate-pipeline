@@ -1,5 +1,7 @@
+import importlib.util
 import json
 import pathlib
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -7,6 +9,9 @@ from unittest import mock
 
 from pipeline import live
 from pipeline.episodes import check
+
+# numpy·ffmpeg 는 쇼츠 워크플로에만 있다 → 거기서 돌고, 가벼운 워크플로(daily·curate 등)에서는 건너뜀
+NEED_RENDER = unittest.skipUnless(importlib.util.find_spec("numpy") and shutil.which("ffmpeg"), "numpy/ffmpeg 없음")
 
 LINES = [
     {"who": "n", "n": "cold", "cap": ["한파 오는데", "난방비 얼마나 나와?"], "say": "삼촌, 이번 주 한파래.", "clip": "snow-street"},
@@ -67,6 +72,7 @@ class LiveTest(unittest.TestCase):
                 s["clip"] = "warm-blanket"
         self.assertFalse(any("clip" in x for x in check(spec)))
 
+    @NEED_RENDER
     def test_missing_scene_reuses_previous(self):
         import numpy as np
         with tempfile.TemporaryDirectory() as d:
@@ -85,6 +91,7 @@ class LiveTest(unittest.TestCase):
                 live.render_part(LINES, False, tmp / "o.mp4", tmp, date="2026-11-18", credits=cr)
             self.assertEqual(cr[0]["lines"], [0, 1])
 
+    @NEED_RENDER
     def test_render_with_local_clip(self):
         import numpy as np
         with tempfile.TemporaryDirectory() as d:
