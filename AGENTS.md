@@ -13,6 +13,7 @@
 8. 5락실 전체 화면 게임(meta `ownfs`)·포스터를 쓰는 게임은 meta.json 에 `"poster"` 캡처 조리법을 넣고, 게임을 고친 PR 에서는 `python playground/posters.py` 로 포스터를 새 화면으로 다시 찍어 함께 올린다(놓쳐도 main 반영 뒤 Actions `posters` 가 자동으로 다시 찍음). 그림 주소에 `?v=` 를 손으로 붙이지 않는다(build.py 자동). 자세한 것은 docs/GAME_QUALITY.md 2-1 (BK 2026-11-15).
 9. 5락실 새 게임을 올리면 그 게임 공략 글 `playground/guides/<slug>.md` 를 같은 PR(늦어도 다음 날)에 함께 올린다. 게임 규칙·점수를 바꾸면 공략 글 숫자도 같이 고친다. 규칙은 docs/RAKSIL_GUIDES.md (BK 2026-11-16).
 10. 5락실 새 게임을 올리면 그 게임 전용 스킨(꾸미기)도 같은 PR 에 만든다: 캐릭터 게임은 캐릭터 스킨 일반 3종(🪙5~12)+전설 1종(🪙50), 캐릭터 없는 게임은 게임 아이템 2~6종(🪙4~15), RPG 는 게임 안 화폐 꾸미기+items.json. 겉모습만, 코인은 무료 획득만(현금·거래·뽑기 금지). 상점·플레이 스크린샷을 `/mnt/project-files/5raksil-<slug>/` 에 남긴다. 테스트 `tests/test_raksil_skins.py` 가 검사하고, 예외는 BK 확인 후 meta.json `"noskin"`. 자세한 것은 docs/GAME_QUALITY.md 5장 (BK 2026-11-16).
+11. numpy·ffmpeg 를 쓰는 테스트에는 `@unittest.skipUnless(...)`(test_live 의 `@NEED_RENDER`)를 붙인다. daily·youtube 등 가벼운 워크플로도 테스트 전체를 돌리는데 numpy 가 없어서, 안 붙이면 그 워크플로가 통째로 실패한다. `tests/test_heavy_deps_guard.py` 가 검사한다 (2026-11-19).
 
 ## 0-1. SNS 운영 규칙
 - [docs/OPERATIONS.md](docs/OPERATIONS.md)를 따른다: 정보형 50% 이상, 하루 발행량 제한, 상호작용 자동화 금지.
