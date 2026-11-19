@@ -18,6 +18,15 @@
    "realistic": false,
    "added": "2026-11-19",
    "note": "눈 오는 밤 담요 속 동전이 고개 내밀고 손 흔듦 (겨울·한파 주제, BK 11/19 Flow)"
+  },
+  {
+   "id": "ai-kimjang-01",
+   "file": "media/ai_clips/kimjang-01.mp4",
+   "scene": "kimjang",
+   "tool": "Veo",
+   "realistic": true,
+   "added": "2026-11-19",
+   "note": "빨간 고무장갑 손이 절인 배추에 양념 바르기, 위에서 (BK 11/19 Flow)"
   }
  ]
 }
