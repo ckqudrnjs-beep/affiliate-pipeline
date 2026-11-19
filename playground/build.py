@@ -688,6 +688,11 @@ GAME_ITEMS = [
     {"g": "hansang", "k": "tb", "kn": "상차림", "id": "najeon", "name": "자개 상", "icon": "🐚", "p": 12},
     {"g": "hansang", "k": "fx", "kn": "서빙 효과", "id": "heart", "name": "하트 뿅", "icon": "💗", "p": 6},
     {"g": "hansang", "k": "fx", "kn": "서빙 효과", "id": "fire", "name": "불꽃 축하", "icon": "🎆", "p": 9},
+    {"g": "pusher", "k": "cn", "kn": "동전 디자인", "id": "heart", "name": "하트 동전", "icon": "💗", "p": 5},
+    {"g": "pusher", "k": "cn", "kn": "동전 디자인", "id": "star", "name": "별 동전", "icon": "⭐", "p": 8},
+    {"g": "pusher", "k": "cn", "kn": "동전 디자인", "id": "jade", "name": "옥 동전", "icon": "🟢", "p": 12},
+    {"g": "pusher", "k": "fx", "kn": "떨어질 때 효과", "id": "spark", "name": "반짝 불빛", "icon": "✨", "p": 6},
+    {"g": "pusher", "k": "fx", "kn": "떨어질 때 효과", "id": "confetti", "name": "색종이", "icon": "🎊", "p": 9},
     # 끊어진 하늘(2026-11-16 BK): 발밑 오라 3종 + 걸음 흔적 2종. 모든 직업 공통, 겉모습만(능력 영향 없음)
     {"g": "sky", "k": "au", "kn": "발밑 오라", "id": "wind", "name": "바람 고리", "icon": "🌀", "p": 6},
     {"g": "sky", "k": "au", "kn": "발밑 오라", "id": "bloom", "name": "꽃잎 고리", "icon": "🌸", "p": 9},
