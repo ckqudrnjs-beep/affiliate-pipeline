@@ -395,7 +395,7 @@ def render_part(lines: list[dict], ad: bool, out: pathlib.Path, tmp: pathlib.Pat
         tag, col = ("삼촌", (31, 92, 74)) if who == "u" else ("조카", (40, 70, 150))
         d.rounded_rectangle([ax + 20, ay + s - 10, ax + s - 20, ay + s + 50], 26, fill=col, outline="white", width=4)
         d.text((ax + s / 2, ay + s + 20), tag, font=_font(34), fill="white", anchor="mm")
-        if pet:  # 동전이: 오른쪽 아래 작게 (webtoon 은 가운데 크게)
+        if pet and queries[i] != "dongjeon":  # 동전이: 오른쪽 아래 작게 (AI 동전이 영상이 배경이면 겹치니 뺌)
             sub_im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
             _draw_pet(sub_im, ln, ds, tt, i)
             box = sub_im.crop((W // 2 - 160, 1360, W // 2 + 460, 1900)).resize((434, 378))
