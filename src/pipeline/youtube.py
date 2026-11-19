@@ -68,11 +68,14 @@ def episode_rows(ep_dir: pathlib.Path = pathlib.Path("data/episodes")) -> list[d
                 price_date = f"{d[5:7].lstrip('0')}/{d[8:10].lstrip('0')}" if d else ""
         out.append({"order": "0", "slug": slug, "title": spec["title"].strip(), "intro": spec["description"].strip(),
                     "price_date": price_date,
-                    "synthetic": "1" if any(x.get("type") == "uncle" for x in spec.get("scenes", [])) else "",
+                    # 실사처럼 보이는 AI 클립(BK 제작, 2026-11-19)도 '변경·합성 콘텐츠' 표시
+                    "synthetic": "1" if (any(x.get("type") == "uncle" for x in spec.get("scenes", []))
+                                         or any(c.get("realistic") for c in mj.get("credits") or [])) else "",
+                    "ai_clip": "1" if any(c.get("ai") for c in mj.get("credits") or []) else "",
                     "ad": "1" if (spec.get("product") or spec.get("products")) else "0",
                     "date": spec["date"], "kind": spec.get("kind", "short"), "episode": str(ep),
                     "takeaway": spec.get("takeaway", ""), "site": spec.get("site_path", ""), "format": spec.get("format", ""),
-                    "credits": "; ".join(f"{c['credit']} {c['page']}".strip() for c in mj.get("credits") or [])})
+                    "credits": "; ".join(f"{c['credit']} {c['page']}".strip() for c in mj.get("credits") or [] if not c.get("ai"))})
     return out
 
 
@@ -106,6 +109,8 @@ def is_long(row: dict) -> bool:
 
 
 def ai_line(row: dict) -> str:
+    if is_synthetic(row) and row.get("ai_clip"):  # BK 가 만든 실사풍 AI 클립 (2026-11-19)
+        return "AI로 생성한 영상과 AI 음성, AI 가상 캐릭터가 나오는 영상입니다."
     return ("AI로 만든 가상 인물과 AI 음성이 나오는 영상입니다." if is_synthetic(row)
             else "내레이션: AI 음성")
 
@@ -143,7 +148,8 @@ def build_description(row: dict) -> str:
             f"자세한 계산·정리: https://don3chon.com/{row.get('site', '').strip()}".rstrip("/"),
             "",
             ai_line(row),
-        ] + ([f"배경 영상(무료 스톡): {row['credits']}"] if row.get("credits") else []) + [  # 2026-11-18 실사 배경 출처
+        ] + ([f"배경 영상(무료 스톡): {row['credits']}"] if row.get("credits") else []) + (  # 2026-11-18 실사 배경 출처
+            ["일부 배경 영상은 AI로 생성했어요."] if row.get("ai_clip") and not is_synthetic(row) else []) + [
             tags(row),
         ])
     lines = [DISCLOSURE, row["intro"].strip()]
