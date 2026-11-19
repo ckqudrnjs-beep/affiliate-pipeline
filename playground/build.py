@@ -682,6 +682,12 @@ GAME_ITEMS = [
     {"g": "bag", "k": "bag", "kn": "봉투 디자인", "id": "gold", "name": "황금 장바구니", "icon": "🧺", "p": 12},
     {"g": "bag", "k": "fx", "kn": "담을 때 효과", "id": "coin", "name": "동전 튀기기", "icon": "🪙", "p": 6},
     {"g": "bag", "k": "fx", "kn": "담을 때 효과", "id": "heart", "name": "하트 뿅", "icon": "💗", "p": 9},
+    # 한 상 콤보(2026-11-19 BK "하루에 하나씩"): 상차림 3종 + 요리 완성 효과 2종. 겉모습만
+    {"g": "hansang", "k": "tb", "kn": "상차림", "id": "marble", "name": "대리석 식탁", "icon": "🤍", "p": 5},
+    {"g": "hansang", "k": "tb", "kn": "상차림", "id": "bojagi", "name": "조각보 식탁", "icon": "🧵", "p": 8},
+    {"g": "hansang", "k": "tb", "kn": "상차림", "id": "najeon", "name": "자개 상", "icon": "🐚", "p": 12},
+    {"g": "hansang", "k": "fx", "kn": "서빙 효과", "id": "heart", "name": "하트 뿅", "icon": "💗", "p": 6},
+    {"g": "hansang", "k": "fx", "kn": "서빙 효과", "id": "fire", "name": "불꽃 축하", "icon": "🎆", "p": 9},
     # 끊어진 하늘(2026-11-16 BK): 발밑 오라 3종 + 걸음 흔적 2종. 모든 직업 공통, 겉모습만(능력 영향 없음)
     {"g": "sky", "k": "au", "kn": "발밑 오라", "id": "wind", "name": "바람 고리", "icon": "🌀", "p": 6},
     {"g": "sky", "k": "au", "kn": "발밑 오라", "id": "bloom", "name": "꽃잎 고리", "icon": "🌸", "p": 9},
