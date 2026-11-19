@@ -9,6 +9,15 @@
    "realistic": false,
    "added": "2026-11-19",
    "note": "동전이 금화 물고 거실에서 다가옴 (BK 11/19 Flow)"
+  },
+  {
+   "id": "ai-dongjeon-02",
+   "file": "media/ai_clips/dongjeon-02.mp4",
+   "scene": "dongjeon",
+   "tool": "Veo",
+   "realistic": false,
+   "added": "2026-11-19",
+   "note": "눈 오는 밤 담요 속 동전이 고개 내밀고 손 흔듦 (겨울·한파 주제, BK 11/19 Flow)"
   }
  ]
 }
