@@ -11,7 +11,8 @@ spec = {
              "after": ["숫자 뜰 때 위 자막"],
              "sfx": [["ding", 2.8], ["flop", 5.0]]}, ...],
   "hold": 1.5,                      # 마지막 컷 끝에서 멈춤 + 어두워짐
-  "small": "돈 줍는 삼촌 · AI 생성 영상"
+  "small": "돈 줍는 삼촌 · AI 생성 영상",
+  "outro": true                     # 끝 멈춤 화면에 다음 편 예고 + 구독·좋아요 (기본 켬, false 로 끔)
 }
 숫자는 한 편에 한 번만(big). 숫자·사실은 사이트 데이터만.
 """
@@ -26,9 +27,16 @@ import tempfile
 W, H, FPS = 1080, 1920, 30
 FONT = pathlib.Path(__file__).resolve().parent.parent / "config/fonts/Jua-Regular.ttf"  # OFL, '…' 글자 없음 → '...'
 BROWN = (70, 40, 20)
+# 2026-11-19 BK "2일에 하나씩인데 컨텐츠에 구독 좋아요를 어필해야": 이유형 CTA(보상 약속 금지), 이틀 간격이라 '모레'.
+OUTRO = {"lines": ["다음 새는 돈은", "모레 저녁 7시!"], "big": "구독 좋아요 꾹!", "sub": "다음 편 안 놓치게", "big_y": 420, "hold": 2.8}
+
+
+def fix(t):  # 주아에 없는 글자 → 네모(두부)로 나옴: '…' '·'
+    return t.replace("…", "...").replace(" · ", " | ").replace("·", "|") if t else t
 
 
 def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92):
+    lines, big, sub, small = [fix(t) for t in lines], fix(big), fix(sub), fix(small)
     from PIL import Image, ImageDraw, ImageFilter, ImageFont
     f = lambda n: ImageFont.truetype(str(FONT), n)  # noqa: E731
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -36,7 +44,6 @@ def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92):
     d, sd = ImageDraw.Draw(im), ImageDraw.Draw(sh)
     y = 190
     for t in lines:
-        t = t.replace("…", "...")
         sd.text((W / 2 + 4, y + 8), t, font=f(size), fill=(0, 0, 0, 150), anchor="mm", stroke_width=10, stroke_fill=(0, 0, 0, 150))
         d.text((W / 2, y), t, font=f(size), fill="white", anchor="mm", stroke_width=10, stroke_fill=BROWN)
         y += size + 24
@@ -74,21 +81,32 @@ def assemble(spec: dict) -> pathlib.Path:
         a = tmp / f"a{i}.png"
         layer(c.get("lines", []), small=spec.get("small") if last else None).save(a)
         inputs = ["-ss", str(c.get("ss", 0)), "-t", str(c.get("t", 8)), "-i", c["clip"], "-i", str(a)]
-        hold = spec.get("hold", 1.5) if last else 0
+        outro = last and spec.get("outro", True)
+        hold = (max(spec.get("hold", 1.5), OUTRO["hold"]) if outro else spec.get("hold", 1.5)) if last else 0
         dur = float(c.get("t", 8)) + hold
         base = "[0:v]scale=1080:1920,setsar=1,fps=30"
         if hold:
             base += f",tpad=stop_mode=clone:stop_duration={hold},fade=t=out:st={dur - 0.9}:d=0.9"
+        end = float(c.get("t", 8))
+        upto = f"*lt(t,{end})" if outro else ""  # 예고 화면에선 컷 자막을 내린다
         if c.get("big"):
             b = tmp / f"b{i}.png"
             layer(c.get("after", c.get("lines", [])), c["big"], c.get("sub"), spec.get("small") if last else None,
                   bigy=c.get("big_y", 900)).save(b)
             at = c.get("big_at", 0)
             inputs += ["-i", str(b)]
-            fc = f"{base}[v];[v][1:v]overlay=enable='lt(t,{at})'[x];[x][2:v]overlay=enable='gte(t,{at})'[o]"
+            fc = (f"{base}[v];[v][1:v]overlay=enable='lt(t,{at})'[x];"
+                  f"[x][2:v]overlay=enable='gte(t,{at}){upto}'[o]")
             sfx.append(("ding", t0 + at + 0.2))
         else:
-            fc = f"{base}[v];[v][1:v]overlay[o]"
+            fc = f"{base}[v];[v][1:v]overlay=enable='1{upto}'[o]"
+        if outro:  # 클립이 끝나고 멈춘 화면에 다음 편 예고 + 구독·좋아요
+            e = tmp / "outro.png"
+            layer(OUTRO["lines"], OUTRO["big"], OUTRO["sub"], spec.get("small"), bigy=OUTRO["big_y"]).save(e)
+            n_in = inputs.count("-i")
+            inputs += ["-i", str(e)]
+            fc = fc[:-3] + f"[pre];[pre][{n_in}:v]overlay=enable='gte(t,{end})'[o]"
+            sfx.append(("ding", t0 + end + 0.3))
         p = tmp / f"p{i}.mp4"
         run(*inputs, "-filter_complex", fc, "-map", "[o]", "-an", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(p))
         sfx += [(k, t0 + s) for k, s in c.get("sfx", [])]
