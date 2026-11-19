@@ -34,7 +34,8 @@
      "sfx": "buzz",
      "big": "약 2만 3천 원",
      "sub": "300W×하루 10시간×30일, 월 300kWh 집",
-     "layout": "focus"
+     "layout": "focus",
+     "clip": "calculator"
     },
     {
      "who": "n",
