@@ -1,5 +1,5 @@
 {
- "_doc": "실사 배경 장면 사전 (2026-11-18). 대본 clip 은 여기 이름만. q=검색어, need=태그에 하나 이상 있어야, ban=있으면 버림. ok=눈으로 확인한 영상 id(먼저 씀), bad=어색해서 빼는 영상 id(전체). 수정: docs/SHORTS_GROWTH.md 실사 배경. 11/18: warm-socks 는 두 번 다 엉뚱(매달린 천, 하늘에 나는 양말)해 사전에서 뺌. 11/19: ai_only 장면(dongjeon, kimjang)은 BK AI 클립(config/ai_clips.json)만 쓴다. 11/19: gas-station 이 'pump' 태그로 공사장 콘크리트 펌프(41826)를 골라 bad 로 빼고 need 에서 pump 제거.",
+ "_doc": "실사 배경 장면 사전 (2026-11-18). 대본 clip 은 여기 이름만. q=검색어, need=태그에 하나 이상 있어야, ban=있으면 버림. ok=눈으로 확인한 영상 id(먼저 씀), bad=어색해서 빼는 영상 id(전체). 수정: docs/SHORTS_GROWTH.md 실사 배경. 11/18: warm-socks 는 두 번 다 엉뚱(매달린 천, 하늘에 나는 양말)해 사전에서 뺌. 11/19: ai_only 장면(dongjeon, kimjang)은 BK AI 클립(config/ai_clips.json)만 쓴다. 11/19: gas-station 이 'pump' 태그로 공사장 콘크리트 펌프(41826)를 골라 bad 로 빼고 need 에서 pump 제거. 11/19: calculator 가 'finance' 태그로 생각하는 남자 얼굴(209854)을 골라 bad, need 에서 finance 제거·얼굴 ban.",
  "ban_all": [
   "globe",
   "earth",
@@ -28,7 +28,8 @@
  "bad": [
   "pixabay-127215",
   "pixabay-258547",
-  "pixabay-41826"
+  "pixabay-41826",
+  "pixabay-209854"
  ],
  "scenes": {
   "snow-street": {
@@ -227,9 +228,15 @@
    "need": [
     "calculator",
     "bills",
-    "finance"
+    "receipt"
    ],
-   "ban": [],
+   "ban": [
+    "face",
+    "man",
+    "portrait",
+    "thinking",
+    "woman"
+   ],
    "ok": []
   },
   "apartment": {
