@@ -127,6 +127,7 @@ class LiveTest(unittest.TestCase):
         self.assertEqual(a["id"], "ai-dongjeon-01")
         self.assertIsNone(live.ai_pick("snow-street", day, set(), clips, used={}))
 
+    @NEED_RENDER
     def test_render_ai_clip_first_no_keys(self):
         import numpy as np
         with tempfile.TemporaryDirectory() as d:
