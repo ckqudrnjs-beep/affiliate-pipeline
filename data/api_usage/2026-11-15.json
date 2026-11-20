@@ -34,5 +34,77 @@
   "out": 1509,
   "cache": 0,
   "usd": 0.0228
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 8670,
+  "out": 24040,
+  "cache": 0,
+  "usd": 0.5155
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 16420,
+  "out": 2539,
+  "cache": 0,
+  "usd": 0.1165
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 10536,
+  "out": 7018,
+  "cache": 0,
+  "usd": 0.1825
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 11703,
+  "out": 1714,
+  "cache": 0,
+  "usd": 0.0811
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 10536,
+  "out": 6635,
+  "cache": 0,
+  "usd": 0.1748
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 11520,
+  "out": 1294,
+  "cache": 0,
+  "usd": 0.072
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-sonnet-5-5",
+  "in": 4437,
+  "out": 1750,
+  "cache": 0,
+  "usd": 0.0264
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-sonnet-5-5",
+  "in": 5317,
+  "out": 1556,
+  "cache": 0,
+  "usd": 0.0262
  }
 ]
