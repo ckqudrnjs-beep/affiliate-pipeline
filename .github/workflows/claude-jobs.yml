@@ -22,14 +22,15 @@ permissions:
   contents: write
   pull-requests: write
 
+# 작업마다 따로 줄을 선다: 배치(50% 할인)로 toon 이 몇 시간 걸려도 주간 작업이 밀려 취소되지 않게 (11/20)
 concurrency:
-  group: claude-jobs
+  group: claude-jobs-${{ github.event.schedule || github.event.inputs.job }}
   cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240   # 배치 대기 포함 (claude_jobs.BATCH_BUDGET_MIN=150분 뒤엔 일반 호출)
     steps:
       - uses: actions/checkout@v4
         with:
