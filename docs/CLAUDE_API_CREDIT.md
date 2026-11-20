@@ -49,7 +49,7 @@
 | titles 서치콘솔 노출 대비 클릭 적은 글 제목·설명 | 월 08:10 | Sonnet 5.5 | PR (글 최대 5편, 본문에 없는 숫자 막음) | $8 |
 | adsense 애드센스 심사관 점검 보고서 | 일 09:10 | Opus 5.5 high | PR `docs/reviews/` | $12 |
 | shorts 쇼츠 조회·시청 지속 분석 → 대본 규칙 제안 | 월 07:30 | Opus 5.5 | PR `docs/SHORTS_AI_NOTES.md` (병합 = 규칙 채택) | $6 |
-| naver 주말 네이버 블로그 초안 (자동 게시 안 함) | 토 08:10 | Sonnet 5.5 | PR `drafts/naver/` → 휴대폰에서 복사 | $8 |
+| naver 네이버 블로그 초안 (자동 게시 안 함) | **꺼 둠** (11/20 BK: 네이버는 자동 게시가 안 돼 손이 감. 필요할 때 workflow_dispatch job=naver) | Sonnet 5.5 | PR `drafts/naver/` → 휴대폰에서 복사 | $8 |
 | check 최근 자동 글·대본 정책 검사 | 매일 05:40 | Haiku 5.5 | 문제 있을 때만 텔레그램 | $3 |
 | polish 남은 크레딧으로 기존 글 손질 | 매일 13:10, **회차 끝 7일만** | Opus 5.5 high | PR (자동 검사 통과분만) | 남은 금액 전부 |
 
