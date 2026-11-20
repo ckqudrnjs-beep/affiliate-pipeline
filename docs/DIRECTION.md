@@ -78,7 +78,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 | 알리 상품 | 2-1 | PRODUCTS_AUTO.md | 예약 '상품 자동 등록' 화·금 10:23 (자동 승인) | `gallery` | data/products | 상품 자동 |
 | 삼촌 쇼츠 대본 | 2-3 | EPISODES.md · 동전이_세계관_바이블.md | claude-jobs `toon` 07:10 → BK 고름 → 예약 '쇼츠 대본' 07:40 | `episodes`(main 반영 시) → `youtube` 10:00 업로드 → 19:00 공개 | pipeline.episodes · claude_jobs | Claude API 크레딧 |
 | 삼촌 쇼츠 영상 | 2-3 | AI_CLIPS.md · BGM.md | BK가 Flow 클립 → Claude가 tools/toon_assemble.py | `youtube` | tools/toon_assemble.py | 쇼츠 만화(실사→캐릭터) |
-| 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) · `yt-early` 19:10·21:10·22:10 (공개 2시간 반응 → 텔레그램 + 다음 편 규칙, 읽기만) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41, `toon` 07:10 이 2시간 규칙을 읽음 | claude_jobs.shorts | Claude API 크레딧 |
+| 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) · `yt-early` 매시 10분 19:10~24:10 (공개 2시간 반응 → 텔레그램 + 다음 편 규칙, 읽기만) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41, `toon` 07:10 이 2시간 규칙을 읽음 | claude_jobs.shorts | Claude API 크레딧 |
 | 5락실 게임 | 2-2 | GAME_QUALITY.md · RAKSIL_GUIDES.md | 게임별 스레드 (PR, BK 확인) · 예약 '게임 아이템 2주 시안' 짝수 주 월 08:43 (커밋만, BK "올려" 후 배포) | `posters`(+새 게임 세로 썸네일 → `drive-backup` 홍보이미지) | playground/ | 5락실 · 게임 품질 |
 | 5락실 쇼츠 | 2-2 | 5RAKSIL_PROMO.md · BGM.md | 예약 16:13 → Actions `raksil-shorts` 16:23 (자동 승인) | 질문 예약 21:37 (자동 승인) | pipeline.raksil_shorts | 5락실 홍보·쇼츠 |
 | 인스타 | 2-4 | INSTAGRAM_AUTO.md | BK 수동 | — | — | 인스타 |
