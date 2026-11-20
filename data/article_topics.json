@@ -125,8 +125,9 @@
  },
  {
   "q": "겨울 차박 여행 준비 메모 (난방·전기·안전)",
-  "done": false,
-  "format": "여행"
+  "done": true,
+  "format": "여행",
+  "slug": "winter-car-camping-prep-memo"
  },
  {
   "q": "대기전력 한 달 전기요금",
