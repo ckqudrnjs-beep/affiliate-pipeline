@@ -213,6 +213,27 @@ POLICY = ("규칙: 상품·구매·할인·제휴 링크·[광고] 없음(쇼츠
           "한국어, 친근한 ~해요체.")
 
 
+def toon_motifs() -> dict:
+    return json.loads((ROOT / "config/toon_motifs.json").read_text(encoding="utf-8"))
+
+
+def recent_motifs(before: str, n: int = 3) -> tuple[list[str], list[str]]:
+    """최근 n편(공개일 앞, 고른 안 = 1안)의 새는 돈 모양·이야기 틀. BK 11/20: 같은 모션 반복 금지."""
+    m, f = [], []
+    for p in sorted((ROOT / "data/toon/lab").glob("*.md"), reverse=True):
+        if p.stem >= before:
+            continue
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.startswith("- 모양·틀:"):
+                parts = line.split(":", 1)[1].split("/")
+                m.append(parts[0].strip())
+                f.append(parts[1].strip() if len(parts) > 1 else "")
+                break
+        if len(m) >= n:
+            break
+    return m, f
+
+
 def recent_episode_titles(n: int = 14) -> list[str]:
     out = []
     for f in sorted((ROOT / "data/episodes").glob("*.json"))[::-1]:
@@ -229,7 +250,7 @@ def recent_episode_titles(n: int = 14) -> list[str]:
 
 # ---------- 1. 동전이 만화 대본 후보 ----------
 CUT = obj({"screen": S, "caption": S, "camera": S})
-VARIANT = obj({"title": S, "place": S, "hook": S, "cuts": arr(CUT), "number_box": S, "number_source": S,
+VARIANT = obj({"title": S, "motif": S, "frame": S, "place": S, "hook": S, "cuts": arr(CUT), "number_box": S, "number_source": S,
                "gag": S, "tip": S, "why_fun": S})
 JUDGE = obj({"scores": arr(obj({"idx": I, "hook": I, "fun": I, "aha": I, "bible": I, "clarity": I, "total": I, "note": S})),
              "best": arr(I)})
@@ -254,18 +275,27 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             if special else "이번 편은 만화판이다. 실사 문장을 쓰지 않는다.\n")
     system = (direction() + "너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n" + kind + "\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE)
+    mot = toon_motifs()
+    used_m, used_f = recent_motifs(date, mot.get("recent_block", 3))
+    free_m = [x for x in mot["motifs"] if x["id"] not in used_m]
+    free_f = [x for x in mot["frames"] if x["id"] not in used_f]
+    motif_rule = ("[새는 돈 모양·이야기 틀 (BK 11/20: 매번 같은 모션이면 지겹다)] 후보마다 아래에서 motif(id)·frame(id) 하나씩, "
+                  "후보끼리도 최대한 다르게. 금화가 창밖으로 날아가는 장면은 그 motif 일 때만. motif 의 영어 문장을 1번 컷 프롬프트에 쓴다.\n"
+                  "쓸 수 있는 motif: " + json.dumps(free_m, ensure_ascii=False) + "\n쓸 수 있는 frame: " + json.dumps(free_f, ensure_ascii=False)
+                  + f"\n(최근 편에서 쓴 것, 금지: {used_m} / {used_f})")
     user = (f"{date} 공개 편 대본 후보를 서로 확실히 다른 {n}개 써 줘. 주제 후보(참고, 더 재미있으면 바꿔도 됨):\n"
             f"{json.dumps(info.get('concept'), ensure_ascii=False)}\n\n"
             "보는 사람: 살림 맡은 30~50대(주부). 재미·상황극이 먼저, 숫자는 3번 컷 끝 number_box 한 번(30만 원/년 미만의 뻔한 절약 팁 금지).\n"
             "cuts 는 정확히 4개, 각 caption 은 화면 자막(한 줄 14자 이하, 최대 2줄, '/'로 줄 나눔), camera 는 구도 메뉴의 영어 문구 하나.\n"
             "number_source 에는 아래 사이트 근거 경로와 계산을 적어라. 근거에 없는 숫자는 쓰지 마라.\n"
-            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + site_facts())
+            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + site_facts())
     res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5)
     vs = res["variants"][:n]
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=상황극·개그 재미, aha=숫자가 놀랍고 사이트 근거가 맞는지(근거 틀리면 1점), "
-                 "bible=세계관·캐릭터·구도 규칙, clarity=자막만 보고 이해되는지. total=합계. best=상위 2개 idx(0부터).\n\n" + bible
-                 + "\n\n" + ELECTRIC_RULE)
+                 "bible=세계관·캐릭터·구도 규칙 + 새는 돈 모양·틀의 신선함(최근 편과 같은 motif·frame 이면 1점), "
+                 "clarity=자막만 보고 이해되는지. total=합계. best=상위 2개 idx(0부터).\n\n" + bible
+                 + "\n\n" + ELECTRIC_RULE + "\n\n" + motif_rule)
     judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False) + "\n\n" + site_facts(),
                  schema=JUDGE, effort="medium", need=0.6)
     scores = {s["idx"]: s for s in judged["scores"]}
@@ -302,6 +332,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                       schema=PROMPTS, model=SONNET, effort="medium", need=0.3)["prompts"][:4]
         up = f", 다듬기 전 {first[i]}" if first.get(i) and first[i] != s.get("total") else ""
         md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/50{up})", "",
+               f"- 모양·틀: {v.get('motif', '')} / {v.get('frame', '')}",
                f"- 장소: {v['place']} / 훅: {v['hook']} / 개그: {v['gag']}",
                f"- 숫자 상자: **{v['number_box']}** — 근거: {v['number_source']}",
                f"- 삼촌 한 마디: {v['tip']} / 재미 포인트: {v['why_fun']}",

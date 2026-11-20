@@ -1,0 +1,23 @@
+{
+  "_why": "BK 2026-11-20: 동전이 새어 나가는 모션이 매번 같으면 지겹다 → 새는 돈 모양·이야기 틀을 돌려 쓴다. 최근 3편과 같은 모양·틀 금지.",
+  "recent_block": 3,
+  "motifs": [
+    {"id": "fly", "ko": "금화가 창밖으로 날아감 (기본)", "en": "shiny plain gold coins with no markings fly out through the window"},
+    {"id": "drip", "ko": "금화가 물처럼 줄줄 새서 바닥에 웅덩이", "en": "shiny plain gold coins with no markings drip out like water and pool on the floor"},
+    {"id": "butterfly", "ko": "글자 없는 지폐가 나비 떼가 되어 날아감", "en": "plain paper bills with no print fold into butterflies and flutter away"},
+    {"id": "shrink", "ko": "꿀꿀이 저금통이 바람 빠진 풍선처럼 쪼그라듦", "en": "a pink pig piggy bank with no text slowly shrinks like a deflating balloon"},
+    {"id": "snowman", "ko": "금화로 만든 눈사람이 녹아내림", "en": "a little snowman made of shiny plain gold coins melts into a puddle"},
+    {"id": "popcorn", "ko": "금화가 팝콘처럼 펑펑 튀어 나감", "en": "shiny plain gold coins pop out like popcorn one after another"},
+    {"id": "receipt", "ko": "글자 없는 영수증이 끝없이 길어져 동전이를 감쌈", "en": "a blank receipt paper with no text keeps growing longer and wraps around the puppy"},
+    {"id": "ants", "ko": "금화가 개미 행렬처럼 줄지어 문틈으로 나감", "en": "a tiny line of shiny plain gold coins marches out under the door like an ant parade"},
+    {"id": "bubble", "ko": "금화가 비눗방울 속에 둥둥 떠서 톡 터짐", "en": "shiny plain gold coins float away inside soap bubbles that pop"},
+    {"id": "domino", "ko": "금화 도미노가 집 안을 돌며 쓰러짐", "en": "a long line of standing shiny plain gold coins falls like dominoes across the room"}
+  ],
+  "frames": [
+    {"id": "chase", "ko": "사건 → 추격 → 해결 (기본)"},
+    {"id": "versus", "ko": "대결: 두 방법을 동전이와 조카가 나눠 맡아 겨룸"},
+    {"id": "timeskip", "ko": "시간 점프: '1년 뒤' 텅 빈 꿀꿀이 → 되감기"},
+    {"id": "culprit", "ko": "동전이가 범인: 동전이 실수로 돈이 새다 들킴"},
+    {"id": "dream", "ko": "꿈: 동전이 꿈속 금화 성이 무너지고 깨어나 해결"}
+  ]
+}

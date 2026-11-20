@@ -48,7 +48,7 @@ class CycleBudgetTest(unittest.TestCase):
 class ToonJobTest(unittest.TestCase):
     def test_toon_writes_top2_with_prompts(self):
         cut = {"screen": "밥솥에서 금화", "caption": "보온 켜 뒀더니", "camera": "fixed camera"}
-        v = {"title": "t", "place": "부엌", "hook": "h", "cuts": [cut] * 4, "number_box": "1년 약 8만 9천 원",
+        v = {"title": "t", "motif": "drip", "frame": "versus", "place": "부엌", "hook": "h", "cuts": [cut] * 4, "number_box": "1년 약 8만 9천 원",
              "number_source": "q/rice-cooker", "gag": "철퍼덕", "tip": "보온 끄기", "why_fun": "w"}
         replies = [{"variants": [dict(v, title=f"안{i}") for i in range(8)]},
                    {"scores": [{"idx": i, "hook": 5, "fun": 5, "aha": 5, "bible": 5, "clarity": 5, "total": 25 + i, "note": "n"}
@@ -65,6 +65,10 @@ class ToonJobTest(unittest.TestCase):
             root = pathlib.Path(d)
             (root / "config").mkdir()
             (root / "config/toon_bible.md").write_text("bible", encoding="utf-8")
+            (root / "config/toon_motifs.json").write_text(json.dumps({"motifs": [{"id": "fly"}, {"id": "drip"}],
+                                                                       "frames": [{"id": "chase"}]}), encoding="utf-8")
+            (root / "data/toon/lab").mkdir(parents=True)
+            (root / "data/toon/lab/2026-12-02.md").write_text("# x\n- 모양·틀: fly / chase\n", encoding="utf-8")
             for sub in ("data/episodes", "data/articles"):
                 (root / sub).mkdir(parents=True)
             (root / "data/calc_questions.json").write_text("[]", encoding="utf-8")
@@ -78,6 +82,9 @@ class ToonJobTest(unittest.TestCase):
                 self.assertIn("1안: 안7고침  (점수 46/50, 다듬기 전 32)", md)  # 오른 것만 바뀜
                 self.assertIn("2안: 안6또고침  (점수 45/50, 다듬기 전 31)", md)  # 1차에 내려가 버리고 2차에 오름
                 self.assertIn("`p1`", md)
+                self.assertIn("- 모양·틀: drip / versus", md)
+                self.assertEqual(C.recent_motifs("2026-12-04"), (["fly"], ["chase"]))
+                self.assertIn("최근 편에서 쓴 것, 금지: ['fly']", C.ask.call_args_list[0].args[2])
                 self.assertIn("| 0 | 안0 |", md)
                 pr.assert_called_once()
                 self.assertEqual(C.toon(dt.date(2026, 11, 20)), 0)  # 이미 있으면 다시 안 만듦
