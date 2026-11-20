@@ -9,7 +9,7 @@ DOC = ROOT / "docs/DIRECTION.md"
 
 
 def machine() -> dict:
-    m = re.search(r"## 5\..*?```json\n(.*?)\n```", DOC.read_text(encoding="utf-8"), re.S)
+    m = re.search(r"## 6\. 자동 점검용.*?```json\n(.*?)\n```", DOC.read_text(encoding="utf-8"), re.S)
     return json.loads(m.group(1))
 
 
