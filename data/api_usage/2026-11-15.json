@@ -115,5 +115,55 @@
   "out": 30,
   "cache": 0,
   "usd": 0.0014
+ },
+ {
+  "date": "2026-11-20",
+  "job": "early",
+  "model": "claude-sonnet-5-5",
+  "in": 2321,
+  "out": 105,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0057
+ },
+ {
+  "date": "2026-11-20",
+  "job": "early",
+  "model": "claude-sonnet-5-5",
+  "in": 2337,
+  "out": 100,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0057
+ },
+ {
+  "date": "2026-11-20",
+  "job": "early",
+  "model": "claude-sonnet-5-5",
+  "in": 1628,
+  "out": 129,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0045
+ },
+ {
+  "date": "2026-11-20",
+  "job": "early",
+  "model": "claude-sonnet-5-5",
+  "in": 1591,
+  "out": 58,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0038
+ },
+ {
+  "date": "2026-11-20",
+  "job": "early",
+  "model": "claude-sonnet-5-5",
+  "in": 1618,
+  "out": 131,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0045
  }
 ]
