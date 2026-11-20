@@ -1,0 +1,76 @@
+name: claude-jobs
+
+# Claude API 크레딧(Max 구독 혜택, 매달 100달러·이월 없음)으로 돌리는 자동 작업 (2026-11-20 BK).
+# 결과는 PR(휴대폰에서 병합 = 승인) 또는 텔레그램으로만 나간다. main 에 바로 올리는 건 사용 금액 장부(data/api_usage/)뿐.
+# 회차 상한 95달러·작업별 상한은 src/pipeline/claude_jobs.py. 계획: docs/CLAUDE_API_CREDIT.md
+on:
+  schedule:
+    - cron: "40 20 * * *"    # check   매일 05:40 KST (05:00 자동 글 뒤)
+    - cron: "10 22 * * *"    # toon    매일 07:10 KST (다음 편 후보가 없을 때만 실제로 돎)
+    - cron: "10 4 * * *"     # polish  매일 13:10 KST (회차 끝 7일 동안만 실제로 돎)
+    - cron: "10 23 * * 5"    # naver   토 08:10 KST
+    - cron: "10 0 * * 0"     # adsense 일 09:10 KST
+    - cron: "30 22 * * 0"    # shorts  월 07:30 KST
+    - cron: "10 23 * * 0"    # titles  월 08:10 KST
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "toon / titles / adsense / shorts / naver / check / polish / usage"
+        required: true
+        default: usage
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: claude-jobs
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: pip install -q "anthropic>=2.11,<3" pillow
+      - name: 어떤 작업인지
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "40 20 * * *") j=check ;;
+            "10 22 * * *") j=toon ;;
+            "10 4 * * *") j=polish ;;
+            "10 23 * * 5") j=naver ;;
+            "10 0 * * 0") j=adsense ;;
+            "30 22 * * 0") j=shorts ;;
+            "10 23 * * 0") j=titles ;;
+            *) j="${{ github.event.inputs.job }}" ;;
+          esac
+          echo "job=$j" >> "$GITHUB_OUTPUT"
+      - name: 실행
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: src
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python -m pipeline.claude_jobs "${{ steps.pick.outputs.job }}"
+      - name: 사용 금액 장부 저장
+        if: always()
+        run: |
+          git checkout -q main 2>/dev/null || true
+          git add data/api_usage || true
+          git diff --cached --quiet && exit 0
+          git commit -q -m "API 사용 장부 (${{ steps.pick.outputs.job }})"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
+          exit 1

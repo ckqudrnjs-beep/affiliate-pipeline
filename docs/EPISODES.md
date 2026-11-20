@@ -4,6 +4,7 @@
 
 ## 대본 쓰기 전 기획 (2026-11-18부터, BK "쇼츠 기획 도구 내일부터 당장")
 대본 예약 작업(매일 07:40)과 사람이 쓸 때 모두, JSON을 쓰기 전에 `.claude/skills/shorts-planner/SKILL.md` 순서를 따른다.
+0. (2026-11-20) `data/toon/lab/<공개일>.md` 가 있으면 BK가 고른 안(PR 댓글 번호, 없으면 1안)을 바탕으로 쓴다. `docs/SHORTS_AI_NOTES.md` 맨 위 주의 "다음 대본 규칙 제안"도 따른다(Claude API 자동, `pipeline.claude_jobs`).
 1. `docs/SHORTS_TRENDS_WEEKLY.md`(지난 7일 한국 쇼츠 상위, 매주 월 06:50 갱신)에서 오늘 형식에 맞고 **우리 사이트 숫자로 답할 수 있는** 주제를 고른다. 남의 제목·대사·숫자는 쓰지 않는다(방향만 참고).
 2. `docs/SHORTS_WEEKLY.md` 우리 상위 편의 형식·훅을 참고한다.
 3. `.claude/skills/viral-hooks` 로 첫 1초 훅 후보 5개 → 숫자 비교형(badge 숫자+물음표) 1개. `.claude/skills/viral-youtube-shorts` 의 루프 원칙(끝이 처음으로 이어짐). 롱폼 유도 없음.
