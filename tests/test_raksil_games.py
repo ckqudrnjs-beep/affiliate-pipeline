@@ -24,6 +24,19 @@ class T(unittest.TestCase):
             (p / "x" / "meta.json").write_text("{bad", encoding="utf-8")
             self.assertEqual([g["slug"] for g in rg.discover(p)], ["a", "b"])
 
+    def test_rotation_off_only_new_games(self):
+        games = G + [{"slug": "tower", "name": "하늘 탑 쌓기", "short": "", "order": 9}]
+        self.assertEqual(rg.plan(MON, G, {}, rotation=False), ("none", None, None))
+        self.assertEqual(rg.plan(THU, G, {}, rotation=False), ("none", None, None))
+        self.assertEqual(rg.plan(THU, games, {}, rotation=False), ("game", "tower", "new"))
+        self.assertFalse(rg.rotation_on(pathlib.Path("/nonexistent.json")))
+
+    def test_challenge_hook_with_score(self):
+        g = G[0]
+        self.assertEqual(rg.hook_of(g, SAT, 1240), "이 기록 1,240점, 넘을 수 있어?")
+        self.assertIn(rg.hook_of(g, SAT, None), rg.HOOKS)
+        self.assertIn(rg.hook_of(g, SAT, 0), rg.HOOKS)
+
     def test_old_games_no_intro(self):
         self.assertEqual(rg.plan(SAT, G, {}), ("none", None, None))
         self.assertEqual(rg.plan(MON, G, {}), ("range", None, None))
