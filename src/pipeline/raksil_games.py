@@ -159,25 +159,78 @@ BOX = (40, rs.BAND_H + 120, W - 40, SAFE[3])  # 게임 화면 자리: 위 제목
 SUB_Y = rs.BAND_H + 55  # 음성 자막 띠 (제목 띠와 게임 화면 사이, 게임 화면은 안 가림)
 
 
-def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[str, str]:
-    """품질 게이트 (BK 11/20 밤 '안 하느니 못해'): 제목 띠 흰 줄(도전 후킹)·제목·대사를 편집장이 채점.
-    미달이면 문구 은행의 다른 후킹으로 다시(최대 rs.GATE_TRIES 번). (쓸 후킹, 쉬는 이유 — 통과면 '')."""
-    tried, best = [], None
-    order = [hook] + [h for i in range(len(HOOKS)) for h in [HOOKS[(day.toordinal() + i) % len(HOOKS)]] if h != hook]
-    for h in order[: rs.GATE_TRIES]:
+GAME_REPLAN_SYS = """너는 5락실 유튜브 쇼츠(무료 웹게임 자동 플레이 화면 약 10초) 기획자다. 편집장이 떨어뜨린 기획안을 지적대로 다시 짠다
+(BK 11/21: 스킵 말고 기획안을 바꿔라). 편집장 지적을 하나도 빠짐없이 반영하고, 지난 시도에서 지적된 점을 되풀이하지 않는다.
+- hook(화면 맨 위 흰 줄, 공백 포함 14자 이하): 보는 사람에게 거는 구체적인 도전·목표. 이 게임에서만 가능한 장면·목표를 쓴다
+  (예: '동전탑 5층 가능?', '우르르 연쇄 몇 배까지'). '이게 설치 없이 된다고?' '무료인데 이 퀄리티?' 같은 아무 게임에나 붙는 말,
+  '신작 게임' 같은 분류 말, 낚시·과장·가짜 통계·퍼센트·지능 비하 금지.
+- line(첫 대사, 공백 포함 30자 이하 반말): 화면을 보며 바로 따라 하고 싶게 만드는 구체적인 한 줄. 게임 이름을 넣는다. 광고 말·구독 부탁 금지.
+- 게임 설명에 없는 기능·보상은 지어내지 않는다."""
+HOOK_MAX, LINE_MAX = 14, 30
+
+
+def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) -> tuple[str, str] | None:
+    """편집장 지적으로 띠 흰 줄(도전 후킹)과 첫 대사를 다시 짠다 → (hook, line). 키가 없거나 실패면 None."""
+    import os
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        from . import claude_jobs as cj
+        past = "\n".join(f"- 띠 '{h['hook']}' / 대사 '{h['line']}' → {h['score']}/40, 지적: {h['note']}" for h in history[-5:])
+        user = (("[새 기획] 지금 각도로는 안 된다. 게임 설명에서 다른 장면·목표를 골라 완전히 다른 각도로.\n" if fresh
+                 else "[고치기] 편집장 지적대로 고친다.\n")
+                + f"게임: {g['name']} ({'신작 소개' if kind == 'new' else '플레이 하이라이트'}) — {g.get('short', '')}\n"
+                + f"게임 설명: {g.get('description', '')}\n편집장 점수: "
+                + json.dumps({k: sc.get(k) for k in rs.GATE_SCHEMA_PROPS}, ensure_ascii=False)
+                + f"\n편집장 지적: {sc.get('note', '')}\n\n지난 시도(되풀이 금지):\n{past}")
+        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.SONNET, effort="medium", max_tokens=800, need=0.02,
+                   schema=cj.obj({"hook": cj.S, "line": cj.S}))
+    except Exception as e:
+        print(f"게임 기획안 다시 짜기 실패: {e}", file=sys.stderr)
+        return None
+    if not isinstance(r, dict):
+        return None
+    hook, line = (" ".join(str(r.get(k, "")).split()).strip() for k in ("hook", "line"))
+    bad = rs.BANNED_BAND + ("구독", "설치 없이")
+    if not hook or len(hook) > HOOK_MAX or not line or len(line) > LINE_MAX or any(w in hook + line for w in bad):
+        return None
+    return hook, line
+
+
+def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[str, list[str], str, dict | None]:
+    """품질 게이트 (BK 11/20 밤 '안 하느니 못해' + 11/21 '기획안을 바꿔야지 스킵하면 안돼'): 띠 흰 줄(도전 후킹)·제목·대사를 편집장이 채점.
+    미달이면 지적대로 후킹·첫 대사를 다시 짜고(연속 rs.GATE_FRESH_AFTER 번 미달이면 새 각도), 채점 최대 rs.GATE_TRIES 번.
+    다시 짜기가 안 되면(키·API 실패) 문구 은행의 다른 후킹. 끝까지 미달이면 최고안이 rs.GATE_SOFT 이상일 때 그 안, 아니면 쉼.
+    → (쓸 후킹, 쓸 대사, 쉬는 이유 — 진행이면 '', 채점 결과)."""
+    hist, best, streak = [], None, 0
+    bank = [h for i in range(len(HOOKS)) for h in [HOOKS[(day.toordinal() + i) % len(HOOKS)]] if h != hook]
+    for n in range(rs.GATE_TRIES):
         brief = (f"게임 쇼츠({'신작 소개' if kind == 'new' else '플레이'}): 자동 플레이 화면 약 10초 + 몽글이 엔딩.\n"
-                 f"게임: {g['name']} — {g.get('short', '')}\n제목 띠: 흰 줄 '{h}' / 노란 줄 '{g['name']}'\n"
-                 f"제목: {title_of(g, kind, h)}\n대사: " + " / ".join(say))
+                 f"게임: {g['name']} — {g.get('short', '')}\n제목 띠: 흰 줄 '{hook}' / 노란 줄 '{g['name']}'\n"
+                 f"제목: {title_of(g, kind, hook)}\n대사: " + " / ".join(say))
         sc = rs.judge("5락실 게임 쇼츠 (layout 은 띠 글자가 첫 1초에 읽히는지로)", brief)
         if sc is None:
-            return h, ""  # 채점 불가 → 화면 검사(check)만
+            return hook, say, "", None  # 채점 불가 → 화면 검사(check)만
         total, ok = rs.gate_total(sc)
-        print(f"게임 품질 채점: '{h}' {total}/40 {'통과' if ok else '미달'} — {sc.get('note', '')}")
+        print(f"게임 품질 채점 {n + 1}: '{hook}' {total}/40 {'통과' if ok else '미달'} — {sc.get('note', '')}")
         if ok:
-            return h, ""
+            return hook, say, "", sc
         if not best or total > best[0]:
-            best = (total, h, sc.get("note", ""))
-    return hook, f"최고 '{best[1]}' {best[0]}/40점 < 통과선 {rs.GATE_FLOOR} — {best[2]}"
+            best = (total, hook, list(say), sc)
+        hist.append({"hook": hook, "line": say[0], "score": total, "note": str(sc.get("note", ""))[:300]})
+        streak += 1
+        fresh = streak >= rs.GATE_FRESH_AFTER
+        nxt = replan_hook(g, kind, sc, hist, fresh)
+        if nxt:
+            hook, say = nxt[0], [nxt[1]] + list(say[1:])
+            streak = 0 if fresh else streak
+        elif bank:
+            hook = bank.pop(0)
+        else:
+            break
+    if best and rs.gate_soft(best[3]):
+        return best[1], best[2], "", {**best[3], "soft": True}
+    return hook, say, f"{len(hist)}번 다시 짜도 최고 '{best[1]}' {best[0]}/40점 < 최후 기준 {rs.GATE_SOFT} — {best[3].get('note', '')}", None
 
 
 def game_band(g: dict, hook: str) -> dict:
@@ -252,7 +305,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     play_d = len(frames) / FPS
     hook = hook_of(g, day, rec_score(rec))
     say = lines(g, kind)
-    hook, why = gate(g, kind, day, hook, say)
+    hook, say, why, judged = gate(g, kind, day, hook, say)
     if why:  # 품질 게이트 미통과 → 오늘은 쉬고 알림 (기록 안 함 → 다음 차례에 다시)
         key = f"{day.isoformat()}-game-{g['slug']}" + ("-new" if kind == "new" else "")
         print(f"품질 게이트 미통과 → 게임 쇼츠 쉼: {why}")
@@ -327,7 +380,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     meta = {"date": day.isoformat(), "qid": f"game-{g['slug']}-{kind}-{day.isoformat()}", "key": key,
             "file": str(mp4), "title": title_of(g, kind, hook), "description": description_of(g, kind, voiced),
             "voiced": voiced, "hour": HOUR, "schedule": True, "category": "20", "game": g["slug"],
-            "tags": tags, "seconds": round(total, 1)}
+            "tags": tags, "seconds": round(total, 1), "kind": "게임", "gate": judged}
     (out_dir / f"{key}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta

@@ -424,6 +424,10 @@ REFINE_GOAL, REFINE_CLICK, REFINE_ROUNDS = 57, 9, 3
 # 품질 게이트 (BK 11/20 "품질이 떨어지는 문구 그리고 영상과 구도는 안하느니 못해"): 다듬은 뒤에도 1안이 이 점수 아래면
 # '이 편은 쉬자'로 표시하고 BK 에게 알린다(대본 후보는 참고로 남김). 48 = 6항목 평균 8점.
 QUALITY_FLOOR = 48
+# BK 11/21 01:31 "아니 기획안을 바꿔야지 스킵하면 안돼": 다듬어도 통과선 아래면 지적을 모아 주제 각도·훅·개그를 바꾼
+# 새 후보 REPLAN_N 개를 다시 쓰고 채점·다듬기 (최대 REPLAN_ROUNDS 번). 그래도 아래면 QUALITY_SOFT 이상인 최고안은 '진행 가능',
+# 그 아래만 '쉬자'.
+REPLAN_ROUNDS, REPLAN_N, QUALITY_SOFT = 2, 4, 44
 
 
 def toon(today: dt.date | None = None, n: int = 8) -> int:
@@ -507,36 +511,80 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             scores[i]["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + scores[i].get("note", "")
     best = sorted(scores, key=lambda i: -scores[i]["total"])[:2] or [i for i in judged["best"] if 0 <= i < len(vs)][:2]
     first = {i: scores.get(i, {}).get("total", 0) for i in best}
-    # 다듬기 (BK 11/20 "점수가 낮네" → "만점으로"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 57점·클릭 9점, 최대 3번.
-    for _ in range(REFINE_ROUNDS):
-        weak = [i for i in best if scores.get(i, {}).get("total", 0) < REFINE_GOAL
-                or scores.get(i, {}).get("click", 0) < REFINE_CLICK]
-        if not weak:
+
+    def refine(best: list[int]) -> None:
+        """다듬기 (BK 11/20 "점수가 낮네" → "만점으로"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 57점·클릭 9점, 최대 3번."""
+        for _ in range(REFINE_ROUNDS):
+            weak = [i for i in best if scores.get(i, {}).get("total", 0) < REFINE_GOAL
+                    or scores.get(i, {}).get("click", 0) < REFINE_CLICK]
+            if not weak:
+                break
+            fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
+                        "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성·제목 띠 문구를 끌어올려라. 순서 그대로 돌려줘.\n\n"
+                        + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False),
+                        schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
+                        need=0.6, cache="1h")["variants"][:len(weak)]
+            if not fixed:
+                break
+            rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False),
+                           schema=JUDGE, effort="medium", need=0.3, cache="5m")
+            for s in rejudged["scores"]:
+                if 0 <= s["idx"] < len(fixed):  # 다듬은 안도 겹침 감점을 똑같이
+                    hit = overlaps(fixed[s["idx"]], rv, skip)
+                    s = dict(s, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
+                if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
+                    i = weak[s["idx"]]
+                    vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
+
+    def top_total() -> int:
+        return max((scores.get(i, {}).get("total", 0) for i in best), default=0)
+
+    refine(best)
+    # 새 기획 (BK 11/21 "기획안을 바꿔야지 스킵하면 안돼"): 다듬어도 통과선 아래면 떨어진 안들의 지적을 모아 각도를 바꾼 새 후보.
+    replans = 0
+    while top_total() < QUALITY_FLOOR and replans < REPLAN_ROUNDS:
+        replans += 1
+        fails = [{"제목": vs[i].get("title"), "제목 띠": f"{vs[i].get('band_top', '')} / {vs[i].get('band_accent', '')}",
+                  "훅": vs[i].get("hook"), "개그": vs[i].get("gag"), "점수": scores.get(i, {})}
+                 for i in sorted(scores, key=lambda i: -scores[i].get("total", 0))[:4]]
+        try:
+            more = ask("toon", system, user + f"\n\n[새 기획 {replans}차 — BK 11/21 '기획안을 바꿔야지 스킵하면 안돼'] 아래 안들은 다듬어도 "
+                       f"통과선({QUALITY_FLOOR}/{MAX_SCORE}) 아래였다. 채점 메모의 지적을 모두 반영해, 아래 안들과 겹치지 않게 "
+                       f"주제 각도·첫 3초 훅·개그·제목 띠를 완전히 바꾼 새 후보 {REPLAN_N}개를 써라.\n"
+                       + json.dumps(fails, ensure_ascii=False),
+                       schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=20000, need=1.0,
+                       cache="1h")["variants"][:REPLAN_N]
+            if not more:
+                break
+            judged2 = ask("toon", judge_sys, json.dumps(more, ensure_ascii=False), schema=JUDGE, effort="medium", need=0.3, cache="5m")
+        except Exception as e:  # 예산·네트워크 → 지금까지의 최고안으로
+            print(f"새 기획 실패: {e}")
             break
-        fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
-                    "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성·제목 띠 문구를 끌어올려라. 순서 그대로 돌려줘.\n\n"
-                    + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False),
-                    schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
-                    need=0.6, cache="1h")["variants"][:len(weak)]
-        if not fixed:
-            break
-        rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False),
-                       schema=JUDGE, effort="medium", need=0.3, cache="5m")
-        for s in rejudged["scores"]:
-            if 0 <= s["idx"] < len(fixed):  # 다듬은 안도 겹침 감점을 똑같이
-                hit = overlaps(fixed[s["idx"]], rv, skip)
-                s = dict(s, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
-            if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
-                i = weak[s["idx"]]
-                vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
+        base = len(vs)
+        vs.extend(more)
+        for s in judged2["scores"]:
+            if 0 <= s["idx"] < len(more):
+                hit = overlaps(more[s["idx"]], rv, skip)
+                i = base + s["idx"]
+                scores[i] = dict(s, idx=i, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
+                if hit:
+                    scores[i]["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + scores[i].get("note", "")
+        best = sorted(scores, key=lambda i: -scores[i].get("total", 0))[:2]
+        first.update({i: scores[i].get("total", 0) for i in best if i >= base})
+        refine(best)
     best.sort(key=lambda i: -scores.get(i, {}).get("total", 0))
     top = scores.get(best[0], {}).get("total", 0) if best else 0
-    below = top < QUALITY_FLOOR
-    md = [*([f"> ⚠️ 품질 게이트 미통과: 1안 {top}/{MAX_SCORE}점 < 통과선 {QUALITY_FLOOR}점. 이 편은 쉬는 걸 추천해요 "
+    below = top < QUALITY_SOFT
+    soft = QUALITY_SOFT <= top < QUALITY_FLOOR
+    md = [*([f"> ⚠️ 품질 게이트 미통과: 기획안을 {replans}번 새로 짜도 1안 {top}/{MAX_SCORE}점 < 최후 기준 {QUALITY_SOFT}점. 이 편은 쉬는 걸 추천해요 "
              "(BK 11/20 '품질이 떨어지는 문구·영상·구도는 안 하느니 못해'). 클립을 만들지 마시고, 그래도 하려면 안을 직접 고쳐 주세요.", ""]
            if below else []),
+          *([f"> ℹ️ 기획안을 {replans}번 새로 짜도 통과선 {QUALITY_FLOOR}점은 못 넘었지만 1안 {top}/{MAX_SCORE}점은 최후 기준({QUALITY_SOFT}) 이상이라 "
+             "진행해도 돼요 (BK 11/21 '기획안을 바꿔야지 스킵하면 안돼').", ""] if soft else []),
           f"# 동전이 {'실사 삼촌 특별편' if special else '만화'} 대본 후보 — {date} 공개 편", "",
-          f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개 다듬기). "
+          f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개 다듬기"
+          + (f" → 미달이라 새 기획 {replans}번" if replans else "") + "). "
+          
           f"점수는 {MAX_SCORE}점 만점의 깐깐한 편집장 채점이에요({MAX_SCORE * 8 // 10}점 = 대부분 항목 8점, 제목 띠 문구 포함). "
           "마음에 드는 안을 골라 이 PR에 댓글로 번호만 남기거나, 그냥 병합하면 1안으로 진행해요. 숫자는 근거를 다시 확인한 뒤 자막에 넣어요.", ""]
     for rank, i in enumerate(best, 1):
@@ -582,7 +630,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     url = open_pr(f"auto/toon-{date}", f"동전이 대본 후보 {date}", f"`{out.relative_to(ROOT)}` 를 열어 보세요. 상위 2안에 Veo 프롬프트까지 있어요.",
                   paths)
     if url and below:
-        notify(f"⚠️ 동전이 {date} 편은 대본 점수가 통과선 아래({top}/{MAX_SCORE} < {QUALITY_FLOOR})라 쉬는 걸 추천해요. "
+        notify(f"⚠️ 동전이 {date} 편은 기획안을 {replans}번 새로 짜도 대본 점수가 최후 기준 아래({top}/{MAX_SCORE} < {QUALITY_SOFT})라 쉬는 걸 추천해요. "
                f"클립은 만들지 마세요. 후보는 참고로 남겼어요.\n{url}")
     elif url:
         notify(f"🐶 동전이 {date} 편 대본 후보 2안이 올라왔어요. 휴대폰에서 보고 병합(=1안 진행)하거나 댓글로 번호를 남겨 주세요.\n{url}")
