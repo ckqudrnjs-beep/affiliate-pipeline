@@ -107,6 +107,26 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
+def mongle_memory(n: int = 5, log: pathlib.Path | None = None) -> str:
+    """몽글이의 지난 선택 n개 (BK 11/20 '빌드업'): 캐릭터 성격이 이어지고 가끔 지난 선택을 받아치게. 업로드 기록에서 읽는다."""
+    try:
+        up = json.loads((log or LOG).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    rows = []
+    for k in sorted(up, reverse=True):
+        v = up[k]
+        if isinstance(v, dict) and isinstance(v.get("pick"), dict) and v.get("a") and v.get("b"):
+            side = v["a"] if v["pick"].get("pick") == "a" else v["b"]
+            rows.append(f"{k[:10]} '{v['a']} vs {v['b']}' → {side} (\"{v['pick'].get('why', '')}\")")
+        if len(rows) >= n:
+            break
+    if not rows:
+        return ""
+    return ("[몽글이의 지난 선택 — 성격이 이어지게. 같은 이유·같은 말투 반복 금지, 어울리면 지난 선택을 살짝 받아치는 농담(예: '어제는 라면 골랐지만')]\n"
+            + "\n".join(rows) + "\n\n")
+
+
 def mongle_plan(q: dict) -> tuple[dict | None, dict | None]:
     """Claude API 한 번으로 (몽글이의 선택, 제목 띠). 키가 없거나 실패면 (None, None) → 띠는 문구 은행에서."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -115,6 +135,7 @@ def mongle_plan(q: dict) -> tuple[dict | None, dict | None]:
         from . import claude_jobs as cj
         from .yt_early import lessons_prompt
         rules = lessons_prompt("5락실 밸런스")  # 공개 2시간 반응 → 다음 편 규칙 (PR #283)
+        rules += mongle_memory()
         recent = recent_bands()
         if recent:  # 반복 양산 막기: 직전 3편 띠와 같은 말·같은 틀 금지 (BK 11/20)
             rules += "직전 3편 제목 띠(같은 말·같은 문장 틀 금지, 완전히 다른 각도로): " + " / ".join(recent) + "\n\n"
@@ -747,7 +768,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
     total += add_ending(mp4, day)
     bgm.mix(mp4, tr)
-    meta = {"date": day.isoformat(), "qid": q["id"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band), "band": band,
+    meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band), "band": band,
             "description": description_of(q, res, voiced, pick), "pick": pick, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
@@ -794,7 +815,8 @@ def upload_meta(meta: dict) -> int:
     sched = meta.get("schedule", meta.get("key", meta["date"]) == meta["date"])
     at = publish_time(meta, dt.datetime.now(KST)) if sched else None
     r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
-    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"]}
+    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"],
+                "a": meta.get("a", ""), "b": meta.get("b", ""), "pick": meta.get("pick")}  # 몽글이 기억 (mongle_memory)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"

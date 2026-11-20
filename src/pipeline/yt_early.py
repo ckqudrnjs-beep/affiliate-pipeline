@@ -36,6 +36,7 @@ MIN_AGE, MAX_AGE = 80, 240     # 분. 이 사이면 '2시간 근처' → 2시간
 LATE_MAX = 30 * 60             # 분. GitHub 예약이 몇 시간씩 늦게 도는 날(11/20 최대 9시간)엔 늦게라도 보고하되 비교 기준에선 뺀다
 LOOKBACK_DAYS = 3              # 업로드 기록에서 최근 며칠 것만 본다 (API 할당량 아끼기)
 NEED_BASE = 3                  # 2시간 기록이 이만큼 쌓여야 '평소 대비' 판정
+BREAKOUT = 3.0                 # 평소 2시간 중간값의 이 배 이상 = '크게 터짐' → 다음 2편 같은 훅·틀 (toon_series, BK 11/20 '빌드업')
 
 
 # ---------- 어떤 편인지 ----------
@@ -144,6 +145,8 @@ def verdict(now_2h: float, base: list[float]) -> tuple[str, float | None]:
     r = now_2h / med if med else None
     if r is None:
         return "기준 쌓는 중", None
+    if r >= BREAKOUT:
+        return "크게 터짐", r
     if r >= 1.5:
         return "평소보다 잘 나감", r
     if r >= 0.7:
@@ -169,7 +172,7 @@ def rule_hint(row: dict, label: str) -> dict:
         nxt = "첫 장면에 결과(반전)를 먼저 보여 주기"
     elif likes / max(v, 1) < 0.01:
         nxt = "반전을 한 박자 빨리, 전체 길이 줄이기"
-    elif label == "평소보다 잘 나감":
+    elif label in ("평소보다 잘 나감", "크게 터짐"):
         nxt = f"이번 훅 '{(row.get('hook') or row.get('title', ''))[:20]}' 방식을 변형해 한 번 더"
     else:
         nxt = "첫 자막을 숫자 대신 상황 한 줄로"
@@ -212,7 +215,7 @@ def lessons_for(kind: str) -> list[str]:
     return [r["rule"] for r in load_lessons().get(kind, {}).get("rules", [])]
 
 
-def update_lessons(lessons: dict, early: dict, row: dict, label: str, hint: dict) -> dict:
+def update_lessons(lessons: dict, early: dict, row: dict, label: str, hint: dict, ratio: float | None = None) -> dict:
     k = lessons.setdefault(row["kind"], {"rules": []})
     rules = [r for r in k["rules"] if r["rule"] != hint["next"]]
     rules.insert(0, {"rule": hint["next"], "from": row["public_at"][:10], "label": label})
@@ -223,7 +226,31 @@ def update_lessons(lessons: dict, early: dict, row: dict, label: str, hint: dict
     k["best"] = [pick(r) for r in rows[:3]]
     k["slow"] = [pick(r) for r in rows[-3:][::-1]] if len(rows) > 3 else []
     k["updated"] = row["checked_at"]
+    if label == "크게 터짐":  # 터진 편은 다음 편들이 같은 훅·틀로 이어 간다 (사례 조사 11/20: 터지면 같은 틀로 바로 더)
+        k["breakout"] = {"from": row["public_at"][:10], "title": (row.get("title") or row["slug"]).replace("#shorts", "").strip()[:50],
+                         "hook": (row.get("hook") or "")[:60], "ratio": round(ratio or 0, 1),
+                         **lab_variety(row["public_at"][:10])}
     return lessons
+
+
+def lab_variety(date: str) -> dict:
+    """삼촌 편 대본 랩 노트(1안)의 첫 3초 훅 유형·이야기 틀. 없으면 빈 칸."""
+    p = pathlib.Path("data/toon/lab") / f"{date}.md"
+    out = {"hook_type": "", "frame": ""}
+    try:
+        lines = p.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return out
+    for line in lines:
+        if line.startswith("- 모양·틀:") and not out["frame"]:
+            parts = [x.strip() for x in line.split(":", 1)[1].split("/")]
+            out["frame"] = parts[1] if len(parts) > 1 else ""
+        elif line.startswith("- 장소·훅유형·제목틀:") and not out["hook_type"]:
+            parts = [x.strip() for x in line.split(":", 1)[1].split("/")]
+            out["hook_type"] = parts[1] if len(parts) > 1 else ""
+        elif line.startswith("## 2안"):
+            break
+    return out
 
 
 def lessons_prompt(kind: str) -> str:
@@ -237,6 +264,14 @@ def lessons_prompt(kind: str) -> str:
         out.append("2시간 반응 좋았던 편: " + " / ".join(f"「{b['title']}」{b['views_2h']}회" for b in k["best"]))
     if k.get("slow"):
         out.append("느렸던 편(비슷하게 하지 말 것): " + " / ".join(f"「{b['title']}」" for b in k["slow"]))
+    br = k.get("breakout")
+    if br and kind != "삼촌":  # 삼촌은 toon_series 가 편수를 세며 이어 간다. 5락실은 터진 뒤 4일 동안 같은 결로.
+        try:
+            fresh = (dt.datetime.now(KST).date() - dt.date.fromisoformat(br["from"])).days <= 4
+        except (KeyError, ValueError):
+            fresh = False
+        if fresh:
+            out.append(f"🔥 크게 터진 편「{br['title']}」(평소 {br.get('ratio', '?')}배): 같은 결의 주제·띠 말투로 이어 가라(같은 질문 반복은 금지).")
     return "\n".join(out) + "\n\n"
 
 
@@ -256,6 +291,9 @@ def report_text(row: dict, label: str, ratio: float | None, base: list[float], n
         lines.append(f"→ 2시간 기준 쌓는 중 ({len(base)}/{NEED_BASE}편)")
         if night:
             lines.append(f"   참고: 지난 편 공개 당일 밤(약 {night[1]}시간) 평균 {night[0]:,}회")
+    if label == "크게 터짐":
+        lines.append("🔥 크게 터짐! " + ("다음 2편은 같은 첫 3초 훅·이야기 틀로 이어 가요(대본 작업이 자동으로 읽음)."
+                                       if row["kind"] == "삼촌" else "같은 결의 질문·띠로 2편 더 이어 가요(질문 예약 작업이 읽음)."))
     if hint.get("now"):
         lines.append(f"👉 지금: {hint['now']}")
     lines.append(f"🛠 다음 편 규칙(자동 반영): {hint['next']}")
@@ -300,7 +338,7 @@ def run(now: dt.datetime | None = None, dry: bool = False) -> int:
         print(text + "\n")
         early[vid] = {k: row[k] for k in ("slug", "kind", "title", "public_at", "checked_at", "age_min", "views", "likes", "comments")}
         early[vid]["hint"] = hint
-        lessons = update_lessons(lessons, early, row, label, hint)
+        lessons = update_lessons(lessons, early, row, label, hint, ratio)
         if not dry:
             from .api_check import send
             sent += bool(send(text))

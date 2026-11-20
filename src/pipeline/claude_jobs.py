@@ -334,11 +334,12 @@ def recent_variety(before: str, n: int = 3) -> dict[str, list[str]]:
     return out
 
 
-def overlaps(v: dict, recent: dict[str, list[str]]) -> list[str]:
-    """후보가 직전 편과 겹치는 칸 이름. 장소는 앞 두 글자가 같아도 겹침으로 본다(부엌/부엌 식탁)."""
+def overlaps(v: dict, recent: dict[str, list[str]], skip: set[str] | frozenset = frozenset()) -> list[str]:
+    """후보가 직전 편과 겹치는 칸 이름. 장소는 앞 두 글자가 같아도 겹침으로 본다(부엌/부엌 식탁).
+    skip = 일부러 다시 쓰는 칸(터진 편 이어 가기, toon_series.allow_repeat)."""
     hit = []
     for k in ("motif", "frame", "hook_type", "title_pattern"):
-        if v.get(k) and v[k] in recent.get(k, []):
+        if k not in skip and v.get(k) and v[k] in recent.get(k, []):
             hit.append(k)
     pl = (v.get("place") or "").strip()
     if pl and any(r and (r == pl or r[:2] == pl[:2]) for r in recent.get("place", [])):
@@ -369,7 +370,8 @@ TITLE_PATTERNS = ["목록", "지시", "질문", "상식 뒤집기", "순위"]
 VARIETY_PENALTY = 5   # 직전 3편과 겹치는 칸 하나당 채점 합계에서 뺀다
 VARIANT = obj({"title": S, "motif": S, "frame": S, "place": S, "hook": S,
                "hook_type": {"type": "string", "enum": HOOK_TYPES}, "title_pattern": {"type": "string", "enum": TITLE_PATTERNS}, "cuts": arr(CUT), "number_box": S, "number_source": S,
-               "gag": S, "tip": S, "why_fun": S, "band_top": S, "band_accent": S, "yt_title": S, "heart": S})
+               "gag": S, "tip": S, "why_fun": S, "band_top": S, "band_accent": S, "yt_title": S, "heart": S,
+               "summary": S, "vote_a": S, "vote_b": S})  # 시즌 빌드업 (toon_series, BK 11/20 "빌드업")
 JUDGE = obj({"scores": arr(obj({"idx": I, "hook": I, "fun": I, "aha": I, "bible": I, "clarity": I, "click": I, "total": I,
                                 "note": S})), "best": arr(I)})
 MAX_SCORE = 60  # 6항목 × 10점 (11/20 '누르고 싶은 제목 띠·제목' click 추가)
@@ -423,6 +425,14 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     system += "\n\n" + facts
     from .yt_early import lessons_prompt
     early_rules = lessons_prompt("삼촌")  # 공개 2시간 반응 → 다음 대본 규칙 (BK 11/20 "개선 방안을 잡는 것이 중요")
+    # 시즌 빌드업 (BK 11/20 "LLM 의 장점을 살려 빌드업"): 지난 편 기억·댓글 투표 주제·터진 편 이어 가기. 실사 특별편은 시즌 밖.
+    from . import toon_series
+    import sys as _sys
+    if special:
+        series_text, sctx = "summary·vote_a·vote_b 는 빈 문자열로 둔다(특별편은 시즌 밖 단독 편).\n\n", {}
+    else:
+        series_text, sctx = toon_series.prepare(_sys.modules[__name__], bible, date, recent_episode_titles(), today)
+    skip = toon_series.allow_repeat(sctx)
     mot = toon_motifs()
     used_m, used_f = recent_motifs(date, mot.get("recent_block", 3))
     free_m = [x for x in mot["motifs"] if x["id"] not in used_m]
@@ -443,7 +453,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             "보는 사람: 살림 맡은 30~50대(주부). 재미·상황극이 먼저, 숫자는 3번 컷 끝 number_box 한 번(30만 원/년 미만의 뻔한 절약 팁 금지).\n"
             "cuts 는 정확히 4개, 각 caption 은 화면 자막(한 줄 14자 이하, 최대 2줄, '/'로 줄 나눔), camera 는 구도 메뉴의 영어 문구 하나.\n"
             "number_source 에는 아래 사이트 근거 경로와 계산을 적어라. 근거에 없는 숫자는 쓰지 마라.\n"
-            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + early_rules + "(사이트 근거는 system 끝 목록)")
+            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + series_text + early_rules
+            + "(사이트 근거는 system 끝 목록)")
     # 1시간 캐시: 작가 호출(출력 2만+ 토큰)과 채점 뒤의 다듬기 호출 사이가 5분을 넘기 쉽다
     res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5,
               cache="1h")
@@ -457,12 +468,13 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                  + ". total=6항목 합계(60점 만점). best=상위 2개 idx(0부터).\n\n" + copy_rule + "\n" + bible
                  + "\n\n" + ELECTRIC_RULE + "\n\n" + motif_rule
                  + ("\n\n" + early_rules + "위 2시간 반응 규칙을 어긴 후보는 hook 점수를 깎는다." if early_rules else "")
+                 + ("\n\n" + series_text + "시즌 규칙(콜백·반복 개그·댓글로 고른 주제·엔딩 투표 두 주제)을 어기면 bible 점수를 깎는다." if sctx else "")
                  + "\n\n" + facts)
     judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False),
                  schema=JUDGE, effort="medium", need=0.6, cache="5m")
     scores = {s["idx"]: s for s in judged["scores"]}
     for i, v in enumerate(vs):  # 직전 3편과 겹치는 칸마다 감점 (모델 채점과 별개로 코드가 확실히)
-        hit = overlaps(v, rv)
+        hit = overlaps(v, rv, skip)
         if hit and i in scores:
             scores[i]["total"] = scores[i].get("total", 0) - VARIETY_PENALTY * len(hit)
             scores[i]["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + scores[i].get("note", "")
@@ -485,7 +497,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                        schema=JUDGE, effort="medium", need=0.3, cache="5m")
         for s in rejudged["scores"]:
             if 0 <= s["idx"] < len(fixed):  # 다듬은 안도 겹침 감점을 똑같이
-                hit = overlaps(fixed[s["idx"]], rv)
+                hit = overlaps(fixed[s["idx"]], rv, skip)
                 s = dict(s, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
             if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
                 i = weak[s["idx"]]
@@ -508,6 +520,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                *([f"- 공감 한 줄(4번 컷 자막): {v['heart']}"] if v.get("heart") else []),
                f"- 모양·틀: {v.get('motif', '')} / {v.get('frame', '')}",
                f"- 장소·훅유형·제목틀: {v.get('place', '')} / {v.get('hook_type', '')} / {v.get('title_pattern', '')}",
+               *([f"- 엔딩 투표(다음엔 뭐가 샐까?): A {v.get('vote_a', '')} / B {v.get('vote_b', '')} · 줄거리: {v.get('summary', '')}"]
+                 if sctx and v.get("vote_a") else []),
                f"- 장소: {v['place']} / 훅: {v['hook']} / 개그: {v['gag']}",
                f"- 숫자 상자: **{v['number_box']}** — 근거: {v['number_source']}",
                f"- 삼촌 한 마디: {v['tip']} / 재미 포인트: {v['why_fun']}",
@@ -519,10 +533,21 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         if i not in best:
             s = scores.get(i, {})
             md.append(f"| {i} | {v['title']} ({v.get('band_top', '')} / {v.get('band_accent', '')}) | {v['number_box']} | {s.get('total', '?')} | {s.get('note', '')[:60]} |")
+    if sctx:
+        s0 = sctx["season"]
+        head = [f"시즌: **{s0['title']}** — 목표 '{s0['goal']}' · 반복 개그 '{s0['running_gag']}'"]
+        if sctx.get("winner"):
+            head.append(f"댓글로 고른 주제: **{sctx['winner']['result']['winner']}** ({sctx['winner']['date']} 편 투표)")
+        if sctx.get("breakout"):
+            head.append(f"터진 편 이어 가기: 「{sctx['breakout'].get('title', '')}」 훅·틀 재사용")
+        md[3:3] = head + [""]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(md) + "\n", encoding="utf-8")
+    paths = [str(out.relative_to(ROOT))]
+    if sctx and best:  # 1안을 시즌 기록·투표에 올린다 (PR 병합 = 확정, 2안을 고르면 조립 때 투표 문구만 바꿈)
+        paths.append(str(toon_series.record(date, vs[best[0]], sctx).relative_to(ROOT)))
     url = open_pr(f"auto/toon-{date}", f"동전이 대본 후보 {date}", f"`{out.relative_to(ROOT)}` 를 열어 보세요. 상위 2안에 Veo 프롬프트까지 있어요.",
-                  [str(out.relative_to(ROOT))])
+                  paths)
     if url:
         notify(f"🐶 동전이 {date} 편 대본 후보 2안이 올라왔어요. 휴대폰에서 보고 병합(=1안 진행)하거나 댓글로 번호를 남겨 주세요.\n{url}")
     return 0
