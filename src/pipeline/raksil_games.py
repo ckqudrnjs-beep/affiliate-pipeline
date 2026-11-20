@@ -216,17 +216,22 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     if len(frames) < FPS * 6:
         print("녹화가 너무 짧음", len(frames))
         return None
+    # 2026-11-20 BK "노래 BPM에 맞춰서": 플레이→CTA 전환을 박자에 맞추고 합성 베이스 대신 BGM (docs/BGM.md)
+    from . import bgm
+    tr = bgm.pick("game", day)
+    if tr:
+        frames = frames[: max(int(FPS * 6), round(bgm.snap(len(frames) / FPS, tr, 1, "down") * FPS))]
     play_d = len(frames) / FPS
     hook = hook_of(g, day, rec_score(rec))
     say = lines(g, kind)
     clips, voiced = rs.tts(say)
     v0 = (0.4, 0.4 + len(clips[0]) / SR) if voiced else (0.4, 2.6)
-    cta_d = max(2.4, len(clips[1]) / SR + 0.5)
+    cta_d = bgm.snap(max(2.4, len(clips[1]) / SR + 0.5), tr, 1, "up")
     total = play_d + cta_d
 
     audio = np.zeros(int(SR * total) + SR, dtype=np.float32)
     bass, t = [82, 110, 98, 123], 0.0
-    while t < total:
+    while t < total and not tr:  # BGM 이 없을 때만 합성 베이스
         rs.place(audio, rs.tone(bass[int(t * 2) % 4], 0.45, 0.06), t)
         t += 0.5
     rs.place(audio, np.concatenate([rs.tone(784, 0.08, 0.15), rs.tone(1047, 0.08, 0.15), rs.tone(1319, 0.18, 0.15)]), 0.0)
@@ -284,6 +289,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     wav.unlink()
     from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
     total += add_ending(mp4, day)
+    bgm.mix(mp4, tr)
     tags = ["5락실", g["name"].replace(" ", ""), "웹게임", "무료게임", "브라우저게임", "미니게임", "shorts"]
     if g.get("genre"):
         tags.insert(2, str(g["genre"]).replace(" ", ""))

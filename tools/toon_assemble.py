@@ -13,9 +13,12 @@ spec = {
   "hold": 1.5,                      # 마지막 컷 끝에서 멈춤 + 어두워짐
   "small": "돈 줍는 삼촌 · AI 생성 영상",
   "outro": true,                    # 끝 멈춤 화면에 다음 편 예고 + 구독·좋아요 (기본 켬, false 로 끔)
-  "ending": {"clip": "toon-ending-01.mp4", "ss": 0, "t": 6, "at": 1.5}  # 고정 엔딩 클립(BK 11/19, 매 편 재사용):
+  "ending": {"clip": "toon-ending-01.mp4", "ss": 0, "t": 6, "at": 1.5},  # 고정 엔딩 클립(BK 11/19, 매 편 재사용):
                                     # 있으면 멈춤 예고 대신 이 클립을 끝에 붙이고 at 초(버튼 누르는 순간)부터 예고·구독 자막
+  "date": "2026-11-22",             # 공개일 (BGM 순번). 없으면 slug 의 날짜
+  "bgm": "leak-detective"           # (선택) 곡 고정, false 면 BGM 없음. 없으면 config/bgm.json 순번대로
 }
+BGM 이 있으면 컷 길이·멈춤은 박 단위로, 숫자 등장·효과음은 반 박에 맞춘다 (BK 11/20 "노래 BPM에 맞춰서"). docs/BGM.md
 숫자는 한 편에 한 번만(big). 숫자·사실은 사이트 데이터만.
 """
 from __future__ import annotations
@@ -25,6 +28,9 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
+from pipeline import bgm  # noqa: E402
 
 W, H, FPS = 1080, 1920, 30
 FONT = pathlib.Path(__file__).resolve().parent.parent / "config/fonts/Jua-Regular.ttf"  # OFL, '…' 글자 없음 → '...'
@@ -64,16 +70,61 @@ def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92):
 
 
 SFX = {  # 합성 효과음 (저작권 없음)
-    "ding": "0.5*sin(2*PI*2600*t)*exp(-9*t)+0.3*sin(2*PI*3900*t)*exp(-12*t)",
-    "flop": "0.6*sin(2*PI*(500-300*t)*t)*exp(-4*t)",
+    # 2026-11-20 BK "쇼츠에 띵 소리가 이질감이 느껴져": 높은 쇳소리 '띵'(2600Hz) → 낮고 짧은 '톡'(물방울·나무 느낌)
+    "ding": "0.32*sin(2*PI*(950-500*t)*t)*exp(-28*t)+0.08*sin(2*PI*1900*t)*exp(-40*t)",
+    "flop": "0.45*sin(2*PI*(500-300*t)*t)*exp(-5*t)",
 }
+# spec "sfx": "none" 이면 효과음을 전부 뺀다 (BGM 만)
 
 
 def run(*a):
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *a], check=True)
 
 
+def clip_len(path) -> float | None:
+    try:
+        return bgm.duration(pathlib.Path(path))
+    except (subprocess.CalledProcessError, ValueError, FileNotFoundError):
+        return None
+
+
+def choose_bgm(spec: dict) -> dict | None:
+    import datetime as dt
+    want = spec.get("bgm")
+    if want is False:
+        return None
+    if isinstance(want, str):
+        return {**bgm.track(want), "lufs_target": bgm.cfg()["kinds"]["toon"]["lufs"], "duck": False}
+    day = spec.get("date") or spec["slug"].split("-skit")[0].removeprefix("ep-")[:10]
+    return bgm.pick("toon", dt.date.fromisoformat(day))
+
+
+def on_beat(spec: dict, tr: dict | None) -> dict:
+    """컷 길이·멈춤 = 박 단위, 숫자 등장·효과음 = 반 박. 모든 컷이 박에서 시작하므로 컷 안 시각만 맞추면 된다."""
+    if not tr:
+        return spec
+    spec = json.loads(json.dumps(spec))
+    for c in spec["cuts"]:
+        n = clip_len(c["clip"])
+        c["t"] = bgm.snap_len(float(c.get("t", 8)), tr, None if n is None else n - float(c.get("ss", 0)))
+        if c.get("big"):
+            c["big_at"] = min(bgm.snap(c.get("big_at", 0), tr, 2), c["t"])
+        c["sfx"] = [[k, bgm.snap(s, tr, 2)] for k, s in c.get("sfx", [])]
+    spec["hold"] = bgm.snap_len(spec.get("hold", 1.5), tr)
+    OUTRO["hold"] = bgm.snap_len(OUTRO["hold"], tr)
+    if spec.get("ending"):
+        en = spec["ending"]
+        n = clip_len(en["clip"])
+        en["t"] = bgm.snap_len(float(en.get("t", 6)), tr, None if n is None else n - float(en.get("ss", 0)))
+        en["at"] = bgm.snap(en.get("at", 1.5), tr, 2)
+    return spec
+
+
 def assemble(spec: dict) -> pathlib.Path:
+    tr = choose_bgm(spec)
+    spec = on_beat(spec, tr)
+    if tr:
+        print(f"BGM: {tr['title']} ({tr['bpm']} BPM, {tr['start']}초부터)")
     out = pathlib.Path(spec["out"])
     tmp = pathlib.Path(tempfile.mkdtemp())
     parts, t0, sfx = [], 0.0, []
@@ -136,6 +187,8 @@ def assemble(spec: dict) -> pathlib.Path:
     v = tmp / "v.mp4"
     run(*sum((["-i", str(p)] for p in parts), []), "-filter_complex", f"concat=n={len(parts)}:v=1:a=0[v]",
         "-map", "[v]", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(v))
+    if spec.get("sfx") == "none":
+        sfx = []
     ins, fl = [], []
     for j, (k, s) in enumerate(sfx):
         w = tmp / f"{k}.wav"
@@ -151,6 +204,7 @@ def assemble(spec: dict) -> pathlib.Path:
         fc = "anullsrc=r=44100:cl=mono[a]"
     out.parent.mkdir(parents=True, exist_ok=True)
     run("-i", str(v), *ins, "-filter_complex", fc, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-shortest", str(out))
+    bgm.mix(out, tr)
     return out
 
 

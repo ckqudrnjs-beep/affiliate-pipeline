@@ -395,7 +395,7 @@ def think(img, t: float, text: str):
         glow_text(img, (MG_X - 170, MG_TOP + 40), ["?"], font(90), 90, PINK, glow=8)
 
 
-def balance_frame(t: float, starts: list[float], base_q, base_r, res: dict | None, mg: "Mongle"):
+def balance_frame(t: float, starts: list[float], base_q, base_r, res: dict | None, mg: "Mongle", step: float = 0.7):
     sc = max(k for k in range(len(starts)) if starts[k] <= t)
     lt = t - starts[sc]
     if sc == 0:  # 첫 1초부터: 두 선택지 + 몽글이가 고개를 좌우로 돌리며 땀 삐질
@@ -408,8 +408,8 @@ def balance_frame(t: float, starts: list[float], base_q, base_r, res: dict | Non
         think(img, lt, "어쩌지...")
     elif sc == 1:  # 3·2·1: 몽글이 덜덜
         img = base_q.copy()
-        num = 3 - min(2, int(lt / 0.7))
-        img.alpha_composite(countdown_layer(num, (lt % 0.7) / 0.7))
+        num = 3 - min(2, int(lt / step))  # step = 숫자 하나 길이 (BGM 박자에 맞춤)
+        img.alpha_composite(countdown_layer(num, (lt % step) / step))
         mg.draw(img, "shock", dx=10 * math.sin(lt * 55), rot=3 * math.sin(lt * 41))
         sweat(img, lt)
     else:  # 반전: 숫자가 차오르면 몽글이 깜짝 점프
@@ -493,6 +493,14 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     d0 = max(2.6, len(clips[0]) / SR + 0.4)
     d1 = 2.1  # 3,2,1 (0.7초씩)
     d2 = max(2.8, len(clips[2]) / SR + 0.5)
+    # 2026-11-20 BK "노래 BPM에 맞춰서": BGM 이 있으면 장면 전환·3,2,1 을 박자에 맞춘다 (docs/BGM.md)
+    from . import bgm
+    tr = bgm.pick("balance", day)
+    step = 0.7
+    if tr:
+        b = bgm.beat(tr)
+        step = round(b * max(1, round(0.7 / b)), 3)
+        d0, d1, d2 = bgm.snap(d0, tr, 1, "up"), 3 * step, bgm.snap(d2, tr, 1, "up")
     durs = [d0, d1, d2]
     total = sum(durs)
     starts = [sum(durs[:i]) for i in range(3)]
@@ -502,13 +510,14 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         place(audio, c * 0.95, s0 + 0.12)
     place(audio, np.concatenate([tone(988, 0.06), tone(740, 0.12)]), 0.0)  # 땀 삐질 '띠용'
     for i in range(3):
-        place(audio, tone(660, 0.1, 0.2), starts[1] + i * 0.7)
+        place(audio, tone(660, 0.1, 0.2), starts[1] + i * step)
     place(audio, np.concatenate([tone(523, 0.08), tone(659, 0.08), tone(784, 0.08), tone(1046, 0.2)]), starts[2])
-    bass = [110, 110, 147, 131]
-    t = 0.0
-    while t < total:
-        place(audio, tone(bass[int(t * 2) % 4], 0.45, 0.07), t)
-        t += 0.5
+    if not tr:  # BGM 이 없을 때만 합성 베이스
+        bass = [110, 110, 147, 131]
+        t = 0.0
+        while t < total:
+            place(audio, tone(bass[int(t * 2) % 4], 0.45, 0.07), t)
+            t += 0.5
     audio = np.clip(audio, -1, 1)[: int(SR * total)]
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -530,14 +539,15 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
                            "-movflags", "+faststart", str(mp4)], stdin=subprocess.PIPE)
     for i in range(int(total * FPS)):
-        ff.stdin.write(balance_frame(i / FPS, starts, base_q, base_r, res, mg).convert("RGB").tobytes())
+        ff.stdin.write(balance_frame(i / FPS, starts, base_q, base_r, res, mg, step).convert("RGB").tobytes())
     ff.stdin.close()
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
     from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
     total += add_ending(mp4, day)
-    meta = {"date": day.isoformat(), "qid": q["id"], "file": str(mp4), "title": title_of(q),
+    bgm.mix(mp4, tr)
+    meta = {"date": day.isoformat(), "qid": q["id"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q),
             "description": description_of(q, res, voiced, pick), "pick": pick, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))

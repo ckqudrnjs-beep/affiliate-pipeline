@@ -1,0 +1,92 @@
+{
+ "_note": "BK가 Suno로 만든 BGM (2026-11-20). bpm·bar0(첫 마디 시작 초)·starts(마디에 맞춘 시작 후보)·lufs 는 librosa 분석값. 곡 추가 = media/bgm/raksil/<이름>.mp3 + 여기 한 줄 + docs/BGM.md. 라이선스: docs/BGM.md",
+ "kinds": {
+  "balance": {
+   "channel": "raksil",
+   "order": [
+    "mongle-dilemma",
+    "insert-coin",
+    "highscore-party",
+    "boss-countdown"
+   ],
+   "lufs": -25,
+   "duck": true,
+   "every_days": 1
+  },
+  "game": {
+   "channel": "raksil",
+   "order": [
+    "boss-countdown",
+    "highscore-party",
+    "insert-coin",
+    "mongle-dilemma"
+   ],
+   "lufs": -24,
+   "duck": true,
+   "every_days": 1
+  }
+ },
+ "no_bgm": {
+  "meme": "느린 음악→파티 음악으로 바뀌는 게 웃음 포인트(자체 음악)",
+  "toon": "BK 11/20: 귀여운 표정 위주 영상·띵 효과음과 안 어울림 → 새 곡 나올 때까지 BGM 없음",
+  "live": "BK 11/20: 삼촌 채널은 지금 곡 안 씀"
+ },
+ "tracks": {
+  "boss-countdown": {
+   "channel": "raksil",
+   "title": "보스전 1분 전",
+   "file": "media/bgm/raksil/boss-countdown.mp3",
+   "bpm": 150.03,
+   "bar0": 1.225,
+   "seconds": 160.96,
+   "lufs": -16.3,
+   "starts": [
+    1.225,
+    10.823
+   ]
+  },
+  "highscore-party": {
+   "channel": "raksil",
+   "title": "하이스코어 파티",
+   "file": "media/bgm/raksil/highscore-party.mp3",
+   "bpm": 130.45,
+   "bar0": 1.59,
+   "seconds": 139.92,
+   "lufs": -15.6,
+   "starts": [
+    1.59,
+    14.468,
+    51.264,
+    78.861
+   ]
+  },
+  "insert-coin": {
+   "channel": "raksil",
+   "title": "코인 넣고 시작",
+   "file": "media/bgm/raksil/insert-coin.mp3",
+   "bpm": 92.3,
+   "bar0": 2.46,
+   "seconds": 145.16,
+   "lufs": -16.1,
+   "starts": [
+    2.46,
+    41.463,
+    75.266
+   ]
+  },
+  "mongle-dilemma": {
+   "channel": "raksil",
+   "title": "몽글이의 고민",
+   "file": "media/bgm/raksil/mongle-dilemma.mp3",
+   "bpm": 105.11,
+   "bar0": 1.167,
+   "seconds": 119.92,
+   "lufs": -15.2,
+   "starts": [
+    1.167,
+    26.284,
+    42.267
+   ]
+  }
+ }
+}
