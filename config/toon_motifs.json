@@ -1,24 +1,82 @@
 {
-  "_why": "BK 2026-11-20: 동전이 새어 나가는 모션이 매번 같으면 지겹다 → 새는 돈 모양·이야기 틀을 돌려 쓴다. 최근 3편과 같은 모양·틀 금지.",
+  "_why": "BK 2026-11-20 밤: '동전 날아가는 것·돈이 샌다 표현은 하지 말고 돈돈돈 강조할 필요 없어', '뻔한 기획 구성은 빼야'. → motifs 는 이제 '동전이가 겪는 소동 모양'(금화·저금통·돈 연출 없음). 매번 같으면 지겨우니 최근 3편과 같은 모양·틀 금지.",
   "recent_block": 3,
   "motifs": [
-    {"id": "fly", "ko": "금화가 창밖으로 날아감 (기본)", "en": "shiny plain gold coins with no markings fly out through the window"},
-    {"id": "drip", "ko": "금화가 물처럼 줄줄 새서 바닥에 웅덩이", "en": "shiny plain gold coins with no markings drip out like water and pool on the floor"},
-    {"id": "butterfly", "ko": "글자 없는 지폐가 나비 떼가 되어 날아감", "en": "plain paper bills with no print fold into butterflies and flutter away"},
-    {"id": "shrink", "ko": "꿀꿀이 저금통이 바람 빠진 풍선처럼 쪼그라듦", "en": "a pink pig piggy bank with no text slowly shrinks like a deflating balloon"},
-    {"id": "snowman", "ko": "금화로 만든 눈사람이 녹아내림", "en": "a little snowman made of shiny plain gold coins melts into a puddle"},
-    {"id": "popcorn", "ko": "금화가 팝콘처럼 펑펑 튀어 나감", "en": "shiny plain gold coins pop out like popcorn one after another"},
-    {"id": "receipt", "ko": "글자 없는 영수증이 끝없이 길어져 동전이를 감쌈", "en": "a blank receipt paper with no text keeps growing longer and wraps around the puppy"},
-    {"id": "ants", "ko": "금화가 개미 행렬처럼 줄지어 문틈으로 나감", "en": "a tiny line of shiny plain gold coins marches out under the door like an ant parade"},
-    {"id": "bubble", "ko": "금화가 비눗방울 속에 둥둥 떠서 톡 터짐", "en": "shiny plain gold coins float away inside soap bubbles that pop"},
-    {"id": "domino", "ko": "금화 도미노가 집 안을 돌며 쓰러짐", "en": "a long line of standing shiny plain gold coins falls like dominoes across the room"}
+    {
+      "id": "burrito",
+      "ko": "담요·수건을 몸에 둘둘 말아 김밥이 됨",
+      "en": "wraps itself in a soft blanket like a burrito with only its face poking out"
+    },
+    {
+      "id": "chomp",
+      "ko": "김·안개·비눗방울 같은 걸 덥석 물려다 허공만 씹음",
+      "en": "snaps its mouth at drifting mist or bubbles, chomping only air"
+    },
+    {
+      "id": "spin",
+      "ko": "돌아가는 걸 눈으로 따라가다 머리가 같이 빙글, 어질어질",
+      "en": "follows something spinning with its eyes until its head circles along and it gets dizzy"
+    },
+    {
+      "id": "hide",
+      "ko": "처음 듣는 소리에 깜짝 놀라 숨었다가 빼꼼",
+      "en": "jumps at a sudden sound, hides, then slowly peeks out with one eye"
+    },
+    {
+      "id": "dive",
+      "ko": "따뜻한 수건·빨래 더미에 다이빙해서 쏙 사라짐",
+      "en": "leaps headfirst into a pile of warm laundry and disappears, then pops its head out"
+    },
+    {
+      "id": "tower",
+      "ko": "방석을 쌓아 높은 데 닿으려다 와르르",
+      "en": "stacks floor cushions to reach something high, wobbles and topples over"
+    },
+    {
+      "id": "navigator",
+      "ko": "지도·종이를 물고 안내하려다 얼굴을 덮음",
+      "en": "holds a blank paper map in its mouth like a navigator until it unfolds over its face"
+    },
+    {
+      "id": "sneeze",
+      "ko": "코에 뭔가 닿아 엄청 큰 재채기, 귀가 펄럭",
+      "en": "something tickles its nose and it lets out a huge sneeze that flaps its ears"
+    },
+    {
+      "id": "zoomies",
+      "ko": "갑자기 신나서 집 안을 우다다 달림",
+      "en": "suddenly gets the zoomies and races in happy circles around the room"
+    },
+    {
+      "id": "window",
+      "ko": "창가에 앉아 바깥(눈·비·노을)을 오래 바라봄",
+      "en": "sits quietly on the windowsill watching snow fall, its breath fogging the glass"
+    }
   ],
   "frames": [
-    {"id": "chase", "ko": "사건 → 추격 → 해결 (기본)"},
-    {"id": "versus", "ko": "대결: 두 방법을 동전이와 조카가 나눠 맡아 겨룸"},
-    {"id": "timeskip", "ko": "시간 점프: '1년 뒤' 텅 빈 꿀꿀이 → 되감기"},
-    {"id": "culprit", "ko": "동전이가 범인: 동전이 실수로 돈이 새다 들킴"},
-    {"id": "dream", "ko": "꿈: 동전이 꿈속 금화 성이 무너지고 깨어나 해결"},
-    {"id": "reversal", "ko": "역전: 조카가 '강아지가 뭘 알아' 하며 동전이를 무시함 → 동전이가 새는 돈을 찾아내 판을 뒤집고 조카가 입을 떡 벌림 (11/20 초반 대박 사례: 무시→역전 1분 이야기, 새 캐릭터 없이 기존 인물로)"}
+    {
+      "id": "day",
+      "ko": "동전이의 하루: 아침→소동→저녁 (기본)"
+    },
+    {
+      "id": "versus",
+      "ko": "대결: 두 방법을 동전이와 조카가 나눠 맡아 겨룸"
+    },
+    {
+      "id": "first",
+      "ko": "처음 겪는 일: 동전이가 처음 보는 물건·장소에 적응해 가는 이야기"
+    },
+    {
+      "id": "culprit",
+      "ko": "동전이가 범인: 동전이 실수로 생긴 소동이 들킴"
+    },
+    {
+      "id": "quiet",
+      "ko": "조용한 편: 큰 사건 없이 겨울 집의 한 장면, 마지막 한 줄이 여운"
+    },
+    {
+      "id": "reversal",
+      "ko": "역전: 조카가 '강아지가 뭘 알아' 하며 무시 → 동전이가 판을 뒤집고 조카가 입을 떡 벌림 (11/20 초반 대박 사례)"
+    }
   ]
 }
