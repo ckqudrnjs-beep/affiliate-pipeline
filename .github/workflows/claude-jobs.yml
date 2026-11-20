@@ -5,7 +5,7 @@ name: claude-jobs
 # 회차 상한 95달러·작업별 상한은 src/pipeline/claude_jobs.py. 계획: docs/CLAUDE_API_CREDIT.md
 on:
   schedule:
-    - cron: "40 20 * * *"    # check   매일 05:40 KST (05:00 자동 글 뒤)
+    - cron: "5 22 * * *"     # check   매일 07:05 KST (05:00 자동 글 뒤. BK 11/21: 05:40 → 07:05, 밤 알림 금지)
     - cron: "10 22 * * *"    # toon    매일 07:10 KST (다음 편 후보가 없을 때만 실제로 돎)
     - cron: "10 4 * * *"     # polish  매일 13:10 KST (회차 끝 7일 동안만 실제로 돎)
     - cron: "10 0 * * 0"     # adsense 일 09:10 KST
@@ -44,7 +44,7 @@ jobs:
         id: pick
         run: |
           case "${{ github.event.schedule }}" in
-            "40 20 * * *") j=check ;;
+            "5 22 * * *") j=check ;;
             "10 22 * * *") j=toon ;;
             "10 4 * * *") j=polish ;;
             "10 0 * * 0") j=adsense ;;

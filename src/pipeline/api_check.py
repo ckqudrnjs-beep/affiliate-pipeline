@@ -1,6 +1,6 @@
 """외부 API 직접 점검 (2026-11-19 BK: "사이트 API가 문제 없는지 수시로 체크").
 
-.github/workflows/api-check.yml 이 하루 4번(06:20·11:20·16:20·21:20 KST) 실행한다.
+.github/workflows/api-check.yml 이 하루 4번(07:15·11:20·16:20·21:20 KST) 실행한다.
 매일 아침 상태 점검(scripts/health_check.py)은 '결과'(작업 실패·데이터 공백)를 보고,
 이 점검은 사이트·자동 작업이 기대는 외부 API에 직접 한 번씩 접속해 키 만료·권한·응답 오류를 미리 잡는다.
 
@@ -266,11 +266,22 @@ def message(alerts: list[str], recovered: list[str], now: dt.datetime) -> str | 
     return "\n\n".join(parts) or None
 
 
+QUIET_START, QUIET_END = 23, 7  # KST. BK 11/21 "잠자는 시간에는 안 오게" → 예약은 낮으로 옮겼고, 늦게 밀린 실행만 조용히 보냄
+
+
+def quiet_now(now: dt.datetime | None = None) -> bool:
+    """KST 23:00~07:00 이면 True. GitHub 예약이 몇 시간 밀려 밤에 돈 경우 소리·진동 없이 보낸다."""
+    h = ((now or dt.datetime.now(dt.timezone.utc)).astimezone(dt.timezone.utc) + dt.timedelta(hours=9)).hour
+    return h >= QUIET_START or h < QUIET_END
+
+
 def send(text: str) -> bool:
+    """BK 개인 대화(관리자 방)로 보내는 공용 함수. 관리자 알림은 모두 여기를 거친다."""
     tok, chat = env("TELEGRAM_BOT_TOKEN"), env("TELEGRAM_ADMIN_CHAT_ID")
     if not (tok and chat):
         return False
-    body = json.dumps({"chat_id": chat, "text": text, "disable_web_page_preview": True}).encode()
+    body = json.dumps({"chat_id": chat, "text": text, "disable_web_page_preview": True,
+                       "disable_notification": quiet_now()}).encode()
     try:
         st, _ = fetch(f"https://api.telegram.org/bot{tok}/sendMessage", data=body, headers={"content-type": "application/json"})
     except Problem:
