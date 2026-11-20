@@ -43,16 +43,17 @@ class EarlyTest(unittest.TestCase):
     def test_run_reports_only_2h_old_and_feeds_lessons(self):
         now = dt.datetime(2026, 11, 20, 12, 10, tzinfo=UTC)  # 21:10 KST → 삼촌 19:00 편 130분
         stats = {"U1": {"views": 40, "likes": 2, "comments": 0, "published": "2026-11-20T10:00:00Z"},
-                 "R1": {"views": 300, "likes": 3, "comments": 1, "published": "2026-11-20T08:00:00Z"},  # 250분 → 제외
+                 "R1": {"views": 300, "likes": 3, "comments": 1, "published": "2026-11-20T08:00:00Z"},  # 250분 → '늦게 봄'으로 보고, 기준 제외
                  "G1": {"views": 5, "likes": 0, "comments": 0, "published": "2026-11-20T11:00:00Z"}}    # 70분 → 제외
         with mock.patch.object(ye, "fetch_stats", return_value=stats):
             with mock.patch.object(ye, "ai_hint", return_value=None), \
                  mock.patch("pipeline.api_check.send", return_value=True) as send:
                 ye.run(now=now)
         early = json.loads((self.tmp / "early.json").read_text(encoding="utf-8"))
-        self.assertEqual(list(early), ["U1"])
+        self.assertEqual(sorted(early), ["R1", "U1"])  # G1(70분)은 아직
+        self.assertEqual(len(ye.baseline(early, "5락실 밸런스", "x")), 0)
         self.assertEqual(early["U1"]["age_min"], 130)
-        text = send.call_args[0][0]
+        text = send.call_args_list[0][0][0]
         self.assertIn("다음 편 규칙", text)
         self.assertIn("시청 지속", text)  # 한계 안내
         self.assertIn("삼촌", ye.load_lessons())
@@ -62,6 +63,16 @@ class EarlyTest(unittest.TestCase):
         with mock.patch.object(ye, "fetch_stats", return_value=stats) as fs:
             ye.run(now=now + dt.timedelta(minutes=30), dry=True)
             self.assertNotIn("U1", fs.call_args[0][0])
+
+    def test_late_run_reports_but_skips_baseline(self):
+        now = dt.datetime(2026, 11, 20, 16, 0, tzinfo=UTC)  # 01:00 KST → 삼촌 편 6시간 (예약 지연)
+        stats = {"U1": {"views": 400, "likes": 5, "comments": 1, "published": "2026-11-20T10:00:00Z"}}
+        with mock.patch.object(ye, "fetch_stats", return_value=stats), mock.patch.object(ye, "ai_hint", return_value=None), \
+             mock.patch("pipeline.api_check.send", return_value=True) as send:
+            ye.run(now=now)
+        self.assertIn("늦게", send.call_args[0][0])
+        early = json.loads((self.tmp / "early.json").read_text(encoding="utf-8"))
+        self.assertEqual(ye.baseline(early, "삼촌", "x"), [])
 
     def test_lessons_keep_latest_and_dedupe(self):
         early, les = {}, {}

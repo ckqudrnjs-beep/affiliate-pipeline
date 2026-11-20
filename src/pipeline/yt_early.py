@@ -32,7 +32,8 @@ from .yt_stats import EP_DIR, RAKSIL, STATS, fetch_stats
 EARLY = pathlib.Path("data/youtube/early.json")
 LESSONS = pathlib.Path("data/youtube/early_lessons.json")
 KEEP_RULES = 5
-MIN_AGE, MAX_AGE = 80, 240     # 분. 이 사이면 '2시간 근처'로 보고 (Actions 예약이 늦게 도는 것 감안)
+MIN_AGE, MAX_AGE = 80, 240     # 분. 이 사이면 '2시간 근처' → 2시간 비교 기준에 들어감
+LATE_MAX = 30 * 60             # 분. GitHub 예약이 몇 시간씩 늦게 도는 날(11/20 최대 9시간)엔 늦게라도 보고하되 비교 기준에선 뺀다
 LOOKBACK_DAYS = 3              # 업로드 기록에서 최근 며칠 것만 본다 (API 할당량 아끼기)
 NEED_BASE = 3                  # 2시간 기록이 이만큼 쌓여야 '평소 대비' 판정
 
@@ -112,7 +113,8 @@ def per2h(row: dict) -> float:
 
 
 def baseline(early: dict, kind: str, exclude: str) -> list[float]:
-    return [per2h(r) for vid, r in early.items() if r.get("kind") == kind and vid != exclude]
+    return [per2h(r) for vid, r in early.items()
+            if r.get("kind") == kind and vid != exclude and r.get("age_min", 0) <= MAX_AGE]
 
 
 def first_night(stats: dict, kind: str, exclude: str) -> tuple[int, float] | None:
@@ -243,7 +245,11 @@ def report_text(row: dict, label: str, ratio: float | None, base: list[float], n
     h, m = divmod(row["age_min"], 60)
     lines = [f"⏱ 쇼츠 공개 {h}시간 {m}분 반응 · {row['kind']}", f"「{title[:40]}」",
              f"조회 {row['views']:,} · 좋아요 {row['likes']} · 댓글 {row['comments']}"]
-    if ratio is not None:
+    if label == "늦게 봄":
+        lines.append("→ 자동 실행이 늦게 돌아 2시간 비교는 못 함 (이 기록은 비교 기준에서 뺌)")
+        if night:
+            lines.append(f"   참고: 지난 편 공개 당일 밤(약 {night[1]}시간) 평균 {night[0]:,}회")
+    elif ratio is not None:
         lines.append(f"→ {label} (지난 {len(base)}편 2시간 중간값 {round(statistics.median(base)):,}의 {ratio:.1f}배)")
     else:
         lines.append(f"→ 2시간 기준 쌓는 중 ({len(base)}/{NEED_BASE}편)")
@@ -278,14 +284,15 @@ def run(now: dt.datetime | None = None, dry: bool = False) -> int:
         if not pub:
             continue
         age = int((now - pub).total_seconds() // 60)
-        if not MIN_AGE <= age <= MAX_AGE:
+        if not MIN_AGE <= age <= LATE_MAX:
             continue
+        late = age > MAX_AGE
         row = {"id": vid, "slug": m["slug"], "kind": m["kind"], "title": m.get("title", ""), "hook": m.get("hook", ""),
                "public_at": pub.astimezone(KST).isoformat(timespec="minutes"),
                "checked_at": now.astimezone(KST).isoformat(timespec="minutes"), "age_min": age,
                "views": st["views"], "likes": st["likes"], "comments": st["comments"]}
         base = baseline(early, m["kind"], vid)
-        label, ratio = verdict(per2h(row), base)
+        label, ratio = ("늦게 봄", None) if late else verdict(per2h(row), base)
         night = first_night(stats, m["kind"], vid) if ratio is None else None
         hint = (None if dry else ai_hint(row, label, base, night)) or rule_hint(row, label)
         text = report_text(row, label, ratio, base, night, hint)
