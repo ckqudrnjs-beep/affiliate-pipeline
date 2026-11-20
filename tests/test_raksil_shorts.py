@@ -240,13 +240,13 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertFalse(r.layout_ok("split", [long_q]))
         self.assertFalse(r.layout_ok("quick", [short, short, {"a": long_q["a"] * 2, "b": "x"}]))  # 3연속은 세 질문 모두
 
-    def _gate_env(self, scores):
+    def _gate_env(self, scores, replan=None):
         import json, os, pathlib, tempfile
         d = pathlib.Path(tempfile.mkdtemp())
-        saved = (r.LOG, r.mongle_plan, r.judge, r.fetch_votes, os.environ.pop("RAKSIL_QID", None))
+        saved = (r.LOG, r.mongle_plan, r.judge, r.fetch_votes, r.replan, os.environ.pop("RAKSIL_QID", None))
         r.LOG = d / "log.json"
         r.LOG.write_text("{}")
-        calls = {"plan": [], "judge": 0}
+        calls = {"plan": [], "judge": 0, "replan": [], "briefs": []}
 
         def plan(q, feedback=""):
             calls["plan"].append((q["id"], feedback))
@@ -254,22 +254,83 @@ class RaksilShortsTest(unittest.TestCase):
 
         def judge(kind, brief):
             calls["judge"] += 1
+            calls["briefs"].append(brief)
             return scores(calls["judge"])
-        r.mongle_plan, r.judge, r.fetch_votes = plan, judge, lambda qid: None
+
+        def rp(q, sc, hist, fresh):
+            calls["replan"].append((q["a"], sc.get("note"), len(hist), fresh))
+            return replan(q, sc, hist, fresh) if replan else None
+        r.mongle_plan, r.judge, r.fetch_votes, r.replan = plan, judge, lambda qid: None, rp
         return d, saved, calls
 
     def _gate_restore(self, saved):
-        r.LOG, r.mongle_plan, r.judge, r.fetch_votes = saved[:4]
+        r.LOG, r.mongle_plan, r.judge, r.fetch_votes, r.replan = saved[:5]
+
+    def test_gate_soft(self):
+        """최후 기준: 28/40 이상·한 칸도 5 미만 없음."""
+        self.assertTrue(r.gate_soft({"fresh": 7, "addictive": 7, "copy": 7, "layout": 7}))
+        self.assertFalse(r.gate_soft({"fresh": 9, "addictive": 4, "copy": 8, "layout": 8}))
+        self.assertFalse(r.gate_soft({"fresh": 6, "addictive": 7, "copy": 7, "layout": 7}))
+
+    def test_clean_q(self):
+        self.assertEqual(r.clean_q(" 식은 피자 첫 조각 ", "치즈 없는 끝 빵?"), ("식은 피자 첫 조각", "치즈 없는 끝 빵"))
+        self.assertIsNone(r.clean_q("가" * 17, "나"))
+        self.assertIsNone(r.clean_q("같은 말", "같은 말"))
+        self.assertIsNone(r.clean_q("90% 확률", "x표"))
 
     @NEED_RENDER
-    def test_gate_skips_day_after_three_low_scores(self):
+    def test_gate_replans_with_feedback_until_pass(self):
+        """BK 11/21 '기획안을 바꿔야지 스킵하면 안돼': 미달이면 지적대로 질문까지 고쳐 다시, 2번 연속 미달이면 새 소재."""
+        low = {"fresh": 4, "insight": 4, "afterglow": 4, "joy": 4, "addictive": 5, "copy": 5, "layout": 8, "note": "질문이 뻔함"}
+        ok = {"fresh": 9, "insight": 5, "afterglow": 5, "joy": 6, "addictive": 8, "copy": 8, "layout": 8, "note": ""}
+        n = {"i": 0}
+
+        def replan(q, sc, hist, fresh):
+            n["i"] += 1
+            return ({**q, "a": f"새 질문 {n['i']}", "b": f"다른 쪽 {n['i']}", "rewritten": True},
+                    {"pick": "b", "why": "손잡이잖아"}, {"top": "진짜 고민되는", "accent": f"선택 {n['i']}"})
+        d, saved, calls = self._gate_env(lambda k: ok if k == 4 else low, replan)
+        try:
+            import unittest.mock as um
+            with um.patch.object(r, "tts", side_effect=RuntimeError("stop")):
+                with self.assertRaises(RuntimeError):
+                    r.render(dt.date(2026, 12, 5), d)
+            self.assertEqual(calls["judge"], 4)
+            self.assertEqual([c[1] for c in calls["replan"]], ["질문이 뻔함"] * 3)  # 지적이 다시 짜기에 들어감
+            self.assertEqual([c[3] for c in calls["replan"]], [False, True, False])  # 같은 소재 2번 미달 → 새 소재
+            self.assertIn("새 질문 3", calls["briefs"][-1])  # 고친 질문으로 채점
+        finally:
+            self._gate_restore(saved)
+
+    @NEED_RENDER
+    def test_gate_soft_last_resort(self):
+        """끝까지 미달이어도 최고안이 최후 기준 이상이면 쉬지 않고 그 안으로 진행."""
+        mid = {"fresh": 7, "insight": 4, "afterglow": 4, "joy": 4, "addictive": 7, "copy": 7, "layout": 8, "note": "조금 약함"}
+        d, saved, calls = self._gate_env(lambda k: mid)
+        try:
+            import unittest.mock as um
+            seen = {}
+
+            def stop(lines, **kw):
+                seen["lines"] = lines
+                raise RuntimeError("stop")
+            with um.patch.object(r, "tts", side_effect=stop):
+                with self.assertRaises(RuntimeError):
+                    r.render(dt.date(2026, 12, 5), d)
+            self.assertEqual(calls["judge"], r.GATE_TRIES)
+            self.assertIn("lines", seen)  # 쉬지 않고 렌더까지 감
+        finally:
+            self._gate_restore(saved)
+
+    @NEED_RENDER
+    def test_gate_skips_only_below_soft_floor(self):
         low = {"fresh": 5, "insight": 4, "afterglow": 4, "joy": 5, "addictive": 5, "copy": 5, "layout": 7, "note": "띠가 막연함"}
         d, saved, calls = self._gate_env(lambda n: low)
         try:
             meta = r.render(dt.date(2026, 12, 5), d)
-            self.assertIn("통과선", meta["skip"])
-            self.assertEqual(calls["judge"], r.GATE_TRIES)  # 채점은 최대 3번
-            self.assertEqual(calls["plan"][1][1], "띠가 막연함")  # 지적을 넣어 다시 짜기
+            self.assertIn("최후 기준", meta["skip"])
+            self.assertEqual(calls["judge"], r.GATE_TRIES)
+            self.assertTrue(any(fb == "띠가 막연함" for _, fb in calls["plan"]))  # 다시 짜기가 안 되면 지적을 넣어 몽글이·띠라도
             self.assertFalse(list(d.glob("*.mp4")))  # 영상은 만들지 않음
             import os
             os.environ.pop("RAKSIL_YT_ENABLED", None)
@@ -284,7 +345,7 @@ class RaksilShortsTest(unittest.TestCase):
             self._gate_restore(saved)
 
     @NEED_RENDER
-    def test_gate_tries_next_question_when_question_is_weak(self):
+    def test_gate_tries_next_question_when_replan_unavailable(self):
         ok = {"fresh": 9, "insight": 5, "afterglow": 5, "joy": 6, "addictive": 8, "copy": 8, "layout": 8, "note": ""}
         weak_q = {**ok, "fresh": 4, "joy": 4, "copy": 9, "layout": 9, "note": "질문이 뻔함"}
         d, saved, calls = self._gate_env(lambda n: weak_q if n == 1 else ok)
@@ -294,10 +355,14 @@ class RaksilShortsTest(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     r.render(dt.date(2026, 12, 5), d)
             self.assertEqual(calls["judge"], 2)
-            self.assertNotEqual(calls["plan"][0][0], calls["plan"][1][0])  # 문구는 괜찮고 질문이 약함 → 다른 질문
+            self.assertNotEqual(calls["plan"][0][0], calls["plan"][1][0])  # 다시 짜기가 안 되면 그날 다른 질문
         finally:
             self._gate_restore(saved)
 
+    def test_description_for_rewritten_question(self):
+        q = {"id": "20261121-1", "a": "식은 첫 조각", "b": "치즈 없는 끝 빵", "rewritten": True}
+        self.assertNotIn("/q/20261121-1", r.description_of(q, None, False))
+        self.assertIn("/q/20261121-1", r.description_of({**q, "rewritten": False}, None, False))
 
 if __name__ == "__main__":
     unittest.main()

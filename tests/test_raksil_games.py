@@ -101,26 +101,33 @@ class T(unittest.TestCase):
 
 
     def test_quality_gate_hooks(self):
-        """품질 게이트: 미달이면 다른 후킹으로 다시, 3번 다 미달이면 쉬는 이유를 돌려준다. 채점 불가면 그대로 진행."""
+        """품질 게이트: 미달이면 지적대로 후킹·첫 대사를 다시 짜고, 끝까지 미달이면 최후 기준, 그 아래면 쉼. 채점 불가면 그대로."""
         from pipeline import raksil_games as rg, raksil_shorts as rs
         g = {"slug": "x", "name": "별빛 요격대", "short": "별을 쏘는 게임"}
         good = {"fresh": 9, "insight": 3, "afterglow": 3, "joy": 8, "addictive": 8, "copy": 8, "layout": 8, "note": ""}
         low = {**good, "copy": 4, "note": "후킹이 막연함"}
-        old = rs.judge
+        old = (rs.judge, rg.replan_hook)
         try:
-            seen = []
+            seen, asked = [], []
             rs.judge = lambda kind, brief: (seen.append(brief), good if len(seen) == 2 else low)[1]
-            hook, why = rg.gate(g, "new", dt.date(2026, 11, 21), "1,240점 넘을 수 있어?", ["a", "b"])
-            self.assertEqual(why, "")
-            self.assertNotEqual(hook, "1,240점 넘을 수 있어?")
+            rg.replan_hook = lambda g, kind, sc, hist, fresh: (asked.append((sc["note"], fresh)), ("별 10개 연속 가능?", "별빛 요격대, 별 10개 연속!"))[1]
+            hook, say, why, sc = rg.gate(g, "new", dt.date(2026, 11, 21), "1,240점 넘을 수 있어?", ["a", "b"])
+            self.assertEqual((hook, say, why), ("별 10개 연속 가능?", ["별빛 요격대, 별 10개 연속!", "b"], ""))
+            self.assertEqual(asked, [("후킹이 막연함", False)])
+            self.assertEqual(sc, good)
             rs.judge = lambda kind, brief: low
-            hook, why = rg.gate(g, "new", dt.date(2026, 11, 21), "1,240점 넘을 수 있어?", ["a", "b"])
-            self.assertIn("통과선", why)
+            rg.replan_hook = lambda *a: None  # 다시 짜기 불가 → 문구 은행
+            hook, say, why, sc = rg.gate(g, "new", dt.date(2026, 11, 21), "1,240점 넘을 수 있어?", ["a", "b"])
+            self.assertIn("최후 기준", why)
+            mid = {**good, "joy": 7, "fresh": 7, "addictive": 7, "copy": 7, "layout": 7}
+            rs.judge = lambda kind, brief: mid
+            hook, say, why, sc = rg.gate(g, "new", dt.date(2026, 11, 21), "h", ["a", "b"])
+            self.assertEqual(why, "")
+            self.assertTrue(sc["soft"])  # 통과선 아래지만 최후 기준 이상 → 진행
             rs.judge = lambda kind, brief: None
-            self.assertEqual(rg.gate(g, "new", dt.date(2026, 11, 21), "h", ["a"]), ("h", ""))
+            self.assertEqual(rg.gate(g, "new", dt.date(2026, 11, 21), "h", ["a"]), ("h", ["a"], "", None))
         finally:
-            rs.judge = old
-
+            rs.judge, rg.replan_hook = old
 
 if __name__ == "__main__":
     unittest.main()

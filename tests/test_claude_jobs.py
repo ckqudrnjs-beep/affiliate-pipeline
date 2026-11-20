@@ -110,6 +110,41 @@ class ToonJobTest(unittest.TestCase):
                 self.assertEqual(pr.call_count, 1)
 
 
+    def test_toon_replans_when_below_floor(self):
+        """BK 11/21 '기획안을 바꿔야지 스킵하면 안돼': 다듬어도 48 아래면 지적을 넣어 새 후보를 다시 쓰고 채점."""
+        cut = {"screen": "s", "caption": "c", "camera": "fixed camera"}
+        v = {"title": "t", "motif": "drip", "frame": "versus", "place": "부엌", "hook": "h", "cuts": [cut] * 4, "number_box": "",
+             "number_source": "", "gag": "g", "tip": "t", "why_fun": "w", "band_top": "a", "band_accent": "b", "yt_title": "y",
+             "heart": "", "summary": "", "vote_a": "", "vote_b": ""}
+        sc = lambda i, t: {"idx": i, "hook": 5, "fun": 5, "aha": 5, "bible": 5, "clarity": 5, "click": 5, "total": t, "note": f"약점{i}"}
+        replies = [{"variants": [dict(v, title=f"안{i}", place=f"곳{i}") for i in range(8)]},
+                   {"scores": [sc(i, 30 + i) for i in range(8)], "best": [7, 6]},
+                   {"variants": [dict(v, title=f"새안{i}", place=f"새곳{i}") for i in range(4)]},
+                   {"scores": [sc(0, 40), sc(1, 50), sc(2, 20), sc(3, 45)], "best": [1, 3]},
+                   {"prompts": ["p1", "p2", "p3", "p4"]}, {"prompts": ["q1", "q2", "q3", "q4"]}]
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "config").mkdir()
+            (root / "config/toon_bible.md").write_text("bible", encoding="utf-8")
+            (root / "config/toon_motifs.json").write_text(json.dumps({"motifs": [{"id": "drip"}], "frames": [{"id": "versus"}]}),
+                                                         encoding="utf-8")
+            for sub in ("data/episodes", "data/articles", "data/toon/lab"):
+                (root / sub).mkdir(parents=True)
+            (root / "data/calc_questions.json").write_text("[]", encoding="utf-8")
+            info = {"date": "2026-12-05", "concept": {"id": "x"}}  # 토요일 = 실사 특별편(시즌 밖)
+            with mock.patch.object(C, "ROOT", root), mock.patch("pipeline.episodes.info_short", return_value=info), \
+                    mock.patch.object(C, "REFINE_ROUNDS", 0), mock.patch.object(C, "REPLAN_ROUNDS", 1), \
+                    mock.patch.object(C, "ask", side_effect=replies), \
+                    mock.patch.object(C, "open_pr", return_value="u"), mock.patch.object(C, "notify") as note:
+                self.assertEqual(C.toon(dt.date(2026, 11, 21)), 0)
+                md = (root / "data/toon/lab/2026-12-05.md").read_text(encoding="utf-8")
+                self.assertIn("[새 기획 1차", C.ask.call_args_list[2].args[2])
+                self.assertIn("약점7", C.ask.call_args_list[2].args[2])  # 떨어진 안의 지적이 새 기획에 들어감
+                self.assertIn("1안: 새안1  (점수 50/60)", md)
+                self.assertIn("새 기획 1번", md)
+                self.assertNotIn("쉬는 걸 추천", md)
+                self.assertIn("대본 후보 2안", note.call_args.args[0])
+
 class CacheTest(unittest.TestCase):
     def test_cache_cost(self):
         # Opus 입력 4달러/백만: 5분 쓰기 1.25배, 1시간 쓰기 2배, 읽기 0.05배

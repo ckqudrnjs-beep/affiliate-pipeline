@@ -231,7 +231,8 @@ def title_of(q: dict, band: dict | None = None, fmt: str = "classic") -> str:
 def description_of(q: dict, res: dict | None, ai_voice: bool, pick: dict | None = None, more: list | None = None) -> str:
     head = [f"{i + 1}. {x['a']} vs {x['b']}" for i, x in enumerate(more)] if more else [f"오늘의 밸런스게임: {q['a']} vs {q['b']}"]
     lines = head + ["",
-             f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}", f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
+             (f"▶ 매일 새 밸런스게임 투표: {SITE}" if q.get("rewritten") else f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}"),
+             f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
              "▶ 매일 17시 새 밸런스게임은 구독으로",
              "▶ 댓글로 AAB 처럼 세 개 다 골라 주세요" if more else "▶ 댓글로 A / B 남기면 내일 쇼츠 결과에 같이 세요", ""]
     if res:
@@ -1168,8 +1169,13 @@ def fmt_sfx(fmt: str, starts: list[float], step: float) -> list[tuple]:
 # ---------- 품질 게이트 (BK 11/20 밤) ----------
 # "뻔한 것이 없는 것, 아니면 인사이트를 주는 것, 사람들의 여운에 남는 것, 어쩔 때는 한없이 즐거운 것", "그리고 중독성",
 # "품질이 떨어지는 문구 그리고 영상과 구도는 안하느니 못해" → 렌더 전에 편집장 채점, 통과선 아래면 다시 짜고, 그래도 아래면
-# 그날은 올리지 않고 텔레그램으로 알린다. 결(뻔하지 않음·인사이트·여운·즐거움)은 넷 중 가장 강한 하나만 보면 된다.
-GATE_FLOOR, GATE_MIN, GATE_TRIES = 32, 6, 3   # 4칸 × 10점 중 32점(평균 8), 한 칸이라도 6 미만이면 탈락, Claude 채점 최대 3번
+# 그날은 올리지 않고 텔레그램으로 알렸다 → 11/21 BK "기획안을 바꿔야지 스킵하면 안돼": 지적대로 기획안(질문까지)을 고쳐 다시. 결(뻔하지 않음·인사이트·여운·즐거움)은 넷 중 가장 강한 하나만 보면 된다.
+GATE_FLOOR, GATE_MIN = 32, 6    # 4칸 × 10점 중 32점(평균 8), 한 칸이라도 6 미만이면 탈락
+# BK 11/21 01:31 "아니 기획안을 바꿔야지 스킵하면 안돼": 미달이면 편집장 지적대로 기획안(질문 자체·몽글이 이유·띠)을 고쳐 다시 만든다.
+# 같은 소재로 고친 안이 GATE_FRESH_AFTER 번 연속 미달이면 소재를 통째로 바꾼 새 기획. 채점은 최대 GATE_TRIES 번.
+GATE_TRIES, GATE_FRESH_AFTER = 8, 2
+# 최후: 다 미달이어도 최고안이 GATE_SOFT 점 이상·한 칸도 GATE_SOFT_MIN 미만이 없으면 그 안으로 올리고 알림. 그 아래면 그날만 쉼.
+GATE_SOFT, GATE_SOFT_MIN = 28, 5
 MIN_TEXT = 56                                  # 선택지 글자가 이보다 작아지면 그 형식에는 질문이 너무 길다(구도 탈락)
 GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 10초짜리 밸런스게임 쇼츠(마스코트 몽글이) 한 편의 기획을 냉정하게 1~10점 채점한다.
 채널 기준(BK): 품질이 떨어지는 문구·영상·구도는 안 하느니 못하다. 한 편은 아래 결 중 적어도 하나가 강해야 하고, 중독성이 있어야 한다.
@@ -1184,14 +1190,77 @@ note 에는 가장 약한 점을 고치는 구체적인 지시 한두 문장(띠
 GATE_SCHEMA_PROPS = ("fresh", "insight", "afterglow", "joy", "addictive", "copy", "layout")
 
 
-def gate_total(sc: dict) -> tuple[int, bool]:
-    """(점수, 통과). 점수 = 결 넷 중 최고 + 중독성 + 문구 + 구도 (40점 만점)."""
+def gate_parts(sc: dict) -> list[int]:
+    """[결 넷 중 최고, 중독성, 문구, 구도]."""
     def v(k):
         x = sc.get(k, 0)
         return int(x) if isinstance(x, (int, float)) else 0
-    mood = max(v(k) for k in ("fresh", "insight", "afterglow", "joy"))
-    parts = [mood, v("addictive"), v("copy"), v("layout")]
+    return [max(v(k) for k in ("fresh", "insight", "afterglow", "joy")), v("addictive"), v("copy"), v("layout")]
+
+
+def gate_total(sc: dict) -> tuple[int, bool]:
+    """(점수, 통과). 점수 = 결 넷 중 최고 + 중독성 + 문구 + 구도 (40점 만점)."""
+    parts = gate_parts(sc)
     return sum(parts), sum(parts) >= GATE_FLOOR and min(parts) >= GATE_MIN
+
+
+def gate_soft(sc: dict) -> bool:
+    """최후 기준: 통과선은 못 넘었지만 올려도 되는 최고안인지 (GATE_SOFT, 한 칸도 GATE_SOFT_MIN 미만 없음)."""
+    parts = gate_parts(sc)
+    return sum(parts) >= GATE_SOFT and min(parts) >= GATE_SOFT_MIN
+
+
+Q_MAX = 16  # 다시 짠 질문의 선택지 글자 수 상한 (공백 포함) — 화면 칸 검사(layout_ok)도 따로 거친다
+COMMON_Q = ("부먹", "찍먹", "민초", "짜장", "짬뽕", "물복", "딱복", "깻잎", "탕수육", "피자 끝", "평생 라면", "평생 치킨")
+REPLAN_SYS = """너는 5락실 유튜브 쇼츠 '밸런스게임'의 기획자다. 편집장이 통과선 아래로 떨어뜨린 기획안을 다시 짠다 (BK: 스킵 말고 기획안을 바꿔라).
+질문(선택지 A·B) 자체부터 고칠 수 있다. 편집장 지적을 하나도 빠짐없이 반영하고, 이전 시도에서 지적된 점을 되풀이하지 않는다.
+좋은 밸런스 질문: 둘 다 끌리거나 둘 다 괴로워서 진짜 고민된다, 구체적인 장면이 떠오른다(조건·상황을 붙인다), 고르는 순간 '나 이런 사람이네'가 보인다,
+친구·가족에게 물어보고 싶어진다. 흔한 질문(부먹찍먹·민초·짜장짬뽕·물복딱복·깻잎 논쟁·피자 끝 빵 류) 금지.
+규칙: 선택지 A·B 각각 공백 포함 4~16자 한국어, 길이감 비슷하게, 'A'·'B'·물음표 없이 명사구나 짧은 동사구. 숫자는 일상 단위(5분·3층)만, 통계·퍼센트 금지.
+특정 사람·브랜드·게임 이름, 비하·혐오·선정·위험한 행동, 돈 자랑 금지. 초등학생부터 어른까지 볼 수 있게.
+몽글이(동글동글한 새싹 요정, 귀엽고 엉뚱함)의 선택과 이유(공백 포함 20자 이하 반말, 막연한 말 말고 엉뚱하고 구체적인 한 줄 — 예 '끝 빵은 피자의 손잡이잖아'),
+제목 띠 후보 3개도 같이 낸다(아래 규칙)."""
+
+
+def clean_q(a, b) -> tuple[str, str] | None:
+    a, b = (" ".join(str(x or "").split()).strip(" .?!") for x in (a, b))
+    if not a or not b or a == b or max(len(a), len(b)) > Q_MAX or min(len(a), len(b)) < 2:
+        return None
+    if any(w in a + b for w in BANNED_WHY + ("vs", "VS")):
+        return None
+    return a, b
+
+
+def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> tuple[dict, dict | None, dict | None] | None:
+    """편집장 지적(sc.note·점수)과 지난 시도로 기획안을 새로 짠다 → (고친 질문, 몽글이 선택, 제목 띠). 실패면 None.
+    fresh=False 는 같은 소재를 지적대로 고치기, True 는 소재를 바꾼 새 질문. 질문 id 는 그대로(그날 기록·중복 검사용)."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        from . import claude_jobs as cj
+        mode = ("[새 기획] 지금 소재로는 더 고쳐도 안 된다. 소재를 완전히 바꾼 새 밸런스 질문을 만든다. 아래 지난 시도들과 소재·말투가 겹치면 안 된다."
+                if fresh else "[고치기] 같은 소재는 살리되 편집장 지적대로 질문(조건·상황을 붙여 고민되게)·몽글이 이유·띠를 고친다.")
+        past = "\n".join(f"- {h['a']} vs {h['b']} / 띠 '{h.get('band', '')}' / 이유 '{h.get('why', '')}' → {h['score']}/40, 지적: {h['note']}"
+                         for h in history[-5:])
+        recent = recent_bands()
+        user = (f"{mode}\n\n지금 기획: A '{q['a']}' vs B '{q['b']}'\n편집장 점수: "
+                + json.dumps({k: sc.get(k) for k in GATE_SCHEMA_PROPS}, ensure_ascii=False)
+                + f"\n편집장 지적: {sc.get('note', '')}\n\n지난 시도(되풀이 금지):\n{past}\n\n"
+                + (f"직전 3편 제목 띠(같은 말·같은 틀 금지): {' / '.join(recent)}\n" if recent else "")
+                + mongle_memory())
+        bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
+        r = cj.ask("raksil", REPLAN_SYS + BAND_SYS, user.strip(), model=cj.SONNET, effort="medium", max_tokens=1500, need=0.03,
+                   schema=cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "bands": bands}))
+    except Exception as e:
+        print(f"기획안 다시 짜기 실패: {e}", file=sys.stderr)
+        return None
+    ab = clean_q(r.get("a"), r.get("b")) if isinstance(r, dict) else None
+    if not ab:
+        return None
+    if fresh and any(w in ab[0] + ab[1] for w in COMMON_Q):
+        return None
+    q2 = {**q, "a": ab[0], "b": ab[1], "rewritten": True}
+    return q2, clean_pick(r), best_band(r.get("bands"), recent_bands())
 
 
 def judge(kind: str, brief: str) -> dict | None:
@@ -1257,27 +1326,34 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         return None
     yq = pick_question(qs, day - dt.timedelta(days=1), for_shorts=True)
     yday = day - dt.timedelta(days=1)  # 어제 결과 = 사이트 투표 + 어제 쇼츠 댓글 투표 (실제 표만, 합쳐서 20표 이상일 때)
-    res = result_of(yq, merge_votes(fetch_votes(yq["id"]) if yq else None, comment_votes(yday, yq)))
+    prev = yesterday_entry(yday)
+    site_votes = fetch_votes(yq["id"]) if yq else None
+    if yq and prev and prev.get("a") and (prev.get("a"), prev.get("b")) != (yq["a"], yq["b"]):
+        yq, site_votes = {**yq, "a": prev["a"], "b": prev["b"]}, None  # 어제 쇼츠는 다시 짠 질문 → 사이트 표는 다른 질문이라 빼고 댓글 표만
+    res = result_of(yq, merge_votes(site_votes, comment_votes(yday, yq)))
     global _THEME
     _THEME = theme_for(day)
-    prev = yesterday_entry(yday)
     prev = prev if prev and isinstance(prev.get("pick"), dict) and prev["pick"].get("pick") in ("a", "b") and yq else None
     day_qs = sorted((x for x in qs if x.get("date") == day.isoformat()), key=lambda x: (shorts_penalty(x), x["id"]))
-    # 품질 게이트 (BK 11/20 밤 "안 하느니 못해"): 그날 질문을 차례로 기획 → 채점, 문구가 약하면 지적을 넣어 다시 짜기.
-    # 채점 최대 GATE_TRIES 번, 다 떨어지면 그날은 쉰다. 키가 없거나 채점이 안 되면 구도(코드) 검사만.
-    tries, feedback, best, plan = 0, "", None, None
-    for qq in ([q] if extra else [q] + [x for x in day_qs if x["id"] != q["id"]]):
+    # 품질 게이트 (BK 11/20 밤 "안 하느니 못해" + 11/21 "기획안을 바꿔야지 스킵하면 안돼"):
+    # 기획 → 채점 → 미달이면 편집장 지적대로 기획안(질문까지)을 고쳐 다시, 같은 소재가 연속 미달이면 새 소재로. 채점 최대 GATE_TRIES 번.
+    # 끝까지 미달이면 최고안이 GATE_SOFT 이상일 때 그 안으로, 그 아래면 그날만 쉰다. 키가 없거나 채점이 안 되면 구도(코드) 검사만.
+    tries, best, plan, hist, streak = 0, None, None, [], 0
+    pool = [] if extra else [x for x in day_qs if x["id"] != q["id"]]  # 다시 짜기가 안 될 때(API 실패) 쓸 그날의 다른 질문
+    qq = q
+    pick, band = mongle_plan(qq)
+    for _ in range(GATE_TRIES * 2):  # 구도 탈락(채점 없이 다시 짜기)까지 포함한 안전 상한
+        if tries >= GATE_TRIES:
+            break
         today3 = [qq] + [x for x in day_qs if x["id"] != qq["id"]][:2]
-        for _ in range(2):
-            pick, band = mongle_plan(qq, feedback)
-            pick = None if res else pick
-            band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
-            # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건(+구도) 안 되면 다음, 직전 3편 형식은 건너뜀
-            ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
-                  "result": bool(yq and (res or prev))}
-            ok = {f: v and layout_ok(f, today3 if f == "quick" else [qq]) for f, v in ok.items()}
-            if not any(ok.values()):
-                break  # 이 질문은 어느 형식에도 글자가 안 들어감 → 다음 질문
+        pick = None if res else pick
+        band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
+        # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건(+구도) 안 되면 다음, 직전 3편 형식은 건너뜀
+        ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
+              "result": bool(yq and (res or prev))}
+        ok = {f: v and layout_ok(f, today3 if f == "quick" else [qq]) for f, v in ok.items()}
+        sc = None
+        if any(ok.values()):
             fmt = choose_format(day, ok, recent_formats())
             if fmt in ("quick", "result"):
                 pick = None  # 화면에 몽글이 선택이 안 나오는 형식 → 기억에도 안 남김
@@ -1289,21 +1365,35 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
                 break
             tries += 1
             total, passed = gate_total(sc)
-            print(f"품질 채점 {tries}: {total}/40 {'통과' if passed else '미달'} — {sc.get('note', '')}")
+            print(f"품질 채점 {tries}: {qq['a']} vs {qq['b']} {total}/40 {'통과' if passed else '미달'} — {sc.get('note', '')}")
             if not best or total > best[0]:
                 best = (total, sc, cand)
             if passed:
                 plan = cand + (sc,)
                 break
-            feedback = str(sc.get("note", ""))[:300]
-            if tries >= GATE_TRIES or min(sc.get("copy", 0), sc.get("layout", 0)) >= GATE_MIN + 2:
-                break  # 문구는 괜찮은데 질문·결이 약하면 다시 짜도 그대로 → 다음 질문
-        if plan or tries >= GATE_TRIES:
-            break
-        feedback = ""
+        else:  # 어느 형식 칸에도 글자가 안 들어감 → 짧게 다시 짜기
+            total = 0
+            sc = {"layout": 1, "note": "선택지가 길어 화면 칸에 안 들어간다. 선택지를 각 10자 안팎으로 짧고 또렷하게."}
+        hist.append({"a": qq["a"], "b": qq["b"], "band": f"{(band or {}).get('top', '')} / {(band or {}).get('accent', '')}",
+                     "why": (pick or {}).get("why", ""), "score": total, "note": str(sc.get("note", ""))[:300]})
+        streak += 1
+        fresh = streak >= GATE_FRESH_AFTER
+        nxt = replan(qq, sc, hist, fresh)
+        if nxt:
+            qq, pick, band = nxt
+            streak = 0 if fresh else streak
+            print(f"기획안 {'새 소재로' if fresh else '고쳐서'} 다시: {qq['a']} vs {qq['b']}")
+        elif pool:  # 다시 짜기 실패 → 그날의 다른 질문
+            qq, streak = pool.pop(0), 0
+            pick, band = mongle_plan(qq)
+        else:
+            pick, band = mongle_plan(qq, str(sc.get("note", ""))[:300])
+    if not plan and best and gate_soft(best[1]):  # 최후: 통과선 아래지만 올릴 만한 최고안 → 올리고 알림
+        plan = best[2] + ({**best[1], "soft": True},)
+        print(f"통과선 아래 최고안으로 진행: {best[0]}/40")
     if not plan:
-        why = (f"최고 {best[0]}/40점 < 통과선 {GATE_FLOOR} — {best[1].get('note', '')}" if best
-               else "어느 질문도 형식 칸에 글자가 들어가지 않음(구도)")
+        why = (f"{tries}번 다시 짜도 최고 {best[0]}/40점 < 최후 기준 {GATE_SOFT} — {best[1].get('note', '')}" if best
+               else "어느 기획안도 형식 칸에 글자가 들어가지 않음(구도)")
         stem_key = q["id"] if extra else day.isoformat()
         meta = {"date": day.isoformat(), "qid": q["id"], "key": stem_key, "skip": why,
                 "scores": best[1] if best else None, "title": "", "file": ""}
@@ -1380,7 +1470,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     total += add_ending(mp4, day)
     bgm.mix(mp4, tr)
     meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band, fmt), "band": band,
-            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "gate": gate, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
+            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "gate": gate, "rewritten": bool(q.get("rewritten")), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
@@ -1416,7 +1506,7 @@ def upload_meta(meta: dict) -> int:
         summary(f"{key} 이미 올림")
         return 0
     if meta.get("skip"):  # 품질 게이트 미통과 → 그날은 쉬고 BK 에게 알림, 예비 실행이 또 만들지 않게 기록
-        msg = f"⏸ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key} 는 품질 통과선 아래라 쉬었어요 (BK 11/20 '안 하느니 못해').\n{meta['skip']}"
+        msg = f"⏸ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key} 는 기획안을 여러 번 다시 짜도 최후 기준 아래라 쉬었어요.\n{meta['skip']}"
         summary(msg)
         try:
             from .claude_jobs import notify
@@ -1446,6 +1536,13 @@ def upload_meta(meta: dict) -> int:
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
     summary(f"5락실 쇼츠 업로드 ({when}): https://youtu.be/{r['id']} ({meta['title']})")
+    if isinstance(meta.get("gate"), dict) and meta["gate"].get("soft"):  # 최후 기준으로 올린 편 → BK 가 알 수 있게
+        try:
+            from .claude_jobs import notify
+            notify(f"⚠️ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key}: 기획안을 여러 번 다시 짜도 통과선({GATE_FLOOR}/40)을 못 넘어 "
+                   f"최고안({gate_total(meta['gate'])[0]}/40)으로 올렸어요. 지적: {meta['gate'].get('note', '')[:200]}\nhttps://youtu.be/{r['id']}")
+        except Exception as e:
+            print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
     return 0
 
 
