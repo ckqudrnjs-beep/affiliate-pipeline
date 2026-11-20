@@ -115,7 +115,7 @@ MAX_PLAY = 13.0
 def hook_of(g: dict, day: dt.date, score: float | None = None) -> str:
     """2026-11-20 1안: 녹화 기록 점수가 있으면 도전형 후킹("이 기록 1,240점, 넘을 수 있어?")."""
     if isinstance(score, (int, float)) and score > 0:
-        return f"이 기록 {int(score):,}점, 넘을 수 있어?"
+        return f"{int(score):,}점 넘을 수 있어?"  # 제목 띠 한 줄에 들어가게 짧게
     return HOOKS[(day.toordinal() + sum(map(ord, g["slug"]))) % len(HOOKS)]
 
 
@@ -155,13 +155,20 @@ def description_of(g: dict, kind: str, voiced: bool) -> str:
 # 쇼츠 화면 안전영역 (2026-11-16 별사탕 합치기 밑부분 잘림 후): 유튜브 쇼츠 앱은 아래 약 20%(제목·채널·음악)를
 # 덮고, 위 약 120px 에 검색·메뉴 아이콘이 있다. 게임 화면은 이 안에만 놓고, 글자 띠도 아래쪽에는 두지 않는다.
 SAFE = (0, 120, W, 1540)
-BOX = (40, 250, W - 40, SAFE[3])  # 게임 화면 자리 (안전영역 안에서 최대한 크게)
-SUB_Y = 170  # 음성 자막 띠 (게임 이름 자리에 잠깐 덮음, 게임 화면은 안 가림)
+BOX = (40, rs.BAND_H + 120, W - 40, SAFE[3])  # 게임 화면 자리: 위 제목 띠·자막 줄 아래 ~ 안전영역 끝  # 게임 화면 자리 (안전영역 안에서 최대한 크게)
+SUB_Y = rs.BAND_H + 55  # 음성 자막 띠 (제목 띠와 게임 화면 사이, 게임 화면은 안 가림)
 
 
-def frame_layer(g: dict, kind: str):
+def game_band(g: dict, hook: str) -> dict:
+    """2026-11-20 BK 패턴: 위쪽 검은 띠 두 줄 = 흰 줄 도전 후킹 + 노란 줄 게임 이름 ("고지능자만 가능한 / 선 잇기 게임" 꼴)."""
+    return {"top": hook, "accent": g["name"]}
+
+
+def frame_layer(g: dict, kind: str, band: dict | None = None):
     from PIL import ImageDraw
     img = rs.background(17)
+    if rs.draw_band(img, band):
+        return img
     dr = ImageDraw.Draw(img)
     f = rs.font(52)
     tag = "5락실 신작" if kind == "new" else "5락실 무료 게임"
@@ -249,14 +256,13 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
         w.setframerate(SR)
         w.writeframes((audio * 32767).astype("<i2").tobytes())
 
-    base = frame_layer(g, kind)
+    band_ = game_band(g, hook)
+    base = frame_layer(g, kind, band_)
     from PIL import Image as _I
     with _I.open(frames[0]) as f0:
         wide = f0.width >= f0.height * 0.8
-    hook_y = 760
     if wide:  # 가로·정사각 게임: 위아래 빈 곳에 후킹 문구와 게임 소개
         gi0, pos0 = game_fit(frames[0])
-        hook_y = (250 + pos0[1]) // 2 + 10
         ybot = (pos0[1] + gi0.height + BOX[3]) // 2 + 40
         rs.glow_text(base, (W / 2, ybot - 40), rs.wrap(__import__("PIL.ImageDraw", fromlist=["x"]).Draw(base), g["short"], rs.font(60), W - 120),
                      rs.font(60), 60, rs.CYAN, glow=8)
@@ -269,9 +275,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
         img = base.copy()
         gi, pos = game_fit(fp)
         img.paste(gi, pos)
-        if t < 2.4:  # 첫 화면부터 후킹 문구
-            band(img, hook_y, hook, 96 if t > 0.12 else 104, rs.YEL)
-        if v0[0] <= t < v0[1] + 0.3 and voiced:  # 음성 자막
+        if v0[0] <= t < v0[1] + 0.3 and voiced:  # 음성 자막 (후킹은 위 제목 띠가 끝까지 맡는다)
             band(img, SUB_Y, say[0], 62, rs.WHITE)
         ff.stdin.write(img.convert("RGB").tobytes())
     ctas = {}

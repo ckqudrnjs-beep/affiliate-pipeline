@@ -12,7 +12,7 @@ main 에 바로 반영하는 것은 사용 금액 장부(data/api_usage/)뿐이�
   check    최근 자동 글·대본 정책 검사 (문제 있을 때만 텔레그램)
   polish   남은 크레딧으로 기존 글 손질 PR (회차 끝 1주 동안, 상한까지)
   usage    이번 회차 사용 금액 출력
-  (raksil  5락실 밸런스 쇼츠 '몽글이의 선택' 한 줄: raksil_shorts.mongle_pick 이 매일 1번, 약 0.3센트)
+  (raksil  5락실 밸런스 쇼츠 '몽글이의 선택' 한 줄 + 제목 띠 후보 3개: raksil_shorts.mongle_plan 이 매일 1번, 약 0.5센트)
   (early   쇼츠 공개 2시간 반응의 다음 편 규칙 한 줄: pipeline.yt_early 가 편마다 1번, 약 0.5센트)
 
 키는 GitHub Secret ANTHROPIC_API_KEY 에서만 읽는다(공개 저장소, 파일에 쓰지 않음).
