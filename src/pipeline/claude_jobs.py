@@ -83,16 +83,21 @@ def spent(d: dt.date, job: str | None = None) -> float:
 
 def cost(model: str, usage: dict) -> float:
     pin, pout, pcache = PRICES[model]
+    made = usage.get("cache_creation_input_tokens", 0) or 0
+    split = usage.get("cache_creation") or {}
+    w1h = (split.get("ephemeral_1h_input_tokens") or 0) if isinstance(split, dict) else 0
+    # 캐시 쓰기: 5분 = 입력값 1.25배, 1시간 = 2배 (docs/CLAUDE_API_CREDIT.md '프롬프트 캐싱')
     return (usage.get("input_tokens", 0) * pin + usage.get("output_tokens", 0) * pout
             + usage.get("cache_read_input_tokens", 0) * pcache
-            + usage.get("cache_creation_input_tokens", 0) * pin * 1.25) / 1e6
+            + (made - w1h) * pin * 1.25 + w1h * pin * 2.0) / 1e6
 
 
 def record(d: dt.date, job: str, model: str, usage: dict) -> float:
     usd = round(cost(model, usage), 4)
     rows = load_ledger(d)
     rows.append({"date": d.isoformat(), "job": job, "model": model, "in": usage.get("input_tokens", 0),
-                 "out": usage.get("output_tokens", 0), "cache": usage.get("cache_read_input_tokens", 0), "usd": usd})
+                 "out": usage.get("output_tokens", 0), "cache": usage.get("cache_read_input_tokens", 0),
+                 "cache_w": usage.get("cache_creation_input_tokens", 0) or 0, "usd": usd})
     p = ledger_path(d)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
@@ -108,13 +113,19 @@ def check_budget(d: dt.date, job: str, need: float) -> None:
 
 # ---------- Claude 호출 ----------
 def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "medium",
-        schema: dict | None = None, max_tokens: int = 16000, need: float = 0.5):
-    """한 번 호출하고 사용 금액을 장부에 적는다. schema 가 있으면 JSON(dict)을, 없으면 글을 돌려준다."""
+        schema: dict | None = None, max_tokens: int = 16000, need: float = 0.5, cache: str | None = None):
+    """한 번 호출하고 사용 금액을 장부에 적는다. schema 가 있으면 JSON(dict)을, 없으면 글을 돌려준다.
+
+    cache="5m"/"1h": 같은 system 을 몇 분 안에 다시 쓰는 호출만 켠다(쓰기 1.25배/2배, 읽기 0.05배).
+    한 번만 부르는 주간 작업에 켜면 쓰기 값만 더 낸다. 512토큰 미만 system 은 서버가 조용히 무시한다."""
     import anthropic
 
     d = today_kst()
     check_budget(d, job, need)
     client = anthropic.Anthropic()
+    if cache:
+        system = [{"type": "text", "text": system,
+                   "cache_control": {"type": "ephemeral", **({"ttl": "1h"} if cache == "1h" else {})}}]
     kw = dict(model=model, max_tokens=max_tokens, system=system,
               messages=[{"role": "user", "content": user}],
               output_config={"effort": effort, **({"format": {"type": "json_schema", "schema": schema}} if schema else {})})
@@ -127,7 +138,8 @@ def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "m
         msg = client.beta.messages.create(**kw)
     usage = msg.usage.model_dump() if hasattr(msg.usage, "model_dump") else dict(msg.usage)
     usd = record(d, job, model, usage)
-    print(f"[{job}] {model} 입력 {usage.get('input_tokens')} 출력 {usage.get('output_tokens')} → ${usd}")
+    print(f"[{job}] {model} 입력 {usage.get('input_tokens')} 캐시읽기 {usage.get('cache_read_input_tokens') or 0} "
+          f"캐시쓰기 {usage.get('cache_creation_input_tokens') or 0} 출력 {usage.get('output_tokens')} → ${usd}")
     if msg.stop_reason == "refusal":
         raise RuntimeError(f"모델이 거절함: {getattr(msg, 'stop_details', None)}")
     if msg.stop_reason == "max_tokens":
@@ -300,6 +312,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     copy_rule = BAND_RULE + (HEART_RULE if heart else "heart 는 빈 문자열로 둔다(이번 편은 재미 위주).\n")
     system = (direction() + "너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n" + kind + "\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE + "\n\n" + copy_rule)
+    facts = site_facts()  # 근거는 system 끝에 둬서 작가·다듬기 호출이 캐시로 같이 쓴다 (BK 11/20 프롬프트 캐싱)
+    system += "\n\n" + facts
     from .yt_early import lessons_prompt
     early_rules = lessons_prompt("삼촌")  # 공개 2시간 반응 → 다음 대본 규칙 (BK 11/20 "개선 방안을 잡는 것이 중요")
     mot = toon_motifs()
@@ -315,8 +329,10 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             "보는 사람: 살림 맡은 30~50대(주부). 재미·상황극이 먼저, 숫자는 3번 컷 끝 number_box 한 번(30만 원/년 미만의 뻔한 절약 팁 금지).\n"
             "cuts 는 정확히 4개, 각 caption 은 화면 자막(한 줄 14자 이하, 최대 2줄, '/'로 줄 나눔), camera 는 구도 메뉴의 영어 문구 하나.\n"
             "number_source 에는 아래 사이트 근거 경로와 계산을 적어라. 근거에 없는 숫자는 쓰지 마라.\n"
-            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + early_rules + site_facts())
-    res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5)
+            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + early_rules + "(사이트 근거는 system 끝 목록)")
+    # 1시간 캐시: 작가 호출(출력 2만+ 토큰)과 채점 뒤의 다듬기 호출 사이가 5분을 넘기 쉽다
+    res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5,
+              cache="1h")
     vs = res["variants"][:n]
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=상황극·개그 재미, aha=숫자가 놀랍고 사이트 근거가 맞는지(근거 틀리면 1점), "
@@ -326,9 +342,10 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                  "12자 이하, 답 금액 없음, 막연하거나 낚시면 3점 이하" + (", heart 한 줄이 억지 명언이면 감점" if heart else "")
                  + ". total=6항목 합계(60점 만점). best=상위 2개 idx(0부터).\n\n" + copy_rule + "\n" + bible
                  + "\n\n" + ELECTRIC_RULE + "\n\n" + motif_rule
-                 + ("\n\n" + early_rules + "위 2시간 반응 규칙을 어긴 후보는 hook 점수를 깎는다." if early_rules else ""))
-    judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False) + "\n\n" + site_facts(),
-                 schema=JUDGE, effort="medium", need=0.6)
+                 + ("\n\n" + early_rules + "위 2시간 반응 규칙을 어긴 후보는 hook 점수를 깎는다." if early_rules else "")
+                 + "\n\n" + facts)
+    judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False),
+                 schema=JUDGE, effort="medium", need=0.6, cache="5m")
     scores = {s["idx"]: s for s in judged["scores"]}
     best = [i for i in judged["best"] if 0 <= i < len(vs)][:2] or sorted(scores, key=lambda i: -scores[i]["total"])[:2]
     first = {i: scores.get(i, {}).get("total", 0) for i in best}
@@ -340,13 +357,13 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             break
         fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
                     "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성·제목 띠 문구를 끌어올려라. 순서 그대로 돌려줘.\n\n"
-                    + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False)
-                    + "\n\n" + site_facts(), schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
-                    need=0.6)["variants"][:len(weak)]
+                    + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False),
+                    schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
+                    need=0.6, cache="1h")["variants"][:len(weak)]
         if not fixed:
             break
-        rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False) + "\n\n" + site_facts(),
-                       schema=JUDGE, effort="medium", need=0.3)
+        rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False),
+                       schema=JUDGE, effort="medium", need=0.3, cache="5m")
         for s in rejudged["scores"]:
             if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
                 i = weak[s["idx"]]
@@ -361,7 +378,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         prompts = ask("toon", "너는 Veo 영상 프롬프트 작가다. 바이블의 '프롬프트 조립' 순서와 고정 문장을 글자 그대로 쓴다. "
                       "클립마다 영어 프롬프트 하나, 동작은 하나만.\n" + kind + "\n" + bible,
                       json.dumps(v, ensure_ascii=False) + "\n\n이 대본의 컷 4개에 맞는 Veo 프롬프트 4개를 써 줘.",
-                      schema=PROMPTS, model=SONNET, effort="medium", need=0.3)["prompts"][:4]
+                      schema=PROMPTS, model=SONNET, effort="medium", need=0.3, cache="5m")["prompts"][:4]
         up = f", 다듬기 전 {first[i]}" if first.get(i) and first[i] != s.get("total") else ""
         md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/{MAX_SCORE}{up})", "",
                f"- 제목 띠: **{v.get('band_top', '')}** / **{v.get('band_accent', '')}** (흰 줄 / 노란 줄, 클릭 {s.get('click', '?')}/10)",
@@ -593,7 +610,7 @@ def polish(today: dt.date | None = None, max_articles: int = 6) -> int:
         user = json.dumps({"article": {k: a[k] for k in ("slug", "title", "desc", "body")},
                            "other_titles": [o["title"] for o in others]}, ensure_ascii=False)
         try:
-            r = ask("polish", system, user, schema=POLISH, effort="high", max_tokens=24000, need=0.6)
+            r = ask("polish", system, user, schema=POLISH, effort="high", max_tokens=24000, need=0.6, cache="5m")
         except BudgetError as e:
             print(e)
             break
