@@ -1,0 +1,26 @@
+name: consistency
+
+# 매일 정합성 점검 (2026-11-20 BK "자동화가 많아질수록 서로 어긋난다"). docs/DIRECTION.md 3·6장.
+# 기준 파일과 실제 일정·대본·업로드 예약을 대조해서 어긋난 것만 텔레그램 한 줄. 아무것도 고치지 않음. Claude 토큰 없음.
+on:
+  schedule:
+    - cron: "50 22 * * *"   # 07:50 KST (07:10 만화 후보·07:40 대본 작업 뒤)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 점검
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.consistency | tee -a "$GITHUB_STEP_SUMMARY"
