@@ -80,6 +80,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 | 삼촌 쇼츠 대본 | 2-3 | EPISODES.md · 동전이_세계관_바이블.md | claude-jobs `toon` 07:10 → BK 고름 → 예약 '쇼츠 대본' 07:40 | `episodes`(main 반영 시) → `youtube` 10:00 업로드 → 19:00 공개 | pipeline.episodes · claude_jobs | Claude API 크레딧 |
 | 삼촌 쇼츠 영상 | 2-3 | AI_CLIPS.md · BGM.md | BK가 Flow 클립 → Claude가 tools/toon_assemble.py | `youtube` | tools/toon_assemble.py | 쇼츠 만화(실사→캐릭터) |
 | 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) · `yt-early` 매시 10분 19:10~24:10 (공개 2시간 반응 → 텔레그램 + 다음 편 규칙, 읽기만) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41, `toon` 07:10 이 2시간 규칙을 읽음 | claude_jobs.shorts | Claude API 크레딧 |
+| 주간 쇼츠 기획안 | 2-2, 2-3 | 프로젝트 폴더 plan/weekly-shorts/ | 예약 '주간 쇼츠 기획안' 월 08:53 (보고만: 트렌드·정책 조사 → 채널별 한 문장 주제·이번 주 주제·예산 안 제안, 코드·설정 안 바꿈) | 채택한 제안만 4장 흐름으로 각 담당 스레드가 반영 | — | 주간 쇼츠 기획 |
 | 5락실 게임 | 2-2 | GAME_QUALITY.md · RAKSIL_GUIDES.md | 게임별 스레드 (PR, BK 확인) · 예약 '게임 아이템 2주 시안' 짝수 주 월 08:43 (커밋만, BK "올려" 후 배포) | `posters`(+새 게임 세로 썸네일 → `drive-backup` 홍보이미지) | playground/ | 5락실 · 게임 품질 |
 | 5락실 쇼츠 | 2-2 | 5RAKSIL_PROMO.md · BGM.md | 예약 16:13 → Actions `raksil-shorts` 16:23 (자동 승인) | 질문 예약 21:37 (자동 승인) | pipeline.raksil_shorts | 5락실 홍보·쇼츠 |
 | 인스타 | 2-4 | INSTAGRAM_AUTO.md | BK 수동 | — | — | 인스타 |
@@ -90,7 +91,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 | **기준·정합성** | 이 파일 | — | 이 파일을 고치는 PR | `consistency` 매일 07:50 → 어긋나면 텔레그램, `scoreboard` 월 08:20 → docs/SCOREBOARD.md + 제안 한 줄 | pipeline.consistency · scoreboard | 자동화 어긋남 막는 기준 |
 
 - '예약' = Claude 예약 작업(저장소 밖에 지시문이 있음), '`이름`' = GitHub Actions 워크플로, `claude-jobs` = Claude API 작업 워크플로(이름 뒤 `toon` 등은 그 안의 작업).
-- 담당 스레드 id (Claude 가 서로 알릴 때): 돈삼촌 사이트 cmsg_01Fq1LsYrf815Jn6tZNPCirgRaBK7XKuuRqJ1ePxZACDTV · 텔레그램 cmsg_01Fq1LsYrf815Jn6tZNPCirgJR6nuyYzahPdtL2UjfcEj5 · 상품 자동 cmsg_01Fq1LsYrf815Jn6tZNPCirgCh9QnzrXhzfjTSXVXr1PLz · Claude API 크레딧 cmsg_01Fq1LsYrf815Jn6tZNPCirg1bUeAAg7sQJ4KtDXcW73Fj · 쇼츠 만화 cmsg_01Fq1LsYrf815Jn6tZNPCirgPhUhQgbmmDVXPq3os6JQRa · 5락실 cmsg_01Fq1LsYrf815Jn6tZNPCirgKrrTYs76w6ss3oJQqLLFpS · 게임 품질 cmsg_01Fq1LsYrf815Jn6tZNPCirgJnV8z4SaBCjzrX9nGvZngp · 5락실 홍보·쇼츠 cmsg_01Fq1LsYrf815Jn6tZNPCirgNTavBwfRNPy31inTt7XKTN · 인스타 cmsg_01Fq1LsYrf815Jn6tZNPCirg532gMQvvC9pRFkZ2F3DEu3 · 네이버 cmsg_01Fq1LsYrf815Jn6tZNPCirgU331LHYpy6SdVBtaq8MzEp · API 점검 cmsg_01Fq1LsYrf815Jn6tZNPCirgVPEuofxxh57QsqeFUuBDc7 · 보안 cmsg_01Fq1LsYrf815Jn6tZNPCirgF6wqPMhBDJN4e7fWv8yfkA · 기준·정합성 cmsg_01Fq1LsYrf815Jn6tZNPCirgJoxotTyY4CAeWA9Xp38WtY. 스레드가 닫혀도 다시 열어 쓴다(같은 영역에 새 스레드를 만들지 않음).
+- 담당 스레드 id (Claude 가 서로 알릴 때): 돈삼촌 사이트 cmsg_01Fq1LsYrf815Jn6tZNPCirgRaBK7XKuuRqJ1ePxZACDTV · 텔레그램 cmsg_01Fq1LsYrf815Jn6tZNPCirgJR6nuyYzahPdtL2UjfcEj5 · 상품 자동 cmsg_01Fq1LsYrf815Jn6tZNPCirgCh9QnzrXhzfjTSXVXr1PLz · Claude API 크레딧 cmsg_01Fq1LsYrf815Jn6tZNPCirg1bUeAAg7sQJ4KtDXcW73Fj · 쇼츠 만화 cmsg_01Fq1LsYrf815Jn6tZNPCirgPhUhQgbmmDVXPq3os6JQRa · 5락실 cmsg_01Fq1LsYrf815Jn6tZNPCirgKrrTYs76w6ss3oJQqLLFpS · 게임 품질 cmsg_01Fq1LsYrf815Jn6tZNPCirgJnV8z4SaBCjzrX9nGvZngp · 5락실 홍보·쇼츠 cmsg_01Fq1LsYrf815Jn6tZNPCirgNTavBwfRNPy31inTt7XKTN · 인스타 cmsg_01Fq1LsYrf815Jn6tZNPCirg532gMQvvC9pRFkZ2F3DEu3 · 네이버 cmsg_01Fq1LsYrf815Jn6tZNPCirgU331LHYpy6SdVBtaq8MzEp · API 점검 cmsg_01Fq1LsYrf815Jn6tZNPCirgVPEuofxxh57QsqeFUuBDc7 · 보안 cmsg_01Fq1LsYrf815Jn6tZNPCirgF6wqPMhBDJN4e7fWv8yfkA · 기준·정합성 cmsg_01Fq1LsYrf815Jn6tZNPCirgJoxotTyY4CAeWA9Xp38WtY · 주간 쇼츠 기획 cmsg_01Fq1LsYrf815Jn6tZNPCirg9guwMucmfPch2ev2g3snEy. 스레드가 닫혀도 다시 열어 쓴다(같은 영역에 새 스레드를 만들지 않음).
 - 새 자동 작업을 만들거나 끄면 **이 표에 먼저 한 줄** 넣거나 지운다. 표에 없는 작업 = 있어서는 안 되는 작업.
 
 ## 4. 수정 → 반영 → 배포 흐름
@@ -127,6 +128,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 ```
 
 ## 결정 기록 (최신이 위)
+- 2026-11-20: 주간 쇼츠 기획안 — 매주 월 08:53 해외·국내 트렌드 조사 → 채널별 주제 고정·이번 주 주제·예산 안(추가 0원 우선, 유료는 금액 명시 선택지) 제안. 보고만, 바꾸는 건 BK 채택 뒤 (BK "알고리즘 빌드를 위해 주제는 명확하게 하고 해외 쇼츠 등 트렌드를 반영하여 조사하여 매주 기획안").
 - 2026-11-20: 실사 삼촌 특별편도 첫 3초·썸네일은 동전이 만화, 실사 얼굴은 중간부터. 첫 1~3초 AI 실사 얼굴 금지, 같은 영상 재업로드 금지 (BK 카드 "만화로 시작, 삼촌은 중간에").
 - 2026-11-20: 5락실 밸런스·게임 쇼츠에 위쪽 검은 제목 띠(흰+노랑 두 줄) + 번호 선택지 + 결과 % 막대(실제 20표 이상만) + 'B를 고른 나:' 몽글이 반응 컷 (BK 유튜브 스튜디오 '내 틈새 주제 실적 우수' 패턴 공유). 띠 문구는 몽글이의 선택과 같은 Claude 호출에서 후보 3개 + 클릭 점수 → 1등, 없으면 문구 은행. 가짜 통계 훅은 안 씀.
 - 2026-11-20: 텔레그램 방문자 조회 — BK 개인 대화에 "방문자"/"7일" 보내면 5락실 서버(/api/tg, 웹훅)가 두 사이트 순 방문자를 바로 답함. 비용 0, BK 대화만. 연결은 Actions `tg-webhook` 수동 1회 (BK "방문자 수 텔레그램 실시간 호출 채팅 방"). docs/TELEGRAM.md.
