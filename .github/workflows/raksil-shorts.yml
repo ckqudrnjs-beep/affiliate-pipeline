@@ -64,6 +64,8 @@ jobs:
           RAKSIL_QID: ${{ inputs.qid }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 몽글이의 선택 한 줄 (없으면 '정답은 없다')
           YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}  # 어제 쇼츠 댓글 투표 읽기만 (raksil_shorts.comment_votes)
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}  # 품질 게이트 미통과로 쉰 날 알림 (BK 11/20)
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
         run: |
           export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
           PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
@@ -75,6 +77,9 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
           FORCE: ${{ inputs.range }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 게임 쇼츠 품질 게이트 채점 (raksil_games.gate)
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
         run: |
           D="${{ inputs.date }}"; D="${D:-$(TZ=Asia/Seoul date +%F)}"
           PLAN=$(PYTHONPATH=src python -m pipeline.raksil_games plan "$D")

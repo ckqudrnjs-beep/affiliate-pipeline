@@ -159,6 +159,27 @@ BOX = (40, rs.BAND_H + 120, W - 40, SAFE[3])  # 게임 화면 자리: 위 제목
 SUB_Y = rs.BAND_H + 55  # 음성 자막 띠 (제목 띠와 게임 화면 사이, 게임 화면은 안 가림)
 
 
+def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[str, str]:
+    """품질 게이트 (BK 11/20 밤 '안 하느니 못해'): 제목 띠 흰 줄(도전 후킹)·제목·대사를 편집장이 채점.
+    미달이면 문구 은행의 다른 후킹으로 다시(최대 rs.GATE_TRIES 번). (쓸 후킹, 쉬는 이유 — 통과면 '')."""
+    tried, best = [], None
+    order = [hook] + [h for i in range(len(HOOKS)) for h in [HOOKS[(day.toordinal() + i) % len(HOOKS)]] if h != hook]
+    for h in order[: rs.GATE_TRIES]:
+        brief = (f"게임 쇼츠({'신작 소개' if kind == 'new' else '플레이'}): 자동 플레이 화면 약 10초 + 몽글이 엔딩.\n"
+                 f"게임: {g['name']} — {g.get('short', '')}\n제목 띠: 흰 줄 '{h}' / 노란 줄 '{g['name']}'\n"
+                 f"제목: {title_of(g, kind, h)}\n대사: " + " / ".join(say))
+        sc = rs.judge("5락실 게임 쇼츠 (layout 은 띠 글자가 첫 1초에 읽히는지로)", brief)
+        if sc is None:
+            return h, ""  # 채점 불가 → 화면 검사(check)만
+        total, ok = rs.gate_total(sc)
+        print(f"게임 품질 채점: '{h}' {total}/40 {'통과' if ok else '미달'} — {sc.get('note', '')}")
+        if ok:
+            return h, ""
+        if not best or total > best[0]:
+            best = (total, h, sc.get("note", ""))
+    return hook, f"최고 '{best[1]}' {best[0]}/40점 < 통과선 {rs.GATE_FLOOR} — {best[2]}"
+
+
 def game_band(g: dict, hook: str) -> dict:
     """2026-11-20 BK 패턴: 위쪽 검은 띠 두 줄 = 흰 줄 도전 후킹 + 노란 줄 게임 이름 ("고지능자만 가능한 / 선 잇기 게임" 꼴)."""
     return {"top": hook, "accent": g["name"]}
@@ -231,6 +252,12 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     play_d = len(frames) / FPS
     hook = hook_of(g, day, rec_score(rec))
     say = lines(g, kind)
+    hook, why = gate(g, kind, day, hook, say)
+    if why:  # 품질 게이트 미통과 → 오늘은 쉬고 알림 (기록 안 함 → 다음 차례에 다시)
+        key = f"{day.isoformat()}-game-{g['slug']}" + ("-new" if kind == "new" else "")
+        print(f"품질 게이트 미통과 → 게임 쇼츠 쉼: {why}")
+        return {"date": day.isoformat(), "qid": f"game-{g['slug']}-{kind}-{day.isoformat()}", "key": key,
+                "kind": "게임", "skip": why, "title": "", "file": ""}
     clips, voiced = rs.tts(say)
     v0 = (0.4, 0.4 + len(clips[0]) / SR) if voiced else (0.4, 2.6)
     cta_d = bgm.snap(max(2.4, len(clips[1]) / SR + 0.5), tr, 1, "up")
@@ -417,6 +444,8 @@ def main(argv: list[str]) -> int:
     meta = render(rec, g, kind, day)
     if not meta:
         return 0
+    if meta.get("skip"):
+        return rs.upload_meta(meta) if cmd == "upload" else 0
     errs = check(rec, meta)
     if errs:
         print("업로드 보류 (화면 검사 실패):\n- " + "\n- ".join(errs))
