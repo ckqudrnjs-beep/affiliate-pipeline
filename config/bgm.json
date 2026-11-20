@@ -4,9 +4,11 @@
   "toon": {
    "channel": "uncle",
    "order": [
+    "whistle-evening",
+    "home-meal",
     "coin-afternoon",
     "piggy-bank",
-    "home-meal"
+    "coin-stroll"
    ],
    "lufs": -26,
    "duck": false,
@@ -143,6 +145,37 @@
     94.132
    ],
    "ding_hz": 2093.0
+  },
+  "coin-stroll": {
+   "channel": "uncle",
+   "title": "동전이의 산책길",
+   "file": "media/bgm/uncle/coin-stroll.mp3",
+   "bpm": 92.29,
+   "bar0": 0.557,
+   "seconds": 60.96,
+   "lufs": -16.2,
+   "starts": [
+    0.557,
+    10.959,
+    18.76
+   ],
+   "ding_hz": 1396.9,
+   "_note": "원곡 32초 → 마디에 맞춰 두 번 이어 붙임(BK 11/20)"
+  },
+  "whistle-evening": {
+   "channel": "uncle",
+   "title": "휘파람 부는 저녁",
+   "file": "media/bgm/uncle/whistle-evening.mp3",
+   "bpm": 86.13,
+   "bar0": 0.557,
+   "seconds": 69.96,
+   "lufs": -15.3,
+   "starts": [
+    0.557,
+    11.656,
+    22.802
+   ],
+   "ding_hz": 2349.3
   }
  }
 }
