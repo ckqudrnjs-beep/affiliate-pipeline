@@ -23,10 +23,11 @@ from . import raksil_shorts as rs
 W, H, FPS, SR = rs.W, rs.H, rs.FPS, rs.SR
 DUR = 2.6
 SAFE_X, SAFE_Y = 900, 1540  # 이 안에만 그린다 (쇼츠 오른쪽 버튼·아래 제목 자리)
-LIKE_Y, SUB_Y = 560, 770
+LIKE_Y, SUB_Y = 615, 805
 BTN_X0, BTN_X1 = 150, 800
 MONGLE_Y = 1420  # 몽글이 발 위치
 REASON = "매일 새 게임과 새 질문"  # 가운뎃점(·)은 폰트에 없어 쓰지 않는다
+URL, URL_Y = "5raksil.com", 462  # 2026-11-20 BK: 쇼츠에 사이트 주소 (화면 글자만, 링크·스티커 아님)
 
 
 def ease_back(x: float) -> float:
@@ -136,8 +137,25 @@ def frame(t: float, spr, body, bg):
         d = ImageDraw.Draw(img)
         d.ellipse((hx - 42, hy - 42, hx + 42, hy + 42), fill=body + (255,), outline=(74, 44, 48, 255), width=5)
     bubble(img, x + spr.width * 0.80 + 50, MONGLE_Y - spr.height * 0.64, "또 놀러 와!", ease_back((t - 0.55) / 0.3))
-    rs.glow_text(img, (W / 2, 360), [REASON], rs.font(60), 60, rs.CYAN, glow=6)
+    rs.glow_text(img, (W / 2, 345), [REASON], rs.font(60), 60, rs.CYAN, glow=6)
+    url(img, ease_back((t - 0.05) / 0.3))
     return img
+
+
+def url(img, k: float) -> None:
+    """사이트 주소 알약 (버튼과 같은 가로 자리, 안전영역 안)."""
+    from PIL import Image, ImageDraw
+    if k <= 0.01:
+        return
+    cx = (BTN_X0 + BTN_X1) / 2
+    hw, hh = (BTN_X1 - BTN_X0) / 2 * 0.8 * k, 50 * k
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(ov).rounded_rectangle((cx - hw, URL_Y - hh, cx + hw, URL_Y + hh), radius=int(hh),
+                                         fill=(255, 255, 255, 235))
+    img.alpha_composite(ov)
+    size = max(10, int(66 * k))
+    d = ImageDraw.Draw(img)
+    d.text((cx, URL_Y + 2 * k), URL, font=rs.font(size), fill=(60, 30, 90, 255), anchor="mm")
 
 
 def audio_clip():

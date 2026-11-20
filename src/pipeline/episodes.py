@@ -914,7 +914,14 @@ def render(path: pathlib.Path) -> pathlib.Path:
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
                         "-c:v", "libx264", "-crf", "22", "-preset", "medium", "-pix_fmt", "yuv420p", "-c:a", "aac",
                         "-b:a", "128k", "-movflags", "+faststart", str(out)], check=True)
+    tr = None
+    if not cv.long and spec.get("bgm", True) is not False:  # 2026-11-20 BK Suno BGM: 목소리 밑에 낮게 (docs/BGM.md)
+        from . import bgm
+        tr = bgm.pick("live", dt.date.fromisoformat(spec["date"]))
+        bgm.mix(out, tr)
     meta = {"slug": slug, "seconds": round(t_acc, 1), "chapters": [[round(a, 1), b] for a, b in chapters]}
+    if tr:
+        meta["bgm"] = tr["slug"]
     if credits:  # 실사 배경 출처 → 설명란 (youtube.episode_rows)
         meta["credits"] = [{k: c[k] for k in ("id", "credit", "page", "query", "lines", "ai", "realistic") if k in c} for c in credits]
         from .live import remember

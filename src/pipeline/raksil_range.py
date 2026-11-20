@@ -128,10 +128,15 @@ def render(rec: pathlib.Path, day: dt.date, out_dir: pathlib.Path = rs.OUT) -> d
         return None
     ev = info["ev"]
     hs = heads(ev)
+    # 2026-11-20 BK "노래 BPM에 맞춰서": 플레이→CTA 전환을 박자에 맞추고 합성 베이스 대신 BGM (docs/BGM.md)
+    from . import bgm
+    tr = bgm.pick("game", day)
+    if tr:
+        play_frames = play_frames[: max(FPS * 8, round(bgm.snap(len(play_frames) / FPS, tr, 1, "down") * FPS))]
     play_d = len(play_frames) / FPS
     cta_d = 3.0
     clips, voiced = rs.tts(lines(stage))
-    cta_d = max(cta_d, len(clips[1]) / SR + 0.6)
+    cta_d = bgm.snap(max(cta_d, len(clips[1]) / SR + 0.6), tr, 1, "up")
     total = play_d + cta_d
 
     audio = np.zeros(int(SR * total) + SR, dtype=np.float32)
@@ -145,7 +150,7 @@ def render(rec: pathlib.Path, day: dt.date, out_dir: pathlib.Path = rs.OUT) -> d
         if 0 <= t - t0 < play_d:
             rs.place(audio, np.concatenate([rs.tone(988, 0.07, 0.15), rs.tone(1319, 0.14, 0.15)]), t - t0)
     bass, t = [82, 82, 110, 98], 0.0
-    while t < total:
+    while t < total and not tr:  # BGM 이 없을 때만 합성 베이스
         rs.place(audio, rs.tone(bass[int(t * 2) % 4], 0.45, 0.06), t)
         t += 0.5
     rs.place(audio, clips[0] * 0.95, 0.2)
@@ -187,6 +192,7 @@ def render(rec: pathlib.Path, day: dt.date, out_dir: pathlib.Path = rs.OUT) -> d
     wav.unlink()
     from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
     total += add_ending(mp4, day)
+    bgm.mix(mp4, tr)
     score = score_at(ev, t0 + play_d)
     meta = {"date": day.isoformat(), "qid": f"range-{day.isoformat()}", "key": f"{day.isoformat()}-range",
             "file": str(mp4), "title": title_of(stage), "description": description_of(stage, score, len(hs), voiced),
