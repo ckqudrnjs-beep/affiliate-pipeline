@@ -115,6 +115,9 @@ def mongle_plan(q: dict) -> tuple[dict | None, dict | None]:
         from . import claude_jobs as cj
         from .yt_early import lessons_prompt
         rules = lessons_prompt("5락실 밸런스")  # 공개 2시간 반응 → 다음 편 규칙 (PR #283)
+        recent = recent_bands()
+        if recent:  # 반복 양산 막기: 직전 3편 띠와 같은 말·같은 틀 금지 (BK 11/20)
+            rules += "직전 3편 제목 띠(같은 말·같은 문장 틀 금지, 완전히 다른 각도로): " + " / ".join(recent) + "\n\n"
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
         r = cj.ask("raksil", MONGLE_SYS + BAND_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
                    effort="low", max_tokens=700, need=0.03,
@@ -122,7 +125,7 @@ def mongle_plan(q: dict) -> tuple[dict | None, dict | None]:
     except Exception as e:  # 예산·네트워크·거절 → 반전 없이 '정답은 없다'
         print(f"몽글이의 선택 실패: {e}", file=sys.stderr)
         return None, None
-    return clean_pick(r), best_band(r.get("bands") if isinstance(r, dict) else None)
+    return clean_pick(r), best_band(r.get("bands") if isinstance(r, dict) else None, recent_bands())
 
 
 def mongle_pick(q: dict) -> dict | None:
@@ -283,15 +286,44 @@ def clean_band(b) -> dict | None:
     return {"top": top, "accent": acc}
 
 
-def best_band(cands) -> dict | None:
-    """후보 중 규칙을 지킨 것 가운데 클릭 점수(click 0~10)가 가장 높은 것."""
+def best_band(cands, recent: list[str] | None = None) -> dict | None:
+    """후보 중 규칙을 지키고 직전 3편 띠와 겹치지 않는 것 가운데 클릭 점수(click 0~10)가 가장 높은 것."""
     ok = [(c.get("click", 0) if isinstance(c.get("click", 0), (int, float)) else 0, i, clean_band(c))
           for i, c in enumerate(cands or []) if isinstance(c, dict)]
-    ok = [x for x in ok if x[2]]
+    ok = [x for x in ok if x[2] and fresh_band(x[2], recent or [])]
     return max(ok, key=lambda x: (x[0], -x[1]))[2] if ok else None
 
 
-def bank_band(day: dt.date) -> dict:
+def recent_bands(n: int = 3, log: pathlib.Path | None = None) -> list[str]:
+    """직전 n편 밸런스 쇼츠 제목 앞의 띠 문구('흰 줄 노란 줄'). 같은 말·같은 틀 반복 금지용."""
+    try:
+        up = json.loads((log or LOG).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    out = []
+    for k in sorted(up, reverse=True):
+        t = up[k].get("title", "") if isinstance(up[k], dict) else ""
+        if "-game-" in k or "meme" in k or " | " not in t:
+            continue
+        out.append(t.split(" | ")[0].strip())
+        if len(out) >= n:
+            break
+    return out
+
+
+def fresh_band(b: dict | None, recent: list[str]) -> bool:
+    """직전 편 띠와 흰 줄·노란 줄 어느 쪽도 같지 않아야 한다."""
+    if not b:
+        return False
+    return not any(b["top"] in r or b["accent"] in r for r in recent)
+
+
+def bank_band(day: dt.date, recent: list[str] | None = None) -> dict:
+    recent = recent or []
+    for k in range(len(BAND_BANK)):
+        top, acc = BAND_BANK[(day.toordinal() + k) % len(BAND_BANK)]
+        if fresh_band({"top": top, "accent": acc}, recent):
+            return {"top": top, "accent": acc}
     top, acc = BAND_BANK[day.toordinal() % len(BAND_BANK)]
     return {"top": top, "accent": acc}
 
@@ -319,25 +351,39 @@ def draw_band(img, band: dict | None) -> int:
     return BAND_H
 
 
+# 반복 양산 막기 (BK 11/20 "비슷한 틀로 찍어낸 영상이 걸러지는 거라면…"): 배경은 날마다 돌려 써서 직전 3편과 겹치지 않게.
+# (위 그라데이션, 아래 그라데이션, 바닥 격자 색, 별 배치 씨앗). 글자·선택지 색은 채널 표시라 그대로.
+THEMES = [((12, 6, 32), (42, 15, 85), (255, 79, 163), 5),     # 보라 밤 (원래)
+          ((4, 22, 30), (8, 70, 82), (60, 230, 210), 11),     # 청록 바다
+          ((34, 8, 14), (110, 34, 30), (255, 170, 60), 17),   # 노을
+          ((6, 12, 40), (20, 40, 120), (120, 160, 255), 23)]  # 파란 우주
+_THEME = THEMES[0]
+
+
+def theme_for(day: dt.date) -> tuple:
+    return THEMES[day.toordinal() % len(THEMES)]
+
+
 def background(seed: int = 5):
     from PIL import Image, ImageDraw
-    img = Image.new("RGBA", (W, H), BG + (255,))
+    bg, bg2, grid, s0 = _THEME
+    img = Image.new("RGBA", (W, H), bg + (255,))
     dr = ImageDraw.Draw(img)
-    for y in range(H):  # 위→아래 보라 그라데이션
+    for y in range(H):  # 위→아래 그라데이션 (날마다 다른 색)
         k = math.sin(math.pi * y / H) * 0.9
-        c = tuple(int(BG[i] + (BG2[i] - BG[i]) * k) for i in range(3))
+        c = tuple(int(bg[i] + (bg2[i] - bg[i]) * k) for i in range(3))
         dr.line([(0, y), (W, y)], fill=c + (255,))
-    rnd = random.Random(seed)
+    rnd = random.Random(seed + s0)
     for _ in range(90):
         x, y, r = rnd.randrange(W), rnd.randrange(int(H * 0.75)), rnd.choice([1, 2, 2, 3])
         dr.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, rnd.randrange(90, 200)))
     # 아래 원근 격자
     hz = int(H * 0.80)
     for i in range(-14, 15):
-        dr.line([(W / 2 + i * 40, hz), (W / 2 + i * 260, H)], fill=PINK + (90,), width=2)
+        dr.line([(W / 2 + i * 40, hz), (W / 2 + i * 260, H)], fill=grid + (90,), width=2)
     y, step = hz, 8
     while y < H:
-        dr.line([(0, y), (W, y)], fill=PINK + (90,), width=2)
+        dr.line([(0, y), (W, y)], fill=grid + (90,), width=2)
         step *= 1.35
         y += int(step)
     return img
@@ -631,9 +677,11 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         return None
     yq = pick_question(qs, day - dt.timedelta(days=1), for_shorts=True)
     res = result_of(yq, fetch_votes(yq["id"]) if yq else None)
+    global _THEME
+    _THEME = theme_for(day)
     pick, band = mongle_plan(q)
     pick = None if res else pick
-    band = band or bank_band(day)  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
+    band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
     lines = script(q, res, pick)
     clips, voiced = tts(lines, caps=[VOICE_CAP[0], 0, VOICE_CAP[1]], speed=1.15)
 
