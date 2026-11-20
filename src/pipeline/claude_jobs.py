@@ -292,7 +292,7 @@ def toon_motifs() -> dict:
 
 
 def recent_motifs(before: str, n: int = 3) -> tuple[list[str], list[str]]:
-    """최근 n편(공개일 앞, 고른 안 = 1안)의 새는 돈 모양·이야기 틀. BK 11/20: 같은 모션 반복 금지."""
+    """최근 n편(공개일 앞, 고른 안 = 1안)의 소동 모양·이야기 틀. BK 11/20: 같은 모션 반복 금지."""
     m, f = [], []
     for p in sorted((ROOT / "data/toon/lab").glob("*.md"), reverse=True):
         if p.stem >= before:
@@ -309,7 +309,7 @@ def recent_motifs(before: str, n: int = 3) -> tuple[list[str], list[str]]:
 
 
 def recent_variety(before: str, n: int = 3) -> dict[str, list[str]]:
-    """직전 n편(고른 안 = 1안)의 장소·첫 3초 훅 유형·제목 틀·새는 돈 모양·이야기 틀. 대본 랩 노트에서 읽는다."""
+    """직전 n편(고른 안 = 1안)의 장소·첫 3초 훅 유형·제목 틀·소동 모양·이야기 틀. 대본 랩 노트에서 읽는다."""
     out = {"place": [], "hook_type": [], "title_pattern": [], "motif": [], "frame": []}
     seen = 0
     for p in sorted((ROOT / "data/toon/lab").glob("*.md"), reverse=True):
@@ -364,14 +364,14 @@ def recent_episode_titles(n: int = 14) -> list[str]:
 # ---------- 1. 동전이 만화 대본 후보 ----------
 CUT = obj({"screen": S, "caption": S, "camera": S})
 # 반복 양산 막기 (BK 11/20 "비슷한 틀로 찍어낸 영상이 걸러지는 거라면 같은 기획으로 계속 만들면 안 되잖아 → 반영").
-# 캐릭터·주제는 유지, 직전 3편과 장소·첫 3초 훅 유형·이야기 틀·제목 틀·새는 돈 모양이 겹치면 안 된다.
+# 캐릭터·주제는 유지, 직전 3편과 장소·첫 3초 훅 유형·이야기 틀·제목 틀·소동 모양이 겹치면 안 된다.
 HOOK_TYPES = ["결과 먼저(끝 장면을 첫 컷에)", "엉뚱한 질문", "상식 뒤집기", "동전이 사고 현장", "대결 선언", "시간 점프", "공감 한숨"]
 TITLE_PATTERNS = ["목록", "지시", "질문", "상식 뒤집기", "순위"]
 VARIETY_PENALTY = 5   # 직전 3편과 겹치는 칸 하나당 채점 합계에서 뺀다
 VARIANT = obj({"title": S, "motif": S, "frame": S, "place": S, "hook": S,
                "hook_type": {"type": "string", "enum": HOOK_TYPES}, "title_pattern": {"type": "string", "enum": TITLE_PATTERNS}, "cuts": arr(CUT), "number_box": S, "number_source": S,
                "gag": S, "tip": S, "why_fun": S, "band_top": S, "band_accent": S, "yt_title": S, "heart": S,
-               "summary": S, "vote_a": S, "vote_b": S})  # 시즌 빌드업 (toon_series, BK 11/20 "빌드업")
+               "summary": S, "vote_a": S, "vote_b": S, "mood": S})  # 시즌 빌드업 (toon_series, BK 11/20 "빌드업")
 JUDGE = obj({"scores": arr(obj({"idx": I, "hook": I, "fun": I, "aha": I, "bible": I, "clarity": I, "click": I, "total": I,
                                 "note": S})), "best": arr(I)})
 MAX_SCORE = 60  # 6항목 × 10점 (11/20 '누르고 싶은 제목 띠·제목' click 추가)
@@ -382,13 +382,33 @@ BAND_RULE = ("[제목 띠·유튜브 제목 — 누르게 만드는 문구가 �
              "화면 맨 위 검은 띠에 두 줄 제목이 처음부터 끝까지 깔린다(쇼츠 피드 썸네일이 곧 이 띠).\n"
              "- band_top(흰 줄, 12자 이하): 누구나 겪는 생활 장면·상황. 예) '추운 날 김치찌개 배달', '밥솥 보온 켜 둔 집'\n"
              "- band_accent(노란 줄, 12자 이하): 궁금증·숫자 훅. 공식 중 하나 — 목록('의외로 모르는 3가지'), "
-             "지시('앞으로 이렇게 하세요', '이것만 보세요'), 질문('집밥이랑 얼마 차이?'), 상식 뒤집기('끄면 손해라고?'), 순위('새는 돈 TOP1').\n"
+             "지시('앞으로 이렇게 하세요', '이것만 보세요'), 질문('집밥이랑 얼마 차이?'), 상식 뒤집기('끄면 손해라고?'), 순위('겨울 집 TOP1').\n"
              "- 답 금액(원)은 띠에 넣지 않는다(숫자 상자에서 반전으로 한 번). 개수·시간 같은 훅 숫자는 된다. 내용과 다른 낚시·과장(무조건·100%·충격) 금지.\n"
              "- 두 줄을 읽으면 '내 얘기네 + 답이 궁금하다'가 동시에 생겨야 한다. 막연한 말('알뜰 꿀팁', '절약 방법') 금지.\n"
              "- yt_title(유튜브 제목, 40자 이하): 띠와 같은 궁금증을 다른 말로, 답 숫자 없이 '?'로 끝. 쇼핑몰·브랜드 이름 금지.\n")
 HEART_RULE = ("[이번 편은 공감 한 줄 편] heart 에 살림하는 사람 마음을 건드리는 한 줄(20자 이하)을 쓴다. 이 줄이 4번 컷 자막이 된다. "
               "훈계·명언 인용 금지, 이 편 장면에서 나온 말. 예) '아낀 건 돈이 아니라 내 저녁 한 시간', "
               "'아무도 모르는 살림, 동전이는 알아요'.\n")
+
+
+# BK 11/20 밤: "뻔한 것이 없는 것, 아니면 인사이트를 주는 것, 사람들의 여운에 남는 것, 어쩔 때는 한없이 즐거운 것",
+# "가볍지 않은 문구, 흥미 유발과 절제를 오가는 퀄리티", "동전 날아가는 것·돈이 샌다 표현은 하지 말고 돈돈돈 강조할 필요 없어".
+MOODS = ["뻔하지 않은 것", "인사이트", "여운", "한없이 즐거운 것"]
+MOOD_RULE = ("[이 편의 결 — 편마다 하나, 공개일로 돌아가며 정한다]\n"
+             "- 뻔하지 않은 것: 처음 보는 상황·구도, 예상과 다르게 끝남.\n"
+             "- 인사이트: 다들 알던 것과 다른 사실 하나를 조용히 보여 줌(숫자는 꼭 필요할 때 한 번, 크게 외치지 않음).\n"
+             "- 여운: 큰 사건 없이 한 장면, 마지막 한 줄이 마음에 남음.\n"
+             "- 한없이 즐거운 것: 동전이의 귀여움·소동으로 끝까지 웃게 함, 정보는 한 줄.\n"
+             "[문구 기준] 자막은 짧고 담담한 한 문장(지켜보는 목소리). 말장난·느낌표 남발·'충격'·'꿀팁' 같은 가벼운 말 금지. "
+             "흥미를 끄는 줄과 절제하는 줄을 오간다. 금화·저금통·'돈이 샌다'·'새는 돈' 연출과 말 금지, 돈을 강조하지 않는다. "
+             "'문제 → 이렇게 바꾸면 아낀다' 같은 뻔한 정보형 구성 금지 — 살림 팁은 마지막 컷 한 줄로만 곁들인다.\n"
+             "[중독성 — 결과 상관없이 매 편 (BK 11/20 '그리고 중독성')] 다시 보고 싶게 만드는 장치 하나 이상: 시즌 반복 개그, "
+             "다시 돌려 보게 되는 마지막 컷(작은 반전·표정), 끝 장면이 첫 장면으로 자연스럽게 이어지는 루프, 귀에 남는 소리·동작 하나.\n")
+
+
+def mood_of(date: str) -> str:
+    """이 편의 결 (BK 11/20 밤 네 가지). 공개일 기준으로 정해져 재실행해도 같다."""
+    return MOODS[dt.date.fromisoformat(date).toordinal() % len(MOODS)]
 
 
 def heart_turn(date: str) -> bool:
@@ -400,6 +420,9 @@ PROMPTS = obj({"prompts": arr(S)})
 # BK 11/20 "만점으로 기획하면 안되나?": 목표를 만점 가까이(57/60, 클릭 9점 이상)로 올리고 다듬기를 3번까지.
 # 채점은 깐깐하게 그대로 둔다(만점을 요구하면 채점이 후해질 뿐 품질이 오르지 않음).
 REFINE_GOAL, REFINE_CLICK, REFINE_ROUNDS = 57, 9, 3
+# 품질 게이트 (BK 11/20 "품질이 떨어지는 문구 그리고 영상과 구도는 안하느니 못해"): 다듬은 뒤에도 1안이 이 점수 아래면
+# '이 편은 쉬자'로 표시하고 BK 에게 알린다(대본 후보는 참고로 남김). 48 = 6항목 평균 8점.
+QUALITY_FLOOR = 48
 
 
 def toon(today: dt.date | None = None, n: int = 8) -> int:
@@ -418,7 +441,9 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             "(BK 11/20: AI 실사 얼굴로 시작한 편은 모두 20회 아래, 만화·카드로 시작한 편은 300~1,200회).\n"
             if special else "이번 편은 만화판이다. 실사 문장을 쓰지 않는다.\n")
     heart = heart_turn(date)
-    copy_rule = BAND_RULE + (HEART_RULE if heart else "heart 는 빈 문자열로 둔다(이번 편은 재미 위주).\n")
+    mood = mood_of(date)
+    copy_rule = (BAND_RULE + MOOD_RULE + f"이번 편의 결: **{mood}** (mood 칸에 그대로 적는다).\n"
+                 + (HEART_RULE if heart or mood == "여운" else "heart 는 빈 문자열로 둔다.\n"))
     system = (direction() + "너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n" + kind + "\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE + "\n\n" + copy_rule)
     facts = site_facts()  # 근거는 system 끝에 둬서 작가·다듬기 호출이 캐시로 같이 쓴다 (BK 11/20 프롬프트 캐싱)
@@ -437,20 +462,21 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     used_m, used_f = recent_motifs(date, mot.get("recent_block", 3))
     free_m = [x for x in mot["motifs"] if x["id"] not in used_m]
     free_f = [x for x in mot["frames"] if x["id"] not in used_f]
-    motif_rule = ("[새는 돈 모양·이야기 틀 (BK 11/20: 매번 같은 모션이면 지겹다)] 후보마다 아래에서 motif(id)·frame(id) 하나씩, "
-                  "후보끼리도 최대한 다르게. 금화가 창밖으로 날아가는 장면은 그 motif 일 때만. motif 의 영어 문장을 1번 컷 프롬프트에 쓴다.\n"
+    motif_rule = ("[동전이 소동 모양·이야기 틀 (BK 11/20: 매번 같은 모션이면 지겹다)] 후보마다 아래에서 motif(id)·frame(id) 하나씩, "
+                  "후보끼리도 최대한 다르게. motif 의 영어 문장을 소동 컷 프롬프트에 쓴다. 금화·저금통·돈 그림은 어떤 컷에도 넣지 않는다.\n"
                   "쓸 수 있는 motif: " + json.dumps(free_m, ensure_ascii=False) + "\n쓸 수 있는 frame: " + json.dumps(free_f, ensure_ascii=False)
                   + f"\n(최근 편에서 쓴 것, 금지: {used_m} / {used_f})")
     rv = recent_variety(date, mot.get("recent_block", 3))
     motif_rule += ("\n\n[반복 양산 금지 — 유튜브가 비슷한 틀로 찍어낸 영상을 덜 보여 준다 (BK 11/20)]\n"
-                   "캐릭터(동전이·삼촌·조카)와 '새는 돈' 주제는 그대로, 아래는 직전 3편과 겹치면 안 된다. 후보끼리도 서로 달라야 한다.\n"
+                   "캐릭터(동전이·삼촌·조카)와 살림 주제는 그대로, 아래는 직전 3편과 겹치면 안 된다. 후보끼리도 서로 달라야 한다.\n"
                    f"- place(장소·배경): 직전 {rv['place'] or '기록 없음'} 과 다른 곳\n"
                    f"- hook_type(첫 3초 훅 유형, {HOOK_TYPES} 중 하나): 직전 {rv['hook_type'] or '기록 없음'} 금지\n"
                    f"- title_pattern(제목 띠 노란 줄 공식, {TITLE_PATTERNS} 중 하나): 직전 {rv['title_pattern'] or '기록 없음'} 금지\n"
                    "- 첫 컷 구도·카메라도 직전 편과 다르게. 겹치면 채점에서 칸마다 감점된다.")
     user = (f"{date} 공개 편 대본 후보를 서로 확실히 다른 {n}개 써 줘. 주제 후보(참고, 더 재미있으면 바꿔도 됨):\n"
             f"{json.dumps(info.get('concept'), ensure_ascii=False)}\n\n"
-            "보는 사람: 살림 맡은 30~50대(주부). 재미·상황극이 먼저, 숫자는 3번 컷 끝 number_box 한 번(30만 원/년 미만의 뻔한 절약 팁 금지).\n"
+            "보는 사람: 살림 맡은 30~50대(주부). 동전이 상황극·이야기가 먼저, 살림 팁은 4번 컷 한 줄로 곁들임. "
+            "number_box 는 이 편의 결이 '인사이트'이고 꼭 필요할 때만 한 번(아니면 빈 문자열), 돈을 강조하지 않는다.\n"
             "cuts 는 정확히 4개, 각 caption 은 화면 자막(한 줄 14자 이하, 최대 2줄, '/'로 줄 나눔), camera 는 구도 메뉴의 영어 문구 하나.\n"
             "number_source 에는 아래 사이트 근거 경로와 계산을 적어라. 근거에 없는 숫자는 쓰지 마라.\n"
             f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + series_text + early_rules
@@ -460,9 +486,9 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
               cache="1h")
     vs = res["variants"][:n]
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
-                 "hook=첫 1초 멈춤 힘, fun=상황극·개그 재미, aha=숫자가 놀랍고 사이트 근거가 맞는지(근거 틀리면 1점), "
-                 "bible=세계관·캐릭터·구도 규칙 + 새는 돈 모양·틀·장소·훅 유형·제목 틀의 신선함(직전 3편과 겹치면 1점), "
-                 "clarity=자막만 보고 이해되는지, "
+                 "hook=첫 1초 멈춤 힘, fun=이 편의 결(뻔하지 않음·인사이트·여운·한없이 즐거움)을 제대로 살렸는지 + 중독성(반복 개그·다시 보게 되는 마지막 컷·끝-처음 루프·귀에 남는 소리), aha=뻔하지 않은 관점·여운이 있고 숫자를 쓴다면 사이트 근거가 맞는지(근거 틀리면 1점), "
+                 "bible=세계관·캐릭터·구도 규칙 + 소동 모양·틀·장소·훅 유형·제목 틀의 신선함(직전 3편과 겹치면 1점, 금화·저금통·돈 강조·뻔한 문제→절약 구성이면 1점), "
+                 "clarity=자막만 보고 이해되고 문구가 가볍지 않은지(말장난·느낌표 남발이면 감점), "
                  "click=제목 띠 두 줄(band_top·band_accent)과 yt_title 이 피드에서 손가락을 멈추게 하는지 — 내 얘기 같은 장면 + 답이 궁금한 훅, "
                  "12자 이하, 답 금액 없음, 막연하거나 낚시면 3점 이하" + (", heart 한 줄이 억지 명언이면 감점" if heart else "")
                  + ". total=6항목 합계(60점 만점). best=상위 2개 idx(0부터).\n\n" + copy_rule + "\n" + bible
@@ -503,7 +529,12 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                 i = weak[s["idx"]]
                 vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
     best.sort(key=lambda i: -scores.get(i, {}).get("total", 0))
-    md = [f"# 동전이 {'실사 삼촌 특별편' if special else '만화'} 대본 후보 — {date} 공개 편", "",
+    top = scores.get(best[0], {}).get("total", 0) if best else 0
+    below = top < QUALITY_FLOOR
+    md = [*([f"> ⚠️ 품질 게이트 미통과: 1안 {top}/{MAX_SCORE}점 < 통과선 {QUALITY_FLOOR}점. 이 편은 쉬는 걸 추천해요 "
+             "(BK 11/20 '품질이 떨어지는 문구·영상·구도는 안 하느니 못해'). 클립을 만들지 마시고, 그래도 하려면 안을 직접 고쳐 주세요.", ""]
+           if below else []),
+          f"# 동전이 {'실사 삼촌 특별편' if special else '만화'} 대본 후보 — {date} 공개 편", "",
           f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개 다듬기). "
           f"점수는 {MAX_SCORE}점 만점의 깐깐한 편집장 채점이에요({MAX_SCORE * 8 // 10}점 = 대부분 항목 8점, 제목 띠 문구 포함). "
           "마음에 드는 안을 골라 이 PR에 댓글로 번호만 남기거나, 그냥 병합하면 1안으로 진행해요. 숫자는 근거를 다시 확인한 뒤 자막에 넣어요.", ""]
@@ -517,10 +548,11 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/{MAX_SCORE}{up})", "",
                f"- 제목 띠: **{v.get('band_top', '')}** / **{v.get('band_accent', '')}** (흰 줄 / 노란 줄, 클릭 {s.get('click', '?')}/10)",
                f"- 유튜브 제목: {v.get('yt_title', '')}",
+               *([f"- 이 편의 결: {v['mood']}"] if v.get("mood") else []),
                *([f"- 공감 한 줄(4번 컷 자막): {v['heart']}"] if v.get("heart") else []),
                f"- 모양·틀: {v.get('motif', '')} / {v.get('frame', '')}",
                f"- 장소·훅유형·제목틀: {v.get('place', '')} / {v.get('hook_type', '')} / {v.get('title_pattern', '')}",
-               *([f"- 엔딩 투표(다음엔 뭐가 샐까?): A {v.get('vote_a', '')} / B {v.get('vote_b', '')} · 줄거리: {v.get('summary', '')}"]
+               *([f"- 엔딩 투표(다음엔 어디로 갈까?): A {v.get('vote_a', '')} / B {v.get('vote_b', '')} · 줄거리: {v.get('summary', '')}"]
                  if sctx and v.get("vote_a") else []),
                f"- 장소: {v['place']} / 훅: {v['hook']} / 개그: {v['gag']}",
                f"- 숫자 상자: **{v['number_box']}** — 근거: {v['number_source']}",
@@ -548,7 +580,10 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         paths.append(str(toon_series.record(date, vs[best[0]], sctx).relative_to(ROOT)))
     url = open_pr(f"auto/toon-{date}", f"동전이 대본 후보 {date}", f"`{out.relative_to(ROOT)}` 를 열어 보세요. 상위 2안에 Veo 프롬프트까지 있어요.",
                   paths)
-    if url:
+    if url and below:
+        notify(f"⚠️ 동전이 {date} 편은 대본 점수가 통과선 아래({top}/{MAX_SCORE} < {QUALITY_FLOOR})라 쉬는 걸 추천해요. "
+               f"클립은 만들지 마세요. 후보는 참고로 남겼어요.\n{url}")
+    elif url:
         notify(f"🐶 동전이 {date} 편 대본 후보 2안이 올라왔어요. 휴대폰에서 보고 병합(=1안 진행)하거나 댓글로 번호를 남겨 주세요.\n{url}")
     return 0
 

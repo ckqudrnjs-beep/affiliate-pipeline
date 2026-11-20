@@ -95,3 +95,19 @@ class PaidPromotionGuardTest(unittest.TestCase):
         finally:
             yt.api = orig
         self.assertEqual(state["status"]["privacyStatus"], "public")
+
+
+class QualityGateTest(unittest.TestCase):  # BK 2026-11-20 "품질이 떨어지는 ... 안하느니 못해"
+    def test_gate(self):
+        s = {"date": "2026-11-24", "kind": "short"}
+        self.assertFalse(yt.quality_ok(s, {}))                       # 실사 안전망 편 → 안 올림
+        self.assertTrue(yt.quality_ok(s, {"style": "toon"}))
+        self.assertTrue(yt.quality_ok(s, {"engine": "hyperframes"}))
+        self.assertTrue(yt.quality_ok(s, {"quality_ok": True}))
+        self.assertFalse(yt.quality_ok(s, {"style": "toon", "quality_ok": False}))
+        self.assertTrue(yt.quality_ok({"date": "2026-11-22", "kind": "short"}, {}))  # 게이트 전 편
+
+    def test_due_rows_skips(self):
+        now = dt.datetime(2026, 11, 23, 10, tzinfo=yt.KST)
+        q = [{"slug": "a", "date": "2026-11-24", "quality_ok": False}, {"slug": "b", "date": "2026-11-24", "quality_ok": True}]
+        self.assertEqual([r["slug"] for r, _ in yt.due_rows(q, {}, now, 1, 2)], ["b"])

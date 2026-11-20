@@ -6,7 +6,7 @@
 
 1. 기억: 시즌 목표·반복 개그·지난 편 줄거리를 data/toon/season.json 에 쌓고, 대본 작가(claude_jobs.toon)가 매 편
    지난 편을 한 번 받아치게 한다(콜백). 편마다 독립된 이야기는 그대로(처음 보는 사람도 이해) — 시즌은 양념이다.
-2. 시청자 투표: 매 편 엔딩에 '다음엔 뭐가 샐까? A / B' (주제 두 개). 공개 하루 뒤 댓글을 읽어(유튜브 공개 댓글, 읽기만)
+2. 시청자 투표: 매 편 엔딩에 '다음엔 어디로 갈까? A / B' (주제 두 개). 공개 하루 뒤 댓글을 읽어(유튜브 공개 댓글, 읽기만)
    Claude 가 A·B 로 나눠 센다. 실제 댓글이 MIN_VOTES 개 이상일 때만 결과로 쓰고, 이긴 주제는 다음 대본의 주제가 된다
    (첫 컷 자막 '댓글로 고른 ○○ 편!'). 표가 모자라면 결과를 지어내지 않고 그냥 넘어간다.
 3. 터진 편 이어 가기: yt_early 가 '터짐'(평소 2시간 조회의 BREAKOUT 배 이상)으로 적은 편이 있으면 다음 BREAKOUT_EPS 편은
@@ -67,16 +67,16 @@ def plan_season(cj, bible: str, date: str, recent: list[str]) -> dict:
     sys_ = (cj.direction() + "너는 한국 유튜브 쇼츠 만화 '동전이네'의 시즌 기획자다. 바이블을 지킨다.\n" + bible + "\n\n" + cj.POLICY)
     user = ("다음 시즌(이틀에 1편, 10편)을 한 줄로 묶을 설정을 만들어 줘.\n"
             "- title: 시즌 이름(12자 이하, 예 '동전이 겨울 대작전')\n"
-            "- goal: 동전이가 시즌 내내 이루려는 귀여운 목표 하나(예 '꿀꿀이 저금통을 크리스마스까지 꽉 채우기'). 편마다 조금씩 다가가거나 멀어진다.\n"
-            "- running_gag: 매 편 한 번 나오는 반복 개그(대사 없이 화면으로 되는 것, 예 '조카가 몰래 동전 하나를 빼 가다 들킴')\n"
-            "- topics: 이 시즌에 다룰 '새는 돈' 주제 12개(각 8자 이하, 주부 살림, 서로 다르게). 시청자 투표 후보로 쓴다.\n"
+            "- goal: 동전이가 시즌 내내 이루려는 귀여운 목표 하나(예 '크리스마스 전에 혼자서 트리 꾸미기'). 돈·저금통 목표 금지(BK 11/20). 편마다 조금씩 다가가거나 멀어진다.\n"
+            "- running_gag: 매 편 한 번 나오는 반복 개그(대사 없이 화면으로 되는 것, 예 '조카가 몰래 동전이 간식을 꺼내다 눈빛에 들킴')\n"
+            "- topics: 이 시즌에 다룰 살림 주제 12개(각 8자 이하, 주부 살림, 서로 다르게). 시청자 투표 후보로 쓴다.\n"
             "편마다 처음 보는 사람도 이해되는 독립 이야기여야 한다(시즌은 양념).\n최근 편: " + " / ".join(recent[:10]))
     try:
         r = cj.ask("toon", sys_, user, schema=SEASON_SCHEMA, model=cj.SONNET, effort="medium", max_tokens=1500, need=0.05)
     except Exception as e:  # 예산·키 없음 → 기본 시즌
         print(f"시즌 기획 건너뜀: {e}")
-        r = {"title": "동전이 겨울 대작전", "goal": "꿀꿀이 저금통을 연말까지 꽉 채우기",
-             "running_gag": "조카가 몰래 동전 하나를 빼 가다 동전이한테 들킴",
+        r = {"title": "동전이 겨울 대작전", "goal": "크리스마스 전에 혼자서 트리 꾸미기",
+             "running_gag": "조카가 몰래 동전이 간식을 꺼내다 눈빛에 들킴",
              "topics": ["난방비", "전기장판", "온수", "가습기", "배달비", "구독료", "김장", "택배비", "정수기", "세탁기", "건조기", "대기전력"]}
     return {"id": date, "title": r["title"][:20], "goal": r["goal"][:60], "running_gag": r["running_gag"][:60],
             "topics": [t[:VOTE_MAX] for t in r.get("topics", []) if t][:12], "started": date}
@@ -226,12 +226,12 @@ def prepare(cj, bible: str, date: str, recent: list[str], today: dt.date) -> tup
     if win:
         out.append(f"- 시청자가 댓글로 고른 주제: **{win['result']['winner']}** ({win['date']} 편 투표). 이번 편 주제로 쓰고, 1번 컷 자막 첫 줄을 "
                    f"'댓글로 고른 {win['result']['winner']} 편!'으로 시작한다(표 숫자는 쓰지 않는다).")
-    out.append("- 엔딩 투표: vote_a·vote_b 에 다음에 다룰 '새는 돈' 주제 두 개(각 8자 이하, 서로 확실히 다르게, 이번 편 주제와 다르게)를 쓴다. "
-               "시즌 주제 후보: " + ", ".join(free[:8]) + ". 엔딩 화면에 '다음엔 뭐가 샐까? A / B 댓글로!'로 나간다.")
+    out.append("- 엔딩 투표: vote_a·vote_b 에 다음에 다룰 살림 주제 두 개(각 8자 이하, 서로 확실히 다르게, 이번 편 주제와 다르게)를 쓴다. "
+               "시즌 주제 후보: " + ", ".join(free[:8]) + ". 엔딩 화면에 '다음엔 어디로 갈까? A / B 댓글로!'로 나간다.")
     out.append("- summary 에 이번 편 줄거리 한 줄(30자 이하, 다음 편 콜백용)을 쓴다.")
     if br:
         out.append(f"- [터진 편 이어 가기] 「{br.get('title', '')}」 편이 평소의 {br.get('ratio', '?')}배로 터졌다. 이번 편은 그 편의 첫 3초 훅 유형"
-                   f"({br.get('hook_type') or '같은 방식'})과 이야기 틀({br.get('frame') or '같은 틀'})을 다시 쓴다. 장소·새는 돈 모양·제목 말은 새로.")
+                   f"({br.get('hook_type') or '같은 방식'})과 이야기 틀({br.get('frame') or '같은 틀'})을 다시 쓴다. 장소·소동 모양·제목 말은 새로.")
     ctx = {"season": s, "winner": win, "breakout": br, "free_topics": free}
     return "\n".join(out) + "\n\n", ctx
 
