@@ -90,11 +90,47 @@ def winner(res: dict) -> tuple[str, int]:
     return (res["a"], res["pa"]) if res["pa"] >= res["pb"] else (res["b"], res["pb"])
 
 
-def script(q: dict, res: dict | None) -> list[str]:
-    """장면별 대사 (빈 문자열 = 대사 없음). 2026-11-20 1안: 질문 → 3·2·1 → 실제 투표 반전. 구독 한 줄은 공통 엔딩이 맡는다."""
+# 2026-11-20 BK: "사람들이 투표를 잘 안 남겨서 % 결과가 안 나올 것" → D1 확인 결과 질문당 1~3표.
+# 반전은 '몽글이의 선택 + 엉뚱한 이유'(캐릭터 의견, 통계 아님)로 하고, 실제 투표가 20표 넘는 날만 %를 보여 준다.
+WHY_MAX = 20
+BANNED_WHY = ("http", "#", "구독", "좋아요", "광고", "할인", "특가", "%", "퍼센트")
+MONGLE_SYS = """너는 유튜브 쇼츠 '5락실 밸런스게임'의 마스코트 몽글이(동글동글한 새싹 요정, 귀엽고 엉뚱함)다.
+오늘 질문 A/B 중 하나를 고르고, 피식 웃게 되는 엉뚱하지만 공감 가는 이유를 한 줄로 말한다.
+규칙: 이유는 공백 포함 20자 이하 한국어 반말, 숫자·통계·퍼센트 금지(몽글이 개인 의견일 뿐), 특정 사람·브랜드·게임 이름 금지,
+비하·혐오·선정·위험한 행동 금지, 이모지·해시태그 금지. 예) A "이불 밖은 위험하니까", B "브런치는 사진이 반이야"."""
+
+
+def mongle_pick(q: dict) -> dict | None:
+    """Claude API(ANTHROPIC_API_KEY)로 몽글이의 선택 {pick: a|b, why}. 키가 없거나 실패·규칙 위반이면 None."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        from . import claude_jobs as cj
+        r = cj.ask("raksil", MONGLE_SYS, f"A: {q['a']}\nB: {q['b']}", model=cj.SONNET, effort="low", max_tokens=400,
+                   need=0.02, schema=cj.obj({"pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S}))
+    except Exception as e:  # 예산·네트워크·거절 → 반전 없이 '정답은 없다'
+        print(f"몽글이의 선택 실패: {e}", file=sys.stderr)
+        return None
+    return clean_pick(r)
+
+
+def clean_pick(r) -> dict | None:
+    if not isinstance(r, dict) or r.get("pick") not in ("a", "b"):
+        return None
+    why = " ".join(str(r.get("why", "")).split()).strip(" .!")
+    if not why or len(why) > WHY_MAX or any(w in why for w in BANNED_WHY):
+        return None
+    return {"pick": r["pick"], "why": why}
+
+
+def script(q: dict, res: dict | None, pick: dict | None = None) -> list[str]:
+    """장면별 대사 (빈 문자열 = 대사 없음). 2026-11-20 1안: 질문 → 3·2·1 → 반전. 구독 한 줄은 공통 엔딩이 맡는다.
+    반전 우선순위: 실제 투표 20표 이상 > 몽글이의 선택 > 정답은 없다."""
     if res:
         win, pct = winner(res)
         mid = f"어제는 {pct}퍼센트가 {win}! 오늘은 너 어느 쪽?"
+    elif pick:
+        mid = f"몽글이는 {q[pick['pick']]}! {pick['why']}. 너는?"
     else:
         mid = "정답은 없어! 댓글로 에이, 비 남겨 줘."
     return [f"{q['a']}. 대. {q['b']}. 너라면?", "", mid]
@@ -107,12 +143,14 @@ def title_of(q: dict) -> str:
     return t
 
 
-def description_of(q: dict, res: dict | None, ai_voice: bool) -> str:
+def description_of(q: dict, res: dict | None, ai_voice: bool, pick: dict | None = None) -> str:
     lines = [f"오늘의 밸런스게임: {q['a']} vs {q['b']}", "",
              f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}", f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
              "▶ 매일 17시 새 밸런스게임은 구독으로", ""]
     if res:
         lines += [f"어제 결과({res['n']}표): {res['a']} {res['pa']}% / {res['b']} {res['pb']}%", ""]
+    elif pick:
+        lines += [f"몽글이의 선택: {q[pick['pick']]} (\"{pick['why']}\", 몽글이 개인 의견) 너는?", ""]
     if ai_voice:
         lines.append("내레이션: AI 음성")
     lines.append("#밸런스게임 #너라면 #5락실")
@@ -262,17 +300,28 @@ def vs_layer(scale: float):
     return img
 
 
-def twist_card(res: dict | None):
-    """반전 장면 바탕: 실제 투표 결과(20표 이상) 또는 '정답은 없다'."""
+def twist_card(res: dict | None, q: dict | None = None, pick: dict | None = None):
+    """반전 장면 바탕: 실제 투표 결과(20표 이상) > 몽글이의 선택 > '정답은 없다'."""
     from PIL import ImageDraw
     img = background(7)
     header(img)
     dr = ImageDraw.Draw(img)
-    if res:
+    if not res and q and pick:
+        col = PINK if pick["pick"] == "a" else CYAN
+        glow_text(img, (W / 2, 330), ["몽글이의 선택은?"], font(72), 72, YEL, glow=8)
+        x0, y0, x1, y1 = 90, 410, W - 90, 700
+        dr.rounded_rectangle((x0, y0, x1, y1), radius=40, fill=tuple(int(c * 0.22) for c in col) + (255,), outline=col + (255,), width=8)
+        glow_text(img, (x0 + 70, y0 + 60), [pick["pick"].upper()], font(76), 76, col, glow=10)
+        f, ls, size = fit(dr, q[pick["pick"]], x1 - x0 - 100, y1 - y0 - 120, 100)
+        glow_text(img, ((x0 + x1) / 2, (y0 + y1) / 2 + 25), ls, f, size, col, glow=14)
+        f, ls, size = fit(dr, f"\"{pick['why']}\"", W - 160, 190, 80)
+        glow_text(img, (W / 2, 830), ls, f, size, WHITE, glow=8)
+        glow_text(img, (W / 2, 990), ["너는? 댓글로 A, B!"], font(70), 70, CYAN, glow=10)
+    elif res:
         glow_text(img, (W / 2, 330), ["어제 질문"], font(60), 60, MUTED, glow=4)
         f, ls, size = fit(dr, f"{res['a']} vs {res['b']}", W - 160, 170, 70)
         glow_text(img, (W / 2, 450), ls, f, size, WHITE, glow=6)
-    else:
+    if not res and not (q and pick):
         glow_text(img, (W / 2, 420), ["정답은 없다!"], font(120), 120, PINK, glow=18)
         glow_text(img, (W / 2, 640), ["댓글로", "A? B?"], font(110), 110, CYAN, glow=14)
     glow_text(img, (MG_X + 320, MG_FLOOR - 230), ["투표는", "오락실 닷컴"], font(56), 56, YEL, glow=8)
@@ -436,7 +485,8 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         return None
     yq = pick_question(qs, day - dt.timedelta(days=1), for_shorts=True)
     res = result_of(yq, fetch_votes(yq["id"]) if yq else None)
-    lines = script(q, res)
+    pick = None if res else mongle_pick(q)
+    lines = script(q, res, pick)
     clips, voiced = tts(lines)
 
     # 2026-11-20 1안: 14초 → 약 8~9초 + 엔딩 2.6초. 끝까지 보는 비율을 올리려고 CTA 카드를 빼고 반전으로 끝낸다.
@@ -474,7 +524,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
 
     mg = Mongle(day)
     base_q = question_card(q)
-    base_r = twist_card(res)
+    base_r = twist_card(res, q, pick)
     ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                            "-r", str(FPS), "-i", "-", "-i", str(wav), "-c:v", "libx264", "-preset", "medium",
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
@@ -488,7 +538,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
     total += add_ending(mp4, day)
     meta = {"date": day.isoformat(), "qid": q["id"], "file": str(mp4), "title": title_of(q),
-            "description": description_of(q, res, voiced), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
+            "description": description_of(q, res, voiced, pick), "pick": pick, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta

@@ -12,6 +12,7 @@ main 에 바로 반영하는 것은 사용 금액 장부(data/api_usage/)뿐이�
   check    최근 자동 글·대본 정책 검사 (문제 있을 때만 텔레그램)
   polish   남은 크레딧으로 기존 글 손질 PR (회차 끝 1주 동안, 상한까지)
   usage    이번 회차 사용 금액 출력
+  (raksil  5락실 밸런스 쇼츠 '몽글이의 선택' 한 줄: raksil_shorts.mongle_pick 이 매일 1번, 약 0.3센트)
 
 키는 GitHub Secret ANTHROPIC_API_KEY 에서만 읽는다(공개 저장소, 파일에 쓰지 않음).
 """
@@ -40,7 +41,7 @@ OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 CYCLE_DAY = 15          # 크레딧 회차 시작일(이번 회차 12/14 만료 → 15일 시작으로 본다)
 CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
-JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "polish": 95.0}
+JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 1.0, "polish": 95.0}
 POLISH_DAYS = 7         # 회차 끝 며칠 전부터 polish 가 남은 돈을 쓴다
 
 

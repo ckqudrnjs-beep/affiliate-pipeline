@@ -27,6 +27,24 @@ class RaksilShortsTest(unittest.TestCase):
         res = r.result_of(QS[2], {"a": 10, "b": 30})
         self.assertIn("75퍼센트가 겨울", r.script(q, res)[2])
 
+    def test_mongle_pick_rules(self):
+        self.assertEqual(r.clean_pick({"pick": "a", "why": " 이불 밖은 위험하니까. "}), {"pick": "a", "why": "이불 밖은 위험하니까"})
+        self.assertIsNone(r.clean_pick({"pick": "c", "why": "x"}))
+        self.assertIsNone(r.clean_pick({"pick": "a", "why": "가" * 21}))
+        self.assertIsNone(r.clean_pick({"pick": "b", "why": "73%가 골랐으니까"}))  # 통계처럼 보이는 숫자 금지
+        self.assertIsNone(r.clean_pick({"pick": "b", "why": "구독하면 알려줄게"}))
+        self.assertIsNone(r.clean_pick(None))
+        import os
+        old = os.environ.pop("ANTHROPIC_API_KEY", None)
+        try:
+            self.assertIsNone(r.mongle_pick(QS[1]))  # 키 없으면 조용히 None
+        finally:
+            if old is not None:
+                os.environ["ANTHROPIC_API_KEY"] = old
+        line = r.script(QS[1], None, {"pick": "b", "why": "치킨은 진리야"})[2]
+        self.assertEqual(line, "몽글이는 평생 치킨만! 치킨은 진리야. 너는?")
+        self.assertIn("몽글이 개인 의견", r.description_of(QS[1], None, False, {"pick": "b", "why": "치킨은 진리야"}))
+
     def test_result_needs_min_votes(self):
         self.assertIsNone(r.result_of(QS[2], {"a": 5, "b": 3}))
         res = r.result_of(QS[2], {"a": 30, "b": 10})
@@ -82,8 +100,10 @@ class RaksilShortsTest(unittest.TestCase):
         bq, br = r.question_card(q), r.twist_card(res)
         empty = np.asarray(r.background().convert("RGB")).astype(int)
         empty_r = np.asarray(r.background(7).convert("RGB")).astype(int)
-        for t, ref in ((0.3, empty), (1.2, empty), (3.0, empty), (6.0, empty_r)):
-            a = np.asarray(r.balance_frame(t, starts, bq, br, res, mg).convert("RGB")).astype(int)
+        bp = r.twist_card(None, q, {"pick": "a", "why": "라면은 국물이 반이야"})
+        for t, ref, base_r, rr in ((0.3, empty, br, res), (1.2, empty, br, res), (3.0, empty, br, res),
+                                   (6.0, empty_r, br, res), (6.0, empty_r, bp, None)):
+            a = np.asarray(r.balance_frame(t, starts, bq, base_r, rr, mg).convert("RGB")).astype(int)
             diff = np.abs(a - ref).sum(axis=2)
             self.assertLess((diff[1000:1540, 900:] > 60).mean(), 0.002, t)
             self.assertLess((diff[1560:, :] > 60).mean(), 0.002, t)
