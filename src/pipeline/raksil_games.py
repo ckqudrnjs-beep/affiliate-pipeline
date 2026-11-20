@@ -72,7 +72,17 @@ def intro_done(log: dict) -> set[str]:
     return {k.split("-game-", 1)[1].removesuffix("-new") for k in log if "-game-" in k and k.endswith("-new")}
 
 
-def plan(day: dt.date, games: list[dict], log: dict, hold: bool = False) -> tuple[str, str | None, str | None]:
+def rotation_on(path: pathlib.Path = HOLD) -> bool:
+    """월 네온 사격장·목 로테이션. 2026-11-20 1안(BK): 봇 플레이 쇼츠가 89~450회라 새 게임 소개만 남김 → 기본 꺼짐.
+    config/raksil_games.json 에 {"rotation": true} 이면 다시 켠다."""
+    try:
+        return bool(json.loads(path.read_text(encoding="utf-8")).get("rotation"))
+    except (OSError, ValueError):
+        return False
+
+
+def plan(day: dt.date, games: list[dict], log: dict, hold: bool = False,
+         rotation: bool = True) -> tuple[str, str | None, str | None]:
     """그날 20:00 슬롯에 무엇을 올릴지. hold 면 게임 화면 쇼츠는 모두 쉼(밸런스 쇼츠는 그대로)."""
     if hold:
         return ("none", None, None)
@@ -80,6 +90,8 @@ def plan(day: dt.date, games: list[dict], log: dict, hold: bool = False) -> tupl
     for g in games:
         if g["slug"] not in OLD_GAMES and g["slug"] not in done:
             return ("game", g["slug"], "new")
+    if not rotation:
+        return ("none", None, None)
     if day.weekday() == 0:
         return ("range", None, None)
     if day.weekday() == 3:
@@ -100,8 +112,18 @@ SKIP_START = 1.0  # 녹화 앞부분(시작 버튼·메뉴) 건너뜀
 MAX_PLAY = 13.0
 
 
-def hook_of(g: dict, day: dt.date) -> str:
+def hook_of(g: dict, day: dt.date, score: float | None = None) -> str:
+    """2026-11-20 1안: 녹화 기록 점수가 있으면 도전형 후킹("이 기록 1,240점, 넘을 수 있어?")."""
+    if isinstance(score, (int, float)) and score > 0:
+        return f"이 기록 {int(score):,}점, 넘을 수 있어?"
     return HOOKS[(day.toordinal() + sum(map(ord, g["slug"]))) % len(HOOKS)]
+
+
+def rec_score(rec: pathlib.Path) -> float | None:
+    try:
+        return json.loads((rec / "info.json").read_text(encoding="utf-8")).get("score")
+    except (OSError, ValueError):
+        return None
 
 
 def lines(g: dict, kind: str) -> list[str]:
@@ -167,13 +189,13 @@ def game_fit_img(g):
 def band(img, y: int, text: str, size: int, color, h: int | None = None):
     """반투명 띠 위에 큰 글자 (후킹·자막)."""
     from PIL import Image, ImageDraw
-    h = h or int(size * 1.7)
-    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(ov).rectangle((0, y - h // 2, W, y + h // 2), fill=(8, 6, 26, 190))
-    img.alpha_composite(ov)
     dr = ImageDraw.Draw(img)
     f = rs.font(size)
     lines_ = rs.wrap(dr, text, f, W - 80)
+    h = h or int(size * 1.7 + size * 1.2 * (len(lines_) - 1))  # 두 줄 후킹(도전형)도 띠 안에
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(ov).rectangle((0, y - h // 2, W, y + h // 2), fill=(8, 6, 26, 190))
+    img.alpha_composite(ov)
     rs.glow_text(img, (W / 2, y), lines_, f, size, color, glow=6)
 
 
@@ -195,7 +217,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
         print("녹화가 너무 짧음", len(frames))
         return None
     play_d = len(frames) / FPS
-    hook = hook_of(g, day)
+    hook = hook_of(g, day, rec_score(rec))
     say = lines(g, kind)
     clips, voiced = rs.tts(say)
     v0 = (0.4, 0.4 + len(clips[0]) / SR) if voiced else (0.4, 2.6)
@@ -373,7 +395,7 @@ def main(argv: list[str]) -> int:
     today = dt.datetime.now(rs.KST).date()
     if len(argv) > 1 and argv[1] == "plan":
         day = dt.date.fromisoformat(argv[2]) if len(argv) > 2 and argv[2] else today
-        what, slug, kind = plan(day, discover(), load_log(), hold_new())
+        what, slug, kind = plan(day, discover(), load_log(), hold_new(), rotation_on())
         print(" ".join(x for x in (what, slug, kind) if x))
         return 0
     rec, cmd, slug, kind = pathlib.Path(argv[1]), argv[2], argv[3], argv[4]

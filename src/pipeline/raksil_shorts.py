@@ -2,7 +2,8 @@
 
 - 질문: playground/data/questions.json 에서 오늘(KST) 날짜의 첫 질문.
 - 어제 질문의 실제 투표 수(https://5raksil.com/api/vote)가 20표 이상이면 결과 공개 장면을 넣는다(실제 숫자만).
-- 화면: 사이트와 같은 네온 오락실 스타일, 1080x1920, 약 14초, 마지막 장면이 첫 장면으로 자연스럽게 이어짐.
+- 화면: 사이트와 같은 네온 오락실 스타일, 1080x1920. 2026-11-20 1안(BK 선택): 첫 1초 몽글이가 두 선택지 사이에서 고민 →
+  3·2·1 → 어제 실제 투표 반전(없으면 '댓글로 A? B?') 약 8~9초 + 공통 엔딩 2.6초.
 - 목소리: Supertonic(무료) 여자 목소리. 설치가 안 된 환경이면 효과음만 넣는다.
 - 업로드: 5락실 채널에 바로 '공개'. 상품·협찬이 없으므로 유료 프로모션 아님(광고 문구 없음).
   AI 음성을 쓰면 설명란에 "내레이션: AI 음성"과 containsSyntheticMedia=True.
@@ -43,8 +44,24 @@ def load_questions(path: pathlib.Path = QUESTIONS) -> list[dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def pick_question(qs: list[dict], day: dt.date) -> dict | None:
+# 2026-11-20 분석: 생활 공감 질문(월급·음식·카톡·주말)은 약 1,100회, 식상한 고전(부먹찍먹 221)·특정 게임 질문
+# (포트나이트 vs 로블록스 249)은 약했다 → 쇼츠에는 그날 질문 중 생활 공감 질문을 고른다(사이트 질문은 그대로).
+GAME_WORDS = ("게임", "배그", "마크", "마인크래프트", "포트나이트", "로블록스", "롤 ", "리그 오브", "오버워치", "발로란트",
+              "메이플", "피파", "스팀", "닌텐도", "플스", "스위치", "모바일 게임")
+STALE = ("부먹", "찍먹", "민초", "짜장", "짬뽕", "물냉", "비냉", "탕수육")
+SHORT_LEN = 44  # A+B 글자 수가 이보다 길면 첫 1초에 다 못 읽는다
+
+
+def shorts_penalty(q: dict) -> tuple[int, int]:
+    t = f"{q.get('a', '')} {q.get('b', '')}"
+    bad = int(any(w in t for w in GAME_WORDS)) + int(any(w in t for w in STALE))
+    return bad, int(len(q.get("a", "")) + len(q.get("b", "")) > SHORT_LEN)
+
+
+def pick_question(qs: list[dict], day: dt.date, for_shorts: bool = False) -> dict | None:
     today = sorted((q for q in qs if q.get("date") == day.isoformat()), key=lambda q: q["id"])
+    if for_shorts and today:
+        return min(today, key=lambda q: (shorts_penalty(q), q["id"]))
     return today[0] if today else None
 
 
@@ -69,15 +86,18 @@ def result_of(q: dict | None, votes: dict | None) -> dict | None:
     return {"a": q["a"], "b": q["b"], "pa": pa, "pb": 100 - pa, "n": a + b}
 
 
+def winner(res: dict) -> tuple[str, int]:
+    return (res["a"], res["pa"]) if res["pa"] >= res["pb"] else (res["b"], res["pb"])
+
+
 def script(q: dict, res: dict | None) -> list[str]:
-    """장면별 대사 (빈 문자열 = 대사 없음)."""
-    last = "투표는 오락실 닷컴에서! 매일 새 질문 올라오니까 구독해 둬."  # 2026-11-17 BK: 끝에 한 번, 이유와 함께
+    """장면별 대사 (빈 문자열 = 대사 없음). 2026-11-20 1안: 질문 → 3·2·1 → 실제 투표 반전. 구독 한 줄은 공통 엔딩이 맡는다."""
     if res:
-        win, pct = (res["a"], res["pa"]) if res["pa"] >= res["pb"] else (res["b"], res["pb"])
-        mid = f"참고로 어제는 {pct}퍼센트가 {win}을 골랐어."
+        win, pct = winner(res)
+        mid = f"어제는 {pct}퍼센트가 {win}! 오늘은 너 어느 쪽?"
     else:
-        mid = "정답은 없어. 다른 사람들은 뭘 골랐을까?"
-    return [f"{q['a']}. 대. {q['b']}. 너라면?", "", mid, last]
+        mid = "정답은 없어! 댓글로 에이, 비 남겨 줘."
+    return [f"{q['a']}. 대. {q['b']}. 너라면?", "", mid]
 
 
 def title_of(q: dict) -> str:
@@ -218,58 +238,139 @@ def panel(img, box, color, label: str, text: str):
     glow_text(img, ((x0 + x1) / 2, (y0 + y1) / 2 + 30), ls, f, size, color, glow=14)
 
 
+# 2026-11-20 1안: 몽글이가 두 선택지 사이에서 고민(첫 1초) → 3·2·1 → 실제 투표 반전에 놀람.
+# 몽글이·말풍선·글자는 쇼츠 오른쪽 버튼(x≥900)과 아래 제목 자리(y≥1540)를 피한다.
+PANEL_A, PANEL_B = (60, 270, W - 60, 590), (60, 670, W - 60, 990)
+VS_Y = 630
+MG_X, MG_FLOOR, MG_K = 400, 1530, 1.35
+MG_TOP = MG_FLOOR - int(395 * MG_K)  # 몽글이 머리 꼭대기 근처
+
+
 def question_card(q: dict):
     img = background()
     header(img)
-    panel(img, (60, 300, W - 60, 900), PINK, "A", q["a"])
-    panel(img, (60, 1020, W - 60, 1620), CYAN, "B", q["b"])
+    panel(img, PANEL_A, PINK, "A", q["a"])
+    panel(img, PANEL_B, CYAN, "B", q["b"])
     return img
 
 
 def vs_layer(scale: float):
     from PIL import Image
-    s = max(10, int(130 * scale))
+    s = max(10, int(110 * scale))
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    glow_text(img, (W / 2, 960), ["VS"], font(s), s, YEL, glow=16)
+    glow_text(img, (W / 2, VS_Y), ["VS"], font(s), s, YEL, glow=16)
     return img
 
 
-def result_card(res: dict, k: float):
+def twist_card(res: dict | None):
+    """반전 장면 바탕: 실제 투표 결과(20표 이상) 또는 '정답은 없다'."""
     from PIL import ImageDraw
     img = background(7)
     header(img)
-    glow_text(img, (W / 2, 400), ["어제의 결과"], font(90), 90, YEL, glow=14)
     dr = ImageDraw.Draw(img)
-    for i, (txt, pct, col) in enumerate(((res["a"], res["pa"], PINK), (res["b"], res["pb"], CYAN))):
-        y = 620 + i * 430
-        f, ls, size = fit(dr, txt, W - 200, 170, 76)
-        glow_text(img, (W / 2, y), ls, f, size, col, glow=8)
-        bx0, by0, bx1, by1 = 100, y + 120, W - 100, y + 220
-        dr.rounded_rectangle((bx0, by0, bx1, by1), radius=50, outline=col + (255,), width=6)
-        fill = bx0 + 8 + (bx1 - bx0 - 16) * pct / 100 * k
-        if fill > bx0 + 30:
-            dr.rounded_rectangle((bx0 + 8, by0 + 8, fill, by1 - 8), radius=42, fill=col + (255,))
-        glow_text(img, (W / 2, by1 + 70), [f"{round(pct * k)}%"], font(80), 80, WHITE, glow=6)
-    glow_text(img, (W / 2, 1560), [f"실제 투표 {res['n']:,}표"], font(48), 48, MUTED, glow=2)
+    if res:
+        glow_text(img, (W / 2, 330), ["어제 질문"], font(60), 60, MUTED, glow=4)
+        f, ls, size = fit(dr, f"{res['a']} vs {res['b']}", W - 160, 170, 70)
+        glow_text(img, (W / 2, 450), ls, f, size, WHITE, glow=6)
+    else:
+        glow_text(img, (W / 2, 420), ["정답은 없다!"], font(120), 120, PINK, glow=18)
+        glow_text(img, (W / 2, 640), ["댓글로", "A? B?"], font(110), 110, CYAN, glow=14)
+    glow_text(img, (MG_X + 320, MG_FLOOR - 230), ["투표는", "오락실 닷컴"], font(56), 56, YEL, glow=8)
     return img
 
 
-def tease_card(k: float):
-    img = background(9)
-    header(img)
-    glow_text(img, (W / 2, 760), ["정답은 없다!"], font(130), 130, PINK, glow=18)
-    glow_text(img, (W / 2, 1030), ["다른 사람들은", "뭘 골랐을까?"], font(100), 100, CYAN, glow=14)
+def twist_layer(res: dict, k: float):
+    """'73%가' 숫자가 0에서 차오르고, 이긴 쪽 이름이 쾅."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    win, pct = winner(res)
+    col = PINK if win == res["a"] else CYAN
+    glow_text(img, (W / 2, 620), [f"{round(pct * k)}%가"], font(180), 180, YEL, glow=20)
+    if k >= 1:
+        dr = ImageDraw.Draw(img)
+        f, ls, size = fit(dr, win + "!", W - 160, 200, 96)
+        glow_text(img, (W / 2, 810), ls, f, size, col, glow=14)
+        glow_text(img, (W / 2, 940), ["오늘은 너 어느 쪽?"], font(72), 72, WHITE, glow=8)
     return img
 
 
-def cta_card(t: float):
-    img = background(11)
-    header(img)
-    glow_text(img, (W / 2, 640), ["투표하고", "결과 보기"], font(120), 120, WHITE, glow=10)
-    blink = PINK if int(t * 3) % 2 == 0 else YEL
-    glow_text(img, (W / 2, 1000), ["5raksil.com"], font(130), 130, blink, glow=20)
-    glow_text(img, (W / 2, 1260), ["댓글로 A? B?"], font(80), 80, CYAN, glow=12)
-    glow_text(img, (W / 2, 1480), ["구독하면 매일 새 질문"], font(56), 56, YEL, glow=8)
+class Mongle:
+    """몽글이 꼬마 그림 (raksil_meme 아틀라스 + 얼굴). 표정별로 한 번만 그린다."""
+
+    def __init__(self, day: dt.date):
+        from . import raksil_meme as rm
+        self.rm, self.atlas = rm, rm._atlas()
+        self.pal = rm.PALS[day.toordinal() % len(rm.PALS)]
+        self.cache: dict = {}
+
+    def get(self, mood: str, blink: bool = False):
+        key = (mood, blink)
+        if key not in self.cache:
+            self.cache[key] = self.rm.sprite(self.atlas, self.pal, 2, None, mood, MG_K, blink)
+        return self.cache[key]
+
+    def draw(self, img, mood: str, dx: float = 0, dy: float = 0, rot: float = 0, flip: bool = False, blink: bool = False):
+        from PIL import Image, ImageDraw
+        s = self.get(mood, blink)
+        if flip:
+            s = s.transpose(Image.FLIP_LEFT_RIGHT)
+        sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        sw = s.width * 0.34
+        ImageDraw.Draw(sh).ellipse((MG_X + dx - sw, MG_FLOOR - sw * 0.15, MG_X + dx + sw, MG_FLOOR + sw * 0.15), fill=(0, 0, 0, 80))
+        img.alpha_composite(sh)
+        if rot:
+            s = s.rotate(rot, resample=Image.BICUBIC, expand=True)
+        self.rm._paste_clip(img, s, int(MG_X + dx - s.width / 2), int(MG_FLOOR + dy - s.height * 0.94))
+
+
+def sweat(img, t: float):
+    """머리 옆 땀방울 두 개가 주르륵."""
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(img)
+    for i, (x, ph) in enumerate(((MG_X + 205, 0.0), (MG_X - 220, 0.5))):
+        f = (t * 1.4 + ph) % 1.0
+        y = MG_TOP + 130 + 120 * f
+        r = 16 - 4 * i
+        a = int(255 * (1 - f))
+        d.polygon([(x, y - r * 2.2), (x - r, y), (x + r, y)], fill=(120, 200, 255, a))
+        d.ellipse((x - r, y - r, x + r, y + r), fill=(120, 200, 255, a))
+
+
+def think(img, t: float, text: str):
+    """몽글이 오른쪽 위 생각 말풍선 + 물음표 깜빡."""
+    from .raksil_ending import bubble
+    bubble(img, MG_X + 190, MG_TOP + 40, text, min(1.0, t / 0.25))
+    if int(t * 4) % 2 == 0:
+        glow_text(img, (MG_X - 250, MG_TOP + 110), ["?"], font(120), 120, YEL, glow=10)
+    if int(t * 4 + 1) % 2 == 0:
+        glow_text(img, (MG_X - 170, MG_TOP + 40), ["?"], font(90), 90, PINK, glow=8)
+
+
+def balance_frame(t: float, starts: list[float], base_q, base_r, res: dict | None, mg: "Mongle"):
+    sc = max(k for k in range(len(starts)) if starts[k] <= t)
+    lt = t - starts[sc]
+    if sc == 0:  # 첫 1초부터: 두 선택지 + 몽글이가 고개를 좌우로 돌리며 땀 삐질
+        img = base_q.copy()
+        img.alpha_composite(vs_layer(round(0.6 + 0.4 * min(1, lt / 0.3) + 0.05 * math.sin(lt * 6), 2)))
+        look = int(lt / 0.45) % 2 == 1
+        mg.draw(img, "shock" if lt < 0.9 else "neutral", dx=-14 if look else 14, rot=7 if look else -7, flip=look,
+                blink=(lt % 1.6) > 1.5)
+        sweat(img, lt)
+        think(img, lt, "어쩌지...")
+    elif sc == 1:  # 3·2·1: 몽글이 덜덜
+        img = base_q.copy()
+        num = 3 - min(2, int(lt / 0.7))
+        img.alpha_composite(countdown_layer(num, (lt % 0.7) / 0.7))
+        mg.draw(img, "shock", dx=10 * math.sin(lt * 55), rot=3 * math.sin(lt * 41))
+        sweat(img, lt)
+    else:  # 반전: 숫자가 차오르면 몽글이 깜짝 점프
+        img = base_r.copy()
+        k = min(1.0, lt / 0.8) if res else 1.0
+        if res:
+            img.alpha_composite(twist_layer(res, round(k, 2)))
+        hop = abs(math.sin(math.pi * min(1.0, max(0.0, lt - 0.8) / 0.45))) if lt > 0.8 else 0.0
+        mood = ("shock" if res and winner(res)[1] >= 65 else "happy") if lt > 0.8 or not res else "neutral"
+        mg.draw(img, mood, dy=-120 * hop, rot=6 * math.sin(lt * 9))
     return img
 
 
@@ -278,7 +379,7 @@ def countdown_layer(n: int, frac: float):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     dr = ImageDraw.Draw(img)
     r = 120
-    cx, cy = W / 2, 960
+    cx, cy = W / 2, VS_Y
     dr.ellipse((cx - r, cy - r, cx + r, cy + r), fill=BG + (235,), outline=YEL + (255,), width=10)
     dr.arc((cx - r - 16, cy - r - 16, cx + r + 16, cy + r + 16), -90, -90 + 360 * (1 - frac), fill=PINK + (255,), width=14)
     glow_text(img, (cx, cy - 10), [str(n)], font(150), 150, YEL, glow=10)
@@ -327,34 +428,32 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     import numpy as np
     qs = load_questions()
     extra = os.environ.get("RAKSIL_QID", "").strip()  # 추가 1편: 질문 id 지정 (바로 공개, 날짜 기록과 따로)
-    q = next((x for x in qs if x["id"] == extra), None) if extra else pick_question(qs, day)
+    q = next((x for x in qs if x["id"] == extra), None) if extra else pick_question(qs, day, for_shorts=True)
     if q and extra:
         day = dt.date.fromisoformat(q["date"])
     if not q:
         print(f"{day} 질문 없음")
         return None
-    yq = pick_question(qs, day - dt.timedelta(days=1))
+    yq = pick_question(qs, day - dt.timedelta(days=1), for_shorts=True)
     res = result_of(yq, fetch_votes(yq["id"]) if yq else None)
     lines = script(q, res)
     clips, voiced = tts(lines)
 
-    d0 = max(3.0, len(clips[0]) / SR + 0.6)
-    d1 = 3.0  # 3,2,1
-    d2 = max(3.2, len(clips[2]) / SR + 0.6)
-    d3 = max(3.2, len(clips[3]) / SR + 0.5)
-    durs = [d0, d1, d2, d3]
+    # 2026-11-20 1안: 14초 → 약 8~9초 + 엔딩 2.6초. 끝까지 보는 비율을 올리려고 CTA 카드를 빼고 반전으로 끝낸다.
+    d0 = max(2.6, len(clips[0]) / SR + 0.4)
+    d1 = 2.1  # 3,2,1 (0.7초씩)
+    d2 = max(2.8, len(clips[2]) / SR + 0.5)
+    durs = [d0, d1, d2]
     total = sum(durs)
-    starts = [sum(durs[:i]) for i in range(4)]
+    starts = [sum(durs[:i]) for i in range(3)]
 
     audio = np.zeros(int(SR * total) + SR, dtype=np.float32)
-    for c, s in zip(clips, starts):
-        place(audio, c * 0.95, s + 0.15)
-    place(audio, tone(880, 0.12) + 0, 0.0)
+    for c, s0 in zip(clips, starts):
+        place(audio, c * 0.95, s0 + 0.12)
+    place(audio, np.concatenate([tone(988, 0.06), tone(740, 0.12)]), 0.0)  # 땀 삐질 '띠용'
     for i in range(3):
-        place(audio, tone(660, 0.1, 0.2), starts[1] + i)
-    place(audio, np.concatenate([tone(523, 0.08), tone(659, 0.08), tone(784, 0.16)]), starts[2])
-    place(audio, tone(1046, 0.15, 0.15, "sine"), starts[3])
-    # 잔잔한 8비트 베이스 루프
+        place(audio, tone(660, 0.1, 0.2), starts[1] + i * 0.7)
+    place(audio, np.concatenate([tone(523, 0.08), tone(659, 0.08), tone(784, 0.08), tone(1046, 0.2)]), starts[2])
     bass = [110, 110, 147, 131]
     t = 0.0
     while t < total:
@@ -373,43 +472,15 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         w.setframerate(SR)
         w.writeframes((audio * 32767).astype("<i2").tobytes())
 
+    mg = Mongle(day)
     base_q = question_card(q)
-    vs_cache = {}
-    tease = tease_card(1) if not res else None
+    base_r = twist_card(res)
     ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                            "-r", str(FPS), "-i", "-", "-i", str(wav), "-c:v", "libx264", "-preset", "medium",
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
                            "-movflags", "+faststart", str(mp4)], stdin=subprocess.PIPE)
-    n = int(total * FPS)
-    res_cache: dict = {}
-    for i in range(n):
-        t = i / FPS
-        sc = max(k for k in range(4) if starts[k] <= t)
-        lt = t - starts[sc]
-        if sc == 0:
-            img = base_q.copy()
-            s = 0.6 + 0.4 * min(1, lt / 0.4) + 0.05 * math.sin(lt * 6)
-            key = round(s, 2)
-            vs_cache.setdefault(key, vs_layer(key))
-            img.alpha_composite(vs_cache[key])
-        elif sc == 1:
-            img = base_q.copy()
-            num = 3 - int(lt)
-            key = (num, round(lt % 1, 1))
-            vs_cache.setdefault(key, countdown_layer(num, lt % 1))
-            img.alpha_composite(vs_cache[key])
-        elif sc == 2:
-            if res:
-                k = round(min(1, lt / 1.2) ** 0.5, 2)
-                res_cache.setdefault(k, result_card(res, k))
-                img = res_cache[k]
-            else:
-                img = tease
-        else:
-            key = int(lt * 3) % 2
-            res_cache.setdefault(("cta", key), cta_card(key / 3))
-            img = res_cache[("cta", key)]
-        ff.stdin.write(img.convert("RGB").tobytes())
+    for i in range(int(total * FPS)):
+        ff.stdin.write(balance_frame(i / FPS, starts, base_q, base_r, res, mg).convert("RGB").tobytes())
     ff.stdin.close()
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")

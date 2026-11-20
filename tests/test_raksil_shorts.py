@@ -13,6 +13,20 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertEqual(r.pick_question(QS, dt.date(2026, 11, 13))["id"], "20261113-1")
         self.assertIsNone(r.pick_question(QS, dt.date(2026, 1, 1)))
 
+    def test_shorts_pick_skips_game_and_stale(self):
+        qs = [{"id": "20261203-1", "date": "2026-12-03", "a": "퇴근 후 배그 스쿼드", "b": "퇴근 후 혼자 마크 농장"},
+              {"id": "20261203-2", "date": "2026-12-03", "a": "탕수육 부먹", "b": "탕수육 찍먹"},
+              {"id": "20261203-3", "date": "2026-12-03", "a": "택배는 바로 뜯기", "b": "택배는 모아서 주말에"}]
+        self.assertEqual(r.pick_question(qs, dt.date(2026, 12, 3), for_shorts=True)["id"], "20261203-3")
+        self.assertEqual(r.pick_question(qs, dt.date(2026, 12, 3))["id"], "20261203-1")  # 사이트는 그대로
+        self.assertEqual(r.pick_question(qs[:1], dt.date(2026, 12, 3), for_shorts=True)["id"], "20261203-1")  # 하나뿐이면 그거
+
+    def test_script_twist_no_cta_card(self):
+        q = QS[1]
+        self.assertEqual(len(r.script(q, None)), 3)
+        res = r.result_of(QS[2], {"a": 10, "b": 30})
+        self.assertIn("75퍼센트가 겨울", r.script(q, res)[2])
+
     def test_result_needs_min_votes(self):
         self.assertIsNone(r.result_of(QS[2], {"a": 5, "b": 3}))
         res = r.result_of(QS[2], {"a": 30, "b": 10})
@@ -57,6 +71,22 @@ class RaksilShortsTest(unittest.TestCase):
             self.assertEqual(r.upload_meta({"date": "2026-11-13", "key": "20261113-1", "qid": "20261113-1", "title": "t"}), 0)
         finally:
             r.LOG = old
+
+    def test_balance_frames_keep_shorts_ui_free(self):
+        """오른쪽 버튼 자리(x≥900, y 1000~1540)와 아래 제목 자리(y≥1560 위 격자 제외)에 몽글이·글자가 없다."""
+        import numpy as np
+        q = QS[1]
+        res = r.result_of(QS[2], {"a": 10, "b": 30})
+        starts = [0.0, 2.6, 4.7]
+        mg = r.Mongle(dt.date(2026, 11, 21))
+        bq, br = r.question_card(q), r.twist_card(res)
+        empty = np.asarray(r.background().convert("RGB")).astype(int)
+        empty_r = np.asarray(r.background(7).convert("RGB")).astype(int)
+        for t, ref in ((0.3, empty), (1.2, empty), (3.0, empty), (6.0, empty_r)):
+            a = np.asarray(r.balance_frame(t, starts, bq, br, res, mg).convert("RGB")).astype(int)
+            diff = np.abs(a - ref).sum(axis=2)
+            self.assertLess((diff[1000:1540, 900:] > 60).mean(), 0.002, t)
+            self.assertLess((diff[1560:, :] > 60).mean(), 0.002, t)
 
 
 if __name__ == "__main__":
