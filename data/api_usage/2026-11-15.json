@@ -106,5 +106,14 @@
   "out": 1556,
   "cache": 0,
   "usd": 0.0262
+ },
+ {
+  "date": "2026-11-20",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 563,
+  "out": 30,
+  "cache": 0,
+  "usd": 0.0014
  }
 ]
