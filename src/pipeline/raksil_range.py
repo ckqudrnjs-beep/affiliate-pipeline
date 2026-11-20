@@ -185,6 +185,8 @@ def render(rec: pathlib.Path, day: dt.date, out_dir: pathlib.Path = rs.OUT) -> d
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
+    from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
+    total += add_ending(mp4, day)
     score = score_at(ev, t0 + play_d)
     meta = {"date": day.isoformat(), "qid": f"range-{day.isoformat()}", "key": f"{day.isoformat()}-range",
             "file": str(mp4), "title": title_of(stage), "description": description_of(stage, score, len(hs), voiced),
