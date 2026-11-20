@@ -119,3 +119,4 @@
 - 2026-11-10: 인스타 하루 1개 자동 게시(공식 Graph API, 생활 팁 릴스·카드뉴스, 게시마다 승인 없음, 비용 0원). 제휴 초안의 인스타 발행은 끔. [INSTAGRAM_AUTO.md](INSTAGRAM_AUTO.md)
 - 2026-11-17: don3chon 난방비 계산기(/calc/heating) 추가. 이것을 끝으로 애드센스 승인 전까지 새 분야·새 페이지 종류 확장은 멈춘다(BK). 승인 뒤 분야 확대는 [CATEGORY_EXPANSION.md](CATEGORY_EXPANSION.md).
 - 2026-11-19: Claude API 크레딧 매달 100달러(Max 혜택, 이월 없음, 이번 회차 12/14 만료) 활용 계획. 12/14 전: 1) 쇼츠 대본 은행 30편 2) 기존 글 품질 손질 PR 3) 올리기 전 정책 검사관. 약 $30~40. 키는 BK가 GitHub Secrets에 직접. [CLAUDE_API_CREDIT.md](CLAUDE_API_CREDIT.md)
+- 2026-11-20: 모든 자동 작업의 기준 파일 [DIRECTION.md](DIRECTION.md) 신설(채널별 지금 형식·꺼진 것·주인 한 명 원칙). 결정이 바뀌면 이 파일부터 고친다. 다음: 매일 정합성 점검(텔레그램 한 줄) → 주간 성과판.
