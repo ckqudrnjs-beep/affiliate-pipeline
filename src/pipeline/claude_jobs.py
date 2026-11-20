@@ -368,6 +368,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     bible = (ROOT / "config/toon_bible.md").read_text(encoding="utf-8")
     special = dt.date.fromisoformat(date).weekday() >= 5  # 주말 공개 편 = 실사 삼촌 특별편 (BK 11/20, 바이블 주 1회)
     kind = ("이번 편은 '실사판 특별편'이다. 바이블의 실사판 규칙대로 실사 삼촌이 직접 나오고 프롬프트는 Photorealistic. 으로 쓴다.\n"
+            "단 1번 컷(첫 3초)은 반드시 동전이 만화 장면으로 시작하고, 실사 삼촌 얼굴은 2번 컷부터 나온다. 썸네일·첫 화면에 실사 얼굴 금지 "
+            "(BK 11/20: AI 실사 얼굴로 시작한 편은 모두 20회 아래, 만화·카드로 시작한 편은 300~1,200회).\n"
             if special else "이번 편은 만화판이다. 실사 문장을 쓰지 않는다.\n")
     heart = heart_turn(date)
     copy_rule = BAND_RULE + (HEART_RULE if heart else "heart 는 빈 문자열로 둔다(이번 편은 재미 위주).\n")
