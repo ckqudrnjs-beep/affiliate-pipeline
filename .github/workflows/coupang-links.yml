@@ -1,0 +1,48 @@
+name: coupang-links
+
+# 레시피 재료 쿠팡 링크 자동 채우기 (2026-11-20, 쿠팡 파트너스 최종 승인 뒤).
+# BK 손 링크(config/recipe_pantry.csv)가 빈 재료만 쿠팡 Open API 상품 검색으로 파트너스 링크를 찾아
+# data/coupang/pantry_links.json 에 저장 → main 에 커밋되면 사이트가 다시 빌드된다. 한 번에 최대 8번 호출, 8초 간격.
+# API 가 실패하면 저장된 링크를 그대로 둔다. 키는 출력하지 않는다. 코드: src/pipeline/coupang_links.py
+on:
+  schedule:
+    - cron: "40 19 * * 3"   # 목 04:40 KST (05:00 글 작업 전)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "시험 실행 (저장·커밋 안 함)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 재료 링크 찾기
+        env:
+          COUPANG_ACCESS_KEY: ${{ secrets.COUPANG_ACCESS_KEY }}
+          COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
+          COUPANG_SUB_ID: don3chon
+        run: |
+          PYTHONPATH=src python -m pipeline.coupang_links ${{ inputs.dry_run && '--dry-run' || '' }} | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: 저장
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "coupang-links-bot"
+          git config user.email "coupang-links-bot@users.noreply.github.com"
+          git add data/coupang/pantry_links.json 2>/dev/null || true
+          git commit -m "레시피 재료 쿠팡 링크 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase -q origin main
+          git push origin HEAD:main
