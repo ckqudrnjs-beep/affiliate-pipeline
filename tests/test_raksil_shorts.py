@@ -224,5 +224,80 @@ class RaksilShortsTest(unittest.TestCase):
             self.assertLess((diff[1560:, :] > 60).mean(), 0.002, (fn.__name__, t))
 
 
+    def test_gate_total(self):
+        """품질 게이트: 결 넷 중 최고 + 중독성 + 문구 + 구도, 32/40 이상이고 한 칸도 6 미만이 없어야 통과."""
+        good = {"fresh": 9, "insight": 3, "afterglow": 2, "joy": 4, "addictive": 8, "copy": 8, "layout": 8}
+        self.assertEqual(r.gate_total(good), (33, True))
+        self.assertFalse(r.gate_total({**good, "copy": 5})[1])  # 문구 한 칸이 약하면 탈락
+        self.assertFalse(r.gate_total({**good, "fresh": 7, "addictive": 7})[1])  # 30점
+        self.assertEqual(r.gate_total({})[0], 0)
+
+    @NEED_RENDER
+    def test_layout_ok(self):
+        short = {"a": "평생 라면만", "b": "평생 치킨만"}
+        long_q = {"a": "어디서든 줄 서지 않고 바로 들어가는 능력 그리고 하나 더", "b": "가는 길 신호등이 늘 초록불로 바뀌는 능력 그리고 하나 더"}
+        self.assertTrue(r.layout_ok("split", [short]))
+        self.assertFalse(r.layout_ok("split", [long_q]))
+        self.assertFalse(r.layout_ok("quick", [short, short, {"a": long_q["a"] * 2, "b": "x"}]))  # 3연속은 세 질문 모두
+
+    def _gate_env(self, scores):
+        import json, os, pathlib, tempfile
+        d = pathlib.Path(tempfile.mkdtemp())
+        saved = (r.LOG, r.mongle_plan, r.judge, r.fetch_votes, os.environ.pop("RAKSIL_QID", None))
+        r.LOG = d / "log.json"
+        r.LOG.write_text("{}")
+        calls = {"plan": [], "judge": 0}
+
+        def plan(q, feedback=""):
+            calls["plan"].append((q["id"], feedback))
+            return {"pick": "a", "why": "그냥 끌려서"}, {"top": "친구랑 꼭 갈리는", "accent": "밸런스게임"}
+
+        def judge(kind, brief):
+            calls["judge"] += 1
+            return scores(calls["judge"])
+        r.mongle_plan, r.judge, r.fetch_votes = plan, judge, lambda qid: None
+        return d, saved, calls
+
+    def _gate_restore(self, saved):
+        r.LOG, r.mongle_plan, r.judge, r.fetch_votes = saved[:4]
+
+    @NEED_RENDER
+    def test_gate_skips_day_after_three_low_scores(self):
+        low = {"fresh": 5, "insight": 4, "afterglow": 4, "joy": 5, "addictive": 5, "copy": 5, "layout": 7, "note": "띠가 막연함"}
+        d, saved, calls = self._gate_env(lambda n: low)
+        try:
+            meta = r.render(dt.date(2026, 12, 5), d)
+            self.assertIn("통과선", meta["skip"])
+            self.assertEqual(calls["judge"], r.GATE_TRIES)  # 채점은 최대 3번
+            self.assertEqual(calls["plan"][1][1], "띠가 막연함")  # 지적을 넣어 다시 짜기
+            self.assertFalse(list(d.glob("*.mp4")))  # 영상은 만들지 않음
+            import os
+            os.environ.pop("RAKSIL_YT_ENABLED", None)
+            self.assertEqual(r.upload_meta(meta), 0)
+            import json
+            log = json.loads(r.LOG.read_text())
+            self.assertTrue(log["2026-12-05"]["skipped"])
+            self.assertEqual(r.recent_formats(3, r.LOG), [])  # 쉰 날은 형식 기록에서 빠짐
+            self.assertEqual(r.main(["x", "upload", "2026-12-05"]), 0)  # 예비 실행은 다시 안 함
+            self.assertEqual(calls["judge"], r.GATE_TRIES)
+        finally:
+            self._gate_restore(saved)
+
+    @NEED_RENDER
+    def test_gate_tries_next_question_when_question_is_weak(self):
+        ok = {"fresh": 9, "insight": 5, "afterglow": 5, "joy": 6, "addictive": 8, "copy": 8, "layout": 8, "note": ""}
+        weak_q = {**ok, "fresh": 4, "joy": 4, "copy": 9, "layout": 9, "note": "질문이 뻔함"}
+        d, saved, calls = self._gate_env(lambda n: weak_q if n == 1 else ok)
+        try:
+            import unittest.mock as um
+            with um.patch.object(r, "tts", side_effect=RuntimeError("stop")):  # 기획까지만 보고 렌더는 멈춤
+                with self.assertRaises(RuntimeError):
+                    r.render(dt.date(2026, 12, 5), d)
+            self.assertEqual(calls["judge"], 2)
+            self.assertNotEqual(calls["plan"][0][0], calls["plan"][1][0])  # 문구는 괜찮고 질문이 약함 → 다른 질문
+        finally:
+            self._gate_restore(saved)
+
+
 if __name__ == "__main__":
     unittest.main()

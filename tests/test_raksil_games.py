@@ -100,5 +100,27 @@ class T(unittest.TestCase):
         self.assertEqual(rg.sample_times(60), [])
 
 
+    def test_quality_gate_hooks(self):
+        """품질 게이트: 미달이면 다른 후킹으로 다시, 3번 다 미달이면 쉬는 이유를 돌려준다. 채점 불가면 그대로 진행."""
+        from pipeline import raksil_games as rg, raksil_shorts as rs
+        g = {"slug": "x", "name": "별빛 요격대", "short": "별을 쏘는 게임"}
+        good = {"fresh": 9, "insight": 3, "afterglow": 3, "joy": 8, "addictive": 8, "copy": 8, "layout": 8, "note": ""}
+        low = {**good, "copy": 4, "note": "후킹이 막연함"}
+        old = rs.judge
+        try:
+            seen = []
+            rs.judge = lambda kind, brief: (seen.append(brief), good if len(seen) == 2 else low)[1]
+            hook, why = rg.gate(g, "new", dt.date(2026, 11, 21), "1,240점 넘을 수 있어?", ["a", "b"])
+            self.assertEqual(why, "")
+            self.assertNotEqual(hook, "1,240점 넘을 수 있어?")
+            rs.judge = lambda kind, brief: low
+            hook, why = rg.gate(g, "new", dt.date(2026, 11, 21), "1,240점 넘을 수 있어?", ["a", "b"])
+            self.assertIn("통과선", why)
+            rs.judge = lambda kind, brief: None
+            self.assertEqual(rg.gate(g, "new", dt.date(2026, 11, 21), "h", ["a"]), ("h", ""))
+        finally:
+            rs.judge = old
+
+
 if __name__ == "__main__":
     unittest.main()

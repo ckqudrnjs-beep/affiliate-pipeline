@@ -158,7 +158,7 @@ def mongle_memory(n: int = 5, log: pathlib.Path | None = None) -> str:
             + "\n".join(rows) + "\n\n")
 
 
-def mongle_plan(q: dict) -> tuple[dict | None, dict | None]:
+def mongle_plan(q: dict, feedback: str = "") -> tuple[dict | None, dict | None]:
     """Claude API 한 번으로 (몽글이의 선택, 제목 띠). 키가 없거나 실패면 (None, None) → 띠는 문구 은행에서."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         return None, None
@@ -171,6 +171,8 @@ def mongle_plan(q: dict) -> tuple[dict | None, dict | None]:
         if recent:  # 반복 양산 막기: 직전 3편 띠와 같은 말·같은 틀 금지 (BK 11/20)
             rules += "직전 3편 제목 띠(같은 말·같은 문장 틀 금지, 완전히 다른 각도로): " + " / ".join(recent) + "\n\n"
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
+        if feedback:  # 품질 게이트에서 떨어진 이유 → 다시 짜기 (BK 11/20 '안 하느니 못해')
+            rules += "[편집장 지적 — 이번엔 이것을 고쳐서]\n" + feedback + "\n\n"
         r = cj.ask("raksil", MONGLE_SYS + BAND_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
                    effort="low", max_tokens=700, need=0.03,
                    schema=cj.obj({"pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "bands": bands}))
@@ -746,6 +748,8 @@ def recent_formats(n: int = 3, log: pathlib.Path | None = None) -> list[str]:
         v = up[k]
         if "-game-" in k or "meme" in k or not isinstance(v, dict):
             continue
+        if v.get("format") == "skip":
+            continue
         out.append(v.get("format", "classic"))
         if len(out) >= n:
             break
@@ -1161,6 +1165,85 @@ def fmt_sfx(fmt: str, starts: list[float], step: float) -> list[tuple]:
     return out
 
 
+# ---------- 품질 게이트 (BK 11/20 밤) ----------
+# "뻔한 것이 없는 것, 아니면 인사이트를 주는 것, 사람들의 여운에 남는 것, 어쩔 때는 한없이 즐거운 것", "그리고 중독성",
+# "품질이 떨어지는 문구 그리고 영상과 구도는 안하느니 못해" → 렌더 전에 편집장 채점, 통과선 아래면 다시 짜고, 그래도 아래면
+# 그날은 올리지 않고 텔레그램으로 알린다. 결(뻔하지 않음·인사이트·여운·즐거움)은 넷 중 가장 강한 하나만 보면 된다.
+GATE_FLOOR, GATE_MIN, GATE_TRIES = 32, 6, 3   # 4칸 × 10점 중 32점(평균 8), 한 칸이라도 6 미만이면 탈락, Claude 채점 최대 3번
+MIN_TEXT = 56                                  # 선택지 글자가 이보다 작아지면 그 형식에는 질문이 너무 길다(구도 탈락)
+GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 10초짜리 밸런스게임 쇼츠(마스코트 몽글이) 한 편의 기획을 냉정하게 1~10점 채점한다.
+채널 기준(BK): 품질이 떨어지는 문구·영상·구도는 안 하느니 못하다. 한 편은 아래 결 중 적어도 하나가 강해야 하고, 중독성이 있어야 한다.
+- fresh(뻔하지 않음): 흔한 밸런스 질문(부먹찍먹·민초 류)·뻔한 반응이 아니고, 이 형식으로 보니 새롭다.
+- insight(인사이트): 고르는 순간 '나 이런 사람이구나' 하고 알게 되는 포인트가 있다.
+- afterglow(여운): 다 보고 나서 친구·가족에게 물어보고 싶은 잔상이 남는다.
+- joy(한없이 즐거움): 몽글이 반응·이유가 피식이 아니라 진짜 웃기다.
+- addictive(중독성): 댓글을 달고 싶고, 다음 편·다시 보기를 부르는 장치(시리즈·반복 개그·내일 발표·루프)가 산다.
+- copy(문구): 제목 띠 두 줄·몽글이 대사가 가볍지 않고 자연스러운 한국어. 낚시·가짜 통계·말장난 남발·막연한 말이면 3점 이하.
+- layout(구도): 이 형식의 화면에 질문 길이·내용이 어울리고 첫 1초에 다 읽힌다.
+note 에는 가장 약한 점을 고치는 구체적인 지시 한두 문장(띠·이유를 어떻게 바꿀지)."""
+GATE_SCHEMA_PROPS = ("fresh", "insight", "afterglow", "joy", "addictive", "copy", "layout")
+
+
+def gate_total(sc: dict) -> tuple[int, bool]:
+    """(점수, 통과). 점수 = 결 넷 중 최고 + 중독성 + 문구 + 구도 (40점 만점)."""
+    def v(k):
+        x = sc.get(k, 0)
+        return int(x) if isinstance(x, (int, float)) else 0
+    mood = max(v(k) for k in ("fresh", "insight", "afterglow", "joy"))
+    parts = [mood, v("addictive"), v("copy"), v("layout")]
+    return sum(parts), sum(parts) >= GATE_FLOOR and min(parts) >= GATE_MIN
+
+
+def judge(kind: str, brief: str) -> dict | None:
+    """편집장 채점. 키가 없거나 실패면 None(→ 코드 검사만으로 진행)."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        from . import claude_jobs as cj
+        props = {k: cj.I for k in GATE_SCHEMA_PROPS}
+        props["note"] = cj.S
+        r = cj.ask("raksil", GATE_SYS, f"[{kind}]\n{brief}", model=cj.SONNET, effort="low", max_tokens=600, need=0.02,
+                   schema=cj.obj(props))
+    except Exception as e:
+        print(f"품질 채점 실패(코드 검사만): {e}", file=sys.stderr)
+        return None
+    return r if isinstance(r, dict) else None
+
+
+def text_size(text: str, w: int, h: int, start: int) -> int:
+    """그 칸에 들어갈 때의 글자 크기 (fit 과 같은 계산)."""
+    from PIL import Image, ImageDraw
+    return fit(ImageDraw.Draw(Image.new("RGB", (8, 8))), no_middot(text), w, h, start)[2]
+
+
+def layout_ok(fmt: str, qs3: list[dict]) -> bool:
+    """구도 검사: 그 형식의 칸에서 선택지 글자가 MIN_TEXT 이상으로 들어가는지."""
+    boxes = {"classic": (726, 220, 110), "split": (420, 240, 92), "result": (420, 315, 88), "quick": (420, 320, 86),
+             "versus": (620, 170, 84)}
+    w, h, st = boxes[fmt]
+    for q in (qs3 if fmt == "quick" else qs3[:1]):
+        for side in ("a", "b"):
+            if text_size(q[side], w, h, st) < MIN_TEXT:
+                return False
+    return True
+
+
+def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: list[str], qs3: list[dict] | None = None) -> str:
+    desc = {"split": "화면 좌우 분할, 몽글이가 양쪽 기웃 → 한쪽으로 뛰어가 이유 한 줄 → '너는 어느 쪽?'",
+            "quick": "그날 질문 3개를 2초씩 + 줄어드는 시간 막대 → '몇 개 A야? 댓글로 AAB 처럼'",
+            "versus": "몽글이가 먼저 골라 뒤집어 둔 카드 → 3·2·1 → 카드 뒤집기(이유 한 줄) → '같으면 댓글에 찌찌뽕'",
+            "result": "전광판에 어제 질문 결과(실제 20표 이상만 %, 아니면 몽글이 선택) → 오늘 질문 → '결과는 내일 발표'",
+            "classic": "위아래 A/B 칸 + 몽글이 고민 → 3·2·1 → 반전(몽글이 선택·이유) → 'B를 고른 나:' 반응 컷"}[fmt]
+    out = [f"형식: {FORMAT_NAMES[fmt]} — {desc}",
+           f"제목 띠: 흰 줄 '{(band or {}).get('top', '')}' / 노란 줄 '{(band or {}).get('accent', '')}'"]
+    for i, x in enumerate(qs3 if fmt == "quick" and qs3 else [q]):
+        out.append(f"질문{i + 1 if fmt == 'quick' else ''}: A '{x['a']}' vs B '{x['b']}'")
+    if pick:
+        out.append(f"몽글이의 선택: {pick['pick'].upper()} — 이유 '{pick['why']}'")
+    out.append("대사: " + " / ".join(x for x in lines if x))
+    return "\n".join(out)
+
+
 # ---------- 만들기 ----------
 def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     import numpy as np
@@ -1177,18 +1260,57 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     res = result_of(yq, merge_votes(fetch_votes(yq["id"]) if yq else None, comment_votes(yday, yq)))
     global _THEME
     _THEME = theme_for(day)
-    pick, band = mongle_plan(q)
-    pick = None if res else pick
-    band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
-    # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건 안 되면 다음, 직전 3편 형식은 건너뜀
-    today3 = sorted((x for x in qs if x.get("date") == day.isoformat()), key=lambda x: (x["id"] != q["id"], shorts_penalty(x), x["id"]))[:3]
     prev = yesterday_entry(yday)
     prev = prev if prev and isinstance(prev.get("pick"), dict) and prev["pick"].get("pick") in ("a", "b") and yq else None
-    fmt = choose_format(day, {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
-                              "result": bool(yq and (res or prev))}, recent_formats())
-    if fmt in ("quick", "result"):
-        pick = None  # 화면에 몽글이 선택이 안 나오는 형식 → 기억에도 안 남김
-    lines = fmt_script(fmt, q, res, pick, prev)
+    day_qs = sorted((x for x in qs if x.get("date") == day.isoformat()), key=lambda x: (shorts_penalty(x), x["id"]))
+    # 품질 게이트 (BK 11/20 밤 "안 하느니 못해"): 그날 질문을 차례로 기획 → 채점, 문구가 약하면 지적을 넣어 다시 짜기.
+    # 채점 최대 GATE_TRIES 번, 다 떨어지면 그날은 쉰다. 키가 없거나 채점이 안 되면 구도(코드) 검사만.
+    tries, feedback, best, plan = 0, "", None, None
+    for qq in ([q] if extra else [q] + [x for x in day_qs if x["id"] != q["id"]]):
+        today3 = [qq] + [x for x in day_qs if x["id"] != qq["id"]][:2]
+        for _ in range(2):
+            pick, band = mongle_plan(qq, feedback)
+            pick = None if res else pick
+            band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
+            # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건(+구도) 안 되면 다음, 직전 3편 형식은 건너뜀
+            ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
+                  "result": bool(yq and (res or prev))}
+            ok = {f: v and layout_ok(f, today3 if f == "quick" else [qq]) for f, v in ok.items()}
+            if not any(ok.values()):
+                break  # 이 질문은 어느 형식에도 글자가 안 들어감 → 다음 질문
+            fmt = choose_format(day, ok, recent_formats())
+            if fmt in ("quick", "result"):
+                pick = None  # 화면에 몽글이 선택이 안 나오는 형식 → 기억에도 안 남김
+            lines = fmt_script(fmt, qq, res, pick, prev)
+            cand = (qq, today3, pick, band, fmt, lines)
+            sc = judge("5락실 밸런스 쇼츠", brief_of(fmt, qq, band, pick, lines, today3))
+            if sc is None:  # 채점 불가 → 구도 검사 통과한 것으로 진행
+                plan = cand
+                break
+            tries += 1
+            total, passed = gate_total(sc)
+            print(f"품질 채점 {tries}: {total}/40 {'통과' if passed else '미달'} — {sc.get('note', '')}")
+            if not best or total > best[0]:
+                best = (total, sc, cand)
+            if passed:
+                plan = cand + (sc,)
+                break
+            feedback = str(sc.get("note", ""))[:300]
+            if tries >= GATE_TRIES or min(sc.get("copy", 0), sc.get("layout", 0)) >= GATE_MIN + 2:
+                break  # 문구는 괜찮은데 질문·결이 약하면 다시 짜도 그대로 → 다음 질문
+        if plan or tries >= GATE_TRIES:
+            break
+        feedback = ""
+    if not plan:
+        why = (f"최고 {best[0]}/40점 < 통과선 {GATE_FLOOR} — {best[1].get('note', '')}" if best
+               else "어느 질문도 형식 칸에 글자가 들어가지 않음(구도)")
+        stem_key = q["id"] if extra else day.isoformat()
+        meta = {"date": day.isoformat(), "qid": q["id"], "key": stem_key, "skip": why,
+                "scores": best[1] if best else None, "title": "", "file": ""}
+        print(f"품질 게이트 미통과 → 오늘 밸런스 쇼츠 쉼: {why}")
+        return meta
+    q, today3, pick, band, fmt, lines = plan[:6]
+    gate = plan[6] if len(plan) > 6 else None
     caps = {"classic": [VOICE_CAP[0], 0, VOICE_CAP[1]], "split": [VOICE_CAP[0], 0, VOICE_CAP[1], 0],
             "versus": [2.4, 0, VOICE_CAP[1], 0], "result": [2.6, 0, VOICE_CAP[0], 0], "quick": [1.6, 0, 0, 0, 0]}[fmt]
     clips, voiced = tts(lines, caps=caps, speed=1.15)
@@ -1258,7 +1380,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     total += add_ending(mp4, day)
     bgm.mix(mp4, tr)
     meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band, fmt), "band": band,
-            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
+            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "gate": gate, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
@@ -1293,6 +1415,19 @@ def upload_meta(meta: dict) -> int:
     if key in log or any(v.get("qid") == meta["qid"] for v in log.values()):
         summary(f"{key} 이미 올림")
         return 0
+    if meta.get("skip"):  # 품질 게이트 미통과 → 그날은 쉬고 BK 에게 알림, 예비 실행이 또 만들지 않게 기록
+        msg = f"⏸ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key} 는 품질 통과선 아래라 쉬었어요 (BK 11/20 '안 하느니 못해').\n{meta['skip']}"
+        summary(msg)
+        try:
+            from .claude_jobs import notify
+            notify(msg)
+        except Exception as e:
+            print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
+        if meta.get("kind") != "게임":  # 게임은 기록하지 않음 → 다음 차례에 새 문구로 다시 시도
+            log[key] = {"skipped": True, "qid": meta["qid"], "format": "skip", "reason": meta["skip"][:300]}
+            LOG.parent.mkdir(parents=True, exist_ok=True)
+            LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+        return 0
     if os.environ.get("RAKSIL_YT_ENABLED", "").lower() != "true":
         summary(f"dry-run (RAKSIL_YT_ENABLED 꺼짐): {meta['title']}")
         return 0
@@ -1317,6 +1452,13 @@ def upload_meta(meta: dict) -> int:
 def main(argv: list[str]) -> int:
     cmd = argv[1] if len(argv) > 1 else "render"
     day = dt.date.fromisoformat(argv[2]) if len(argv) > 2 else dt.datetime.now(KST).date()
+    if cmd == "upload" and not os.environ.get("RAKSIL_QID", "").strip():
+        try:  # 16:47 예비 실행: 이미 올렸거나 품질 게이트로 쉰 날이면 다시 기획·채점하지 않는다
+            if day.isoformat() in json.loads(LOG.read_text(encoding="utf-8")):
+                print(f"{day} 이미 처리됨")
+                return 0
+        except (OSError, ValueError):
+            pass
     meta = render(day)
     if not meta:
         return 0
