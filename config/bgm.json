@@ -1,6 +1,17 @@
 {
- "_note": "BK가 Suno로 만든 BGM (2026-11-20). bpm·bar0(첫 마디 시작 초)·starts(마디에 맞춘 시작 후보)·lufs 는 librosa 분석값. 곡 추가 = media/bgm/raksil/<이름>.mp3 + 여기 한 줄 + docs/BGM.md. 라이선스: docs/BGM.md",
+ "_note": "BK가 Suno로 만든 BGM (2026-11-20). bpm·bar0(첫 마디 시작 초)·starts(마디에 맞춘 시작 후보)·lufs 는 librosa 분석값. 곡 추가 = media/bgm/<uncle|raksil>/<이름>.mp3 + 여기 한 줄 + docs/BGM.md. 라이선스: docs/BGM.md ding_hz = 그 곡 으뜸음(높은 옥타브)으로 맞춘 '띵' 높이.",
  "kinds": {
+  "toon": {
+   "channel": "uncle",
+   "order": [
+    "coin-afternoon",
+    "piggy-bank",
+    "home-meal"
+   ],
+   "lufs": -26,
+   "duck": false,
+   "every_days": 2
+  },
   "balance": {
    "channel": "raksil",
    "order": [
@@ -28,8 +39,7 @@
  },
  "no_bgm": {
   "meme": "느린 음악→파티 음악으로 바뀌는 게 웃음 포인트(자체 음악)",
-  "toon": "BK 11/20: 귀여운 표정 위주 영상·띵 효과음과 안 어울림 → 새 곡 나올 때까지 BGM 없음",
-  "live": "BK 11/20: 삼촌 채널은 지금 곡 안 씀"
+  "live": "삼촌 실사 특별편은 아직 BGM 안 씀 (BK 11/20 은은한 곡은 만화에만 확인)"
  },
  "tracks": {
   "boss-countdown": {
@@ -87,6 +97,52 @@
     26.284,
     42.267
    ]
+  },
+  "coin-afternoon": {
+   "channel": "uncle",
+   "title": "동전이의 오후",
+   "file": "media/bgm/uncle/coin-afternoon.mp3",
+   "bpm": 88.56,
+   "bar0": 1.51,
+   "seconds": 139.6,
+   "lufs": -17.0,
+   "starts": [
+    1.51,
+    23.19,
+    44.87,
+    66.551
+   ],
+   "ding_hz": 1568.0
+  },
+  "piggy-bank": {
+   "channel": "uncle",
+   "title": "꿀꿀이 저금통",
+   "file": "media/bgm/uncle/piggy-bank.mp3",
+   "bpm": 92.0,
+   "bar0": 2.467,
+   "seconds": 87.08,
+   "lufs": -16.0,
+   "starts": [
+    2.467,
+    28.554
+   ],
+   "ding_hz": 2093.0
+  },
+  "home-meal": {
+   "channel": "uncle",
+   "title": "집밥 한 그릇",
+   "file": "media/bgm/uncle/home-meal.mp3",
+   "bpm": 83.35,
+   "bar0": 1.99,
+   "seconds": 154.0,
+   "lufs": -17.0,
+   "starts": [
+    1.99,
+    25.025,
+    79.734,
+    94.132
+   ],
+   "ding_hz": 2093.0
   }
  }
 }
