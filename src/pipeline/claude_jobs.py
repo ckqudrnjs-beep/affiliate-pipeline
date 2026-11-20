@@ -173,6 +173,20 @@ def notify(text: str) -> bool:
     return send(text)
 
 
+def direction(section: str = "2-3") -> str:
+    """docs/DIRECTION.md(모든 자동 작업의 기준)에서 한 칸을 꺼낸다. 프롬프트 맨 앞에 넣어 방향이 어긋나지 않게 (2026-11-20)."""
+    f = ROOT / "docs/DIRECTION.md"
+    if not f.exists():
+        return ""
+    text = f.read_text(encoding="utf-8")
+    start = text.find(f"### {section}")
+    if start < 0:
+        return ""
+    end = text.find("\n#", start + 4)
+    body = text[start:end if end > 0 else None].strip()
+    return "[지금 방향 — 다른 규칙과 다르면 이것을 따른다]\n" + body + "\n\n"
+
+
 def jload(p: str | pathlib.Path):
     return json.loads((ROOT / p).read_text(encoding="utf-8"))
 
@@ -230,7 +244,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         print(f"{out.name} 이미 있음")
         return 0
     bible = (ROOT / "config/toon_bible.md").read_text(encoding="utf-8")
-    system = ("너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n\n" + bible
+    system = (direction() + "너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE)
     user = (f"{date} 공개 편 대본 후보를 서로 확실히 다른 {n}개 써 줘. 주제 후보(참고, 더 재미있으면 바꿔도 됨):\n"
             f"{json.dumps(info.get('concept'), ensure_ascii=False)}\n\n"
@@ -383,7 +397,7 @@ def shorts(today: dt.date | None = None) -> int:
     for ch, vids in last.items():
         for vid, s in vids.items():
             rows.append({"ch": ch, "title": titles_by_id.get(vid, vid), **s})
-    system = ("너는 유튜브 쇼츠 데이터 분석가다. 조회수·평균 시청 비율(avg_pct)·공유·구독을 보고, 잘된 편과 안된 편의 차이를 "
+    system = (direction() + "너는 유튜브 쇼츠 데이터 분석가다. 조회수·평균 시청 비율(avg_pct)·공유·구독을 보고, 잘된 편과 안된 편의 차이를 "
               "훅·형식·길이·주제로 설명하고, 다음 대본 규칙을 3~5줄 제안한다. 조회수 숫자를 꾸며내지 말고 표의 값만 쓴다. "
               "형식: ## 이번 주 한 줄, ## 잘된 편 왜, ## 안된 편 왜, ## 다음 대본 규칙 제안(체크박스). 한국어.")
     report = ask("shorts", system, json.dumps(rows, ensure_ascii=False), effort="medium", need=0.5)
