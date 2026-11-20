@@ -63,6 +63,7 @@ jobs:
           RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
           RAKSIL_QID: ${{ inputs.qid }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # 몽글이의 선택 한 줄 (없으면 '정답은 없다')
+          YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}  # 어제 쇼츠 댓글 투표 읽기만 (raksil_shorts.comment_votes)
         run: |
           export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
           PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}

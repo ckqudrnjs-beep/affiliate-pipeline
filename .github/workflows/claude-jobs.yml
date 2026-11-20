@@ -59,6 +59,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
           GH_TOKEN: ${{ github.token }}
+          # 시즌 댓글 투표 읽기(toon_series, 공개 댓글 읽기만)
+          YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           PYTHONPATH: src
         run: |
           git config user.name "github-actions[bot]"

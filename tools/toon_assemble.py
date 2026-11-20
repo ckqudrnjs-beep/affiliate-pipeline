@@ -17,8 +17,11 @@ spec = {
                                     # 있으면 멈춤 예고 대신 이 클립을 끝에 붙이고 at 초(버튼 누르는 순간)부터 예고·구독 자막
   "date": "2026-11-22",             # 공개일 (BGM 순번). 없으면 slug 의 날짜
   "bgm": "leak-detective",          # (선택) 곡 고정, false 면 BGM 없음. 없으면 config/bgm.json 순번대로
-  "band": {"top": "배달 김치찌개 한 그릇", "accent": "집밥이면 얼마 남을까?"}  # (선택) 위쪽 검은 제목 띠
+  "band": {"top": "배달 김치찌개 한 그릇", "accent": "집밥이면 얼마 남을까?"},  # (선택) 위쪽 검은 제목 띠
+  "vote": {"a": "난방비", "b": "배달비"}  # (선택) 엔딩 투표. 없으면 data/toon/season.json 에서 그 날짜 투표를 찾는다. false 면 끔
 }
+엔딩 투표 (BK 11/20 '빌드업', pipeline.toon_series): 예고 자리에 '다음엔 뭐가 샐까? A ○○ / B ○○' + '댓글로 골라 줘!'.
+댓글은 공개 하루 뒤 읽기만 해서 세고, 이긴 주제가 다음 대본 주제가 된다.
 제목 띠 (BK 11/20 "섬네일과 코멘트가 우선 사람들이 누르게"): 잘 된 살림 쇼츠처럼 화면 맨 위에 검은 띠 + 흰 줄·노란 줄
 두 줄 제목을 처음부터 마지막 컷까지 깔고(엔딩 클립엔 없음), 컷 자막은 띠 아래로 내린다. 문구 규칙 docs/SHORTS_BANK.md '제목 띠'.
 BGM 이 있으면 컷 길이·멈춤은 박 단위로, 숫자 등장·효과음은 반 박에 맞춘다 (BK 11/20 "노래 BPM에 맞춰서"). docs/BGM.md
@@ -42,6 +45,20 @@ BAND_H, BAND_SIZE, BAND_MAXW = 360, 104, W - 70  # 제목 띠: 높이(=화면 19
 YELLOW = (255, 214, 0)
 # 2026-11-19 BK "2일에 하나씩인데 컨텐츠에 구독 좋아요를 어필해야": 이유형 CTA(보상 약속 금지), 이틀 간격이라 '모레'.
 OUTRO = {"lines": ["다음 새는 돈은", "모레 저녁 7시!"], "big": "구독 좋아요 꾹!", "sub": "다음 편 안 놓치게", "big_y": 420, "hold": 2.8}
+
+
+def outro_of(spec: dict) -> dict:
+    """엔딩 예고 문구. 시즌 투표가 있으면 '다음엔 뭐가 샐까? A/B', 없으면 기본 예고."""
+    v = spec.get("vote")
+    if v is None:
+        try:
+            from pipeline import toon_series
+            v = toon_series.ensure_vote(str(spec.get("date") or spec.get("slug", "")[3:13]))  # 없으면 시즌 주제로 열고 기록
+        except Exception:
+            v = None
+    if not v or not v.get("a") or not v.get("b"):
+        return OUTRO
+    return dict(OUTRO, lines=["다음엔 뭐가 샐까?", f"A {v['a']} / B {v['b']}"], big="댓글로 골라 줘!", sub="많이 고른 걸로 만들어요")
 
 
 def fix(t):  # 주아에 없는 글자 → 네모(두부)로 나옴: '…' '·'
@@ -201,7 +218,8 @@ def assemble(spec: dict) -> pathlib.Path:
             fc = f"{base}[v];[v][1:v]overlay=enable='1{upto}'[o]"
         if outro:  # 클립이 끝나고 멈춘 화면에 다음 편 예고 + 구독·좋아요
             e = tmp / "outro.png"
-            layer(OUTRO["lines"], OUTRO["big"], OUTRO["sub"], spec.get("small"), bigy=OUTRO["big_y"], band=spec.get("band")).save(e)
+            oc = outro_of(spec)
+            layer(oc["lines"], oc["big"], oc["sub"], spec.get("small"), bigy=oc["big_y"], band=spec.get("band")).save(e)
             n_in = inputs.count("-i")
             inputs += ["-i", str(e)]
             fc = fc[:-3] + f"[pre];[pre][{n_in}:v]overlay=enable='gte(t,{end})'[o]"
@@ -214,7 +232,8 @@ def assemble(spec: dict) -> pathlib.Path:
     if spec.get("ending"):  # 고정 엔딩 클립: 버튼 누르는 순간부터 예고 + 구독·좋아요, 끝에 멈춤·어두워짐
         en = spec["ending"]
         e = tmp / "outro.png"
-        layer(OUTRO["lines"], OUTRO["big"], OUTRO["sub"], spec.get("small"), bigy=OUTRO["big_y"]).save(e)
+        oc = outro_of(spec)
+        layer(oc["lines"], oc["big"], oc["sub"], spec.get("small"), bigy=oc["big_y"]).save(e)
         hold = spec.get("hold", 1.5)
         dur = float(en.get("t", 6)) + hold
         at = en.get("at", 1.5)

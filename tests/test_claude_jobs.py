@@ -50,7 +50,8 @@ class ToonJobTest(unittest.TestCase):
         cut = {"screen": "밥솥에서 금화", "caption": "보온 켜 뒀더니", "camera": "fixed camera"}
         v = {"title": "t", "motif": "drip", "frame": "versus", "place": "부엌", "hook": "h", "cuts": [cut] * 4, "number_box": "1년 약 8만 9천 원",
              "number_source": "q/rice-cooker", "gag": "철퍼덕", "tip": "보온 끄기", "why_fun": "w",
-             "band_top": "밥솥 보온 켜 둔 집", "band_accent": "의외로 모르는 진실", "yt_title": "밥솥 보온, 하루 종일 켜 두면?", "heart": ""}
+             "band_top": "밥솥 보온 켜 둔 집", "band_accent": "의외로 모르는 진실", "yt_title": "밥솥 보온, 하루 종일 켜 두면?", "heart": "",
+             "summary": "밥솥 보온 잡음", "vote_a": "난방비", "vote_b": "배달비"}
         replies = [{"variants": [dict(v, title=f"안{i}") for i in range(8)]},
                    {"scores": [{"idx": i, "hook": 5, "fun": 5, "aha": 5, "bible": 5, "clarity": 5, "total": 25 + i, "note": "n"}
                                for i in range(8)], "best": [7, 6]},
@@ -74,7 +75,11 @@ class ToonJobTest(unittest.TestCase):
                 (root / sub).mkdir(parents=True)
             (root / "data/calc_questions.json").write_text("[]", encoding="utf-8")
             info = {"date": "2026-12-04", "concept": {"id": "x"}}
-            with mock.patch.object(C, "ROOT", root), \
+            season = {"id": "2026-12-04", "title": "겨울 대작전", "goal": "꿀꿀이 채우기", "running_gag": "조카 몰래 빼 감",
+                      "topics": ["난방비", "배달비"], "started": "2026-12-04"}
+            with mock.patch.object(C, "ROOT", root), mock.patch("pipeline.toon_series.ROOT", root), \
+                    mock.patch("pipeline.toon_series.plan_season", return_value=season), \
+                    mock.patch("pipeline.toon_series.breakout", return_value=None), \
                     mock.patch("pipeline.episodes.info_short", return_value=info), \
                     mock.patch.object(C, "ask", side_effect=replies), \
                     mock.patch.object(C, "open_pr", return_value=None) as pr:
@@ -91,6 +96,15 @@ class ToonJobTest(unittest.TestCase):
                 self.assertIn("- 유튜브 제목: 밥솥 보온, 하루 종일 켜 두면?", md)
                 self.assertIn("[제목 띠·유튜브 제목", C.ask.call_args_list[0].args[1])
                 self.assertIn("click=", C.ask.call_args_list[1].args[1])
+                pr.assert_called_once()
+                # 시즌 빌드업: 작가 프롬프트에 시즌 덩어리, 1안이 시즌 기록·투표로, 투표 파일이 PR 에 같이
+                self.assertIn("[시즌 빌드업 — '겨울 대작전' 1/10편", C.ask.call_args_list[0].args[2])
+                self.assertIn("data/toon/season.json", pr.call_args.args[3])
+                st = json.loads((root / "data/toon/season.json").read_text(encoding="utf-8"))
+                self.assertEqual(st["log"][0]["title"], "안7고침")
+                self.assertEqual([p["date"] for p in st["polls"]], ["2026-12-04"])
+                self.assertIn("시즌: **겨울 대작전**", md)
+                self.assertIn("- 엔딩 투표(다음엔 뭐가 샐까?): A 난방비 / B 배달비", md)
                 pr.assert_called_once()
                 self.assertEqual(C.toon(dt.date(2026, 11, 20)), 0)  # 이미 있으면 다시 안 만듦
                 self.assertEqual(pr.call_count, 1)
