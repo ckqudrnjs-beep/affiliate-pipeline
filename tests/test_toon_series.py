@@ -135,7 +135,7 @@ class AssembleVoteTest(unittest.TestCase):
         import toon_assemble as A
         self.assertEqual(A.outro_of({"vote": False}), A.OUTRO)
         oc = A.outro_of({"vote": {"a": "난방비", "b": "배달비"}})
-        self.assertEqual(oc["lines"], ["다음엔 뭐가 샐까?", "A 난방비 / B 배달비"])
+        self.assertEqual(oc["lines"], ["다음엔 어디로 갈까?", "A 난방비 / B 배달비"])
         self.assertEqual(oc["big_y"], A.OUTRO["big_y"])
         with mock.patch("pipeline.toon_series.ensure_vote", return_value=None):
             self.assertEqual(A.outro_of({"date": "2026-12-04"}), A.OUTRO)

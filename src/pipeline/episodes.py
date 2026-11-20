@@ -72,6 +72,13 @@ HOME_RULE = ("[주부 타깃·아하 규칙 2026-11-17] 보는 사람 = 장보�
              "[11/18 교훈, 11/25 편부터] 길이 20~25초(내레이션 100~150자, skit 4~5줄 + end). 제목은 답을 말하지 않고 궁금증으로 끝낸다(\"온풍기 vs 전기장판, 한 달 차이 얼마?\"), "
              "답 숫자(big)는 영상 안에서만. 삼촌 얼굴 영상(uncle) 장면은 쓰지 않는다(첫 화면 정지 얼굴 = 넘김). "
              "end say 는 한 번만 가볍게 '구독해 두면 계속 알려줄게' 또는 '매일 아침 시세는 돈삼촌 즐겨찾기' 중 하나(보상 약속·화면 고정 문구 금지). ")
+# 2026-11-20 밤 BK: "동전 날아가는 것·돈이 샌다 표현은 하지 말고 돈돈돈 강조할 필요 없어", "뻔한 기획 구성은 빼야",
+# "가볍지 않은 문구, 흥미 유발과 절제를 오가는 퀄리티", 네 가지 결 + 중독성, "품질이 떨어지는 문구·영상·구도는 안 하느니 못해".
+# 아래 규칙이 위 HOME_RULE 의 '반전 숫자' 중심 설명보다 우선한다.
+TONE_RULE = ("[최우선 2026-11-20 BK] 돈을 강조하지 않는다: 금화·저금통·'새는 돈'·'돈이 샌다' 말과 그림 금지, 큰 숫자 반전으로 끌고 가지 않는다. "
+             "'문제 → 이렇게 바꾸면 아낀다' 같은 뻔한 정보형 구성 금지. 동전이(강아지)가 겪는 상황·이야기가 중심, 살림 팁은 끝 한 줄로 곁들인다. "
+             "편마다 결 하나(뻔하지 않은 것 / 인사이트 / 여운 / 한없이 즐거운 것) + 중독성(반복 개그, 다시 보게 되는 끝 장면). "
+             "자막·대사는 짧고 담담하게, 말장난·느낌표 남발·'충격'·'꿀팁' 금지. 숫자는 인사이트에 꼭 필요할 때만 한 번(사이트 데이터만). ")
 BASKET_RULE = ("상품 없음. data/daily/ 최신 파일 grocery 의 m(한 달 변화 %)·price 만 쓴다. 가장 많이 내린 것 1~2개와 오른 것 1개를 고른다(±20% 이상 우선). "
                "skit: 1줄 조카가 장보기 목록(숫자 cap) → 2줄 오답(\"김장철이라 무도 비싸겠지\") → 3줄 buzz + big(\"한 달 -27%\") + sub(KAMIS 소매가, 날짜) → "
                "4~5줄 대신 살 것·미룰 것 → 끝. 4가지 체크(GROWTH 글자형 규칙)를 모두 통과하면 textshort 가 글자형으로 바꿀 수 있다. ")
@@ -201,7 +208,7 @@ def info_short(today: dt.date) -> dict:
     concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith(("skit", "toon")) else None
     return {"concept": concept, "concept_rule": "concept 의 상황·반전·루프를 이 형식에 맞게 쓰고 대본에 \"concept\": id 를 넣는다. "
             "썸네일 문구 공식은 docs/SHORTS_BANK.md." if concept else None,"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
-            "rules": INFO_RULE + HOME_RULE + rules + (LIVE_RULE + STORY_RULE if d.weekday() in LIVE_DAYS and key != "toon" else ""),
+            "rules": TONE_RULE + INFO_RULE + HOME_RULE + rules + (LIVE_RULE + STORY_RULE if d.weekday() in LIVE_DAYS and key != "toon" else ""),
             "style": "live" if d.weekday() in LIVE_DAYS and key != "toon" else "webtoon", "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
             "recent_products": [u for u in used if u][-10:],
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg()),

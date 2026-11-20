@@ -84,7 +84,14 @@ def episode_info(slug: str) -> dict:
             for ln in sc.get("lines", [])[:1]:
                 hook = ln.get("say", "")
             hook = hook or sc.get("text", "") or sc.get("badge", "")
-        return {"title": s.get("title", ""), "format": s.get("format_name") or s.get("format", ""), "hook": hook}
+        style = ""
+        mp = p.with_name(p.stem + ".meta.json")
+        try:
+            style = json.loads(mp.read_text(encoding="utf-8")).get("style", "") if mp.exists() else ""
+        except (OSError, ValueError):
+            style = ""
+        return {"title": s.get("title", ""), "format": s.get("format_name") or s.get("format", ""), "hook": hook,
+                "style": style}
     return {}
 
 
@@ -275,6 +282,29 @@ def lessons_prompt(kind: str) -> str:
     return "\n".join(out) + "\n\n"
 
 
+# ---------- 넣을 재생목록 (BK 11/20 "재생목록은 분류별로") ----------
+PLAYLISTS = pathlib.Path("config/playlists.json")
+
+
+def playlist_of(row: dict) -> str:
+    """이 편을 넣을 재생목록 이름. 없으면 빈 문자열. 삼촌은 만화(toon) / 주말 실사 특별편 / 그 밖(넣지 않음)."""
+    try:
+        cfg = json.loads(PLAYLISTS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    kind = row.get("kind", "")
+    if kind == "삼촌":
+        style, fmt = (row.get("style") or "").lower(), (row.get("format") or "").lower()
+        d = _slug_date(row.get("slug", ""))
+        if style == "toon" or fmt in ("toon", "동전이 만화"):
+            kind = "삼촌 만화"
+        elif style == "live" or "특별" in fmt or (d and d.weekday() >= 5 and d >= dt.date(2026, 11, 28)):
+            kind = "삼촌 특별편"
+        else:
+            kind = "삼촌 기타"
+    return (cfg.get(kind) or "").strip()
+
+
 # ---------- 리포트 ----------
 def report_text(row: dict, label: str, ratio: float | None, base: list[float], night, hint: dict) -> str:
     title = (row.get("title") or row["slug"]).replace("#shorts", "").strip()
@@ -299,6 +329,9 @@ def report_text(row: dict, label: str, ratio: float | None, base: list[float], n
     lines.append(f"🛠 다음 편 규칙(자동 반영): {hint['next']}")
     if hint.get("title"):
         lines.append(f"✏️ 제목 바꿔 볼 만: {hint['title']} (Studio에서 직접, 자동 변경 안 함)")
+    pl = playlist_of(row)
+    if pl:
+        lines.append(f"📂 재생목록: '{pl}' 에 넣어 주세요 (Studio → 콘텐츠 → 체크 → 재생목록에 추가)")
     lines += ["※ 공개 조회수는 몇십 분 늦게 반영. 시청 지속·공유는 1~2일 뒤 22:41 집계에서.",
               f"https://youtube.com/shorts/{row['id']}"]
     return "\n".join(lines)
@@ -327,6 +360,7 @@ def run(now: dt.datetime | None = None, dry: bool = False) -> int:
             continue
         late = age > MAX_AGE
         row = {"id": vid, "slug": m["slug"], "kind": m["kind"], "title": m.get("title", ""), "hook": m.get("hook", ""),
+               "format": m.get("format", ""), "style": m.get("style", ""),
                "public_at": pub.astimezone(KST).isoformat(timespec="minutes"),
                "checked_at": now.astimezone(KST).isoformat(timespec="minutes"), "age_min": age,
                "views": st["views"], "likes": st["likes"], "comments": st["comments"]}
