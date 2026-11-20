@@ -1,0 +1,88 @@
+import datetime as dt
+import json
+import os
+import pathlib
+import tempfile
+import unittest
+from unittest import mock
+
+from pipeline import claude_jobs as C
+
+
+class CycleBudgetTest(unittest.TestCase):
+    def test_cycle(self):
+        self.assertEqual(C.cycle_start(dt.date(2026, 11, 20)), dt.date(2026, 11, 15))
+        self.assertEqual(C.cycle_start(dt.date(2026, 12, 14)), dt.date(2026, 11, 15))
+        self.assertEqual(C.cycle_start(dt.date(2026, 12, 15)), dt.date(2026, 12, 15))
+        self.assertEqual(C.cycle_start(dt.date(2027, 1, 3)), dt.date(2026, 12, 15))
+        self.assertEqual(C.cycle_end(dt.date(2026, 11, 20)), dt.date(2026, 12, 14))
+        self.assertEqual(C.cycle_end(dt.date(2027, 1, 20)), dt.date(2027, 2, 14))
+
+    def test_cost(self):
+        self.assertAlmostEqual(C.cost(C.OPUS, {"input_tokens": 1_000_000, "output_tokens": 100_000}), 6.0)
+        self.assertAlmostEqual(C.cost(C.HAIKU, {"input_tokens": 1_000_000}), 0.1)
+
+    def test_caps_add_up(self):
+        fixed = sum(v for k, v in C.JOB_CAP.items() if k != "polish")
+        self.assertLess(fixed, C.CAP_USD)  # 남는 돈은 polish 가 회차 끝에 쓴다
+        self.assertLessEqual(C.CAP_USD, 100)
+
+    def test_budget_guard(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(C, "USAGE_DIR", pathlib.Path(d)):
+            day = dt.date(2026, 11, 20)
+            C.record(day, "toon", C.OPUS, {"input_tokens": 0, "output_tokens": 700_000})  # 14달러
+            self.assertAlmostEqual(C.spent(day), 14.0)
+            C.check_budget(day, "toon", 0.5)
+            with self.assertRaises(C.BudgetError):
+                C.check_budget(day, "toon", 1.5)  # toon 상한 15
+            C.record(day, "polish", C.OPUS, {"output_tokens": 4_000_000})  # +80 → 94
+            with self.assertRaises(C.BudgetError):
+                C.check_budget(day, "check", 1.5)  # 전체 상한 95
+
+    def test_no_key_skips(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(C.main(["toon"]), 0)
+        self.assertEqual(C.main(["nope"]), 2)
+
+
+class ToonJobTest(unittest.TestCase):
+    def test_toon_writes_top2_with_prompts(self):
+        cut = {"screen": "밥솥에서 금화", "caption": "보온 켜 뒀더니", "camera": "fixed camera"}
+        v = {"title": "t", "place": "부엌", "hook": "h", "cuts": [cut] * 4, "number_box": "1년 약 8만 9천 원",
+             "number_source": "q/rice-cooker", "gag": "철퍼덕", "tip": "보온 끄기", "why_fun": "w"}
+        replies = [{"variants": [dict(v, title=f"안{i}") for i in range(8)]},
+                   {"scores": [{"idx": i, "hook": 5, "fun": 5, "aha": 5, "bible": 5, "clarity": 5, "total": 25 + i, "note": "n"}
+                               for i in range(8)], "best": [7, 6]},
+                   {"prompts": ["p1", "p2", "p3", "p4"]}, {"prompts": ["q1", "q2", "q3", "q4"]}]
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "config").mkdir()
+            (root / "config/toon_bible.md").write_text("bible", encoding="utf-8")
+            for sub in ("data/episodes", "data/articles"):
+                (root / sub).mkdir(parents=True)
+            (root / "data/calc_questions.json").write_text("[]", encoding="utf-8")
+            info = {"date": "2026-12-04", "concept": {"id": "x"}}
+            with mock.patch.object(C, "ROOT", root), \
+                    mock.patch("pipeline.episodes.info_short", return_value=info), \
+                    mock.patch.object(C, "ask", side_effect=replies), \
+                    mock.patch.object(C, "open_pr", return_value=None) as pr:
+                self.assertEqual(C.toon(dt.date(2026, 11, 20)), 0)
+                md = (root / "data/toon/lab/2026-12-04.md").read_text(encoding="utf-8")
+                self.assertIn("1안: 안7", md)
+                self.assertIn("2안: 안6", md)
+                self.assertIn("`p1`", md)
+                self.assertIn("| 0 | 안0 |", md)
+                pr.assert_called_once()
+                self.assertEqual(C.toon(dt.date(2026, 11, 20)), 0)  # 이미 있으면 다시 안 만듦
+                self.assertEqual(pr.call_count, 1)
+
+
+class GscTest(unittest.TestCase):
+    def test_gsc_rows_aggregate(self):
+        q, p = C.gsc_rows()
+        self.assertTrue(all("impressions" in r and isinstance(r["pos"], float) for r in q + p))
+        self.assertEqual([r["impressions"] for r in q], sorted((r["impressions"] for r in q), reverse=True))
+
+
+if __name__ == "__main__":
+    unittest.main()

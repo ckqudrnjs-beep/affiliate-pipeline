@@ -162,3 +162,57 @@ def validate(a: dict, product_slugs: set[str], calc_slugs: set[str], article_slu
         if s not in product_slugs:
             err.append(f"없는 상품: {s}")
     return err
+
+
+# 자동 글이 서로 비슷해 보이지 않게 (2026-11-20 BK, 애드센스 심사 중 "비슷한 글 반복" 방지)
+SIMILAR_MAX = 0.18          # 두 글 본문의 4글자 조각 겹침 비율(자카드) 상한. 11/20 손질 후 최대 0.14
+SAME_SENTENCE_MIN = 25      # 이 길이 이상 똑같은 문장이 두 글에 있으면 안 된다
+STYLE_RULES_FROM = "2026-11-21"  # 아래 도입·말버릇 규칙은 이 날짜 이후 글부터
+CATCHPHRASES = ("저도 처음엔", "결론부터", "먼저 답부터", "먼저 결론", "요금만 보면")
+
+
+def _grams(t: str, n: int = 4) -> set[str]:
+    t = re.sub(r"\s+", "", t)
+    return {t[i:i + n] for i in range(len(t) - n + 1)}
+
+
+def _sentences(t: str) -> set[str]:
+    out = set()
+    for s in re.split(r"(?<=[.!?])\s+|\n", t):
+        s = s.strip(" -|*#")
+        if len(s) >= SAME_SENTENCE_MIN:
+            out.add(s)
+    return out
+
+
+def _first_heading(body: str) -> str:
+    m = re.search(r"^## (.+)$", body, re.M)
+    return m.group(1).strip() if m else ""
+
+
+def similarity_problems(arts: list[dict]) -> list[str]:
+    """글끼리 너무 닮았는지 검사한다. 빈 목록이면 통과."""
+    err = []
+    arts = sorted(arts, key=lambda a: (a.get("date", ""), a.get("slug", "")))
+    grams = [_grams(a.get("body", "")) for a in arts]
+    sents = [_sentences(a.get("body", "")) for a in arts]
+    for i in range(len(arts)):
+        for j in range(i + 1, len(arts)):
+            u = grams[i] | grams[j]
+            r = len(grams[i] & grams[j]) / len(u) if u else 0
+            if r >= SIMILAR_MAX:
+                err.append(f"{arts[i]['slug']} ↔ {arts[j]['slug']} 본문 겹침 {r:.2f} (상한 {SIMILAR_MAX})")
+            for s in sents[i] & sents[j]:
+                err.append(f"{arts[i]['slug']} ↔ {arts[j]['slug']} 같은 문장: {s[:40]}")
+    for k, a in enumerate(arts):
+        if a.get("date", "") < STYLE_RULES_FROM:
+            continue
+        prev = arts[max(0, k - 3):k]
+        head = _first_heading(a.get("body", ""))
+        for p in prev:
+            if head[:4] and head[:4] == _first_heading(p.get("body", ""))[:4]:
+                err.append(f"{a['slug']}: 첫 소제목 시작이 최근 글({p['slug']})과 같음")
+        for w in CATCHPHRASES:
+            if w in a.get("body", "") and any(w in p.get("body", "") for p in prev):
+                err.append(f"{a['slug']}: 말버릇 '{w}'를 최근 3편 안에서 또 씀")
+    return err
