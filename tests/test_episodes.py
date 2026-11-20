@@ -107,3 +107,19 @@ class ShortV3Test(unittest.TestCase):
         self.assertTrue(title_errors(self.spec("온풍기 한 달 4만 8천 원?")))
         self.assertTrue(title_errors(self.spec("온풍기 vs 담요, 480원 차이")))
         self.assertTrue(title_errors(self.spec("온풍기 vs 담요 비교")))
+
+    def test_band(self):
+        """2026-11-20 BK: 위쪽 검은 제목 띠 두 줄 — 짧게, 답 숫자·쇼핑몰 이름 없이."""
+        from pipeline.episodes import title_errors
+        ok = dict(self.spec("온풍기 하루 8시간, 한 달 얼마?"), band={"top": "하루 8시간 온풍기", "accent": "한 달 얼마 나올까?"})
+        self.assertEqual(title_errors(ok), [])
+        for bad in ({"top": "하루 8시간 온풍기"}, {"top": "온풍기", "accent": "한 달 4만 8천 원 더"},
+                    {"top": "알리에서 산 온풍기", "accent": "얼마?"}, {"top": "온풍기를 하루 종일 켜 둔 우리 집 거실", "accent": "얼마?"}):
+            self.assertTrue(title_errors(dict(ok, band=bad)), bad)
+
+    def test_toon_band_required(self):
+        from pipeline.episodes import check
+        e = check({"date": "2026-12-04", "format": "toon", "kind": "short", "title": "t?", "scenes": []})
+        self.assertTrue(any("제목 띠" in x for x in e))
+        e = check({"date": "2026-12-02", "format": "toon", "kind": "short", "title": "t?", "scenes": []})
+        self.assertFalse(any("제목 띠" in x for x in e))
