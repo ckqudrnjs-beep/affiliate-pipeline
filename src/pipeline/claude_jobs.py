@@ -13,6 +13,7 @@ main 에 바로 반영하는 것은 사용 금액 장부(data/api_usage/)뿐이�
   polish   남은 크레딧으로 기존 글 손질 PR (회차 끝 1주 동안, 상한까지)
   usage    이번 회차 사용 금액 출력
   (raksil  5락실 밸런스 쇼츠 '몽글이의 선택' 한 줄: raksil_shorts.mongle_pick 이 매일 1번, 약 0.3센트)
+  (early   쇼츠 공개 2시간 반응의 다음 편 규칙 한 줄: pipeline.yt_early 가 편마다 1번, 약 0.5센트)
 
 키는 GitHub Secret ANTHROPIC_API_KEY 에서만 읽는다(공개 저장소, 파일에 쓰지 않음).
 """
@@ -41,7 +42,7 @@ OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 CYCLE_DAY = 15          # 크레딧 회차 시작일(이번 회차 12/14 만료 → 15일 시작으로 본다)
 CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
-JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 1.0, "polish": 95.0}
+JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 1.0, "early": 1.0, "polish": 95.0}
 POLISH_DAYS = 7         # 회차 끝 며칠 전부터 polish 가 남은 돈을 쓴다
 
 
@@ -275,6 +276,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             if special else "이번 편은 만화판이다. 실사 문장을 쓰지 않는다.\n")
     system = (direction() + "너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n" + kind + "\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE)
+    from .yt_early import lessons_prompt
+    early_rules = lessons_prompt("삼촌")  # 공개 2시간 반응 → 다음 대본 규칙 (BK 11/20 "개선 방안을 잡는 것이 중요")
     mot = toon_motifs()
     used_m, used_f = recent_motifs(date, mot.get("recent_block", 3))
     free_m = [x for x in mot["motifs"] if x["id"] not in used_m]
@@ -288,14 +291,15 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             "보는 사람: 살림 맡은 30~50대(주부). 재미·상황극이 먼저, 숫자는 3번 컷 끝 number_box 한 번(30만 원/년 미만의 뻔한 절약 팁 금지).\n"
             "cuts 는 정확히 4개, 각 caption 은 화면 자막(한 줄 14자 이하, 최대 2줄, '/'로 줄 나눔), camera 는 구도 메뉴의 영어 문구 하나.\n"
             "number_source 에는 아래 사이트 근거 경로와 계산을 적어라. 근거에 없는 숫자는 쓰지 마라.\n"
-            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + site_facts())
+            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + early_rules + site_facts())
     res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5)
     vs = res["variants"][:n]
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=상황극·개그 재미, aha=숫자가 놀랍고 사이트 근거가 맞는지(근거 틀리면 1점), "
                  "bible=세계관·캐릭터·구도 규칙 + 새는 돈 모양·틀의 신선함(최근 편과 같은 motif·frame 이면 1점), "
                  "clarity=자막만 보고 이해되는지. total=합계. best=상위 2개 idx(0부터).\n\n" + bible
-                 + "\n\n" + ELECTRIC_RULE + "\n\n" + motif_rule)
+                 + "\n\n" + ELECTRIC_RULE + "\n\n" + motif_rule
+                 + ("\n\n" + early_rules + "위 2시간 반응 규칙을 어긴 후보는 hook 점수를 깎는다." if early_rules else ""))
     judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False) + "\n\n" + site_facts(),
                  schema=JUDGE, effort="medium", need=0.6)
     scores = {s["idx"]: s for s in judged["scores"]}
@@ -461,7 +465,13 @@ def shorts(today: dt.date | None = None) -> int:
     system = (direction() + "너는 유튜브 쇼츠 데이터 분석가다. 조회수·평균 시청 비율(avg_pct)·공유·구독을 보고, 잘된 편과 안된 편의 차이를 "
               "훅·형식·길이·주제로 설명하고, 다음 대본 규칙을 3~5줄 제안한다. 조회수 숫자를 꾸며내지 말고 표의 값만 쓴다. "
               "형식: ## 이번 주 한 줄, ## 잘된 편 왜, ## 안된 편 왜, ## 다음 대본 규칙 제안(체크박스). 한국어.")
-    report = ask("shorts", system, json.dumps(rows, ensure_ascii=False), effort="medium", need=0.5)
+    early = jload("data/youtube/early.json") if (ROOT / "data/youtube/early.json").exists() else {}
+    early_rows = [{"ch": r.get("kind"), "title": r.get("title"), "age_min": r.get("age_min"), "views": r.get("views"),
+                   "likes": r.get("likes"), "comments": r.get("comments"), "next_rule": (r.get("hint") or {}).get("next")}
+                  for r in early.values()][-40:]
+    system += (" 'early' 는 공개 약 2시간 시점 숫자와 그때 나온 다음 편 규칙이다. 첫 반응(2시간)과 최종 조회가 어긋나는 편이 있으면 짚고, "
+               "2시간 규칙 중 효과가 있었던 것은 유지·없던 것은 빼자고 제안한다. 5락실 밸런스 질문 규칙도 따로 한 칸 쓴다.")
+    report = ask("shorts", system, json.dumps({"final": rows, "early": early_rows}, ensure_ascii=False), effort="medium", need=0.5)
     out = ROOT / "docs/SHORTS_AI_NOTES.md"
     old = out.read_text(encoding="utf-8") if out.exists() else "# 쇼츠 AI 분석 노트 (매주 자동, 병합 = 규칙 채택)\n\n대본 기획 때 맨 위 최신 주의 '다음 대본 규칙 제안'을 따른다.\n"
     head, _, rest = old.partition("\n## ")
