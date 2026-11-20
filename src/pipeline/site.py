@@ -439,9 +439,9 @@ def product_page(p: dict) -> str:
     else:
         head = None
     if head:
-        top = f'<p class="small"><a class="backall" href="../index.html#all-{p["category"]}">← {e(cat)} 물건 모두 보기</a></p>\n' + head + "\n"
+        top = f'<p class="small"><a class="backall" href="../items.html#all-{p["category"]}">← {e(cat)} 물건 모두 보기</a></p>\n' + head + "\n"
     else:
-        top = f"""<p class="small"><a class="backall" href="../index.html#all-{p['category']}">← {e(cat)} 물건 모두 보기</a></p>
+        top = f"""<p class="small"><a class="backall" href="../items.html#all-{p['category']}">← {e(cat)} 물건 모두 보기</a></p>
 <h1>{e(p['name'])}, 알리 vs 쿠팡 얼마 차이?</h1>
 <p class="lede">알리 {when}, 쿠팡 {cpwhen}. 기능이 비슷한 제품의 알리익스프레스 가격과 쿠팡 가격을 나란히 두고 계산했습니다. 같은 제품이 아니므로 사양·구성은 판매 페이지에서 확인하세요.</p>
 <div class="ph" style="max-width:560px;margin-top:24px">{media(p, "../")}</div>
@@ -474,7 +474,7 @@ def product_page(p: dict) -> str:
 
 BACK_JS = r"""(function(){var a=document.querySelector('a.backall');if(!a)return;
 a.addEventListener('click',function(e){try{var r=new URL(document.referrer);
-if(r.origin===location.origin&&/\/(index\.html)?$/.test(r.pathname)&&history.length>1){e.preventDefault();history.back();}}catch(x){}});})();"""
+if(r.origin===location.origin&&/\/items(\.html)?$/.test(r.pathname)&&history.length>1){e.preventDefault();history.back();}}catch(x){}});})();"""
 
 
 # 모바일(720px 이하) 홈에서만 섹션을 접는다. 첫 화면엔 "오늘의 생활 시세"(시세+퀴즈)만 펼침.
@@ -528,17 +528,33 @@ def retired_page(d: dict, products: list[dict]) -> str:
     return page(f"{d['name']} | {BRAND}", f"{d['name']}: {d['why']}.", body, root="../", path=f"p/{d['slug']}.html", ads=False, noindex=True)
 
 
-def index_page(products: list[dict], days: list[dict] | None = None) -> str:
+def items_page(products: list[dict]) -> str:
+    """모든 물건(분야별). 제휴 상품 목록이라 상품 페이지처럼 색인 제외 + 애드센스 코드 없음 (2026-11-20)."""
     e = html.escape
     ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
-    picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:4]))
     cats = [c for c in CATEGORIES if any(p["category"] == c for p in products)]
     chips = '<a href="#all" data-cat="" aria-current="true">전체</a>' + "".join(
         f'<a href="#all-{c}" data-cat="{c}">{e(CATEGORIES[c])}</a>' for c in cats)
     groups = "".join(f'<div class="catgroup" id="{c}"><h3>{e(CATEGORIES[c])}</h3><div class="picks compact">'
                      + "".join(pick(p) for p in ranked if p["category"] == c) + "</div></div>" for c in cats)
-    all_sec = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
-<nav class="chips" aria-label="분야">{chips}</nav>{groups}</section>""" if products else ""
+    prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
+    body = f"""<p class="small"><a href="index.html">← 홈</a></p>
+<section id="all"><div class="sechead"><h1>모든 물건</h1><span>{len(products)}개 · 분야별</span></div>
+<p class="small">[광고] 상품을 누르면 쿠팡 파트너스·알리익스프레스 제휴 링크가 있는 페이지로 이동하며, 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다.</p>
+<nav class="chips" aria-label="분야">{chips}</nav>{groups}</section>
+<script>window.PRICES={prices};{N.HOME_JS}</script>
+<script>{ALL_JS}</script>"""
+    return page(f"모든 물건 | {BRAND}", f"돈 줍는 삼촌이 알리·쿠팡 가격을 계산해 본 물건 {len(products)}개를 분야별로 모았어요.", body,
+                path="items.html", ads=False, noindex=True)
+
+
+def index_page(products: list[dict], days: list[dict] | None = None) -> str:
+    e = html.escape
+    ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
+    picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:4]))
+    # 2026-11-20 애드센스 점검: 전체 상품 목록이 홈 글자의 70%라 홈이 쇼핑 목록처럼 보였다 → items.html(색인 제외)로 옮기고 홈엔 링크만.
+    all_link = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
+<p class="small">[광고] 지금까지 계산해 본 물건 {len(products)}개를 분야별로 모아 두었어요. <a href="items.html">모든 물건 보기 →</a></p></section>""" if products else ""
     qrow = "".join(f'<li><a href="q/{q["slug"]}.html">{e(q["h1"])}</a></li>' for q in Q.load())
     qrow = f'<h3 class="qhead">많이 묻는 계산</h3><ul class="qlist">{qrow}</ul>' if qrow else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
@@ -571,10 +587,10 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
 <!--ADFIT-->
 {picks_sec}
 {new_sec}
-{all_sec}
+{all_link}
 <script>window.PRICES={prices};{N.HOME_JS}</script>
 {DY.data_script(latest, days, BASE)}
-<script>{FOLD_JS}{ALL_JS}</script>"""
+<script>{FOLD_JS}</script>"""
     return page(f"{BRAND} | 오늘의 생활 시세와 살림 계산", "기름값·환율·장바구니 시세를 매일 아침 정리하고, 하루 한 문제 얼마게 퀴즈와 전기요금·직구 세금·레시피 원가 계산을 무료로 제공해요.", body,
                 ld={"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": BASE + "/", "inLanguage": "ko"}, hero=hero)
 
@@ -784,6 +800,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         (o / "ads.txt").write_text(f"google.com, {client.removeprefix('ca-')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     days = DY.load_all()
     (o / "index.html").write_text(index_page(products, days), encoding="utf-8")
+    (o / "items.html").write_text(items_page(products), encoding="utf-8")
     (o / "quiz.html").write_text(page(f"오늘의 얼마게 | {BRAND}", "하루 한 문제, 생활 속 숫자 맞히기. 레시피 원가·전기요금·기름값·환율로 물가 감각을 키우고 출석 도장을 모아요.",
         DY.quiz_body(days[0] if days else None) + DY.data_script(days[0] if days else None, days, BASE), path="quiz.html"), encoding="utf-8")
     for p in products:
