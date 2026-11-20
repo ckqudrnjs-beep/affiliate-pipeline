@@ -106,6 +106,7 @@ class QualityGateTest(unittest.TestCase):  # BK 2026-11-20 "품질이 떨어지�
         self.assertTrue(yt.quality_ok(s, {"quality_ok": True}))
         self.assertFalse(yt.quality_ok(s, {"style": "toon", "quality_ok": False}))
         self.assertTrue(yt.quality_ok({"date": "2026-11-22", "kind": "short"}, {}))  # 게이트 전 편
+        self.assertFalse(yt.quality_ok({"date": "2026-11-22", "kind": "short"}, {"style": "toon", "quality_ok": False}))  # 사람이 막은 편은 게이트 전에도
 
     def test_due_rows_skips(self):
         now = dt.datetime(2026, 11, 23, 10, tzinfo=yt.KST)
