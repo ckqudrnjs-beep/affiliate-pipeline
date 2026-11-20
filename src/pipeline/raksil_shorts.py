@@ -4,6 +4,8 @@
 - 어제 질문의 실제 투표 수(https://5raksil.com/api/vote)가 20표 이상이면 결과 공개 장면을 넣는다(실제 숫자만).
 - 화면: 사이트와 같은 네온 오락실 스타일, 1080x1920. 위쪽 검은 제목 띠 두 줄(11/20). 2026-11-20 1안(BK 선택): 첫 1초 몽글이가 두 선택지 사이에서 고민 →
   3·2·1 → 반전(실제 투표 % 막대 > 몽글이의 선택) → 'B를 고른 나:' 반응 컷, 약 10초 + 공통 엔딩 2.6초.
+- 2026-11-20 BK "네 바꿔야돼요": 위 틀(3초 선택)을 포함해 화면 구성이 다른 형식 5가지를 5일 한 바퀴로 돌린다
+  (FORMATS: 갈림길·스피드 3연속·몽글이 vs 너·어제 결과→오늘·3초 선택). 모두 약 10초 + 공통 엔딩.
 - 목소리: Supertonic(무료) 여자 목소리. 설치가 안 된 환경이면 효과음만 넣는다.
 - 업로드: 5락실 채널에 바로 '공개'. 상품·협찬이 없으므로 유료 프로모션 아님(광고 문구 없음).
   AI 음성을 쓰면 설명란에 "내레이션: AI 음성"과 containsSyntheticMedia=True.
@@ -84,8 +86,9 @@ def comment_votes(day: dt.date, q: dict | None, log: pathlib.Path | None = None)
         up = json.loads((log or LOG).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    vid = (up.get(day.isoformat()) or {}).get("id")
-    if not vid:
+    ent = up.get(day.isoformat()) or {}
+    vid = ent.get("id")
+    if not vid or ent.get("format") == "quick":  # 3연속 편 댓글('AAB')은 한 질문의 A/B 표가 아님
         return None
     try:
         from . import claude_jobs as cj, toon_series
@@ -211,20 +214,24 @@ def script(q: dict, res: dict | None, pick: dict | None = None) -> list[str]:
     return [first, "", mid]
 
 
-def title_of(q: dict, band: dict | None = None) -> str:
-    """2026-11-20: 제목도 띠처럼 보는 사람에게 도전 ("고민 없이 고르면 찐 어른 인정 | A vs B")."""
+def title_of(q: dict, band: dict | None = None, fmt: str = "classic") -> str:
+    """2026-11-20: 제목도 띠처럼 보는 사람에게 도전 ("고민 없이 고르면 찐 어른 인정 | A vs B").
+    스피드 3연속 편은 '밸런스게임 3연속:' 을 붙인다 (형식 돌리기)."""
     hook = f"{band['top']} {band['accent']} | " if band else ""
+    if fmt == "quick":
+        hook += "3연속: "
     t = f"{hook}{q['a']} vs {q['b']} #밸런스게임 #shorts" if hook else f"{q['a']} vs {q['b']} 너라면? #밸런스게임 #shorts"
     if len(t) > 100:
         t = f"{hook}{q['a'][:28]} vs {q['b'][:28]} #밸런스게임"
     return t[:100]
 
 
-def description_of(q: dict, res: dict | None, ai_voice: bool, pick: dict | None = None) -> str:
-    lines = [f"오늘의 밸런스게임: {q['a']} vs {q['b']}", "",
+def description_of(q: dict, res: dict | None, ai_voice: bool, pick: dict | None = None, more: list | None = None) -> str:
+    head = [f"{i + 1}. {x['a']} vs {x['b']}" for i, x in enumerate(more)] if more else [f"오늘의 밸런스게임: {q['a']} vs {q['b']}"]
+    lines = head + ["",
              f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}", f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
              "▶ 매일 17시 새 밸런스게임은 구독으로",
-             "▶ 댓글로 A / B 남기면 내일 쇼츠 결과에 같이 세요", ""]
+             "▶ 댓글로 AAB 처럼 세 개 다 골라 주세요" if more else "▶ 댓글로 A / B 남기면 내일 쇼츠 결과에 같이 세요", ""]
     if res:
         lines += [f"어제 결과({res['n']}표): {res['a']} {res['pa']}% / {res['b']} {res['pb']}%", ""]
     elif pick:
@@ -714,6 +721,446 @@ def place(buf, clip, at: float):
         buf[i:j] += clip[: j - i]
 
 
+# ---------- 형식 돌리기 (BK 11/20 "네 바꿔야돼요") ----------
+# 매일 같은 틀에 질문만 바뀌면 유튜브가 '반복·양산 콘텐츠'로 볼 수 있다 → 화면 구성 자체가 다른 5가지 형식을 날마다 돌린다.
+# 5일에 한 바퀴라 어떤 형식도 직전 4편과 겹치지 않는다(주 7일에 5형식을 요일로 고정하면 3일 간격 겹침이 생김).
+# 형식이 조건(몽글이 선택·오늘 질문 3개·어제 정보)을 못 채우면 다음 형식으로, 직전 3편과 같은 형식은 건너뛴다.
+FORMATS = ["split", "quick", "versus", "result", "classic"]
+FORMAT_NAMES = {"split": "몽글이 갈림길", "quick": "스피드 3연속", "versus": "몽글이 vs 너",
+                "result": "어제 결과 → 오늘", "classic": "3초 선택"}
+FORMAT_START = dt.date(2026, 11, 21)  # 11/21(토) 갈림길부터
+
+
+def scheduled_format(day: dt.date) -> str:
+    return FORMATS[(day - FORMAT_START).days % len(FORMATS)]
+
+
+def recent_formats(n: int = 3, log: pathlib.Path | None = None) -> list[str]:
+    """직전 n편 밸런스 쇼츠 형식 (기록에 없으면 classic = 11/20 까지의 틀)."""
+    try:
+        up = json.loads((log or LOG).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    out = []
+    for k in sorted(up, reverse=True):
+        v = up[k]
+        if "-game-" in k or "meme" in k or not isinstance(v, dict):
+            continue
+        out.append(v.get("format", "classic"))
+        if len(out) >= n:
+            break
+    return out
+
+
+def choose_format(day: dt.date, ok: dict, recent: list[str] | None = None) -> str:
+    """오늘 차례 형식부터 돌며, 조건이 되고(ok) 직전 3편과 안 겹치는 첫 형식. 다 막히면 조건 되는 첫 형식, 끝은 classic."""
+    force = os.environ.get("RAKSIL_FORMAT", "").strip()
+    if force in FORMATS and ok.get(force, force == "classic"):
+        return force
+    i = FORMATS.index(scheduled_format(day))
+    order = FORMATS[i:] + FORMATS[:i]
+    good = [f for f in order if ok.get(f, f == "classic")]
+    fresh = [f for f in good if f not in (recent or [])]
+    return (fresh or good or ["classic"])[0]
+
+
+def yesterday_entry(yday: dt.date, log: pathlib.Path | None = None) -> dict | None:
+    try:
+        v = json.loads((log or LOG).read_text(encoding="utf-8")).get(yday.isoformat())
+    except (OSError, ValueError):
+        return None
+    return v if isinstance(v, dict) else None
+
+
+def fmt_script(fmt: str, q: dict, res: dict | None, pick: dict | None, prev: dict | None = None) -> list[str]:
+    """형식별 장면 대사 (빈 문자열 = 대사 없음). classic 은 script() 그대로."""
+    say = {"a": "에이", "b": "비"}
+    if fmt == "classic" or fmt == "split":
+        return script(q, res, pick) + [""]
+    if fmt == "versus":
+        return ["몽글이는 벌써 골랐어. 너도 골라!", "", f"몽글이는 {say[pick['pick']]}! {pick['why']}.", ""]
+    if fmt == "result":
+        if res:
+            win, pct = winner(res)
+            first = f"어제 결과! {pct}퍼센트가 {say['a' if win == res['a'] else 'b']}!"
+        else:
+            first = f"어제 몽글이는 {say[prev['pick']['pick']]}! 너희는?"
+        n = len(q["a"]) + len(q["b"])
+        third = "그럼 오늘은? 댓글로 골라 줘!" if n > LONG_Q else f"오늘은? {q['a']}. 대. {q['b']}."
+        return [first, "", third, ""]
+    if fmt == "quick":
+        return ["밸런스게임 3연속! 바로 골라!", "", "", "", ""]
+    raise ValueError(fmt)
+
+
+# --- 그림 도우미 ---
+def _box(img, box, color, k: float = 0.22, width: int = 8, radius: int = 40):
+    from PIL import ImageDraw
+    ImageDraw.Draw(img).rounded_rectangle(box, radius=radius, fill=tuple(int(c * k) for c in color) + (255,),
+                                          outline=color + (255,), width=width)
+
+
+def _label(img, cx: float, cy: float, color, label: str, r: int = 58):
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(img)
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color + (255,))
+    d.text((cx, cy + 4), label, font=font(int(r * 1.45)), fill=BG + (255,), anchor="mm")
+
+
+def _text_in(img, box, text: str, color, start: int = 96, glow: int = 12):
+    from PIL import ImageDraw
+    x0, y0, x1, y1 = box
+    f, ls, size = fit(ImageDraw.Draw(img), text, x1 - x0, y1 - y0, start)
+    glow_text(img, ((x0 + x1) / 2, (y0 + y1) / 2), ls, f, size, color, glow=glow)
+
+
+def _dim(img, box, a: int = 170):
+    from PIL import Image, ImageDraw
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(ov).rounded_rectangle(box, radius=40, fill=(0, 0, 0, a))
+    img.alpha_composite(ov)
+
+
+def _overlay(img, a: int = 235):
+    from PIL import Image, ImageDraw
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(ov).rectangle((0, BAND_H, W, MG_TOP - 10), fill=BG + (a,))
+    img.alpha_composite(ov)
+
+
+def _bubble_at(img, x: float, y: float, text: str, k: float = 1.0):
+    from .raksil_ending import bubble
+    bubble(img, x, y, text, k)
+
+
+# --- 1) 몽글이 갈림길: 화면을 좌우로 갈라 몽글이가 이쪽저쪽 기웃 → 한쪽으로 뛰어감 → 그쪽에 불 ---
+HALF_A, HALF_B = (40, BAND_H + 30, W // 2 - 10, 990), (W // 2 + 10, BAND_H + 30, W - 40, 990)
+SPLIT_DX = {"a": -150, "b": 230, "mid": 140}  # 몽글이 위치 (오른쪽 버튼 자리 x≥900 을 피함)
+
+
+def split_card(q: dict, band: dict | None):
+    img = background(3)
+    if not draw_band(img, band):
+        header(img)
+    for side, box, col in (("a", HALF_A, PINK), ("b", HALF_B, CYAN)):
+        _box(img, box, col)
+        cx = (box[0] + box[2]) / 2
+        _label(img, cx, box[1] + 100, col, side.upper())
+        _text_in(img, (box[0] + 30, box[1] + 180, box[2] - 30, box[1] + 420), q[side], col, 92)
+    return img
+
+
+def split_frame(t: float, starts: list[float], ctx: dict):
+    sc = max(k for k in range(len(starts)) if starts[k] <= t)
+    lt = t - starts[sc]
+    q, res, pick, mg = ctx["q"], ctx["res"], ctx["pick"], ctx["mg"]
+    img = ctx["base"].copy()
+    if sc == 0:  # 가운데서 좌우 두리번 + 땀
+        look = int(lt / 0.45) % 2 == 1
+        mg.draw(img, "shock" if lt < 0.8 else "neutral", dx=SPLIT_DX["mid"], rot=7 if look else -7, flip=look)
+        _bubble_at(img, MG_X + SPLIT_DX["mid"] - 120, MG_TOP + 70, "어느 쪽?", min(1.0, lt / 0.25))
+    elif sc == 1:  # A 쪽으로 살금 → 고개 젓고 → B 쪽으로 → 다시 가운데
+        half = (starts[2] - starts[1]) / 2
+        side = "a" if lt < half else "b"
+        k = min(1.0, (lt % half) / (half * 0.45))
+        dx = SPLIT_DX["mid"] + (SPLIT_DX[side] - SPLIT_DX["mid"]) * (1 - (1 - k) ** 3)
+        _dim(img, HALF_B if side == "a" else HALF_A, 120)
+        mg.draw(img, "neutral" if k < 1 else "shock", dx=dx, dy=-30 * abs(math.sin(lt * 14)), flip=side == "b",
+                rot=5 * math.sin(lt * 14))
+        _bubble_at(img, MG_X + dx - 60, MG_TOP + 70, f"{side.upper()}면...", min(1.0, k * 2))
+    elif sc == 2:  # 결정: 고른 쪽에 불, 다른 쪽 어둡게 (실제 투표면 양쪽 세로 막대)
+        if res:
+            kk = min(1.0, lt / 0.8)
+            for side, box, col in (("a", HALF_A, PINK), ("b", HALF_B, CYAN)):
+                pct = res["p" + side]
+                from PIL import ImageDraw
+                h = int((box[3] - box[1] - 40) * pct / 100 * kk)
+                ImageDraw.Draw(img).rounded_rectangle((box[0] + 20, box[3] - 20 - h, box[2] - 20, box[3] - 20), radius=30,
+                                                      fill=col + (110,))
+                glow_text(img, ((box[0] + box[2]) / 2, box[3] - 110), [f"{round(pct * kk)}%"], font(110), 110, YEL, glow=10)
+            if kk >= 1:
+                glow_text(img, (W / 2, BAND_H + 60), [f"실제 투표 {res['n']}표"], font(52), 52, WHITE, glow=6)
+            win_side = "a" if res["pa"] >= res["pb"] else "b"
+            mood = "shock" if winner(res)[1] >= 65 else "happy"
+        elif pick:
+            win_side, mood = pick["pick"], "happy"
+            _dim(img, HALF_B if win_side == "a" else HALF_A, 190)
+            box = HALF_A if win_side == "a" else HALF_B
+            glow_text(img, ((box[0] + box[2]) / 2, box[1] + 460), ["몽글이 PICK"], font(64), 64, YEL, glow=10)
+            _text_in(img, (box[0] + 30, box[1] + 500, box[2] - 30, box[3] - 20), f"\"{pick['why']}\"", WHITE, 56, 6)
+        else:
+            win_side, mood = ("a" if int(lt * 3) % 2 else "b"), "happy"
+            glow_text(img, (W / 2, 960), ["정답은 없다!"], font(110), 110, PINK, glow=16)
+        go = min(1.0, lt / 0.35)
+        dx = SPLIT_DX["mid"] + (SPLIT_DX[win_side] - SPLIT_DX["mid"]) * go
+        hop = abs(math.sin(math.pi * min(1.0, max(0.0, lt - 0.35) / 0.45))) if lt > 0.35 else 0.0
+        mg.draw(img, mood, dx=dx, dy=-120 * hop, rot=6 * math.sin(lt * 9), flip=win_side == "b")
+    else:  # 너는?
+        _overlay(img, int(235 * min(1.0, lt / 0.15)))
+        glow_text(img, (W / 2, 560), ["너는", "어느 쪽?"], font(150), 150, WHITE, glow=16)
+        glow_text(img, (W / 2, 880), ["댓글로 A? B?"], font(96), 96, CYAN, glow=12)
+        mg.draw(img, "happy", dx=SPLIT_DX["mid"], dy=-90 * abs(math.sin(lt * 7)), rot=8 * math.sin(lt * 7),
+                flip=int(lt * 3.5) % 2 == 1)
+    return img
+
+
+# --- 2) 몽글이 vs 너: 몽글이가 먼저 골라 뒤집어 둔 카드 → 3·2·1 → 카드 뒤집기 → '같으면 찌찌뽕' ---
+CHIP_A, CHIP_B = (50, BAND_H + 30, W // 2 - 10, BAND_H + 250), (W // 2 + 10, BAND_H + 30, W - 50, BAND_H + 250)
+CARD = (180, 660, 870, 1110)
+
+
+def versus_card(q: dict, band: dict | None):
+    img = background(9)
+    if not draw_band(img, band):
+        header(img)
+    for side, box, col in (("a", CHIP_A, PINK), ("b", CHIP_B, CYAN)):
+        _box(img, box, col, width=6, radius=30)
+        _label(img, box[0] + 60, (box[1] + box[3]) / 2, col, side.upper(), 40)
+        _text_in(img, (box[0] + 115, box[1] + 20, box[2] - 20, box[3] - 20), q[side], col, 64, 8)
+    glow_text(img, (W / 2, 615), ["몽글이는 이미 골랐다"], font(64), 64, YEL, glow=8)
+    return img
+
+
+def _card(img, k: float, face, shake: float = 0.0, mark: str = "?"):
+    """뒤집기 카드. k = 가로 폭 비율(0~1), face = None(뒷면 '?') 또는 (side, text, why)."""
+    from PIL import Image, ImageDraw
+    x0, y0, x1, y1 = CARD
+    cx = (x0 + x1) / 2 + shake
+    hw = (x1 - x0) / 2 * max(0.02, k)
+    lay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    col = YEL if face is None else (PINK if face[0] == "a" else CYAN)
+    _box(lay, (int(cx - hw), y0, int(cx + hw), y1), col, 0.25 if face else 0.18, 10)
+    if k > 0.6:
+        if face is None:
+            glow_text(lay, (cx, (y0 + y1) / 2), [mark], font(300), 300, YEL if mark == "?" else PINK, glow=18)
+        else:
+            side, text, why = face
+            _label(lay, cx, y0 + 90, col, side.upper(), 56)
+            _text_in(lay, (cx - hw + 40, y0 + 160, cx + hw - 40, y0 + 330), text, col, 84)
+            _text_in(lay, (cx - hw + 40, y0 + 340, cx + hw - 40, y1 - 20), f"\"{why}\"", WHITE, 56, 6)
+    img.alpha_composite(lay)
+
+
+def versus_frame(t: float, starts: list[float], ctx: dict):
+    sc = max(k for k in range(len(starts)) if starts[k] <= t)
+    lt = t - starts[sc]
+    q, pick, mg, step = ctx["q"], ctx["pick"], ctx["mg"], ctx["step"]
+    img = ctx["base"].copy()
+    face = (pick["pick"], q[pick["pick"]], pick["why"])
+    if sc == 0:
+        _card(img, 1.0, None, 6 * math.sin(lt * 5))
+        mg.draw(img, "happy", dx=-180, dy=-20 * abs(math.sin(lt * 4)), rot=4 * math.sin(lt * 4))
+        _bubble_at(img, MG_X - 30, MG_TOP + 110, "맞혀 봐!", min(1.0, lt / 0.25))
+    elif sc == 1:  # 카드 위에 3·2·1 (덜덜)
+        num = 3 - min(2, int(lt / step))
+        _card(img, 1.0, None, 14 * math.sin(lt * 50), str(num))
+        mg.draw(img, "shock", dx=-180 + 10 * math.sin(lt * 55), rot=3 * math.sin(lt * 41))
+    elif sc == 2:  # 뒤집기
+        k = abs(math.cos(math.pi * min(1.0, lt / 0.4)))
+        _card(img, k, None if lt < 0.2 else face)
+        if lt > 0.4:
+            from PIL import ImageDraw
+            other = CHIP_B if pick["pick"] == "a" else CHIP_A
+            _dim(img, other, 190)
+        hop = abs(math.sin(math.pi * min(1.0, max(0.0, lt - 0.4) / 0.45))) if lt > 0.4 else 0.0
+        mg.draw(img, "happy" if lt > 0.4 else "neutral", dx=-180, dy=-120 * hop, rot=6 * math.sin(lt * 9))
+    else:
+        _card(img, 1.0, face)
+        _overlay(img, int(220 * min(1.0, lt / 0.15)))
+        glow_text(img, (W / 2, 560), ["몽글이랑", "같으면?"], font(140), 140, WHITE, glow=16)
+        glow_text(img, (W / 2, 880), ["댓글에 찌찌뽕!"], font(100), 100, PINK, glow=12)
+        mg.draw(img, "happy", dx=-100, dy=-90 * abs(math.sin(lt * 7)), rot=8 * math.sin(lt * 7), flip=int(lt * 3.5) % 2 == 1)
+    return img
+
+
+# --- 3) 어제 결과 → 오늘: 전광판에 어제 질문 결과(실제 20표 이상만 %) → 휙 → 오늘 질문 나란히 → '내일 발표!' ---
+BOARD = (50, BAND_H + 30, W - 50, 985)
+SQ_A, SQ_B = (50, 470, W // 2 - 10, 985), (W // 2 + 10, 470, W - 50, 985)
+
+
+def board_card(yq: dict, res: dict | None, prev_pick: dict | None, band: dict | None):
+    from PIL import ImageDraw
+    img = background(13)
+    if not draw_band(img, band):
+        header(img)
+    d = ImageDraw.Draw(img)
+    x0, y0, x1, y1 = BOARD
+    d.rounded_rectangle(BOARD, radius=30, fill=(8, 6, 14, 255), outline=YEL + (255,), width=6)
+    for x in range(x0 + 30, x1 - 20, 40):  # 전광판 전구
+        for y in (y0 + 14, y1 - 14):
+            d.ellipse((x - 6, y - 6, x + 6, y + 6), fill=YEL + (200,))
+    glow_text(img, (W / 2, y0 + 62), [f"어제 실제 투표 {res['n']}표" if res else "어제의 밸런스게임"], font(64), 64, YEL, glow=10)
+    if not res:  # 몽글이 선택만 (통계 아님)
+        side = prev_pick["pick"]
+        for i, s in enumerate(("a", "b")):
+            col = PINK if s == "a" else CYAN
+            box = (x0 + 30, y0 + 130 + i * 215, x1 - 30, y0 + 320 + i * 215)
+            _box(img, box, col, 0.22 if s == side else 0.08, 6 if s == side else 3, 30)
+            _label(img, box[0] + 70, (box[1] + box[3]) / 2, col, s.upper(), 46)
+            _text_in(img, (box[0] + 140, box[1] + 20, box[2] - 30, box[3] - 20), yq[s], col if s == side else MUTED, 76, 8)
+            if s != side:
+                _dim(img, box, 120)
+        glow_text(img, (W / 2, y0 + 575), [f"몽글이는 {side.upper()}! 너희는?"], font(68), 68, WHITE, glow=8)
+    return img
+
+
+def today_card(q: dict, band: dict | None):
+    img = background(15)
+    if not draw_band(img, band):
+        header(img)
+    glow_text(img, (W / 2, 410), ["그럼 오늘은?"], font(80), 80, YEL, glow=10)
+    for side, box, col in (("a", SQ_A, PINK), ("b", SQ_B, CYAN)):
+        _box(img, box, col)
+        _label(img, (box[0] + box[2]) / 2, box[1] + 90, col, side.upper())
+        _text_in(img, (box[0] + 30, box[1] + 170, box[2] - 30, box[3] - 30), q[side], col, 88)
+    return img
+
+
+def result_frame(t: float, starts: list[float], ctx: dict):
+    sc = max(k for k in range(len(starts)) if starts[k] <= t)
+    lt = t - starts[sc]
+    res, mg = ctx["res"], ctx["mg"]
+    if sc == 0:
+        img = ctx["board"].copy()
+        if res:
+            lay = twist_layer(res, round(min(1.0, lt / 0.8), 2))
+            img.alpha_composite(lay)
+        mg.draw(img, "happy" if lt > 0.8 else "neutral", dx=-150, dy=-40 * abs(math.sin(lt * 6)))
+    elif sc == 1:  # 휙: 전광판이 위로, 오늘 카드가 아래에서
+        from PIL import Image
+        k = min(1.0, lt / max(0.01, starts[2] - starts[1]))
+        e = 1 - (1 - k) ** 3
+        img = ctx["today"].copy()
+        old = ctx["board"].copy()
+        if res:
+            old.alpha_composite(twist_layer(res, 1.0))
+        sh = int(-H * e)
+        strip = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        strip.paste(old.crop(BOARD), (BOARD[0], BOARD[1] + sh))
+        img.alpha_composite(strip)
+        mg.draw(img, "shock", dx=-150)
+    elif sc == 2:
+        img = ctx["today"].copy()
+        look = int(lt / 0.45) % 2 == 1
+        mg.draw(img, "neutral", dx=-150, rot=7 if look else -7, flip=look)
+    else:
+        img = ctx["today"].copy()
+        _overlay(img, int(230 * min(1.0, lt / 0.15)))
+        glow_text(img, (W / 2, 560), ["댓글로", "골라 줘!"], font(140), 140, WHITE, glow=16)
+        glow_text(img, (W / 2, 880), ["결과는 내일 발표!"], font(90), 90, YEL, glow=12)
+        mg.draw(img, "happy", dx=-100, dy=-90 * abs(math.sin(lt * 7)), rot=8 * math.sin(lt * 7))
+    return img
+
+
+# --- 4) 스피드 3연속: 오늘 질문 3개를 2초대씩 빠르게, 아래 시간 막대가 줄어든다 → 'AAB 처럼 댓글로' ---
+QUICK_A, QUICK_B = (50, 470, W // 2 - 10, 980), (W // 2 + 10, 470, W - 50, 980)
+
+
+def quick_card(q: dict, i: int, band: dict | None, plain: bool = False):
+    img = background(17 + i)
+    if not draw_band(img, band):
+        header(img)
+    if plain:  # 카드가 미끄러져 들어올 때 깔리는 빈 바탕
+        return img
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((W / 2 - 110, 365, W / 2 + 110, 445), radius=40, fill=YEL + (255,))
+    d.text((W / 2, 407), f"{i + 1} / 3", font=font(60), fill=BG + (255,), anchor="mm")
+    for side, box, col in (("a", QUICK_A, PINK), ("b", QUICK_B, CYAN)):
+        _box(img, box, col)
+        _label(img, (box[0] + box[2]) / 2, box[1] + 85, col, side.upper(), 52)
+        _text_in(img, (box[0] + 30, box[1] + 160, box[2] - 30, box[3] - 30), q[side], col, 86)
+    return img
+
+
+def quick_title():
+    img = background(19)
+    glow_text(img, (W / 2, 140), ["5락실"], font(70), 70, PINK, glow=10)
+    glow_text(img, (W / 2, 560), ["스피드", "밸런스게임"], font(150), 150, WHITE, glow=16)
+    glow_text(img, (W / 2, 880), ["3연속!"], font(170), 170, YEL, glow=18)
+    return img
+
+
+def quick_frame(t: float, starts: list[float], ctx: dict):
+    sc = max(k for k in range(len(starts)) if starts[k] <= t)
+    lt = t - starts[sc]
+    mg = ctx["mg"]
+    if sc == 0:
+        img = ctx["title"].copy()
+        mg.draw(img, "shock", dx=-100, dy=-60 * abs(math.sin(lt * 9)))
+        return img
+    if sc <= 3:
+        from PIL import Image, ImageDraw
+        img = ctx["cards"][sc - 1].copy()
+        dur = starts[sc + 1] - starts[sc]
+        slide = 1 - min(1.0, lt / 0.18)
+        if slide > 0:  # 오른쪽에서 휙
+            moved = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            moved.paste(img.crop((0, BAND_H + 20, W, 995)), (int(W * slide * 0.6), BAND_H + 20))
+            img = ctx["plains"][sc - 1].copy()
+            img.alpha_composite(moved)
+        left = max(0.0, 1 - lt / dur)
+        d = ImageDraw.Draw(img)
+        d.rounded_rectangle((60, 1010, 840, 1050), radius=20, fill=(40, 30, 70, 255))
+        if left > 0.02:
+            d.rounded_rectangle((60, 1010, 60 + int(780 * left), 1050), radius=20, fill=(PINK if left < 0.35 else YEL) + (255,))
+        mg.draw(img, "shock" if left < 0.35 else "neutral", dx=-150 + 8 * math.sin(lt * 30) * (left < 0.35))
+        return img
+    img = ctx["cards"][2].copy()
+    _overlay(img, int(235 * min(1.0, lt / 0.15)))
+    glow_text(img, (W / 2, 560), ["몇 개 A야?"], font(150), 150, WHITE, glow=16)
+    glow_text(img, (W / 2, 840), ["댓글로 AAB 처럼!"], font(92), 92, CYAN, glow=12)
+    mg.draw(img, "happy", dx=-100, dy=-90 * abs(math.sin(lt * 7)), rot=8 * math.sin(lt * 7))
+    return img
+
+
+def fmt_durations(fmt: str, clips: list, tr: dict | None) -> tuple[list[float], float]:
+    """장면 길이 (BGM 이 있으면 박자에 맞춤). 돌려주는 값 = (장면 길이들, 3·2·1 한 칸 길이)."""
+    from . import bgm
+    step = 0.7
+    if tr:
+        b = bgm.beat(tr)
+        step = round(b * max(1, round(0.7 / b)), 3)
+    sn = (lambda x: bgm.snap(x, tr, 1, "up")) if tr else (lambda x: x)
+    v = [len(c) / SR for c in clips]
+    if fmt in ("classic", "split", "versus"):
+        d = [max(2.6, v[0] + 0.4), 3 * step, max(2.8, v[2] + 0.5), REACT_D]
+        return [sn(d[0]), d[1], sn(d[2]), sn(d[3])], step
+    if fmt == "result":
+        d = [max(2.6, v[0] + 0.4), 0.5, max(2.6, v[2] + 0.4), 1.6]
+        return [sn(d[0]), d[1], sn(d[2]), sn(d[3])], step
+    if fmt == "quick":
+        d = [max(1.0, v[0] + 0.2), 2.0, 2.0, 2.0, 1.5]
+        return [sn(x) for x in d], step
+    raise ValueError(fmt)
+
+
+def fmt_sfx(fmt: str, starts: list[float], step: float) -> list[tuple]:
+    """(소리, 시각) 목록."""
+    import numpy as np
+    ding = np.concatenate([tone(523, 0.08), tone(659, 0.08), tone(784, 0.08), tone(1046, 0.2)])
+    pop = np.concatenate([tone(1175, 0.05, 0.2), tone(880, 0.05, 0.2), tone(1175, 0.12, 0.2)])
+    boing = np.concatenate([tone(988, 0.06), tone(740, 0.12)])
+    out = [(boing, 0.0)]
+    if fmt in ("classic", "versus"):
+        out += [(tone(660, 0.1, 0.2), starts[1] + i * step) for i in range(3)]
+        out += [(ding, starts[2]), (pop, starts[3])]
+    elif fmt == "split":
+        n = int((starts[2] - starts[1]) / 0.18)
+        out += [(tone(440 + 110 * (i % 2), 0.05, 0.12, "sine"), starts[1] + i * 0.18) for i in range(n)]  # 콩콩 발소리
+        out += [(ding, starts[2]), (pop, starts[3])]
+    elif fmt == "result":
+        out += [(tone(330 + 30 * (i % 3), 0.06, 0.15), i * 0.09) for i in range(8)]  # 두구두구
+        out += [(np.concatenate([tone(f, 0.03, 0.12, "sine") for f in range(1400, 400, -100)]), starts[1])]  # 휙
+        out += [(ding, starts[2]), (pop, starts[3])]
+    elif fmt == "quick":
+        for k in (1, 2, 3):
+            out += [(np.concatenate([tone(880, 0.05), tone(1320, 0.08)]), starts[k])]
+            out += [(tone(1500, 0.03, 0.1), starts[k] + 1.1 + i * 0.3) for i in range(3)]  # 째깍
+        out += [(pop, starts[4])]
+    return out
+
+
 # ---------- 만들기 ----------
 def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     import numpy as np
@@ -733,34 +1180,31 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     pick, band = mongle_plan(q)
     pick = None if res else pick
     band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
-    lines = script(q, res, pick)
-    clips, voiced = tts(lines, caps=[VOICE_CAP[0], 0, VOICE_CAP[1]], speed=1.15)
+    # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건 안 되면 다음, 직전 3편 형식은 건너뜀
+    today3 = sorted((x for x in qs if x.get("date") == day.isoformat()), key=lambda x: (x["id"] != q["id"], shorts_penalty(x), x["id"]))[:3]
+    prev = yesterday_entry(yday)
+    prev = prev if prev and isinstance(prev.get("pick"), dict) and prev["pick"].get("pick") in ("a", "b") and yq else None
+    fmt = choose_format(day, {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
+                              "result": bool(yq and (res or prev))}, recent_formats())
+    if fmt in ("quick", "result"):
+        pick = None  # 화면에 몽글이 선택이 안 나오는 형식 → 기억에도 안 남김
+    lines = fmt_script(fmt, q, res, pick, prev)
+    caps = {"classic": [VOICE_CAP[0], 0, VOICE_CAP[1]], "split": [VOICE_CAP[0], 0, VOICE_CAP[1], 0],
+            "versus": [2.4, 0, VOICE_CAP[1], 0], "result": [2.6, 0, VOICE_CAP[0], 0], "quick": [1.6, 0, 0, 0, 0]}[fmt]
+    clips, voiced = tts(lines, caps=caps, speed=1.15)
 
-    # 2026-11-20 1안: 14초 → 약 8~9초 + 엔딩 2.6초. 끝까지 보는 비율을 올리려고 CTA 카드를 빼고 반전으로 끝낸다.
-    d0 = max(2.6, len(clips[0]) / SR + 0.4)
-    d1 = 2.1  # 3,2,1 (0.7초씩)
-    d2 = max(2.8, len(clips[2]) / SR + 0.5)
-    # 2026-11-20 BK "노래 BPM에 맞춰서": BGM 이 있으면 장면 전환·3,2,1 을 박자에 맞춘다 (docs/BGM.md)
+    # 2026-11-20 1안: 엔딩 빼고 약 10초. BGM 이 있으면 장면 전환·3,2,1 을 박자에 맞춘다 (docs/BGM.md)
     from . import bgm
     tr = bgm.pick("balance", day)
-    step = 0.7
-    if tr:
-        b = bgm.beat(tr)
-        step = round(b * max(1, round(0.7 / b)), 3)
-        d0, d1, d2 = bgm.snap(d0, tr, 1, "up"), 3 * step, bgm.snap(d2, tr, 1, "up")
-    d3 = bgm.snap(REACT_D, tr, 1, "up") if tr else REACT_D  # 'B를 고른 나:' 반응 컷
-    durs = [d0, d1, d2, d3]
+    durs, step = fmt_durations(fmt, clips, tr)
     total = sum(durs)
-    starts = [sum(durs[:i]) for i in range(4)]
+    starts = [sum(durs[:i]) for i in range(len(durs))]
 
     audio = np.zeros(int(SR * total) + SR, dtype=np.float32)
     for c, s0 in zip(clips, starts):
         place(audio, c * 0.95, s0 + 0.12)
-    place(audio, np.concatenate([tone(988, 0.06), tone(740, 0.12)]), 0.0)  # 땀 삐질 '띠용'
-    for i in range(3):
-        place(audio, tone(660, 0.1, 0.2), starts[1] + i * step)
-    place(audio, np.concatenate([tone(523, 0.08), tone(659, 0.08), tone(784, 0.08), tone(1046, 0.2)]), starts[2])
-    place(audio, np.concatenate([tone(1175, 0.05, 0.2), tone(880, 0.05, 0.2), tone(1175, 0.12, 0.2)]), starts[3])  # 반응 컷 '뾰롱'
+    for c, at in fmt_sfx(fmt, starts, step):
+        place(audio, c, at)
     if not tr:  # BGM 이 없을 때만 합성 베이스
         bass = [110, 110, 147, 131]
         t = 0.0
@@ -781,16 +1225,31 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         w.writeframes((audio * 32767).astype("<i2").tobytes())
 
     mg = Mongle(day)
-    base_q = question_card(q, band)
-    base_r = twist_card(res, q, pick, band)
-    side, mood = react_side(res, pick, day)
-    react = ({"a": res["a"], "b": res["b"]} if res else q, side, mood)
+    ctx = {"q": q, "res": res, "pick": pick, "mg": mg, "step": step}
+    if fmt == "classic":
+        base_q, base_r = question_card(q, band), twist_card(res, q, pick, band)
+        side, mood = react_side(res, pick, day)
+        react = ({"a": res["a"], "b": res["b"]} if res else q, side, mood)
+        frame = lambda t: balance_frame(t, starts, base_q, base_r, res, mg, step, react)  # noqa: E731
+    elif fmt == "split":
+        ctx["base"] = split_card(q, band)
+        frame = lambda t: split_frame(t, starts, ctx)  # noqa: E731
+    elif fmt == "versus":
+        ctx["base"] = versus_card(q, band)
+        frame = lambda t: versus_frame(t, starts, ctx)  # noqa: E731
+    elif fmt == "result":
+        ctx["board"], ctx["today"] = board_card(yq, res, prev and prev["pick"], band), today_card(q, band)
+        frame = lambda t: result_frame(t, starts, ctx)  # noqa: E731
+    else:
+        ctx["title"], ctx["cards"] = quick_title(), [quick_card(x, i, band) for i, x in enumerate(today3)]
+        ctx["plains"] = [quick_card(x, i, band, True) for i, x in enumerate(today3)]
+        frame = lambda t: quick_frame(t, starts, ctx)  # noqa: E731
     ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                            "-r", str(FPS), "-i", "-", "-i", str(wav), "-c:v", "libx264", "-preset", "medium",
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
                            "-movflags", "+faststart", str(mp4)], stdin=subprocess.PIPE)
     for i in range(int(total * FPS)):
-        ff.stdin.write(balance_frame(i / FPS, starts, base_q, base_r, res, mg, step, react).convert("RGB").tobytes())
+        ff.stdin.write(frame(i / FPS).convert("RGB").tobytes())
     ff.stdin.close()
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
@@ -798,8 +1257,8 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
     total += add_ending(mp4, day)
     bgm.mix(mp4, tr)
-    meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band), "band": band,
-            "description": description_of(q, res, voiced, pick), "pick": pick, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
+    meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band, fmt), "band": band,
+            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
@@ -846,7 +1305,8 @@ def upload_meta(meta: dict) -> int:
     at = publish_time(meta, dt.datetime.now(KST)) if sched else None
     r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
     log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"],
-                "a": meta.get("a", ""), "b": meta.get("b", ""), "pick": meta.get("pick")}  # 몽글이 기억 (mongle_memory)
+                "a": meta.get("a", ""), "b": meta.get("b", ""), "pick": meta.get("pick"),
+                "format": meta.get("format", "classic")}  # 몽글이 기억 (mongle_memory)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"

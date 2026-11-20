@@ -148,5 +148,81 @@ class RaksilShortsTest(unittest.TestCase):
             self.assertLess((diff[1560:, :] > 60).mean(), 0.002, t)
 
 
+    def test_format_rotation(self):
+        """형식 돌리기 (BK 11/20): 5일 한 바퀴, 11/21 갈림길부터, 같은 형식은 5일 안에 다시 안 나온다."""
+        import os
+        os.environ.pop("RAKSIL_FORMAT", None)
+        d0 = dt.date(2026, 11, 21)
+        self.assertEqual(r.scheduled_format(d0), "split")
+        seq = [r.scheduled_format(d0 + dt.timedelta(days=i)) for i in range(10)]
+        for i in range(len(seq) - 4):
+            self.assertEqual(len(set(seq[i:i + 5])), 5)
+        ok = {f: True for f in r.FORMATS}
+        self.assertEqual(r.choose_format(d0, ok), "split")
+        self.assertEqual(r.choose_format(d0, {**ok, "split": False}), "quick")  # 조건 안 되면 다음 형식
+        self.assertEqual(r.choose_format(d0, ok, ["split", "quick"]), "versus")  # 직전 3편 형식은 건너뜀
+        self.assertEqual(r.choose_format(d0, {"classic": True}, ["classic"]), "classic")  # 끝은 늘 classic
+
+    def test_recent_formats_and_quick_comments(self):
+        import json, pathlib, tempfile
+        log = pathlib.Path(tempfile.mkdtemp()) / "log.json"
+        log.write_text(json.dumps({"2026-11-20": {"id": "x", "title": "t"}, "2026-11-21": {"id": "y", "format": "split"},
+                                   "2026-11-21-game-1": {"id": "z", "format": "game"}, "2026-11-22": {"id": "w", "format": "quick"}}))
+        self.assertEqual(r.recent_formats(3, log), ["quick", "split", "classic"])
+        self.assertIsNone(r.comment_votes(dt.date(2026, 11, 22), QS[1], log))  # 3연속 편 댓글은 A/B 표로 안 셈
+
+    def test_format_scripts(self):
+        q = QS[1]
+        pick = {"pick": "a", "why": "라면은 국물이 반이야"}
+        self.assertEqual(len(r.fmt_script("split", q, None, pick)), 4)
+        self.assertIn("몽글이는 에이", r.fmt_script("versus", q, None, pick)[2])
+        prev = {"pick": {"pick": "b", "why": "x"}}
+        self.assertTrue(r.fmt_script("result", q, None, None, prev)[0].startswith("어제 몽글이는 비"))
+        res = r.result_of(QS[2], {"a": 10, "b": 30})
+        self.assertIn("75퍼센트가 비", r.fmt_script("result", q, res, None)[0])
+        self.assertEqual(len(r.fmt_script("quick", q, None, None)), 5)
+        for line in sum((r.fmt_script(f, q, None, pick, prev) for f in ("split", "versus", "result", "quick")), []):
+            self.assertNotIn("%", line)
+        t = r.title_of(q, {"top": "친구랑 꼭 갈리는", "accent": "밸런스게임"}, "quick")
+        self.assertIn("| 3연속: 평생 라면만", t)
+        d = r.description_of(q, None, False, None, [q, QS[0], QS[2]])
+        self.assertIn("3. 여름 vs 겨울", d)
+        self.assertIn("AAB", d)
+
+    @NEED_RENDER
+    def test_format_frames_keep_shorts_ui_free(self):
+        """새 형식 4가지도 오른쪽 버튼 자리(x≥900, y 1000~1540)와 아래 제목 자리(y≥1560)를 비운다."""
+        import numpy as np
+        q, mg = QS[1], r.Mongle(dt.date(2026, 11, 21))
+        band = {"top": "친구랑 꼭 갈리는", "accent": "밸런스게임"}
+        pick = {"pick": "b", "why": "치킨은 진리야"}
+        res = r.result_of(QS[2], {"a": 10, "b": 30})
+        ctx = {"q": q, "res": None, "pick": pick, "mg": mg, "step": 0.7}
+        cases = []
+        st4 = [0.0, 2.6, 4.7, 7.5]
+        for k in (0.3, 3.0, 4.0, 5.0, 6.0, 8.0):
+            cases.append((r.split_frame, k, st4, {**ctx, "base": r.split_card(q, band)}, r.background(3)))
+            cases.append((r.split_frame, k, st4, {**ctx, "res": res, "base": r.split_card(q, band)}, r.background(3)))
+            cases.append((r.versus_frame, k, st4, {**ctx, "base": r.versus_card(q, band)}, r.background(9)))
+        st_r = [0.0, 2.6, 3.1, 5.7]
+        for k in (0.5, 1.5, 2.8, 4.0, 6.0):
+            ref = r.background(13 if k < 2.6 else 15)  # 오늘 카드는 다른 별 배치
+            cases.append((r.result_frame, k, st_r, {**ctx, "board": r.board_card(QS[2], None, {"pick": "a"}, band),
+                                                     "today": r.today_card(q, band)}, ref))
+            cases.append((r.result_frame, k, st_r, {**ctx, "res": res, "board": r.board_card(QS[2], res, None, band),
+                                                     "today": r.today_card(q, band)}, ref))
+        st_q = [0.0, 1.2, 3.5, 5.8, 8.1]
+        qctx = {**ctx, "title": r.quick_title(), "cards": [r.quick_card(x, i, band) for i, x in enumerate(QS)],
+                "plains": [r.quick_card(x, i, band, True) for i, x in enumerate(QS)]}
+        for k in (0.5, 1.25, 2.0, 3.6, 5.9, 8.5):
+            i = max(0, min(2, sum(k >= x for x in st_q[1:4]) - 1))
+            cases.append((r.quick_frame, k, st_q, qctx, r.background(19 if k < 1.2 else 17 + i)))
+        for fn, t, st, c, ref in cases:
+            a = np.asarray(fn(t, st, c).convert("RGB")).astype(int)
+            diff = np.abs(a - np.asarray(ref.convert("RGB")).astype(int)).sum(axis=2)
+            self.assertLess((diff[1000:1540, 900:] > 60).mean(), 0.002, (fn.__name__, t))
+            self.assertLess((diff[1560:, :] > 60).mean(), 0.002, (fn.__name__, t))
+
+
 if __name__ == "__main__":
     unittest.main()
