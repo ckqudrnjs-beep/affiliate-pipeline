@@ -278,7 +278,9 @@ def heart_turn(date: str) -> bool:
 PROMPTS = obj({"prompts": arr(S)})
 
 
-REFINE_GOAL, REFINE_ROUNDS = 54, 2
+# BK 11/20 "만점으로 기획하면 안되나?": 목표를 만점 가까이(57/60, 클릭 9점 이상)로 올리고 다듬기를 3번까지.
+# 채점은 깐깐하게 그대로 둔다(만점을 요구하면 채점이 후해질 뿐 품질이 오르지 않음).
+REFINE_GOAL, REFINE_CLICK, REFINE_ROUNDS = 57, 9, 3
 
 
 def toon(today: dt.date | None = None, n: int = 8) -> int:
@@ -330,9 +332,10 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     scores = {s["idx"]: s for s in judged["scores"]}
     best = [i for i in judged["best"] if 0 <= i < len(vs)][:2] or sorted(scores, key=lambda i: -scores[i]["total"])[:2]
     first = {i: scores.get(i, {}).get("total", 0) for i in best}
-    # 다듬기 (BK 11/20 "점수가 낮네"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 45점, 최대 2번.
+    # 다듬기 (BK 11/20 "점수가 낮네" → "만점으로"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 57점·클릭 9점, 최대 3번.
     for _ in range(REFINE_ROUNDS):
-        weak = [i for i in best if scores.get(i, {}).get("total", 0) < REFINE_GOAL]
+        weak = [i for i in best if scores.get(i, {}).get("total", 0) < REFINE_GOAL
+                or scores.get(i, {}).get("click", 0) < REFINE_CLICK]
         if not weak:
             break
         fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
