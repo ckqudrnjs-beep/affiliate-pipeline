@@ -1,0 +1,30 @@
+name: tg-webhook
+
+# 텔레그램에서 "방문자" 라고 보내면 5락실·돈삼촌 방문자 수를 바로 답하는 기능(2026-11-20 BK)의 연결 버튼.
+# 답하는 쪽은 5락실 서버 https://5raksil.com/api/tg (playground/functions/api/tg.js, 늘 켜져 있음).
+# 이 워크플로는 수동으로 1번만: set = 연결, info = 상태 보기, delete = 끊기. 설정: docs/TELEGRAM.md '방문자 조회'.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "set(연결) / info(상태) / delete(끊기)"
+        type: choice
+        options: [set, info, delete]
+        default: set
+
+permissions:
+  contents: read
+
+jobs:
+  webhook:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - name: 웹훅 ${{ inputs.action }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: python3 scripts/tg_webhook.py ${{ inputs.action }}
