@@ -59,6 +59,26 @@ class ChecksTest(unittest.TestCase):
                 A.check_kamis()
         self.assertEqual(c.exception.kind, A.AUTH)
 
+    def test_kamis_timeout_retries_once(self):
+        ok = {"data": {"error_code": "000", "item": []}}
+        calls = [A.Problem(A.TEMP, "연결 실패(TimeoutError)"), ok]
+
+        def fake(url, **kw):
+            v = calls.pop(0)
+            if isinstance(v, Exception):
+                raise v
+            return v
+        with mock.patch.object(A, "get_json", side_effect=fake), mock.patch("pipeline.daily.parse_grocery", return_value=[{"x": 1}]):
+            A.check_kamis(wait=0)
+        self.assertEqual(calls, [])
+
+    def test_kamis_two_timeouts_still_temp(self):
+        with mock.patch.object(A, "get_json", side_effect=A.Problem(A.TEMP, "연결 실패(TimeoutError)")) as g:
+            with self.assertRaises(A.Problem) as c:
+                A.check_kamis(wait=0)
+        self.assertEqual(g.call_count, 2)
+        self.assertEqual(c.exception.kind, A.TEMP)
+
     def test_google_invalid_grant_is_auth(self):
         with mock.patch.object(A, "fetch", return_value=(400, '{"error": "invalid_grant"}')):
             with self.assertRaises(A.Problem) as c:

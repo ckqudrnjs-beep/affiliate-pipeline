@@ -16,6 +16,8 @@ import json
 import os
 import pathlib
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -29,10 +31,25 @@ SOURCES = {
 }
 
 
-def get_json(url: str) -> dict:
+def get_json(url: str, tries: int = 1, timeout: int = 30, wait: float = 10) -> dict:
+    """tries>1 이면 시간 초과·연결 끊김만 다시 시도한다(HTTP 오류 응답은 바로 실패).
+    KAMIS 는 해외(Actions) 서버에서 자주 시간 초과가 나서 3번까지 시도한다 (2026-11-20)."""
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (report-bot)"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8", "replace"))
+        except urllib.error.HTTPError:
+            raise
+        except (TimeoutError, OSError):  # socket.timeout·URLError 포함
+            if i == tries - 1:
+                raise
+            print(f"연결 실패, {wait * (i + 1):.0f}초 뒤 다시 시도 ({i + 2}/{tries})", file=sys.stderr)
+            time.sleep(wait * (i + 1))
+    raise RuntimeError("unreachable")
+
+
+KAMIS_TRY = {"tries": 3, "timeout": 40}  # KAMIS 호출 공통: 최대 약 2분 30초
 
 
 def num(v) -> float | None:
@@ -107,7 +124,7 @@ def parse_grocery(js: dict, top: int = 5) -> dict | None:
 def fetch_grocery(key: str, uid: str) -> dict | None:
     url = "https://www.kamis.or.kr/service/price/xml.do?" + urllib.parse.urlencode(
         {"action": "dailySalesList", "p_cert_key": key, "p_cert_id": uid, "p_returntype": "json"})
-    return parse_grocery(get_json(url))
+    return parse_grocery(get_json(url, **KAMIS_TRY))
 
 
 # ---------- 환율 (ECOS) ----------

@@ -23,6 +23,7 @@ import json
 import os
 import pathlib
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -93,10 +94,18 @@ def check_ecos(today: dt.date) -> None:
                   f"환율 데이터 없음{f'(코드 {code})' if code else ''}")
 
 
-def check_kamis() -> None:
+def check_kamis(wait: float = 10) -> None:
     from . import daily
-    js = get_json("https://www.kamis.or.kr/service/price/xml.do?" + urllib.parse.urlencode(
-        {"action": "dailySalesList", "p_cert_key": env("KAMIS_KEY"), "p_cert_id": env("KAMIS_ID"), "p_returntype": "json"}))
+    url = "https://www.kamis.or.kr/service/price/xml.do?" + urllib.parse.urlencode(
+        {"action": "dailySalesList", "p_cert_key": env("KAMIS_KEY"), "p_cert_id": env("KAMIS_ID"), "p_returntype": "json"})
+    # KAMIS 는 Actions(해외) 서버에서 시간 초과가 잦다. 연결 실패만 한 번 더 시도한다 (2026-11-20).
+    try:
+        js = get_json(url, timeout=40)
+    except Problem as p:
+        if not p.msg.startswith("연결 실패"):
+            raise
+        time.sleep(wait)
+        js = get_json(url, timeout=40)
     if daily.parse_grocery(js):
         return
     data = js.get("data") if isinstance(js.get("data"), dict) else {}

@@ -76,5 +76,36 @@ class DailyTest(unittest.TestCase):
             self.assertEqual([r["date"] for r in DY.load_all(pathlib.Path(d))], ["2026-11-15", "2026-11-14"])
 
 
+    def test_carry_grocery_when_kamis_fails(self):
+        g = [{"name": "배추", "unit": "1포기", "price": 3000, "d": 0, "m": -10}]
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "2026-11-18.json").write_text(json.dumps({"date": "2026-11-18", "grocery": g}))
+            (root / "2026-11-19.json").write_text(json.dumps({"date": "2026-11-19", "fuel": {}}))
+            self.assertEqual(DY.carry_grocery(dt.date(2026, 11, 20), root), (g, "2026-11-18"))
+            # 이어 쓴 값도 원래 받은 날 기준으로 3일까지만
+            (root / "2026-11-20.json").write_text(json.dumps({"date": "2026-11-20", "grocery": g, "groceryAsOf": "2026-11-18"}))
+            self.assertEqual(DY.carry_grocery(dt.date(2026, 11, 21), root), (g, "2026-11-18"))
+            self.assertIsNone(DY.carry_grocery(dt.date(2026, 11, 22), root))
+        latest = {"date": "2026-11-20", "grocery": g, "groceryAsOf": "2026-11-18"}
+        self.assertIn("장바구니(11월 18일 (수) 기준)", DY.today_block(latest))
+
+    def test_get_json_retries_timeout_only(self):
+        from unittest import mock
+        from pipeline import report as R
+
+        class Resp:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self): return b'{"ok": 1}'
+        with mock.patch("urllib.request.urlopen", side_effect=[TimeoutError("t"), Resp()]) as u, mock.patch("time.sleep"):
+            self.assertEqual(R.get_json("https://x", tries=3), {"ok": 1})
+        self.assertEqual(u.call_count, 2)
+        with mock.patch("urllib.request.urlopen", side_effect=TimeoutError("t")) as u, mock.patch("time.sleep"):
+            with self.assertRaises(TimeoutError):
+                R.get_json("https://x", tries=3)
+        self.assertEqual(u.call_count, 3)
+
+
 if __name__ == "__main__":
     unittest.main()
