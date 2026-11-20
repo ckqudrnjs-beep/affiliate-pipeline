@@ -89,7 +89,7 @@ function talk2(id, offer, finish) {
 function finish2(id) { const P = G.P; if (id === 'q11' && !useGood('cog', 5)) return false;
   const R = { q8: [1800, 500], q9: [2500, 700], q10: [2200, 600], q11: [1200, 400], q12: [6000, 2000] }[id]; if (!R) return false;
   P.q[id].s = 3; gainXp(R[0]); P.gold += R[1];
-  if (id === 'q8') addInv(makeItem('amu2', 2, 17, { id: 1, st: 0 }));
+  if (id === 'q8') addInv(makeItem('ear2', 2, 17, { id: 1, st: 0 }));
   if (id === 'q9') addInv(makeItem('boots2', 2, 19, { id: 1, st: 1 }));
   if (id === 'q10') addInv(makeItem('ring4', 2, 19, { id: 1, st: 0 }));
   if (id === 'q11') { addInv(goods('bhone')); addInv(goods('bglue')); }

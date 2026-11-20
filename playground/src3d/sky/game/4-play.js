@@ -52,16 +52,17 @@ function loadSave(cls) { try { const s = JSON.parse(localStorage.getItem('sky_' 
 /* ---------- 몹 ---------- */
 const ISL_LV = { 0: [1, 2], 1: [2, 3], 2: [4, 5], 3: [6, 7], 4: [5, 6] };
 function mkMob(t, x, y, lv, elite) {
-  const D = MOBDEF[t], E = elite ? ELITE[elite - 1] : null, m0 = E ? E[2] : {}, T = dT(); lv += T.lv; const m = { hp: (m0.hp || 1) * T.hp, dmg: (m0.dmg || 1) * T.dmg, spd: m0.spd || 1 };
+  const D = MOBDEF[t], E = elite ? ELITE[elite - 1] : null, m0 = E ? E[2] : {}, T = dT(), K = chD(), kh = D.boss ? 1 + (K.hp - 1) * .7 : K.hp; lv += T.lv; const m = { hp: (m0.hp || 1) * T.hp * kh, dmg: (m0.dmg || 1) * T.dmg * K.dmg, spd: m0.spd || 1 };
   const hp = Math.round((D.hp[0] + D.hp[1] * lv) * (m.hp || 1) * (elite ? 1.3 : 1) * DIFF.hp);
-  return { t, D, x, y, hx: x, hy: y, lv, hp, mhp: hp, dmg: [(D.dmg[0] + D.dmg[2] * lv) * (m.dmg || 1) * DIFF.dmg, (D.dmg[1] + D.dmg[2] * lv * 1.3) * (m.dmg || 1) * DIFF.dmg], spd: D.spd * (m.spd || 1) * DIFF.spd, r: D.r, dir: ri(0, 7), an: 'idle', at: Math.random(), cd: 1, st: 'idle', kx: 0, ky: 0, stun: 0, slow: 0, elite, E, kbimm: m.kbimm, wan: rnd(1, 4), fl: 0, fear: 0, taunt: 0, miss: 0, bleed: 0, id: Math.random() };
+  return { t, D, x, y, hx: x, hy: y, lv, hp, mhp: hp, dmg: [(D.dmg[0] + D.dmg[2] * lv) * (m.dmg || 1) * DIFF.dmg, (D.dmg[1] + D.dmg[2] * lv * 1.3) * (m.dmg || 1) * DIFF.dmg], spd: D.spd * (m.spd || 1) * DIFF.spd, r: D.r, dir: ri(0, 7), an: 'idle', at: Math.random(), cd: 1, st: 'idle', kx: 0, ky: 0, stun: 0, slow: 0, elite, E, kbimm: m.kbimm, wan: rnd(1, 4), fl: 0, fear: 0, taunt: 0, miss: 0, bleed: 0, id: Math.random(), cdm: K.cd, xpm: 1 + (kh - 1) * .5 };
 }
 function spawnPack(pk) {
   const s = G.Wd.islands[pk.isl], R = Math.random; pk.mobs = []; if (G.today === pk.isl && !pk.boss && !pk.elite) pk.elite = ri(1, ELITE.length);
+  if (!pk.boss && pk.chd == null) { const K = chD(); pk.chd = 1; pk.n += K.add; if (!pk.elite && R() < K.elite) pk.elite = ri(1, ELITE.length); }
   for (let tries = 0; tries < 30 && pk.mobs.length < pk.n; tries++) {
     const a = R() * TAU, d = R() * 1.8, x = pk.x + Math.cos(a) * d, y = pk.y + Math.sin(a) * d;
     if (!walk(G.Wd, x, y)) continue; const elite = pk.elite && pk.mobs.length === 0 ? pk.elite : 0;
-    const i = pk.mobs.length, lead = pk.lead && i === 0, m = lead ? mkMob(pk.lead, pk.x, pk.y, pk.lv[1] + 1, 0) : mkMob(pk.kinds[(i - (pk.lead ? 1 : 0)) % pk.kinds.length], x, y, ri(pk.lv[0], pk.lv[1]), elite && !pk.lead ? elite : (pk.lead && i === 1 ? pk.elite : 0)); m.pk = pk; pk.mobs.push(m); G.mobs.push(m);
+    const i = pk.mobs.length, lead = pk.lead && i === 0, m = lead ? mkMob(pk.lead, pk.x, pk.y, pk.lv[1] + 1, 0) : mkMob(pk.boss ? pk.kinds[(i - (pk.lead ? 1 : 0)) % pk.kinds.length] : foeSwap(pk.kinds[(i - (pk.lead ? 1 : 0)) % pk.kinds.length]), x, y, ri(pk.lv[0], pk.lv[1]), elite && !pk.lead ? elite : (pk.lead && i === 1 ? pk.elite : 0)); m.pk = pk; pk.mobs.push(m); G.mobs.push(m);
   }
   pk.dead = 0; pk.clear = 0; pk.bl = pk.bl || 0;
 }
@@ -123,7 +124,7 @@ function hitMob(m, dmg, crit, o) {
 function killMob(m, fell) {
   if (m.dead) return; m.dead = 1; m.an = 'die'; m.at = 0; const P = G.P, D = m.D;
   if (m.mark > 0 && m.markT) markMove(m);
-  let xp = (D.xp[0] + D.xp[1] * m.lv) * (m.elite ? 3 : 1) * P.xpm * dT().xp; if (m.lv < P.lv - 5) xp *= .3;
+  let xp = (D.xp[0] + D.xp[1] * m.lv) * (m.elite ? 3 : 1) * (m.xpm || 1) * P.xpm * dT().xp; if (m.lv < P.lv - 5) xp *= .3;
   const bonus = Math.min(P.rested, xp); P.rested -= bonus; gainXp(Math.round(xp + bonus));
   if (P.lifek) P.hp = Math.min(P.mhp, P.hp + P.lifek); if (P.windk) P.wind = Math.min(P.mwind, P.wind + P.windk);
   for (const s in P.eq) if (P.eq[s] && P.eq[s].hid) { const it = P.eq[s]; it.tame = (it.tame || 0) + 1; if (it.tame === TAME_N) { say('길들이기 완료! ' + itemName(it) + ' 숨은 옵션: ' + afxText(it.hid[0], it.hid[1], P.cls), '#c9a8ff'); calc(P); } }
@@ -151,8 +152,8 @@ function drops(m, fell) {
   for (let i = 0; i < nItem; i++) put(rollDrop(ilv, P.find + T.find + (m.elite ? 60 : 0) + (D.boss ? 150 : D.mini ? 90 : 0), P.cls));
   roamDrops(m, put);
   if (D.chboss) { if (G.Wd.ch !== 8) chXDrops(m, put); }
-  else if (D.rustship) { put(makeItem('amu3', 3, 34, { u: 'u_anchor' })); const sp = pick(SETS.harbor.parts); put(makeItem(sp[0], 4, 34, { set: 'harbor' })); put(goods('bhone')); put(goods('bglue')); }
-  else if (D.creaker) { put(makeItem('amu2', 3, 25, { u: 'u_millheart' })); const sp = pick(SETS.mill.parts); put(makeItem(sp[0], 4, 25, { set: 'mill' })); put(goods('bhone')); put(goods('bglue')); }
+  else if (D.rustship) { put(chUniq(3, 34)); const sp = pick(SETS.harbor.parts); put(makeItem(sp[0], 4, 34, { set: 'harbor' })); put(goods('bhone')); put(goods('bglue')); }
+  else if (D.creaker) { put(chUniq(2, 25)); const sp = pick(SETS.mill.parts); put(makeItem(sp[0], 4, 25, { set: 'mill' })); put(goods('bhone')); put(goods('bglue')); }
   else if (D.boss) { const u = CLS_START[P.cls][4]; put(makeItem(UNIQ.find(x => x.id === u).base, 3, 9, { u })); if (Math.random() < .5) put(makeItem('helm2', 3, 8, { u: 'u_millcap' })); put(goods('bhone')); }
   // 바람 조각: 둥지지기 1개, 우두머리 2개, 정예는 가끔
   const col = () => pick(Object.keys(SHARD));
@@ -380,11 +381,12 @@ function mobUpdate(m, dt) {
   if (m.charge > 0) { m.charge -= dt; chargeTrail(m); move(m, m.cvx * dt, m.cvy * dt); m.an = 'atk'; m.at = .1; m.hitDone = 1; if (!m.hitC && hyp(P.x - m.x, P.y - m.y) < m.r + P.r + .2) { m.hitC = 1; hurtPlayer(rnd(m.dmg[0], m.dmg[1]) * 1.3, m); } if (m.charge <= 0) { m.an = 'idle'; m.at = 0; } return; }
   if (m.D.ai === 'dive' && m.back > 0) { m.back -= dt; move(m, -dx / d * sp * dt, -dy / d * sp * dt); m.an = 'move'; return; }
   if (m.D.big) return bossAI(m, dt, d, dx, dy);
+  if (m.D.fk) return foeAI(m, dt, d, dx, dy, sp);
   if (m.D.ai === 'spit') return spitAI(m, dt, d, dx, dy, sp);
   if (m.D.ai === 'spin') return spinAI(m, dt, d, dx, dy, sp);
   const reach = m.r + P.r + .35;
   if (d > reach) { move(m, dx / d * sp * dt, dy / d * sp * dt); m.an = 'move'; separate(m); }
-  else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = m.D.atk * rnd(.9, 1.3) * DIFF.cd; mobAtkStart(m); if (m.D.ai === 'dive') m.back = .8; }
+  else if (m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = m.D.atk * rnd(.9, 1.3) * DIFF.cd * (m.cdm || 1); mobAtkStart(m); if (m.D.ai === 'dive') m.back = .8; }
   else m.an = 'idle';
 }
 function separate(m) { for (const o of G.mobs) { if (o === m || o.dead) continue; const dx = m.x - o.x, dy = m.y - o.y, d = hyp(dx, dy), rr = m.r + o.r; if (d < rr && d > 0) { move(m, dx / d * (rr - d) * .3, dy / d * (rr - d) * .3); } } }

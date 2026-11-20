@@ -125,7 +125,7 @@ function talkX(id, offer, finish) {
 function finishX(id) { const P = G.P, ch = qCh(id), C = CHX[ch], i = C.qid.indexOf(id); if (i === 3 && !useGood(C.sg[0], 5)) return false;
   const m = Math.pow(1.3, ch - 4), R = [[5000, 1500], [6500, 2000], [6000, 1800], [3500, 1200], [11000, 5000]][i].map(v => Math.round(v * m)); P.q[id].s = 3; gainXp(R[0]); P.gold += R[1]; if (id === 'q37') skyRankEnd(P.diff || 0);
   const L = C.lv[3][1] + 2, c = 'c' + ch;
-  if (i === 0) addInv(makeItem(c + 'amu2', 2, L, { id: 1, st: 0 })); if (i === 1) addInv(makeItem(c + 'boots2', 2, L + 1, { id: 1, st: 1 })); if (i === 2) addInv(makeItem(c + 'ring4', 2, L + 1, { id: 1, st: 0 }));
+  if (i === 0) addInv(makeItem(c + ({ 4: 'ear2', 5: 'inner2', 6: 'legs3', 7: 'cloak3' }[ch] || 'ear2'), 2, L, { id: 1, st: 0 })); if (i === 1) addInv(makeItem(c + 'boots2', 2, L + 1, { id: 1, st: 1 })); if (i === 2) addInv(makeItem(c + 'ring4', 2, L + 1, { id: 1, st: 0 }));
   if (i === 3) { addInv(goods('bhone')); addInv(goods('bglue')); } if (i === 4) { if (ch === 7) addInv(goods('chart', 2)); addInv(makeItem(c + 'sail4', 2, C.blv, { id: 1, st: 1 })); addInv(goods('bhone', 2)); addInv(goods('bglue', 2)); }
   return R; }
 function trackX(id, q) { const ch = qCh(id), C = CHX[ch]; if (!C) return null; const i = C.qid.indexOf(id);
@@ -145,7 +145,7 @@ function chXKill(m) { const P = G.P, ch = G.Wd.ch, C = CHX[ch]; if (!C) return; 
   if (m.t === M.k && P.q[I[1]] && P.q[I[1]].s === 1 && count(C.bg[0]) + G.drops.filter(d => d.it && d.it.g === C.bg[0]).length < 4) { G.drops.push({ x: m.x + rnd(-.4, .4), y: m.y + rnd(-.4, .4), it: goods(C.bg[0]), t: 0 }); say(C.bg[1] + '을(를) 떨궜어요!', '#ffe08a', 1); }
   if ((m.t === M.a || m.t === M.b) && P.q[I[3]] && P.q[I[3]].s === 1 && count(C.sg[0]) + G.drops.filter(d => d.it && d.it.g === C.sg[0]).length < 5 && Math.random() < .2) G.drops.push({ x: m.x + rnd(-.4, .4), y: m.y + rnd(-.4, .4), it: goods(C.sg[0]), t: 0 });
   if (m.D.chboss) { P.flags[M.boss] = 1; if (P.q[I[4]] && P.q[I[4]].s === 1) qSet(I[4], 2); G.shake = 14; G.flash = .4; say(C.mn.boss + '을(를) 쓰러뜨렸어요! ' + C.hill + ' 바람개비 표지에 손을 얹어 보세요.', '#ffd166'); } }
-function chXDrops(m, put) { const ch = m.D.chboss, C = CHX[ch]; put(makeItem('c' + ch + 'amu2', 3, C.blv, { u: C.uq[0] })); const sp = pick(SETS[C.set[0]].parts); put(makeItem(sp[0], 4, C.blv, { set: C.set[0] })); put(goods('bhone')); put(goods('bglue')); }
+function chXDrops(m, put) { const ch = m.D.chboss, C = CHX[ch]; put(chUniq(ch, C.blv)); const sp = pick(SETS[C.set[0]].parts); put(makeItem(sp[0], 4, C.blv, { set: C.set[0] })); put(goods('bhone')); put(goods('bglue')); }
 // 장 보스: 장마다 고른 공격 묶음(줄 솟구치기·여기저기 떨구기·둘레 쓸기·부르기·사방 칼날·둘러싸기)
 function chXBossAI(m, dt, d, dx, dy) { const ch = m.D.chboss, C = CHX[ch], B = C.boss, P = G.P, rage = m.hp < m.mhp * .5, sp2 = rage ? 1.35 : 1;
   if (rage && !m.raged) { m.raged = 1; G.cut = { s: C.mn.boss + '이(가) 성이 났어요!', t: 0, c: B.col }; sfx('slam'); G.shake = 8; }
