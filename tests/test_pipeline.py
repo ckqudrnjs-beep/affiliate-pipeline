@@ -268,6 +268,24 @@ class ArticleDataTest(unittest.TestCase):
         for a in arts:
             self.assertEqual(articles.validate(a, prods, {c["slug"] for c in calcs.CALCS}, set(slugs)), [], a["slug"])
 
+    def test_articles_not_too_similar(self):  # 자동 글끼리 비슷해 보이면 올리지 않는다 (2026-11-20)
+        import json
+        from pipeline import articles
+        root = pathlib.Path(__file__).resolve().parent.parent / "data"
+        arts = [json.loads(f.read_text(encoding="utf-8")) for f in (root / "articles").glob("*.json")]
+        self.assertEqual(articles.similarity_problems(arts), [])
+
+    def test_similarity_rules_catch_copies(self):
+        from pipeline import articles
+        body = "## 결론부터: 한 달 6천 원이에요\n" + "전기장판 200W를 하루 8시간 켜면 한 달 48kWh가 더 나와요. " * 20
+        a = {"slug": "a", "date": "2026-11-21", "body": body}
+        b = {"slug": "b", "date": "2026-11-22", "body": body.replace("6천", "7천")}
+        errs = articles.similarity_problems([a, b])
+        self.assertTrue(any("본문 겹침" in e for e in errs))
+        self.assertTrue(any("같은 문장" in e for e in errs))
+        self.assertTrue(any("첫 소제목" in e for e in errs))
+        self.assertTrue(any("말버릇" in e for e in errs))
+
 
 class ImitationFilterTest(unittest.TestCase):
     def test_filter(self):

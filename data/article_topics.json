@@ -89,8 +89,10 @@
  },
  {
   "q": "가습기 전기요금 (초음파·가열식·복합식)",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "winter-humidity-humidifier-types",
+  "note": "기존 글과 겹쳐 따로 쓰지 않음 (2026-11-20)"
  },
  {
   "q": "제습기 전기요금 한 달",
@@ -118,7 +120,8 @@
  {
   "q": "전기요금 누진제 400kWh 넘으면 얼마",
   "done": false,
-  "format": "정보"
+  "format": "정보",
+  "angle": "first-winter-bill-power-hogs-diary와 겹치지 않게: 구간표 반복 말고 400kWh 넘기 직전 집의 달별 시뮬레이션 위주"
  },
  {
   "q": "겨울 차박 여행 준비 메모 (난방·전기·안전)",
@@ -157,8 +160,10 @@
  },
  {
   "q": "보조배터리 용량 표기와 실제 충전 횟수",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "powerbank-how-many-charges-diary",
+  "note": "기존 글과 겹쳐 따로 쓰지 않음 (2026-11-20)"
  },
  {
   "q": "보조배터리 비행기 반입 기준 (Wh 계산)",
@@ -198,7 +203,8 @@
  {
   "q": "독자 질문: 전기장판 켜 두고 자도 요금 괜찮을까요?",
   "done": false,
-  "format": "질문 답장"
+  "format": "질문 답장",
+  "angle": "요금표는 쓰지 말고 기존 매트 글 2편에 링크. 켜 두고 잘 때 안전(저온화상·KC·타이머)과 습관 위주"
  },
  {
   "q": "전기포트 한 번 끓일 때 전기요금",
@@ -247,8 +253,10 @@
  },
  {
   "q": "결로 생기는 습도와 막는 법",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "veranda-condensation-diary",
+  "note": "기존 글과 겹쳐 따로 쓰지 않음 (2026-11-20)"
  },
  {
   "q": "전동칫솔 칫솔모 교체 비용 1년",
@@ -378,7 +386,8 @@
  {
   "q": "겨울 결로·곰팡이 생기는 집 체크",
   "done": false,
-  "format": "정보"
+  "format": "정보",
+  "angle": "veranda-condensation-diary와 겹치지 않게: 곰팡이 생긴 뒤 청소·환기 순서와 집 구조별 점검 위주"
  },
  {
   "q": "로봇청소기 고르는 법 (물걸레·흡입력)",
