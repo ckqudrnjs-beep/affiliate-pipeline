@@ -234,7 +234,10 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         print(f"{date} 후보 이미 있음 (파일 또는 PR)")
         return 0
     bible = (ROOT / "config/toon_bible.md").read_text(encoding="utf-8")
-    system = ("너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n\n" + bible
+    special = dt.date.fromisoformat(date).weekday() >= 5  # 주말 공개 편 = 실사 삼촌 특별편 (BK 11/20, 바이블 주 1회)
+    kind = ("이번 편은 '실사판 특별편'이다. 바이블의 실사판 규칙대로 실사 삼촌이 직접 나오고 프롬프트는 Photorealistic. 으로 쓴다.\n"
+            if special else "이번 편은 만화판이다. 실사 문장을 쓰지 않는다.\n")
+    system = ("너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n" + kind + "\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE)
     user = (f"{date} 공개 편 대본 후보를 서로 확실히 다른 {n}개 써 줘. 주제 후보(참고, 더 재미있으면 바꿔도 됨):\n"
             f"{json.dumps(info.get('concept'), ensure_ascii=False)}\n\n"
@@ -272,14 +275,14 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                 i = weak[s["idx"]]
                 vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
     best.sort(key=lambda i: -scores.get(i, {}).get("total", 0))
-    md = [f"# 동전이 만화 대본 후보 — {date} 공개 편", "",
+    md = [f"# 동전이 {'실사 삼촌 특별편' if special else '만화'} 대본 후보 — {date} 공개 편", "",
           f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개 다듬기). "
           "점수는 50점 만점의 깐깐한 편집장 채점이에요(40점 = 대부분 항목 8점). "
           "마음에 드는 안을 골라 이 PR에 댓글로 번호만 남기거나, 그냥 병합하면 1안으로 진행해요. 숫자는 근거를 다시 확인한 뒤 자막에 넣어요.", ""]
     for rank, i in enumerate(best, 1):
         v, s = vs[i], scores.get(i, {})
         prompts = ask("toon", "너는 Veo 영상 프롬프트 작가다. 바이블의 '프롬프트 조립' 순서와 고정 문장을 글자 그대로 쓴다. "
-                      "클립마다 영어 프롬프트 하나, 동작은 하나만.\n\n" + bible,
+                      "클립마다 영어 프롬프트 하나, 동작은 하나만.\n" + kind + "\n" + bible,
                       json.dumps(v, ensure_ascii=False) + "\n\n이 대본의 컷 4개에 맞는 Veo 프롬프트 4개를 써 줘.",
                       schema=PROMPTS, model=SONNET, effort="medium", need=0.3)["prompts"][:4]
         up = f", 다듬기 전 {first[i]}" if first.get(i) and first[i] != s.get("total") else ""

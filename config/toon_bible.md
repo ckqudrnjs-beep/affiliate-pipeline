@@ -47,3 +47,9 @@
 
 ## 금지
 영상 안 글자·숫자·간판·로고·화면, 실존 인물·연예인 닮은 얼굴, 아이, 한 클립에 동작 여러 개, 특정 브랜드 제품 모양. 상품·구매·할인·제휴 링크 없음.
+
+## 실사판 특별편 (주 1회, 주말 공개 편)
+- 실사 삼촌과 실제 시바 같은 동전이가 같은 이야기를 한다. 한 편 안에서 만화·실사를 섞지 않는다. 유튜브 '변경·합성 콘텐츠' 표시 필수.
+- 삼촌 실사판 고정 문장: `@삼촌, a fictional Korean man in his fifties, green cap, mustache, khaki fishing vest, warm smile, photorealistic`
+- 동전이 실사판: `@동전이, a real small two-year-old Shiba Inu puppy with orange and cream fur, red collar with a small plain gold coin pendant, photorealistic`
+- 프롬프트는 `Cartoon.` 대신 `Photorealistic.` 로 시작, 끝말의 `same cute 3D cartoon look` 대신 `same photorealistic look`. 삼촌은 가상 인물, 실존 인물·연예인 닮은 얼굴 금지, 얼굴은 너무 가깝게 잡지 않는다.
