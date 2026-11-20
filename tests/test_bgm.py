@@ -18,7 +18,7 @@ NEED_FFMPEG = unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffpro
 class ConfigTest(unittest.TestCase):
     def test_tracks_exist_and_sane(self):
         c = bgm.cfg()
-        self.assertEqual(len(c["tracks"]), 7)
+        self.assertEqual(len(c["tracks"]), 9)
         for slug, t in c["tracks"].items():
             f = ROOT / t["file"]
             self.assertTrue(f.exists(), f)
@@ -107,6 +107,15 @@ class MixTest(unittest.TestCase):
             self.assertAlmostEqual(bgm.duration(mp4), 4.0, delta=0.15)
             self.assertTrue(bgm.has_audio(mp4))
 
+
+class NoRepeatTest(unittest.TestCase):
+    def test_toon_no_repeat_in_last_three(self):
+        """반복 양산 금지(BK 11/20): 삼촌 만화 곡은 직전 3편과 안 겹침."""
+        days = [dt.date(2026, 11, 22) + dt.timedelta(days=2 * i) for i in range(20)]
+        got = [bgm.pick("toon", d)["slug"] for d in days]
+        for i in range(3, len(got)):
+            self.assertNotIn(got[i], got[i - 3:i])
+        self.assertEqual(got[:3], ["home-meal", "coin-afternoon", "piggy-bank"])  # 이미 정한 11/22~26 그대로
 
 if __name__ == "__main__":
     unittest.main()
