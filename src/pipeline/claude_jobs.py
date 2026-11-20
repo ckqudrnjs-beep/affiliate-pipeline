@@ -26,6 +26,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -44,6 +45,13 @@ CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
 JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 1.0, "early": 1.0, "polish": 95.0}
 POLISH_DAYS = 7         # 회차 끝 며칠 전부터 polish 가 남은 돈을 쓴다
+# 배치(Message Batches, 입·출력 50% 할인, 대부분 1시간 안) — 급하지 않은 작업만 (BK 11/20 "배치도 진행")
+# raksil·early(공개 시각에 맞춰야 함)·check(하루 몇 센트)·naver(직접 돌림)는 일반 호출.
+BATCH_JOBS = {"toon", "adsense", "shorts", "titles", "polish"}
+BATCH_WAIT_MIN = 45     # 한 호출을 이만큼 기다려도 안 끝나면 취소하고 일반 호출
+BATCH_BUDGET_MIN = 150  # 작업 시작 뒤 이만큼 지나면 남은 호출은 일반 호출 (워크플로 제한 240분 안에 끝내기)
+BATCH_POLL_SEC = 20
+_T0 = time.monotonic()
 
 
 class BudgetError(RuntimeError):
@@ -92,12 +100,12 @@ def cost(model: str, usage: dict) -> float:
             + (made - w1h) * pin * 1.25 + w1h * pin * 2.0) / 1e6
 
 
-def record(d: dt.date, job: str, model: str, usage: dict) -> float:
-    usd = round(cost(model, usage), 4)
+def record(d: dt.date, job: str, model: str, usage: dict, batch: bool = False) -> float:
+    usd = round(cost(model, usage) * (0.5 if batch else 1.0), 4)
     rows = load_ledger(d)
     rows.append({"date": d.isoformat(), "job": job, "model": model, "in": usage.get("input_tokens", 0),
                  "out": usage.get("output_tokens", 0), "cache": usage.get("cache_read_input_tokens", 0),
-                 "cache_w": usage.get("cache_creation_input_tokens", 0) or 0, "usd": usd})
+                 "cache_w": usage.get("cache_creation_input_tokens", 0) or 0, **({"batch": True} if batch else {}), "usd": usd})
     p = ledger_path(d)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
@@ -112,6 +120,38 @@ def check_budget(d: dt.date, job: str, need: float) -> None:
 
 
 # ---------- Claude 호출 ----------
+def use_batch(job: str) -> bool:
+    if job not in BATCH_JOBS or os.environ.get("CLAUDE_BATCH", "1") == "0":
+        return False
+    return (time.monotonic() - _T0) / 60 < BATCH_BUDGET_MIN
+
+
+def run_batch(client, kw: dict, job: str):
+    """요청 1개짜리 배치를 넣고 끝날 때까지 기다린다. 성공하면 메시지, 실패·만료·시간 초과면 None(→ 일반 호출)."""
+    params = {k: v for k, v in kw.items() if k not in ("betas", "fallbacks")}  # 배치는 fallbacks 를 못 씀
+    b = client.beta.messages.batches.create(requests=[{"custom_id": job, "params": params}])
+    left = BATCH_BUDGET_MIN * 60 - (time.monotonic() - _T0)
+    deadline = time.monotonic() + max(60.0, min(BATCH_WAIT_MIN * 60, left))
+    canceled = False
+    while True:
+        st = client.beta.messages.batches.retrieve(b.id).processing_status
+        if st == "ended":
+            break
+        if time.monotonic() > deadline:
+            if canceled:
+                print(f"[{job}] 배치 {b.id} 취소가 늦어 일반 호출로 넘어감")
+                return None
+            client.beta.messages.batches.cancel(b.id)
+            canceled, deadline = True, time.monotonic() + 300
+            print(f"[{job}] 배치 {b.id} 가 {BATCH_WAIT_MIN}분 안에 안 끝나 취소")
+        time.sleep(BATCH_POLL_SEC)
+    for e in client.beta.messages.batches.results(b.id):
+        if e.result.type == "succeeded":
+            return e.result.message
+        print(f"[{job}] 배치 결과 {e.result.type} → 일반 호출")
+    return None
+
+
 def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "medium",
         schema: dict | None = None, max_tokens: int = 16000, need: float = 0.5, cache: str | None = None):
     """한 번 호출하고 사용 금액을 장부에 적는다. schema 가 있으면 JSON(dict)을, 없으면 글을 돌려준다.
@@ -123,6 +163,9 @@ def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "m
     d = today_kst()
     check_budget(d, job, need)
     client = anthropic.Anthropic()
+    batch = use_batch(job)
+    if cache and batch:
+        cache = "1h"  # 배치는 몇 분~1시간 걸려 5분 캐시는 다음 호출 전에 만료되기 쉽다 (문서 권장)
     if cache:
         system = [{"type": "text", "text": system,
                    "cache_control": {"type": "ephemeral", **({"ttl": "1h"} if cache == "1h" else {})}}]
@@ -131,14 +174,28 @@ def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "m
               output_config={"effort": effort, **({"format": {"type": "json_schema", "schema": schema}} if schema else {})})
     if model in (OPUS, SONNET):  # 안전 분류기가 거절하면 서버가 다른 모델로 다시 시도
         kw.update(betas=["server-side-fallback-2026-07-01"], fallbacks="default")
-    if max_tokens > 16000:
-        with client.beta.messages.stream(**kw) as s:
-            msg = s.get_final_message()
-    else:
-        msg = client.beta.messages.create(**kw)
-    usage = msg.usage.model_dump() if hasattr(msg.usage, "model_dump") else dict(msg.usage)
-    usd = record(d, job, model, usage)
-    print(f"[{job}] {model} 입력 {usage.get('input_tokens')} 캐시읽기 {usage.get('cache_read_input_tokens') or 0} "
+    msg = None
+    if batch:
+        try:
+            msg = run_batch(client, kw, job)
+        except anthropic.APIError as e:  # 배치 넣기 실패 → 일반 호출
+            print(f"[{job}] 배치 실패 {e} → 일반 호출")
+        if msg is not None and msg.stop_reason == "refusal" and "fallbacks" in kw:
+            record(d, job, model, _usage(msg), batch=True)  # 거절도 값은 낸다 → 다른 모델로 다시 시도하는 일반 호출
+            print(f"[{job}] 배치에서 거절 → fallbacks 있는 일반 호출")
+            msg = None
+        elif msg is not None:
+            batch = True
+    if msg is None:
+        batch = False
+        if max_tokens > 16000:
+            with client.beta.messages.stream(**kw) as s:
+                msg = s.get_final_message()
+        else:
+            msg = client.beta.messages.create(**kw)
+    usage = _usage(msg)
+    usd = record(d, job, model, usage, batch=batch)
+    print(f"[{job}] {model}{' 배치' if batch else ''} 입력 {usage.get('input_tokens')} 캐시읽기 {usage.get('cache_read_input_tokens') or 0} "
           f"캐시쓰기 {usage.get('cache_creation_input_tokens') or 0} 출력 {usage.get('output_tokens')} → ${usd}")
     if msg.stop_reason == "refusal":
         raise RuntimeError(f"모델이 거절함: {getattr(msg, 'stop_details', None)}")
@@ -146,6 +203,10 @@ def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "m
         raise RuntimeError("응답이 max_tokens 에서 잘림")
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
     return json.loads(text) if schema else text
+
+
+def _usage(msg) -> dict:
+    return msg.usage.model_dump() if hasattr(msg.usage, "model_dump") else dict(msg.usage)
 
 
 def obj(props: dict, req: list[str] | None = None) -> dict:

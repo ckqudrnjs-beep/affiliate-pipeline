@@ -124,6 +124,86 @@ class CacheTest(unittest.TestCase):
             self.assertEqual(seen["system"], "규칙")  # 기본은 캐시 안 씀(한 번만 부르는 작업)
 
 
+class BatchTest(unittest.TestCase):
+    """배치(50% 할인): 성공하면 반값 기록, 실패·거절이면 일반 호출로 다시."""
+
+    @staticmethod
+    def message(text, stop="end_turn"):
+        import types
+        return types.SimpleNamespace(usage={"input_tokens": 0, "output_tokens": 100_000}, stop_reason=stop,
+                                     content=[types.SimpleNamespace(type="text", text=text)])
+
+    def fake(self, batch_result, direct_text="direct"):
+        import types
+        calls = {"batch": [], "direct": []}
+        message = self.message
+
+        class Batches:
+            def create(self, requests):
+                calls["batch"].append(requests[0]["params"])
+                return types.SimpleNamespace(id="b1")
+
+            def retrieve(self, _id):
+                return types.SimpleNamespace(processing_status="ended")
+
+            def cancel(self, _id):
+                pass
+
+            def results(self, _id):
+                if batch_result is None:
+                    return [types.SimpleNamespace(result=types.SimpleNamespace(type="expired"))]
+                return [types.SimpleNamespace(result=types.SimpleNamespace(type="succeeded", message=batch_result))]
+
+        class Msgs:
+            batches = Batches()
+
+            def create(self, **kw):
+                calls["direct"].append(kw)
+                return message(direct_text)
+
+        mod = types.SimpleNamespace(Anthropic=lambda: types.SimpleNamespace(beta=types.SimpleNamespace(messages=Msgs())),
+                                    APIError=Exception)
+        return mod, calls
+
+    def run_ask(self, mod, job="adsense", **kw):
+        import sys
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(sys.modules, {"anthropic": mod}), \
+                mock.patch.object(C, "USAGE_DIR", pathlib.Path(d)), mock.patch.object(C, "BATCH_POLL_SEC", 0):
+            out = C.ask(job, "규칙", "글", model=C.SONNET, cache="5m", **kw)
+            return out, C.load_ledger(C.today_kst())
+
+    def test_batch_half_price(self):
+        mod, calls = self.fake(self.message("batched"))
+        out, rows = self.run_ask(mod)
+        self.assertEqual(out, "batched")
+        self.assertEqual(calls["direct"], [])
+        params = calls["batch"][0]
+        self.assertNotIn("fallbacks", params)  # 배치는 fallbacks 를 못 씀
+        self.assertEqual(params["system"][0]["cache_control"], {"type": "ephemeral", "ttl": "1h"})  # 배치면 1시간
+        self.assertEqual(rows[-1]["usd"], 0.5)  # Sonnet 출력 10만 토큰 1달러 → 반값
+        self.assertTrue(rows[-1]["batch"])
+
+    def test_expired_falls_back(self):
+        mod, calls = self.fake(None)
+        out, rows = self.run_ask(mod)
+        self.assertEqual(out, "direct")
+        self.assertEqual(calls["direct"][0]["fallbacks"], "default")
+        self.assertEqual(rows[-1]["usd"], 1.0)
+
+    def test_refusal_retries_with_fallbacks(self):
+        mod, calls = self.fake(self.message("", stop="refusal"))
+        out, rows = self.run_ask(mod)
+        self.assertEqual(out, "direct")
+        self.assertEqual([r["usd"] for r in rows[-2:]], [0.5, 1.0])
+
+    def test_not_batched_jobs(self):
+        mod, calls = self.fake(None)
+        with mock.patch.dict(os.environ, {"CLAUDE_BATCH": "1"}):
+            out, _rows = self.run_ask(mod, job="raksil")
+        self.assertEqual(calls["batch"], [])
+        self.assertEqual(out, "direct")
+
+
 class HeartTurnTest(unittest.TestCase):
     def test_one_in_three(self):
         days = [(dt.date(2026, 12, 2) + dt.timedelta(days=2 * k)).isoformat() for k in range(9)]
