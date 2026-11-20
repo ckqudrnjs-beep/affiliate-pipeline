@@ -18,7 +18,7 @@ NEED_FFMPEG = unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffpro
 class ConfigTest(unittest.TestCase):
     def test_tracks_exist_and_sane(self):
         c = bgm.cfg()
-        self.assertEqual(len(c["tracks"]), 4)
+        self.assertEqual(len(c["tracks"]), 7)
         for slug, t in c["tracks"].items():
             f = ROOT / t["file"]
             self.assertTrue(f.exists(), f)
@@ -34,7 +34,7 @@ class ConfigTest(unittest.TestCase):
             self.assertEqual(len(set(k["order"])), len(k["order"]), kind)
             for s in k["order"]:
                 self.assertEqual(c["tracks"][s]["channel"], k["channel"], f"{kind}: {s}")
-        for k in ("meme", "toon", "live"):  # 밈은 자체 음악, 삼촌은 BK 11/20 "안 어울려" (docs/BGM.md 1장)
+        for k in ("meme", "live"):  # 밈은 자체 음악, 실사 특별편은 아직 (docs/BGM.md 1장)
             self.assertNotIn(k, c["kinds"])
             self.assertIn(k, c["no_bgm"])
 
@@ -42,11 +42,12 @@ class ConfigTest(unittest.TestCase):
 class PickTest(unittest.TestCase):
     def test_consecutive_episodes_differ(self):
         d = dt.date(2026, 11, 22)
-        for kind, step in (("balance", 1), ("game", 1)):
+        for kind, step in (("toon", 2), ("balance", 1), ("game", 1)):
             got = [bgm.pick(kind, d + dt.timedelta(days=i * step))["slug"] for i in range(8)]
             for a, b in zip(got, got[1:]):
                 self.assertNotEqual(a, b, kind)
-            self.assertEqual(len(set(got[:4])), 4, f"{kind}: 4편 안에 4곡 모두")
+            n = len(bgm.cfg()["kinds"][kind]["order"])
+            self.assertEqual(len(set(got[:n])), n, f"{kind}: {n}편 안에 모든 곡")
 
     def test_same_day_raksil_differs(self):
         for i in range(30):
@@ -61,8 +62,15 @@ class PickTest(unittest.TestCase):
             self.assertNotEqual(a["start"], b["start"])
 
     def test_no_bgm_kind(self):
-        for k in ("meme", "toon", "live"):
+        for k in ("meme", "live"):
             self.assertIsNone(bgm.pick(k, dt.date(2026, 11, 21)))
+
+
+class DingTest(unittest.TestCase):
+    def test_uncle_tracks_have_ding_pitch(self):  # BK 11/20 '띵'은 맑게, 곡 음높이에 맞춰
+        for slug, t in bgm.cfg()["tracks"].items():
+            if t["channel"] == "uncle":
+                self.assertTrue(1000 <= t.get("ding_hz", 0) <= 2400, slug)
 
 
 class SnapTest(unittest.TestCase):
