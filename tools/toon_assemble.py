@@ -77,6 +77,13 @@ SFX = {  # 합성 효과음 (저작권 없음)
 # spec "sfx": "none" 이면 효과음을 전부 뺀다 (BGM 만)
 
 
+def bell(hz: float) -> str:
+    """BK 11/20 "노래를 은은하게 깔고 띵 소리가 맑고 청량하게": 곡의 으뜸음에 맞춘 맑은 종소리.
+    정수배 배음만(쇳소리 없음), 빠른 시작·0.6초 여운."""
+    return (f"0.26*sin(2*PI*{hz}*t)*exp(-6*t)+0.10*sin(2*PI*{hz * 2}*t)*exp(-10*t)"
+            f"+0.05*sin(2*PI*{hz * 3}*t)*exp(-16*t)+0.04*sin(2*PI*{hz * 1.5}*t)*exp(-8*t)")
+
+
 def run(*a):
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *a], check=True)
 
@@ -189,11 +196,14 @@ def assemble(spec: dict) -> pathlib.Path:
         "-map", "[v]", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", str(v))
     if spec.get("sfx") == "none":
         sfx = []
+    sounds = dict(SFX)
+    if tr and tr.get("ding_hz"):  # BGM 이 있으면 '띵' = 곡 음높이에 맞춘 맑은 종소리
+        sounds["ding"] = bell(tr["ding_hz"])
     ins, fl = [], []
     for j, (k, s) in enumerate(sfx):
         w = tmp / f"{k}.wav"
         if not w.exists():
-            run("-f", "lavfi", "-i", f"aevalsrc='{SFX[k]}':s=44100:d=0.7", str(w))
+            run("-f", "lavfi", "-i", f"aevalsrc='{sounds[k]}':s=44100:d=0.8", str(w))
         ins += ["-i", str(w)]
         ms = int(s * 1000)
         fl.append(f"[{j + 1}]adelay={ms}|{ms}[s{j}]")
