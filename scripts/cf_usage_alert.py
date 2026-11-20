@@ -114,6 +114,9 @@ def telegram(token: str, chat: str, text: str) -> bool:
 
 def setup(token: str) -> int:
     st, txt = http(f"https://api.telegram.org/bot{token}/getUpdates")
+    if st == 409:  # 방문자 조회 웹훅(tg-webhook)이 켜져 있으면 getUpdates 가 막힌다
+        print("::error::봇에 방문자 조회 웹훅이 켜져 있어 번호 찾기를 못 해요. Actions tg-webhook 을 delete 로 돌린 뒤 다시 하고, 끝나면 set 으로 다시 켜 주세요.")
+        return 1
     try:
         ups = json.loads(txt).get("result", [])
     except ValueError:
