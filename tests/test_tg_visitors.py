@@ -45,7 +45,7 @@ class TgVisitors(unittest.TestCase):
 
     def test_others_get_nothing(self):
         self.assertNotIn("23", self.o["other"]["text"])
-        self.assertEqual(self.o["bad"]["st"], 404)
+        self.assertEqual(self.o["bad"]["st"], 401)
 
     def test_secret_same_as_python(self):
         import tg_webhook

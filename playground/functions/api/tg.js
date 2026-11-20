@@ -52,10 +52,11 @@ export function render(kind, raksil, d3, now = KST()) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const token = String(env.TELEGRAM_BOT_TOKEN || "");
+  const token = String(env.TELEGRAM_BOT_TOKEN || "").trim();
   const admin = String(env.TELEGRAM_ADMIN_CHAT_ID || "").trim();
-  if (token.length < 20 || !admin) return new Response(null, { status: 404 });
-  if (!same(request.headers.get("x-telegram-bot-api-secret-token") || "", await tgSecret(token))) return new Response(null, { status: 404 });
+  // 연결 점검용 상태 코드(tg-webhook info 의 '마지막 오류'에 그대로 보임): 503 = Cloudflare 변수 없음, 401 = 토큰이 GitHub 것과 다름
+  if (token.length < 20 || !admin) return new Response(null, { status: 503 });
+  if (!same(request.headers.get("x-telegram-bot-api-secret-token") || "", await tgSecret(token))) return new Response(null, { status: 401 });
   let u;
   try { u = await request.json(); } catch { return ok(); }
   const m = u && u.message;
