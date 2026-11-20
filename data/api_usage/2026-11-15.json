@@ -1,0 +1,38 @@
+[
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 8225,
+  "out": 26576,
+  "cache": 0,
+  "usd": 0.5644
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 15081,
+  "out": 2871,
+  "cache": 0,
+  "usd": 0.1177
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-sonnet-5-5",
+  "in": 3878,
+  "out": 1847,
+  "cache": 0,
+  "usd": 0.0262
+ },
+ {
+  "date": "2026-11-20",
+  "job": "toon",
+  "model": "claude-sonnet-5-5",
+  "in": 3873,
+  "out": 1509,
+  "cache": 0,
+  "usd": 0.0228
+ }
+]
