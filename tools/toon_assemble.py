@@ -16,8 +16,11 @@ spec = {
   "ending": {"clip": "toon-ending-01.mp4", "ss": 0, "t": 6, "at": 1.5},  # 고정 엔딩 클립(BK 11/19, 매 편 재사용):
                                     # 있으면 멈춤 예고 대신 이 클립을 끝에 붙이고 at 초(버튼 누르는 순간)부터 예고·구독 자막
   "date": "2026-11-22",             # 공개일 (BGM 순번). 없으면 slug 의 날짜
-  "bgm": "leak-detective"           # (선택) 곡 고정, false 면 BGM 없음. 없으면 config/bgm.json 순번대로
+  "bgm": "leak-detective",          # (선택) 곡 고정, false 면 BGM 없음. 없으면 config/bgm.json 순번대로
+  "band": {"top": "배달 김치찌개 한 그릇", "accent": "집밥이면 얼마 남을까?"}  # (선택) 위쪽 검은 제목 띠
 }
+제목 띠 (BK 11/20 "섬네일과 코멘트가 우선 사람들이 누르게"): 잘 된 살림 쇼츠처럼 화면 맨 위에 검은 띠 + 흰 줄·노란 줄
+두 줄 제목을 처음부터 마지막 컷까지 깔고(엔딩 클립엔 없음), 컷 자막은 띠 아래로 내린다. 문구 규칙 docs/SHORTS_BANK.md '제목 띠'.
 BGM 이 있으면 컷 길이·멈춤은 박 단위로, 숫자 등장·효과음은 반 박에 맞춘다 (BK 11/20 "노래 BPM에 맞춰서"). docs/BGM.md
 숫자는 한 편에 한 번만(big). 숫자·사실은 사이트 데이터만.
 """
@@ -35,6 +38,8 @@ from pipeline import bgm  # noqa: E402
 W, H, FPS = 1080, 1920, 30
 FONT = pathlib.Path(__file__).resolve().parent.parent / "config/fonts/Jua-Regular.ttf"  # OFL, '…' 글자 없음 → '...'
 BROWN = (70, 40, 20)
+BAND_H, BAND_SIZE, BAND_MAXW = 360, 104, W - 70  # 제목 띠: 높이(=화면 19%, Veo 프롬프트가 비워 두는 위 1/4 안), 글자 크기, 최대 폭
+YELLOW = (255, 214, 0)
 # 2026-11-19 BK "2일에 하나씩인데 컨텐츠에 구독 좋아요를 어필해야": 이유형 CTA(보상 약속 금지), 이틀 간격이라 '모레'.
 OUTRO = {"lines": ["다음 새는 돈은", "모레 저녁 7시!"], "big": "구독 좋아요 꾹!", "sub": "다음 편 안 놓치게", "big_y": 420, "hold": 2.8}
 
@@ -43,14 +48,44 @@ def fix(t):  # 주아에 없는 글자 → 네모(두부)로 나옴: '…' '·'
     return t.replace("…", "...").replace(" · ", " | ").replace("·", "|") if t else t
 
 
-def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92):
+def band_lines(band: dict | None) -> list[tuple[str, tuple]]:
+    """제목 띠 두 줄: 위 흰색(상황), 아래 노란색(궁금증·숫자 훅). 한 줄만 있어도 된다."""
+    if not band:
+        return []
+    out = [(fix(band.get("top", "")).strip(), (255, 255, 255)), (fix(band.get("accent", "")).strip(), YELLOW)]
+    return [x for x in out if x[0]]
+
+
+def draw_band(d, band: dict | None) -> int:
+    """화면 맨 위 검은 띠 + 두 줄 제목. 띠 아래 y 를 돌려준다(띠 없으면 0). 긴 줄은 폭에 맞게 글자를 줄인다."""
+    rows = band_lines(band)
+    if not rows:
+        return 0
+    from PIL import ImageFont
+    d.rectangle([0, 0, W, BAND_H], fill=(0, 0, 0, 255))
+    size = BAND_SIZE
+    while size > 64 and max(d.textlength(t, font=ImageFont.truetype(str(FONT), size)) for t, _ in rows) > BAND_MAXW:
+        size -= 4
+    f = ImageFont.truetype(str(FONT), size)
+    gap = size + 26
+    y = BAND_H / 2 + 14 - gap * (len(rows) - 1) / 2  # 위쪽 상태바 여백을 조금 더 둔다
+    for t, col in rows:
+        d.text((W / 2, y), t, font=f, fill=col, anchor="mm")
+        y += gap
+    return BAND_H
+
+
+def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92, band=None):
     lines, big, sub, small = [fix(t) for t in lines], fix(big), fix(sub), fix(small)
     from PIL import Image, ImageDraw, ImageFilter, ImageFont
     f = lambda n: ImageFont.truetype(str(FONT), n)  # noqa: E731
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d, sd = ImageDraw.Draw(im), ImageDraw.Draw(sh)
-    y = 190
+    top = draw_band(d, band)
+    y = top + 100 if top else 190  # 띠가 있으면 자막은 띠 바로 아래
+    if top:  # 숫자 상자가 자막·띠와 겹치지 않게 아래로
+        bigy = max(bigy, y + len(lines) * (size + 24) + 10)
     for t in lines:
         sd.text((W / 2 + 4, y + 8), t, font=f(size), fill=(0, 0, 0, 150), anchor="mm", stroke_width=10, stroke_fill=(0, 0, 0, 150))
         d.text((W / 2, y), t, font=f(size), fill="white", anchor="mm", stroke_width=10, stroke_fill=BROWN)
@@ -139,7 +174,7 @@ def assemble(spec: dict) -> pathlib.Path:
     for i, c in enumerate(spec["cuts"]):
         last = i == n - 1
         a = tmp / f"a{i}.png"
-        layer(c.get("lines", []), small=spec.get("small") if last else None).save(a)
+        layer(c.get("lines", []), small=spec.get("small") if last else None, band=spec.get("band")).save(a)
         inputs = ["-ss", str(c.get("ss", 0)), "-t", str(c.get("t", 8)), "-i", c["clip"], "-i", str(a)]
         ending = spec.get("ending")
         outro = last and spec.get("outro", True) and not ending
@@ -156,7 +191,7 @@ def assemble(spec: dict) -> pathlib.Path:
         if c.get("big"):
             b = tmp / f"b{i}.png"
             layer(c.get("after", c.get("lines", [])), c["big"], c.get("sub"), spec.get("small") if last else None,
-                  bigy=c.get("big_y", 900)).save(b)
+                  bigy=c.get("big_y", 900), band=spec.get("band")).save(b)
             at = c.get("big_at", 0)
             inputs += ["-i", str(b)]
             fc = (f"{base}[v];[v][1:v]overlay=enable='lt(t,{at})'[x];"
@@ -166,7 +201,7 @@ def assemble(spec: dict) -> pathlib.Path:
             fc = f"{base}[v];[v][1:v]overlay=enable='1{upto}'[o]"
         if outro:  # 클립이 끝나고 멈춘 화면에 다음 편 예고 + 구독·좋아요
             e = tmp / "outro.png"
-            layer(OUTRO["lines"], OUTRO["big"], OUTRO["sub"], spec.get("small"), bigy=OUTRO["big_y"]).save(e)
+            layer(OUTRO["lines"], OUTRO["big"], OUTRO["sub"], spec.get("small"), bigy=OUTRO["big_y"], band=spec.get("band")).save(e)
             n_in = inputs.count("-i")
             inputs += ["-i", str(e)]
             fc = fc[:-3] + f"[pre];[pre][{n_in}:v]overlay=enable='gte(t,{end})'[o]"
