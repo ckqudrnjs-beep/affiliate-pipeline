@@ -220,6 +220,9 @@ JUDGE = obj({"scores": arr(obj({"idx": I, "hook": I, "fun": I, "aha": I, "bible"
 PROMPTS = obj({"prompts": arr(S)})
 
 
+REFINE_GOAL, REFINE_ROUNDS = 45, 2
+
+
 def toon(today: dt.date | None = None, n: int = 8) -> int:
     from . import episodes
     today = today or today_kst()
@@ -248,8 +251,29 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                  schema=JUDGE, effort="medium", need=0.6)
     scores = {s["idx"]: s for s in judged["scores"]}
     best = [i for i in judged["best"] if 0 <= i < len(vs)][:2] or sorted(scores, key=lambda i: -scores[i]["total"])[:2]
+    first = {i: scores.get(i, {}).get("total", 0) for i in best}
+    # 다듬기 (BK 11/20 "점수가 낮네"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 45점, 최대 2번.
+    for _ in range(REFINE_ROUNDS):
+        weak = [i for i in best if scores.get(i, {}).get("total", 0) < REFINE_GOAL]
+        if not weak:
+            break
+        fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
+                    "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성을 끌어올려라. 순서 그대로 돌려줘.\n\n"
+                    + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False)
+                    + "\n\n" + site_facts(), schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
+                    need=0.6)["variants"][:len(weak)]
+        if not fixed:
+            break
+        rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False) + "\n\n" + site_facts(),
+                       schema=JUDGE, effort="medium", need=0.3)
+        for s in rejudged["scores"]:
+            if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
+                i = weak[s["idx"]]
+                vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
+    best.sort(key=lambda i: -scores.get(i, {}).get("total", 0))
     md = [f"# 동전이 만화 대본 후보 — {date} 공개 편", "",
-          f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개). "
+          f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개 다듬기). "
+          "점수는 50점 만점의 깐깐한 편집장 채점이에요(40점 = 대부분 항목 8점). "
           "마음에 드는 안을 골라 이 PR에 댓글로 번호만 남기거나, 그냥 병합하면 1안으로 진행해요. 숫자는 근거를 다시 확인한 뒤 자막에 넣어요.", ""]
     for rank, i in enumerate(best, 1):
         v, s = vs[i], scores.get(i, {})
@@ -257,7 +281,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                       "클립마다 영어 프롬프트 하나, 동작은 하나만.\n\n" + bible,
                       json.dumps(v, ensure_ascii=False) + "\n\n이 대본의 컷 4개에 맞는 Veo 프롬프트 4개를 써 줘.",
                       schema=PROMPTS, model=SONNET, effort="medium", need=0.3)["prompts"][:4]
-        md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/50)", "",
+        up = f", 다듬기 전 {first[i]}" if first.get(i) and first[i] != s.get("total") else ""
+        md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/50{up})", "",
                f"- 장소: {v['place']} / 훅: {v['hook']} / 개그: {v['gag']}",
                f"- 숫자 상자: **{v['number_box']}** — 근거: {v['number_source']}",
                f"- 삼촌 한 마디: {v['tip']} / 재미 포인트: {v['why_fun']}",
