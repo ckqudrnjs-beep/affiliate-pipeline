@@ -17,6 +17,7 @@
 11. numpy·ffmpeg 를 쓰는 테스트에는 `@unittest.skipUnless(...)`(test_live 의 `@NEED_RENDER`)를 붙인다. daily·youtube 등 가벼운 워크플로도 테스트 전체를 돌리는데 numpy 가 없어서, 안 붙이면 그 워크플로가 통째로 실패한다. `tests/test_heavy_deps_guard.py` 가 검사한다 (2026-11-19).
 12. AI 영상(Veo·Sora) 프롬프트를 쓰거나 BK 가 만든 클립을 등록할 때는 docs/AI_CLIPS.md '제작 지침'을 따른다: 영상 안에 글자·숫자·간판·로고·화면 표시 금지(숫자는 편집 자막으로만), 한 장면 한 동작·카메라 하나, 손·얼굴 단순하게, 프롬프트 틀 순서대로. 등록 전 프레임을 보고 깨진 것은 넣지 않는다 (BK 2026-11-19).
 13. 쇼츠를 만들거나 새 형식을 만들 때는 docs/BGM.md 를 따른다: 먼저 'BGM 이 필요한 구성인지' 판정(목소리 없음 = BGM 주인공, 목소리 있음 = 낮게+자동 낮춤, 음악 변화·게임 소리가 내용이면 안 넣음), 곡은 BK Suno 곡만 `pipeline.bgm.pick` 순번으로(5락실 4곡, 삼촌 만화 은은한 3곡, 실사 특별편·밈은 없음), 장면 전환은 박(`bgm.snap`)에 맞춘다. 유행 음원·남의 곡 금지 (BK 2026-11-20).
+14. BK 개인 텔레그램(관리자 대화) 알림은 `pipeline.api_check.send`(scripts 는 `cf_usage_alert.telegram`)로만 보내고, 예약 시각은 밤 23:00~07:00 KST 를 피한다. 밀려서 밤에 돌면 함수가 소리 없이 보낸다. 자세한 시간표: docs/DIRECTION.md 2-6 (BK 2026-11-21).
 
 ## 0-1. SNS 운영 규칙
 - [docs/OPERATIONS.md](docs/OPERATIONS.md)를 따른다: 정보형 50% 이상, 하루 발행량 제한, 상호작용 자동화 금지.

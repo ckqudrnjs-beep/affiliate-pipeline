@@ -74,6 +74,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 
 ### 2-6. 텔레그램 (https://t.me/don3chon_deal)
 - 매일 06:30 자동. 시세 알림 구독 기능은 애드센스 승인 뒤.
+- **BK 개인 대화 알림은 밤 23:00~07:00(KST)에 안 보낸다 (BK 11/21 "잠자는 시간에는 안 오게")**: 텔레그램을 보내는 예약은 낮으로 옮김 — `yt-early` 19:10~22:10 + 07:10, `cf-usage` 08:50·11:50·14:50·17:50·20:50·22:50, `api-check` 07:15, claude-jobs `check` 07:05. GitHub 예약이 밀려 밤에 돌면 공용 함수(`api_check.send`, `cf_usage_alert.telegram`)가 소리 없이 보냄. 새 알림 작업도 이 시간대를 피하고 이 함수로 보낸다. 공개 채널(@don3chon_deal 06:30 등)은 해당 없음.
 
 ### 2-7. 네이버 블로그
 - 주말에 BK가 직접, 비정기. 자동 초안은 정기 실행 끔(필요할 때만 수동).
@@ -83,20 +84,20 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 
 | 영역 | 기준 칸 | 세부 규칙 문서 | 주인 작업 (KST) | 뒤따르는 작업 | 코드 | 담당 스레드 |
 |---|---|---|---|---|---|---|
-| 돈삼촌 글 | 2-1 | ARTICLES_AUTO.md | 예약 '삼촌의 글' 매일 05:13 (자동 승인) | claude-jobs `check` 05:40, `polish` 13:10(PR) | pipeline.site · articles | 돈삼촌 사이트 |
+| 돈삼촌 글 | 2-1 | ARTICLES_AUTO.md | 예약 '삼촌의 글' 매일 05:13 (자동 승인) | claude-jobs `check` 07:05, `polish` 13:10(PR) | pipeline.site · articles | 돈삼촌 사이트 |
 | 생활 시세·텔레그램 | 2-1, 2-6 | DAILY.md · TELEGRAM.md | Actions `daily` 05:50, `curate` 06:30 (자동 승인) | `report` 월 07:10 | pipeline.daily · curate · telegram | 텔레그램 |
 | 레시피 쿠팡 링크 | 2-1 | AFFILIATES.md | Actions `coupang-links` 손 실행만(애드센스 승인 뒤 목 04:40 예약 켬, main 커밋 → 사이트 빌드) | 사이트 빌드 | pipeline.coupang_links | 쿠팡 API 링크 |
 | 알리 상품 | 2-1 | PRODUCTS_AUTO.md | 예약 '상품 자동 등록' 화·금 10:23 (자동 승인) | `gallery` | data/products | 상품 자동 |
 | 삼촌 쇼츠 대본 | 2-3 | EPISODES.md · 동전이_세계관_바이블.md | claude-jobs `toon` 07:10(+시즌 기록·댓글 투표 셈 data/toon/season.json) → BK 고름 → 예약 '쇼츠 대본' 07:40 | `episodes`(main 반영 시) → `youtube` 10:00 업로드 → 19:00 공개 | pipeline.episodes · claude_jobs | Claude API 크레딧 |
 | 삼촌 쇼츠 영상 | 2-3 | AI_CLIPS.md · BGM.md | BK가 Flow 클립 → Claude가 tools/toon_assemble.py | `youtube` | tools/toon_assemble.py | 쇼츠 만화(실사→캐릭터) |
-| 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) · `yt-early` 매시 10분 19:10~24:10 (공개 2시간 반응 → 텔레그램 + 다음 편 규칙, 읽기만) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41, `toon` 07:10 이 2시간 규칙을 읽음 | claude_jobs.shorts | Claude API 크레딧 |
+| 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) · `yt-early` 매시 10분 19:10~22:10 + 07:10 (공개 2시간 반응 → 텔레그램 + 다음 편 규칙, 읽기만) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41, `toon` 07:10 이 2시간 규칙을 읽음 | claude_jobs.shorts | Claude API 크레딧 |
 | 주간 쇼츠 기획안 | 2-2, 2-3 | 프로젝트 폴더 plan/weekly-shorts/ | 예약 '주간 쇼츠 기획안' 월 08:53 (보고만: 트렌드·정책 조사 → 채널별 한 문장 주제·이번 주 주제·예산 안 제안, 코드·설정 안 바꿈) | 채택한 제안만 4장 흐름으로 각 담당 스레드가 반영 | — | 주간 쇼츠 기획 |
 | 5락실 게임 | 2-2 | GAME_QUALITY.md · RAKSIL_GUIDES.md | 게임별 스레드 (PR, BK 확인) · 예약 '게임 아이템 2주 시안' 짝수 주 월 08:43 (커밋만, BK "올려" 후 배포) | `posters`(+새 게임 세로 썸네일 → `drive-backup` 홍보이미지) | playground/ | 5락실 · 게임 품질 |
 | 5락실 쇼츠 | 2-2 | 5RAKSIL_PROMO.md · BGM.md | 예약 16:13 → Actions `raksil-shorts` 16:23 (자동 승인) | 질문 예약 21:37 (자동 승인) | pipeline.raksil_shorts | 5락실 홍보·쇼츠 |
 | 인스타 | 2-4 | INSTAGRAM_AUTO.md | BK 수동 | — | — | 인스타 |
 | 스레드 | 2-5 | OPERATIONS.md | 없음 (`publish` dry-run) | — | pipeline.publish | — |
 | 네이버 블로그 | 2-7 | — | BK 수동 (claude-jobs `naver` 수동 실행만) | — | — | 네이버 |
-| 감시·검사 | 0 | COMPLIANCE.md · SECURITY.md | `api-check` 06:20·11:20·16:20·21:20, `health` 10:30, `gsc-stats` 07:20, `cf-usage` · 방문자 조회 `5raksil.com/api/tg`(텔레그램 "방문자", 상시) | 텔레그램 알림 | pipeline.api_check | API 점검 · 보안 |
+| 감시·검사 | 0 | COMPLIANCE.md · SECURITY.md | `api-check` 07:15·11:20·16:20·21:20, `health` 10:30, `gsc-stats` 07:20, `cf-usage` · 방문자 조회 `5raksil.com/api/tg`(텔레그램 "방문자", 상시) | 텔레그램 알림 | pipeline.api_check | API 점검 · 보안 |
 | 백업 | — | DRIVE_BACKUP.md | `drive-backup` 03:30, `d1-backup` 일 04:20 | — | pipeline.drive_backup | 드라이브 백업 |
 | **기준·정합성** | 이 파일 | — | 이 파일을 고치는 PR | `consistency` 매일 07:50 → 어긋나면 텔레그램, `scoreboard` 월 08:20 → docs/SCOREBOARD.md + 제안 한 줄 | pipeline.consistency · scoreboard | 자동화 어긋남 막는 기준 |
 

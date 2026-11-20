@@ -106,7 +106,10 @@ def health() -> str | None:
 
 
 def telegram(token: str, chat: str, text: str) -> bool:
-    st, txt = http(f"https://api.telegram.org/bot{token}/sendMessage", {"chat_id": chat, "text": text, "disable_web_page_preview": True})
+    kst_h = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)).hour
+    quiet = kst_h >= 23 or kst_h < 7  # BK 11/21: 밤 23~07시(KST)는 소리 없이 (src/pipeline/api_check.quiet_now 와 같은 규칙)
+    st, txt = http(f"https://api.telegram.org/bot{token}/sendMessage",
+                   {"chat_id": chat, "text": text, "disable_web_page_preview": True, "disable_notification": quiet})
     if st != 200:
         print("텔레그램 전송 실패:", st, txt[:200])
     return st == 200
