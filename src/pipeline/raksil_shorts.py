@@ -879,7 +879,7 @@ def split_frame(t: float, starts: list[float], ctx: dict):
                                                       fill=col + (110,))
                 glow_text(img, ((box[0] + box[2]) / 2, box[3] - 110), [f"{round(pct * kk)}%"], font(110), 110, YEL, glow=10)
             if kk >= 1:
-                glow_text(img, (W / 2, BAND_H + 60), [f"실제 투표 {res['n']}표"], font(52), 52, WHITE, glow=6)
+                glow_text(img, (W / 2 - 60, 1045), [f"실제 투표 {res['n']}표"], font(52), 52, WHITE, glow=6)
             win_side = "a" if res["pa"] >= res["pb"] else "b"
             mood = "shock" if winner(res)[1] >= 65 else "happy"
         elif pick:
