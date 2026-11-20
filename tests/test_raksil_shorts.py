@@ -1,7 +1,12 @@
 import datetime as dt
+import importlib.util
+import shutil
 import unittest
 
 from pipeline import raksil_shorts as r
+
+NEED_RENDER = unittest.skipUnless(importlib.util.find_spec("numpy") and importlib.util.find_spec("PIL") and shutil.which("ffmpeg"),
+                                  "numpy/PIL/ffmpeg 없음")
 
 QS = [{"id": "20261113-2", "date": "2026-11-13", "a": "x", "b": "y"},
       {"id": "20261113-1", "date": "2026-11-13", "a": "평생 라면만", "b": "평생 치킨만"},
@@ -90,6 +95,7 @@ class RaksilShortsTest(unittest.TestCase):
         finally:
             r.LOG = old
 
+    @NEED_RENDER
     def test_balance_frames_keep_shorts_ui_free(self):
         """오른쪽 버튼 자리(x≥900, y 1000~1540)와 아래 제목 자리(y≥1560 위 격자 제외)에 몽글이·글자가 없다."""
         import numpy as np
