@@ -1,0 +1,51 @@
+name: yt-early
+
+# 쇼츠 공개 2시간 반응 리포트 + 다음 편 규칙 (2026-11-20 BK "1~2시간 반응 리포트, 그 뒤 개선 방안이 중요").
+# 5락실 밸런스 17:00 → 19:10, 삼촌 19:00 → 21:10, 5락실 새 게임 20:00 → 22:10 KST 에 공개 후 80~240분 된 편만 본다.
+# 결과: 텔레그램(관리자 대화방) + data/youtube/early.json(기록) + early_lessons.json(다음 대본이 읽는 규칙).
+# 영상·제목은 바꾸지 않는다(읽기만). 힌트 한 줄은 Claude API 작업 'early'(회차 상한 1달러).
+on:
+  schedule:
+    - cron: "10 10 * * *"   # 19:10 KST
+    - cron: "10 12 * * *"   # 21:10 KST
+    - cron: "10 13 * * *"   # 22:10 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  early:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: pip install -q "anthropic>=2.11,<3"
+      - name: 2시간 반응
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.yt_early
+      - name: 저장
+        run: |
+          git config user.name "yt-early-bot"
+          git config user.email "yt-early-bot@users.noreply.github.com"
+          git add data/youtube/early.json data/youtube/early_lessons.json 2>/dev/null || true
+          git add data/api_usage 2>/dev/null || true
+          git diff --cached --quiet && exit 0
+          git commit -q -m "쇼츠 2시간 반응 $(TZ=Asia/Seoul date '+%F %H:%M')"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
+          exit 1

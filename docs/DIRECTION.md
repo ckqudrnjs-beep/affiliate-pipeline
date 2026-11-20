@@ -71,7 +71,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 | 알리 상품 | 2-1 | PRODUCTS_AUTO.md | 예약 '상품 자동 등록' 화·금 10:23 (자동 승인) | `gallery` | data/products | 상품 자동 |
 | 삼촌 쇼츠 대본 | 2-3 | EPISODES.md · 동전이_세계관_바이블.md | claude-jobs `toon` 07:10 → BK 고름 → 예약 '쇼츠 대본' 07:40 | `episodes`(main 반영 시) → `youtube` 10:00 업로드 → 19:00 공개 | pipeline.episodes · claude_jobs | Claude API 크레딧 |
 | 삼촌 쇼츠 영상 | 2-3 | AI_CLIPS.md | BK가 Flow 클립 → Claude가 tools/toon_assemble.py | `youtube` | tools/toon_assemble.py | 쇼츠 만화(실사→캐릭터) |
-| 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41 | claude_jobs.shorts | Claude API 크레딧 |
+| 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) · `yt-early` 19:10·21:10·22:10 (공개 2시간 반응 → 텔레그램 + 다음 편 규칙, 읽기만) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41, `toon` 07:10 이 2시간 규칙을 읽음 | claude_jobs.shorts | Claude API 크레딧 |
 | 5락실 게임 | 2-2 | GAME_QUALITY.md · RAKSIL_GUIDES.md | 게임별 스레드 (PR, BK 확인) · 예약 '게임 아이템 2주 시안' 짝수 주 월 08:43 (커밋만, BK "올려" 후 배포) | `posters`(+새 게임 세로 썸네일 → `drive-backup` 홍보이미지) | playground/ | 5락실 · 게임 품질 |
 | 5락실 쇼츠 | 2-2 | 5RAKSIL_PROMO.md | 예약 16:13 → Actions `raksil-shorts` 16:23 (자동 승인) | 질문 예약 21:37 (자동 승인) | pipeline.raksil_shorts | 5락실 홍보·쇼츠 |
 | 인스타 | 2-4 | INSTAGRAM_AUTO.md | BK 수동 | — | — | 인스타 |
@@ -119,6 +119,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 ```
 
 ## 결정 기록 (최신이 위)
+- 2026-11-20: 쇼츠 공개 2시간 반응 리포트 `yt-early` + 다음 편 규칙 자동 반영(삼촌 `toon` 대본·채점, 주간 `shorts` 분석). 제목은 자동으로 안 바꿈(제안만) (BK "1~2시간 반응 리포트" → "그 이후 개선 방안을 잡는 것이 중요").
 - 2026-11-20: 삼촌 쇼츠 새는 돈 모양 10가지·이야기 틀 5가지 돌려 쓰기, 최근 3편 반복 금지 (BK "동전이 새어나가는 모션이 고정적으로 사용되면 지겨울수도").
 - 2026-11-20: 새 콘텐츠만 홍보 이미지 자동, 이전 콘텐츠는 안 만듦 (BK "향후 새로운 컨텐츠를 만들면 자동적으로" → "네").
 - 2026-11-20: 주간 성과판 `scoreboard`(월 08:20) — docs/SCOREBOARD.md, 이미 꺼진 형식엔 제안 안 함. 방문자·인스타·텔레그램은 아직 못 잼.
