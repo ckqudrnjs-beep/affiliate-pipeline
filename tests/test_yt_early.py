@@ -106,7 +106,7 @@ class PlaylistTest(unittest.TestCase):
 
     def test_kinds(self):
         self.assertEqual(ye.playlist_of({"kind": "삼촌", "style": "toon", "slug": "ep-2026-11-20-skit-q"}),
-                         "동전이네 새는 돈 잡기")
+                         "동전이네 겨울 이야기")
         self.assertEqual(ye.playlist_of({"kind": "삼촌", "style": "live", "slug": "ep-2026-11-28-toon"}), "삼촌 특별편")
         self.assertEqual(ye.playlist_of({"kind": "삼촌", "style": "webtoon", "slug": "ep-2026-11-17-leak"}), "")
         self.assertEqual(ye.playlist_of({"kind": "5락실 밸런스", "slug": "5raksil-2026-11-20"}), "몽글이 밸런스게임")
