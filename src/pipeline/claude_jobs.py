@@ -194,7 +194,8 @@ ELECTRIC_RULE = ("전기요금 계산 기준(사이트 계산기와 같음): 월
                  "예) 평소 250kWh 집에 +24kWh → 약 6,180원, +48kWh → 약 12,370원.")
 POLICY = ("규칙: 상품·구매·할인·제휴 링크·[광고] 없음(쇼츠·블로그 초안 모두). 건강·의약 효능 주장 금지. "
           "사실이 아닌 체험담(직접 써 봤다 등) 금지. 숫자는 주어진 사이트 근거에서만, 근거 경로를 함께 적는다. "
-          "개인·사업자 정보 쓰지 않음. 한국어, 친근한 ~해요체.")
+          "개인·사업자 정보 쓰지 않음. 알리·쿠팡·테무 등 쇼핑몰·브랜드 이름 금지('해외직구'처럼 일반 말로). "
+          "한국어, 친근한 ~해요체.")
 
 
 def recent_episode_titles(n: int = 14) -> list[str]:
@@ -220,17 +221,23 @@ JUDGE = obj({"scores": arr(obj({"idx": I, "hook": I, "fun": I, "aha": I, "bible"
 PROMPTS = obj({"prompts": arr(S)})
 
 
+REFINE_GOAL, REFINE_ROUNDS = 45, 2
+
+
 def toon(today: dt.date | None = None, n: int = 8) -> int:
     from . import episodes
     today = today or today_kst()
     info = episodes.info_short(today)
     date = info["date"]
     out = ROOT / "data/toon/lab" / f"{date}.md"
-    if out.exists():
-        print(f"{out.name} 이미 있음")
+    if out.exists() or sh("git", "ls-remote", "--heads", "origin", f"auto/toon-{date}", check=False):
+        print(f"{date} 후보 이미 있음 (파일 또는 PR)")
         return 0
     bible = (ROOT / "config/toon_bible.md").read_text(encoding="utf-8")
-    system = ("너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n\n" + bible
+    special = dt.date.fromisoformat(date).weekday() >= 5  # 주말 공개 편 = 실사 삼촌 특별편 (BK 11/20, 바이블 주 1회)
+    kind = ("이번 편은 '실사판 특별편'이다. 바이블의 실사판 규칙대로 실사 삼촌이 직접 나오고 프롬프트는 Photorealistic. 으로 쓴다.\n"
+            if special else "이번 편은 만화판이다. 실사 문장을 쓰지 않는다.\n")
+    system = ("너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n" + kind + "\n" + bible
               + "\n\n" + POLICY + "\n" + ELECTRIC_RULE)
     user = (f"{date} 공개 편 대본 후보를 서로 확실히 다른 {n}개 써 줘. 주제 후보(참고, 더 재미있으면 바꿔도 됨):\n"
             f"{json.dumps(info.get('concept'), ensure_ascii=False)}\n\n"
@@ -248,16 +255,38 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                  schema=JUDGE, effort="medium", need=0.6)
     scores = {s["idx"]: s for s in judged["scores"]}
     best = [i for i in judged["best"] if 0 <= i < len(vs)][:2] or sorted(scores, key=lambda i: -scores[i]["total"])[:2]
-    md = [f"# 동전이 만화 대본 후보 — {date} 공개 편", "",
-          f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개). "
+    first = {i: scores.get(i, {}).get("total", 0) for i in best}
+    # 다듬기 (BK 11/20 "점수가 낮네"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 45점, 최대 2번.
+    for _ in range(REFINE_ROUNDS):
+        weak = [i for i in best if scores.get(i, {}).get("total", 0) < REFINE_GOAL]
+        if not weak:
+            break
+        fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
+                    "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성을 끌어올려라. 순서 그대로 돌려줘.\n\n"
+                    + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False)
+                    + "\n\n" + site_facts(), schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
+                    need=0.6)["variants"][:len(weak)]
+        if not fixed:
+            break
+        rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False) + "\n\n" + site_facts(),
+                       schema=JUDGE, effort="medium", need=0.3)
+        for s in rejudged["scores"]:
+            if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
+                i = weak[s["idx"]]
+                vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
+    best.sort(key=lambda i: -scores.get(i, {}).get("total", 0))
+    md = [f"# 동전이 {'실사 삼촌 특별편' if special else '만화'} 대본 후보 — {date} 공개 편", "",
+          f"자동 생성 {today.isoformat()} (Claude API, 후보 {len(vs)}개 → 채점 → 상위 2개 다듬기). "
+          "점수는 50점 만점의 깐깐한 편집장 채점이에요(40점 = 대부분 항목 8점). "
           "마음에 드는 안을 골라 이 PR에 댓글로 번호만 남기거나, 그냥 병합하면 1안으로 진행해요. 숫자는 근거를 다시 확인한 뒤 자막에 넣어요.", ""]
     for rank, i in enumerate(best, 1):
         v, s = vs[i], scores.get(i, {})
         prompts = ask("toon", "너는 Veo 영상 프롬프트 작가다. 바이블의 '프롬프트 조립' 순서와 고정 문장을 글자 그대로 쓴다. "
-                      "클립마다 영어 프롬프트 하나, 동작은 하나만.\n\n" + bible,
+                      "클립마다 영어 프롬프트 하나, 동작은 하나만.\n" + kind + "\n" + bible,
                       json.dumps(v, ensure_ascii=False) + "\n\n이 대본의 컷 4개에 맞는 Veo 프롬프트 4개를 써 줘.",
                       schema=PROMPTS, model=SONNET, effort="medium", need=0.3)["prompts"][:4]
-        md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/50)", "",
+        up = f", 다듬기 전 {first[i]}" if first.get(i) and first[i] != s.get("total") else ""
+        md += [f"## {rank}안: {v['title']}  (점수 {s.get('total', '?')}/50{up})", "",
                f"- 장소: {v['place']} / 훅: {v['hook']} / 개그: {v['gag']}",
                f"- 숫자 상자: **{v['number_box']}** — 근거: {v['number_source']}",
                f"- 삼촌 한 마디: {v['tip']} / 재미 포인트: {v['why_fun']}",

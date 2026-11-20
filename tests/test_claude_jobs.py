@@ -53,6 +53,13 @@ class ToonJobTest(unittest.TestCase):
         replies = [{"variants": [dict(v, title=f"안{i}") for i in range(8)]},
                    {"scores": [{"idx": i, "hook": 5, "fun": 5, "aha": 5, "bible": 5, "clarity": 5, "total": 25 + i, "note": "n"}
                                for i in range(8)], "best": [7, 6]},
+                   {"variants": [dict(v, title="안7고침"), dict(v, title="안6고침")]},
+                   {"scores": [{"idx": 0, "hook": 9, "fun": 9, "aha": 9, "bible": 9, "clarity": 9, "total": 46, "note": "좋아짐"},
+                               {"idx": 1, "hook": 5, "fun": 5, "aha": 5, "bible": 5, "clarity": 5, "total": 20, "note": "나빠짐"}],
+                    "best": [0]},
+                   {"variants": [dict(v, title="안6또고침")]},
+                   {"scores": [{"idx": 0, "hook": 9, "fun": 9, "aha": 9, "bible": 9, "clarity": 9, "total": 45, "note": "n"}],
+                    "best": [0]},
                    {"prompts": ["p1", "p2", "p3", "p4"]}, {"prompts": ["q1", "q2", "q3", "q4"]}]
         with tempfile.TemporaryDirectory() as d:
             root = pathlib.Path(d)
@@ -68,8 +75,8 @@ class ToonJobTest(unittest.TestCase):
                     mock.patch.object(C, "open_pr", return_value=None) as pr:
                 self.assertEqual(C.toon(dt.date(2026, 11, 20)), 0)
                 md = (root / "data/toon/lab/2026-12-04.md").read_text(encoding="utf-8")
-                self.assertIn("1안: 안7", md)
-                self.assertIn("2안: 안6", md)
+                self.assertIn("1안: 안7고침  (점수 46/50, 다듬기 전 32)", md)  # 오른 것만 바뀜
+                self.assertIn("2안: 안6또고침  (점수 45/50, 다듬기 전 31)", md)  # 1차에 내려가 버리고 2차에 오름
                 self.assertIn("`p1`", md)
                 self.assertIn("| 0 | 안0 |", md)
                 pr.assert_called_once()
