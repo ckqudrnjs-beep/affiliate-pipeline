@@ -71,6 +71,10 @@ class PlaygroundTest(unittest.TestCase):
         t = (d / "games" / "spot.html").read_text(encoding="utf-8")
         self.assertIn('data-ad-client="ca-pub-123"', t); self.assertIn('data-ad-slot="999"', t); self.assertNotIn("ca-ca-", t)
         self.assertIn("pub-123, DIRECT", (d / "ads.txt").read_text(encoding="utf-8"))
+        # 관리자·게시판·프로필(내용 없는 화면·사용자 글)엔 광고 코드 없음 (2026-11-20)
+        for f in ("admin.html", "board.html", "profile.html"):
+            t = (d / f).read_text(encoding="utf-8")
+            self.assertNotIn("adsbygoogle", t, f); self.assertNotIn('class="ad"', t, f)
 
     def test_stats_and_report(self):
         qs = pg.load_questions({"questionsPerDay": 3}, date(2030, 1, 1))

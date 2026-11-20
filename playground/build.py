@@ -1237,6 +1237,10 @@ def load_en_guides() -> list[dict]:
     return out
 
 
+# 내용 없는 화면(관리자·로그인 성격)과 사용자 글 화면에는 애드센스 코드를 넣지 않는다(애드센스 정책: 게시자 콘텐츠 없는 화면 광고 금지, 2026-11-20).
+NO_ADS_PATHS = {"admin", "board", "profile"}
+
+
 def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None, og=None):
     url = cfg["baseUrl"].rstrip("/") + "/" + path
     head = ""
@@ -1245,7 +1249,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
     if re.fullmatch(r"[0-9a-f]{32}", kkey):
         kakao = ('<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>'
                  f'<script>try{{Kakao.init("{kkey}")}}catch(e){{}}</script>')
-    pub = pub_id(cfg)
+    pub = pub_id(cfg) if path not in NO_ADS_PATHS else ""
     if pub:
         head += (f'<meta name="google-adsense-account" content="ca-{pub}"><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{pub}" crossorigin="anonymous"></script>')
     verify = ""  # 검색엔진 확인 태그는 <head> 맨 앞에 둔다(긴 CSS 뒤에 있으면 일부 봇이 못 읽음).
@@ -1260,7 +1264,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
         head += f'<link rel="alternate" hreflang="ko" href="{esc(url)}"><link rel="alternate" hreflang="en" href="{esc(b0 + "/" + EN_ALT[path])}">'
     for x in jsonld or []:
         head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
-    ad = ad_slot(cfg)
+    ad = ad_slot(cfg) if path not in NO_ADS_PATHS else ""
     body = body.replace("<!--AD-->", ad)
     if 'class="ad" data-m=' in body:
         script += ADFIT_JS
