@@ -217,7 +217,8 @@ def update_lessons(lessons: dict, early: dict, row: dict, label: str, hint: dict
     rules = [r for r in k["rules"] if r["rule"] != hint["next"]]
     rules.insert(0, {"rule": hint["next"], "from": row["public_at"][:10], "label": label})
     k["rules"] = rules[:KEEP_RULES]
-    rows = sorted((r for r in early.values() if r.get("kind") == row["kind"]), key=per2h, reverse=True)
+    rows = sorted((r for r in early.values() if r.get("kind") == row["kind"] and r.get("age_min", 0) <= MAX_AGE),
+                  key=per2h, reverse=True)
     pick = lambda r: {"title": (r.get("title") or r["slug"]).replace("#shorts", "").strip()[:50], "views_2h": round(per2h(r))}
     k["best"] = [pick(r) for r in rows[:3]]
     k["slow"] = [pick(r) for r in rows[-3:][::-1]] if len(rows) > 3 else []

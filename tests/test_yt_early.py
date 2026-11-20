@@ -58,7 +58,7 @@ class EarlyTest(unittest.TestCase):
         self.assertIn("시청 지속", text)  # 한계 안내
         self.assertIn("삼촌", ye.load_lessons())
         self.assertIn("2시간 반응", ye.lessons_prompt("삼촌"))
-        self.assertEqual(ye.lessons_prompt("5락실 밸런스"), "")
+        self.assertNotIn("좋았던 편", ye.lessons_prompt("5락실 밸런스"))  # 늦게 본 편은 순위에서 뺌
         # 같은 편은 두 번 보고하지 않음
         with mock.patch.object(ye, "fetch_stats", return_value=stats) as fs:
             ye.run(now=now + dt.timedelta(minutes=30), dry=True)
