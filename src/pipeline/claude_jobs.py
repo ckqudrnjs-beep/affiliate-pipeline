@@ -308,6 +308,44 @@ def recent_motifs(before: str, n: int = 3) -> tuple[list[str], list[str]]:
     return m, f
 
 
+def recent_variety(before: str, n: int = 3) -> dict[str, list[str]]:
+    """직전 n편(고른 안 = 1안)의 장소·첫 3초 훅 유형·제목 틀·새는 돈 모양·이야기 틀. 대본 랩 노트에서 읽는다."""
+    out = {"place": [], "hook_type": [], "title_pattern": [], "motif": [], "frame": []}
+    seen = 0
+    for p in sorted((ROOT / "data/toon/lab").glob("*.md"), reverse=True):
+        if p.stem >= before:
+            continue
+        got = False
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.startswith("- 모양·틀:"):
+                parts = [x.strip() for x in line.split(":", 1)[1].split("/")]
+                out["motif"].append(parts[0])
+                out["frame"].append(parts[1] if len(parts) > 1 else "")
+                got = True
+            elif line.startswith("- 장소·훅유형·제목틀:"):
+                parts = [x.strip() for x in line.split(":", 1)[1].split("/")]
+                for k, v in zip(("place", "hook_type", "title_pattern"), parts):
+                    out[k].append(v)
+            elif line.startswith("## 2안"):
+                break
+        seen += got
+        if seen >= n:
+            break
+    return out
+
+
+def overlaps(v: dict, recent: dict[str, list[str]]) -> list[str]:
+    """후보가 직전 편과 겹치는 칸 이름. 장소는 앞 두 글자가 같아도 겹침으로 본다(부엌/부엌 식탁)."""
+    hit = []
+    for k in ("motif", "frame", "hook_type", "title_pattern"):
+        if v.get(k) and v[k] in recent.get(k, []):
+            hit.append(k)
+    pl = (v.get("place") or "").strip()
+    if pl and any(r and (r == pl or r[:2] == pl[:2]) for r in recent.get("place", [])):
+        hit.append("place")
+    return hit
+
+
 def recent_episode_titles(n: int = 14) -> list[str]:
     out = []
     for f in sorted((ROOT / "data/episodes").glob("*.json"))[::-1]:
@@ -324,7 +362,13 @@ def recent_episode_titles(n: int = 14) -> list[str]:
 
 # ---------- 1. 동전이 만화 대본 후보 ----------
 CUT = obj({"screen": S, "caption": S, "camera": S})
-VARIANT = obj({"title": S, "motif": S, "frame": S, "place": S, "hook": S, "cuts": arr(CUT), "number_box": S, "number_source": S,
+# 반복 양산 막기 (BK 11/20 "비슷한 틀로 찍어낸 영상이 걸러지는 거라면 같은 기획으로 계속 만들면 안 되잖아 → 반영").
+# 캐릭터·주제는 유지, 직전 3편과 장소·첫 3초 훅 유형·이야기 틀·제목 틀·새는 돈 모양이 겹치면 안 된다.
+HOOK_TYPES = ["결과 먼저(끝 장면을 첫 컷에)", "엉뚱한 질문", "상식 뒤집기", "동전이 사고 현장", "대결 선언", "시간 점프", "공감 한숨"]
+TITLE_PATTERNS = ["목록", "지시", "질문", "상식 뒤집기", "순위"]
+VARIETY_PENALTY = 5   # 직전 3편과 겹치는 칸 하나당 채점 합계에서 뺀다
+VARIANT = obj({"title": S, "motif": S, "frame": S, "place": S, "hook": S,
+               "hook_type": {"type": "string", "enum": HOOK_TYPES}, "title_pattern": {"type": "string", "enum": TITLE_PATTERNS}, "cuts": arr(CUT), "number_box": S, "number_source": S,
                "gag": S, "tip": S, "why_fun": S, "band_top": S, "band_accent": S, "yt_title": S, "heart": S})
 JUDGE = obj({"scores": arr(obj({"idx": I, "hook": I, "fun": I, "aha": I, "bible": I, "clarity": I, "click": I, "total": I,
                                 "note": S})), "best": arr(I)})
@@ -387,6 +431,13 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                   "후보끼리도 최대한 다르게. 금화가 창밖으로 날아가는 장면은 그 motif 일 때만. motif 의 영어 문장을 1번 컷 프롬프트에 쓴다.\n"
                   "쓸 수 있는 motif: " + json.dumps(free_m, ensure_ascii=False) + "\n쓸 수 있는 frame: " + json.dumps(free_f, ensure_ascii=False)
                   + f"\n(최근 편에서 쓴 것, 금지: {used_m} / {used_f})")
+    rv = recent_variety(date, mot.get("recent_block", 3))
+    motif_rule += ("\n\n[반복 양산 금지 — 유튜브가 비슷한 틀로 찍어낸 영상을 덜 보여 준다 (BK 11/20)]\n"
+                   "캐릭터(동전이·삼촌·조카)와 '새는 돈' 주제는 그대로, 아래는 직전 3편과 겹치면 안 된다. 후보끼리도 서로 달라야 한다.\n"
+                   f"- place(장소·배경): 직전 {rv['place'] or '기록 없음'} 과 다른 곳\n"
+                   f"- hook_type(첫 3초 훅 유형, {HOOK_TYPES} 중 하나): 직전 {rv['hook_type'] or '기록 없음'} 금지\n"
+                   f"- title_pattern(제목 띠 노란 줄 공식, {TITLE_PATTERNS} 중 하나): 직전 {rv['title_pattern'] or '기록 없음'} 금지\n"
+                   "- 첫 컷 구도·카메라도 직전 편과 다르게. 겹치면 채점에서 칸마다 감점된다.")
     user = (f"{date} 공개 편 대본 후보를 서로 확실히 다른 {n}개 써 줘. 주제 후보(참고, 더 재미있으면 바꿔도 됨):\n"
             f"{json.dumps(info.get('concept'), ensure_ascii=False)}\n\n"
             "보는 사람: 살림 맡은 30~50대(주부). 재미·상황극이 먼저, 숫자는 3번 컷 끝 number_box 한 번(30만 원/년 미만의 뻔한 절약 팁 금지).\n"
@@ -399,7 +450,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     vs = res["variants"][:n]
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=상황극·개그 재미, aha=숫자가 놀랍고 사이트 근거가 맞는지(근거 틀리면 1점), "
-                 "bible=세계관·캐릭터·구도 규칙 + 새는 돈 모양·틀의 신선함(최근 편과 같은 motif·frame 이면 1점), "
+                 "bible=세계관·캐릭터·구도 규칙 + 새는 돈 모양·틀·장소·훅 유형·제목 틀의 신선함(직전 3편과 겹치면 1점), "
                  "clarity=자막만 보고 이해되는지, "
                  "click=제목 띠 두 줄(band_top·band_accent)과 yt_title 이 피드에서 손가락을 멈추게 하는지 — 내 얘기 같은 장면 + 답이 궁금한 훅, "
                  "12자 이하, 답 금액 없음, 막연하거나 낚시면 3점 이하" + (", heart 한 줄이 억지 명언이면 감점" if heart else "")
@@ -410,7 +461,12 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False),
                  schema=JUDGE, effort="medium", need=0.6, cache="5m")
     scores = {s["idx"]: s for s in judged["scores"]}
-    best = [i for i in judged["best"] if 0 <= i < len(vs)][:2] or sorted(scores, key=lambda i: -scores[i]["total"])[:2]
+    for i, v in enumerate(vs):  # 직전 3편과 겹치는 칸마다 감점 (모델 채점과 별개로 코드가 확실히)
+        hit = overlaps(v, rv)
+        if hit and i in scores:
+            scores[i]["total"] = scores[i].get("total", 0) - VARIETY_PENALTY * len(hit)
+            scores[i]["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + scores[i].get("note", "")
+    best = sorted(scores, key=lambda i: -scores[i]["total"])[:2] or [i for i in judged["best"] if 0 <= i < len(vs)][:2]
     first = {i: scores.get(i, {}).get("total", 0) for i in best}
     # 다듬기 (BK 11/20 "점수가 낮네" → "만점으로"): 상위 2안을 채점 메모대로 고쳐 다시 채점, 오른 것만 쓴다. 목표 57점·클릭 9점, 최대 3번.
     for _ in range(REFINE_ROUNDS):
@@ -428,6 +484,9 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False),
                        schema=JUDGE, effort="medium", need=0.3, cache="5m")
         for s in rejudged["scores"]:
+            if 0 <= s["idx"] < len(fixed):  # 다듬은 안도 겹침 감점을 똑같이
+                hit = overlaps(fixed[s["idx"]], rv)
+                s = dict(s, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
             if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
                 i = weak[s["idx"]]
                 vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
@@ -448,6 +507,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                f"- 유튜브 제목: {v.get('yt_title', '')}",
                *([f"- 공감 한 줄(4번 컷 자막): {v['heart']}"] if v.get("heart") else []),
                f"- 모양·틀: {v.get('motif', '')} / {v.get('frame', '')}",
+               f"- 장소·훅유형·제목틀: {v.get('place', '')} / {v.get('hook_type', '')} / {v.get('title_pattern', '')}",
                f"- 장소: {v['place']} / 훅: {v['hook']} / 개그: {v['gag']}",
                f"- 숫자 상자: **{v['number_box']}** — 근거: {v['number_source']}",
                f"- 삼촌 한 마디: {v['tip']} / 재미 포인트: {v['why_fun']}",
