@@ -96,6 +96,34 @@ class ToonJobTest(unittest.TestCase):
                 self.assertEqual(pr.call_count, 1)
 
 
+class CacheTest(unittest.TestCase):
+    def test_cache_cost(self):
+        # Opus 입력 4달러/백만: 5분 쓰기 1.25배, 1시간 쓰기 2배, 읽기 0.05배
+        self.assertAlmostEqual(C.cost(C.OPUS, {"cache_creation_input_tokens": 1_000_000}), 5.0)
+        self.assertAlmostEqual(C.cost(C.OPUS, {"cache_creation_input_tokens": 1_000_000,
+                                               "cache_creation": {"ephemeral_1h_input_tokens": 1_000_000}}), 8.0)
+        self.assertAlmostEqual(C.cost(C.OPUS, {"cache_read_input_tokens": 1_000_000}), 0.2)
+
+    def test_ask_cache_block(self):
+        import sys
+        import types
+        seen = {}
+
+        class Msgs:
+            def create(self, **kw):
+                seen.update(kw)
+                return types.SimpleNamespace(usage={"input_tokens": 1, "output_tokens": 1}, stop_reason="end_turn",
+                                             content=[types.SimpleNamespace(type="text", text="ok")])
+        fake = types.SimpleNamespace(Anthropic=lambda: types.SimpleNamespace(beta=types.SimpleNamespace(messages=Msgs())))
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(sys.modules, {"anthropic": fake}), \
+                mock.patch.object(C, "USAGE_DIR", pathlib.Path(d)):
+            C.ask("check", "규칙", "글", model=C.HAIKU, cache="1h")
+            self.assertEqual(seen["system"], [{"type": "text", "text": "규칙",
+                                               "cache_control": {"type": "ephemeral", "ttl": "1h"}}])
+            C.ask("check", "규칙", "글", model=C.HAIKU)
+            self.assertEqual(seen["system"], "규칙")  # 기본은 캐시 안 씀(한 번만 부르는 작업)
+
+
 class HeartTurnTest(unittest.TestCase):
     def test_one_in_three(self):
         days = [(dt.date(2026, 12, 2) + dt.timedelta(days=2 * k)).isoformat() for k in range(9)]
