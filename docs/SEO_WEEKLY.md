@@ -1,4 +1,4 @@
-# 서치콘솔 현황 (2026-11-19 수집, 2026-10-20~2026-11-16)
+# 서치콘솔 현황 (2026-11-20 수집, 2026-10-21~2026-11-17)
 
 자동 생성: python -m pipeline.gsc_stats (읽기 전용). 데이터는 2~3일 늦게 확정된다.
 
@@ -6,8 +6,23 @@
 
 | 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 URL |
 |---|---|---|---|---|
-| sc-domain:don3chon.com | 1 | 35 | 16.2 | 107 |
-| sc-domain:5raksil.com | 2 | 7 | 6.7 | 57 |
+| sc-domain:5raksil.com | 2 | 9 | 7.2 | 57 |
+| sc-domain:don3chon.com | 1 | 35 | 16.2 | 109 |
+
+## sc-domain:5raksil.com 상위 검색어
+| 검색어 | 클릭 | 노출 | 순위 |
+|---|---|---|---|
+| 락실 | 0 | 5 | 9.2 |
+
+## sc-domain:5raksil.com 상위 페이지
+| 페이지 | 클릭 | 노출 | 순위 |
+|---|---|---|---|
+| https://5raksil.com/ | 2 | 2 | 1.0 |
+| http://5raksil.com/ | 0 | 2 | 6.0 |
+| https://5raksil.com/about | 0 | 6 | 9.2 |
+| https://5raksil.com/games/range | 0 | 2 | 3.0 |
+| https://5raksil.com/games/starlight | 0 | 2 | 5.5 |
+| https://5raksil.com/games/tongtong | 0 | 3 | 6.7 |
 
 ## sc-domain:don3chon.com 상위 검색어
 | 검색어 | 클릭 | 노출 | 순위 |
@@ -36,18 +51,3 @@
 | https://don3chon.com/guide/electric-blanket-vs-mat-bill | 0 | 2 | 36.5 |
 | https://don3chon.com/news | 0 | 2 | 3.0 |
 | https://don3chon.com/news/drop-baseus-ep10-nc-earbuds-2026-11-11 | 0 | 1 | 21.0 |
-
-## sc-domain:5raksil.com 상위 검색어
-| 검색어 | 클릭 | 노출 | 순위 |
-|---|---|---|---|
-| 락실 | 0 | 3 | 9.3 |
-
-## sc-domain:5raksil.com 상위 페이지
-| 페이지 | 클릭 | 노출 | 순위 |
-|---|---|---|---|
-| https://5raksil.com/ | 2 | 2 | 1.0 |
-| http://5raksil.com/ | 0 | 2 | 6.0 |
-| https://5raksil.com/about | 0 | 4 | 9.2 |
-| https://5raksil.com/games/range | 0 | 2 | 3.0 |
-| https://5raksil.com/games/starlight | 0 | 2 | 5.5 |
-| https://5raksil.com/games/tongtong | 0 | 3 | 6.7 |
