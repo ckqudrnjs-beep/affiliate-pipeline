@@ -32,7 +32,7 @@
 
 ## 쿠팡 Open API 사용 (2026-11-20 최종 승인)
 - 키: GitHub Secrets `COUPANG_ACCESS_KEY` / `COUPANG_SECRET_KEY` (BK 등록). `api-check` 가 하루 4번 연결 확인(11/20 수동 실행 OK).
-- 레시피 재료 링크 자동(`pipeline.coupang_links`, Actions `coupang-links` 목 04:40): `config/recipe_pantry.csv` 의 coupangUrl 이 빈 재료만 상품 검색 → 이름이 맞는 첫 상품의 파트너스 링크를 `data/coupang/pantry_links.json` 에 저장. 손 링크가 항상 먼저. 검색어를 바꾸려면 CSV 에 `coupangKeyword` 칸을 추가.
+- 레시피 재료 링크 자동(`pipeline.coupang_links`, Actions `coupang-links`, 애드센스 심사 중엔 손 실행·시험 실행만, 승인 뒤 목 04:40 예약): `config/recipe_pantry.csv` 의 coupangUrl 이 빈 재료만 상품 검색 → 이름이 맞는 첫 상품의 파트너스 링크를 `data/coupang/pantry_links.json` 에 저장. 손 링크가 항상 먼저. 검색어를 바꾸려면 CSV 에 `coupangKeyword` 칸을 추가.
 - 호출: 한 번에 최대 8회·8초 간격, 저장 링크는 30일마다 다시 확인. 429·오류 시 저장 링크 유지(정확한 호출 한도는 *공식 문서 확인 필요*, 보수적으로 잡음).
 - 사이트에는 상품 가격·이미지·상품명을 싣지 않는다(재료 이름 + "쿠팡에서 보기"). subId `don3chon`.
 - 장보기 리스트(/shopping)·쇼츠·인스타·스레드에는 제휴 링크를 넣지 않는다. /items 쿠팡 칸은 가격 비교가 BK 입력이라 그대로 수동.

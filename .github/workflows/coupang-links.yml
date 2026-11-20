@@ -4,9 +4,10 @@ name: coupang-links
 # BK 손 링크(config/recipe_pantry.csv)가 빈 재료만 쿠팡 Open API 상품 검색으로 파트너스 링크를 찾아
 # data/coupang/pantry_links.json 에 저장 → main 에 커밋되면 사이트가 다시 빌드된다. 한 번에 최대 8번 호출, 8초 간격.
 # API 가 실패하면 저장된 링크를 그대로 둔다. 키는 출력하지 않는다. 코드: src/pipeline/coupang_links.py
+# 애드센스 심사 중(2026-11-20 BK): 예약 끔, 손 실행(기본 시험 실행)만. 승인 뒤 아래 schedule 을 되살린다.
+#   schedule:
+#     - cron: "40 19 * * 3"   # 목 04:40 KST (05:00 글 작업 전)
 on:
-  schedule:
-    - cron: "40 19 * * 3"   # 목 04:40 KST (05:00 글 작업 전)
   workflow_dispatch:
     inputs:
       dry_run:
