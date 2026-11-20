@@ -30,7 +30,11 @@ class RaksilShortsTest(unittest.TestCase):
         q = QS[1]
         self.assertEqual(len(r.script(q, None)), 3)
         res = r.result_of(QS[2], {"a": 10, "b": 30})
-        self.assertIn("75퍼센트가 겨울", r.script(q, res)[2])
+        self.assertIn("75퍼센트가 비", r.script(q, res)[2])
+        self.assertTrue(r.script(q, None)[0].endswith("너라면?"))
+        self.assertFalse(r.script({"a": "가" * 15, "b": "나" * 15}, None)[0].endswith("너라면?"))  # 긴 질문은 짧게
+        long_q = {"a": "어디서든 줄 서지 않고 바로 들어가는 능력", "b": "가는 길 신호등이 늘 초록불로 바뀌는 능력"}
+        self.assertEqual(r.script(long_q, None)[0], "에이야, 비야? 3초 안에 골라!")  # 11/20 18.9초 편 같은 질문
 
     def test_mongle_pick_rules(self):
         self.assertEqual(r.clean_pick({"pick": "a", "why": " 이불 밖은 위험하니까. "}), {"pick": "a", "why": "이불 밖은 위험하니까"})
@@ -47,7 +51,7 @@ class RaksilShortsTest(unittest.TestCase):
             if old is not None:
                 os.environ["ANTHROPIC_API_KEY"] = old
         line = r.script(QS[1], None, {"pick": "b", "why": "치킨은 진리야"})[2]
-        self.assertEqual(line, "몽글이는 평생 치킨만! 치킨은 진리야. 너는?")
+        self.assertEqual(line, "몽글이는 비! 치킨은 진리야.")
         self.assertIn("몽글이 개인 의견", r.description_of(QS[1], None, False, {"pick": "b", "why": "치킨은 진리야"}))
 
     def test_band_rules(self):

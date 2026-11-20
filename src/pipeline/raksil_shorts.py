@@ -142,14 +142,21 @@ def clean_pick(r) -> dict | None:
 def script(q: dict, res: dict | None, pick: dict | None = None) -> list[str]:
     """장면별 대사 (빈 문자열 = 대사 없음). 2026-11-20 1안: 질문 → 3·2·1 → 반전. 구독 한 줄은 공통 엔딩이 맡는다.
     반전 우선순위: 실제 투표 20표 이상 > 몽글이의 선택 > 정답은 없다."""
+    # 11/20 길이 상한: 선택지 글자는 화면에 있으니 반전 대사는 '에이/비'로 짧게, 긴 질문은 '너라면?' 생략.
+    say = {"a": "에이", "b": "비"}
     if res:
         win, pct = winner(res)
-        mid = f"어제는 {pct}퍼센트가 {win}! 오늘은 너 어느 쪽?"
+        mid = f"어제는 {pct}퍼센트가 {say['a' if win == res['a'] else 'b']}! 너는?"
     elif pick:
-        mid = f"몽글이는 {q[pick['pick']]}! {pick['why']}. 너는?"
+        mid = f"몽글이는 {say[pick['pick']]}! {pick['why']}."
     else:
-        mid = "정답은 없어! 댓글로 에이, 비 남겨 줘."
-    return [f"{q['a']}. 대. {q['b']}. 너라면?", "", mid]
+        mid = "정답은 없어! 댓글로 에이, 비!"
+    n = len(q["a"]) + len(q["b"])
+    if n > LONG_Q:  # 아주 긴 질문은 화면 글자에 맡기고 짧게 (다 읽으면 5초가 넘음)
+        first = "에이야, 비야? 3초 안에 골라!"
+    else:
+        first = f"{q['a']}. 대. {q['b']}." + ("" if n > 24 else " 너라면?")
+    return [first, "", mid]
 
 
 def title_of(q: dict, band: dict | None = None) -> str:
@@ -368,7 +375,10 @@ PANEL_A, PANEL_B = (60, 370, W - 60, 640), (60, 720, W - 60, 990)
 VS_Y = 680
 MG_X, MG_FLOOR, MG_K = 400, 1530, 1.35
 MG_TOP = MG_FLOOR - int(395 * MG_K)  # 몽글이 머리 꼭대기 근처
-REACT_D = 1.6  # 반응 컷 길이(초, BGM 이 있으면 박자에 맞춤)
+REACT_D = 1.4  # 반응 컷 길이(초, BGM 이 있으면 박자에 맞춤)
+# 길이 상한 (11/20 긴 질문 편 18.9초 → 엔딩 빼고 약 10초): 질문 음성 3.4초·반전 음성 2.6초를 넘으면 빠르게 읽는다.
+VOICE_CAP, MAX_SPEED = (3.4, 2.6), 1.45
+LONG_Q = 34  # A+B 글자 수가 이보다 길면 질문은 소리 내 읽지 않는다
 
 
 def question_card(q: dict, band: dict | None = None):
@@ -564,8 +574,9 @@ def countdown_layer(n: int, frac: float):
 
 
 # ---------- 소리 ----------
-def tts(lines: list[str]):
-    """대사 → (클립 리스트, 성공 여부). supertonic 이 없으면 무음."""
+def tts(lines: list[str], caps: list[float] | None = None, speed: float = 1.05):
+    """대사 → (클립 리스트, 성공 여부). supertonic 이 없으면 무음.
+    caps = 줄별 최대 초: 넘으면 그 줄만 빠르게(최대 MAX_SPEED) 다시 읽는다 (11/20 긴 질문 18.9초 편 후)."""
     import numpy as np
     try:
         from supertonic import TTS
@@ -577,8 +588,15 @@ def tts(lines: list[str]):
             if not s.strip():
                 out.append(np.zeros(1, dtype=np.float32))
                 continue
-            wav, _ = t.synthesize(s, voice_style=style, lang="ko", total_steps=32, speed=1.05)
-            out.append(resample(wav.reshape(-1).astype(np.float32), t.sample_rate))
+            cap = caps[len(out)] if caps and len(out) < len(caps) else None
+            sp = speed
+            for _ in range(3):
+                wav, _ = t.synthesize(s, voice_style=style, lang="ko", total_steps=32, speed=sp)
+                clip = resample(wav.reshape(-1).astype(np.float32), t.sample_rate)
+                if not cap or len(clip) / SR <= cap or sp >= MAX_SPEED:
+                    break
+                sp = min(MAX_SPEED, sp * len(clip) / SR / cap * 1.03)
+            out.append(clip)
         return out, True
     except Exception as e:
         print(f"음성 없이 진행: {e}", file=sys.stderr)
@@ -617,7 +635,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     pick = None if res else pick
     band = band or bank_band(day)  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
     lines = script(q, res, pick)
-    clips, voiced = tts(lines)
+    clips, voiced = tts(lines, caps=[VOICE_CAP[0], 0, VOICE_CAP[1]], speed=1.15)
 
     # 2026-11-20 1안: 14초 → 약 8~9초 + 엔딩 2.6초. 끝까지 보는 비율을 올리려고 CTA 카드를 빼고 반전으로 끝낸다.
     d0 = max(2.6, len(clips[0]) / SR + 0.4)
