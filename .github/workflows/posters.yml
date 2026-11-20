@@ -55,6 +55,10 @@ jobs:
       - name: 포스터 찍기
         if: steps.c.outputs.go == '1'
         run: python playground/posters.py ${{ inputs.all && '--all' || '' }}
+      - name: 새 게임 홍보 썸네일 (2026-11-20, docs/PROMO_DESIGN.md)
+        if: steps.c.outputs.go == '1'
+        continue-on-error: true   # 썸네일이 실패해도 포스터는 올린다
+        run: PYTHONPATH=src python -m pipeline.promo_cards new
       - name: 검사
         if: steps.c.outputs.go == '1'
         run: PYTHONPATH=src python -m unittest tests.test_raksil_posters
@@ -64,6 +68,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add playground/static/img/*-poster.jpg playground/static/og/*.jpg playground/static/img/posters.json
+          git add media/promo/raksil 2>/dev/null || true
           git diff --cached --quiet && { echo "바뀐 포스터 없음"; exit 0; }
           git commit -m "5락실 게임 포스터 자동 갱신 ($(TZ=Asia/Seoul date '+%F %H:%M'))"
           # 거의 동시에 머지된 PR 두 개면 앞선 실행이 같은 포스터를 먼저 올릴 수 있다(11/15 #179·#180).
@@ -77,6 +82,8 @@ jobs:
               T=$(python playground/posters.py --check); echo "$T"
               [ "$T" = "모든 포스터가 최신이에요" ] && { echo "다른 실행이 이미 최신 포스터를 올림"; exit 0; }
               python playground/posters.py
+              PYTHONPATH=src python -m pipeline.promo_cards new || true
+              git add media/promo/raksil 2>/dev/null || true
               git add playground/static/img/*-poster.jpg playground/static/og/*.jpg playground/static/img/posters.json
               git diff --cached --quiet && exit 0
               git commit -m "5락실 게임 포스터 자동 갱신 ($(TZ=Asia/Seoul date '+%F %H:%M'))"

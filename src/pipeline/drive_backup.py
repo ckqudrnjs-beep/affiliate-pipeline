@@ -39,6 +39,7 @@ CATEGORIES = [
     ("media/ai_clips/", "AI클립"),
     ("media/uncle/", "삼촌-캐릭터영상"),
     ("media/raksil/", "쇼츠-5락실"),
+    ("media/promo/", "홍보이미지"),
     ("static/ig/", "인스타"),
     ("docs/insta/", "인스타"),
     ("static/video/", "사이트-영상"),

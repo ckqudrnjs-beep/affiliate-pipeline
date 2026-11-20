@@ -10,6 +10,9 @@
   python -m pipeline.promo_cards raksil bag hansang pusher --out OUT   # 게임 화면을 새로 찍어서
   python -m pipeline.promo_cards raksil bag --shots DIR --out OUT       # 이미 찍은 <slug>-phone.png 로
   python -m pipeline.promo_cards calc --name 전기난로 --watts 1000 --hours 4 --out OUT
+  python -m pipeline.promo_cards new                                    # 새 게임만 세로 썸네일(media/promo/raksil/)
+자동: Actions posters.yml 이 main 에 게임이 들어오면 `new` 를 돌려 커밋 → drive-backup 이 드라이브 "홍보이미지"로 올림.
+옛 게임(PROMO_FROM 전에 추가된 게임)은 만들지 않는다 (BK 11/20 "이전 콘텐츠는 따로 만들 필요 없음").
 """
 from __future__ import annotations
 
@@ -27,6 +30,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 PG = ROOT / "playground"
 RAKSIL_URL = "5raksil.com"
 DON_URL = "don3chon.com"
+PROMO_DIR = ROOT / "media" / "promo" / "raksil"
+PROMO_FROM = "2026-11-20"  # 이 날짜(meta.json added) 이후 추가된 게임만 자동으로 만든다
 
 # 홍보 이미지에 들어가면 안 되는 말(DIRECTION 0-5: 판매·특가·제휴 문구 금지, 쇼핑몰 이름 금지)
 BANNED = re.compile(r"판매|특가|제휴|할인|최저가|구매|쿠팡|알리|테무|광고|협찬|공구")
@@ -156,6 +161,36 @@ def shoot_phones(slugs: list[str], out: pathlib.Path) -> None:
             srv.shutdown()
 
 
+def new_games(out: pathlib.Path = PROMO_DIR) -> list[str]:
+    """자동으로 썸네일을 만들 게임: PROMO_FROM 이후 추가됐고, 아직 썸네일이 없는 게임."""
+    todo = []
+    for d in sorted((PG / "games").iterdir()):
+        f = d / "meta.json"
+        if not f.exists():
+            continue
+        m = json.loads(f.read_text(encoding="utf-8"))
+        if m.get("poster") and str(m.get("added", ""))[:10] >= PROMO_FROM and not (out / f"{d.name}.jpg").exists():
+            todo.append(d.name)
+    return todo
+
+
+def make_new(out: pathlib.Path = PROMO_DIR) -> int:
+    todo = new_games(out)
+    if not todo:
+        print("새 게임 홍보 썸네일 없음")
+        return 0
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        shots = pathlib.Path(tmp)
+        shoot_phones(todo, shots)
+        specs = [raksil_vertical(s, str(shots / f"{s}-phone.png"), None, str(out / f"{s}.jpg"))
+                 for s in todo if (shots / f"{s}-phone.png").exists()]
+        if not specs:
+            print("폰 화면을 못 찍었어요:", " ".join(todo), file=sys.stderr)
+            return 1
+        return render(specs)
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="홍보 이미지 3종(5락실 썸네일·포스터, 돈삼촌 계산기 카드)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -170,7 +205,11 @@ def main(argv: list[str]) -> int:
     c.add_argument("--days", type=int, default=30)
     c.add_argument("--base", type=int, default=300)
     c.add_argument("--out", required=True)
+    n = sub.add_parser("new", help="새 게임만 세로 썸네일(자동 작업용)")
+    n.add_argument("--out", default=str(PROMO_DIR))
     a = ap.parse_args(argv)
+    if a.cmd == "new":
+        return make_new(pathlib.Path(a.out))
     out = pathlib.Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "calc":
