@@ -2,7 +2,7 @@
 // 봉투 꽉!: 5락실 창작 장바구니 담기 퍼즐 로그라이트. 물건·봉투·배경·소리 모두 코드로 생성(외부 파일 없음).
 // 봉투(격자)에 장 본 물건을 담는다. 냉동끼리 붙이기, 무거운 건 바닥, 깨지는 건 위, 레시피 세트, 꽉 채우기로 점수.
 // 봉투마다 목표 점수를 넘기면 쿠폰(영구 효과)을 하나 고르고 다음 봉투로. 5봉투까지, 오늘은 모두 같은 물건 순서.
-// 봉투를 열 때 '덤 뽑기'(슬롯 3칸): 같은 그림 2개면 값 2배 덤 물건, 3개면 황금(3배). 다시 뽑기 티켓은 게임 안에서만 얻어요(현금·코인 없음).
+// 봉투를 열 때 '덤 뽑기'(그림 3칸): 같은 그림 2개면 값 2배 덤 물건, 3개면 황금(3배). 다시 뽑기 티켓은 게임 안에서만 얻어요(현금·코인 없음).
 const $=id=>document.getElementById(id);
 const cab=$('bg-cab'),cv=$('bg-c'),cx=cv.getContext('2d');
 const COARSE=matchMedia('(pointer: coarse)').matches,IOS=/iP(hone|od|ad)/.test(navigator.userAgent);
@@ -312,7 +312,7 @@ function drawCoupon(){if(!offer)return;cx.fillStyle='#050214aa';cx.fillRect(0,0,
   txt(c.n,X(r.x+dx+66),Y(r.y+34),Math.round(17*S),'#fff',FK,'left');txt(c.d,X(r.x+dx+66),Y(r.y+58),Math.round(12*S),'#d9c2ff',FK,'left');txt(String(i+1),X(r.x+dx+r.w-16),Y(r.y+22),Math.round(8*S),'#ffffff66',FN,'right');cx.globalAlpha=1}}
 function drawSlot(){if(!slot)return;cx.fillStyle='#050214b0';cx.fillRect(0,0,W,H);panel(150,360);
  txt('덤 뽑기',X(VW/2),Y(190),Math.round(24*S),'#fff',FK);txt('같은 그림 2개 = 값 2배 덤 · 3개 = 황금 3배',X(VW/2),Y(214),Math.round(11.5*S),'#ffd23fcc',FK);
- // 슬롯 틀
+ // 덤 뽑기 그림 3칸 틀
  cx.fillStyle=lg(Y(232),Y(352),'#3a1f7a','#1e0f48');rr(X(36),Y(232),(VW-72)*S,120*S,14*S);cx.fill();cx.strokeStyle='#ffd23f';cx.lineWidth=3*S;cx.stroke();
  for(let i=0;i<3;i++){const rx=48+i*92,ry=244,rw=80,rh=96,stopped=slot.st>i||slot.st>=3;cx.fillStyle='#fff8ec';rr(X(rx),Y(ry),rw*S,rh*S,10*S);cx.fill();
   cx.save();rr(X(rx),Y(ry),rw*S,rh*S,10*S);cx.clip();
@@ -321,7 +321,7 @@ function drawSlot(){if(!slot)return;cx.fillStyle='#050214b0';cx.fillRect(0,0,W,H
   else{const tk=slot.stopT&&slot.stopT[i]!=null?Math.min(1,(slot.t-slot.stopT[i])/0.18):1;drawCell(slot.res[i],rx,ry+(1-tk)*-10,rw,rh)}
   cx.restore();cx.fillStyle='rgba(0,0,0,.18)';cx.fillRect(X(rx),Y(ry),rw*S,10*S);cx.fillRect(X(rx),Y(ry+rh-10),rw*S,10*S)}
  if(slotDone()){const o=slot.out;if(o.m){const g=o.m===3;cx.strokeStyle=g?'#ffd23f':'#3ddc84';cx.lineWidth=3*S;cx.globalAlpha=0.6+0.4*Math.sin(T*8);cx.beginPath();cx.moveTo(X(44),Y(292));cx.lineTo(X(VW-44),Y(292));cx.stroke();cx.globalAlpha=1}
-  txt(o.m?(o.m===3?'잭팟! 황금 '+IT[o.k].n+' (값 '+IT[o.k].p*3+')':'덤 '+IT[o.k].n+' (값 '+IT[o.k].p*2+')'):'꽝! 이번엔 덤이 없어요',X(VW/2),Y(384),Math.round(16*S),o.m===3?'#ffd23f':o.m?'#3ddc84':'#ff8aa0',FK);
+  txt(o.m?(o.m===3?'대박! 황금 '+IT[o.k].n+' (값 '+IT[o.k].p*3+')':'덤 '+IT[o.k].n+' (값 '+IT[o.k].p*2+')'):'꽝! 이번엔 덤이 없어요',X(VW/2),Y(384),Math.round(16*S),o.m===3?'#ffd23f':o.m?'#3ddc84':'#ff8aa0',FK);
   txt('다시 뽑으면 지금 결과는 사라져요',X(VW/2),Y(410),Math.round(10.5*S),'#ffffff88',FK)}
  const B=(b,s,c,on,sub)=>{cx.fillStyle=on?c:'#2a1d5c';rr(X(b.x),Y(b.y),b.w*S,b.h*S,13*S);cx.fill();cx.strokeStyle=c;cx.lineWidth=2*S;cx.stroke();txt(s,X(b.x+b.w/2),Y(b.y+b.h/2+(sub?0:6)),Math.round(16*S),on?'#1a0f00':c,FK);if(sub)txt(sub,X(b.x+b.w/2),Y(b.y+b.h/2+16),Math.round(9.5*S),on?'#1a0f00aa':c,FK)};
  if(slot.st<0)B(BTN_SPIN,'🎰 뽑기!','#ffd23f',true,'봉투마다 1번 공짜');
