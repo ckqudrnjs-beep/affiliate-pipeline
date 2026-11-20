@@ -16,5 +16,6 @@
  "check": "전원 케이블 구성(220V·12V·24V), 용량, 내부 용기 재질",
  "commission": 7.0,
  "status": "active",
- "addedDate": "2026-11-11"
+ "addedDate": "2026-11-11",
+ "missingDays": 1
 }
