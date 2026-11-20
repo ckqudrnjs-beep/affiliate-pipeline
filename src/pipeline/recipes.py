@@ -2,7 +2,8 @@
 
 재료 값은 '삼촌 장보기 기준가'(config/recipe_pantry.csv)의 한 봉 가격 ÷ 용량 × 쓴 양으로 계산한다.
 기준가를 고치면 모든 레시피의 원가·제목이 같이 바뀐다. 쿠팡 가격을 긁어 오지 않는다.
-재료 링크(coupangUrl)는 BK님이 쿠팡 파트너스에서 직접 만든 것만 넣는다. 링크가 하나도 없으면 링크 칸은 숨긴다.
+재료 링크(coupangUrl)는 BK님이 쿠팡 파트너스에서 직접 만든 것이 먼저이고, 빈 재료는 쿠팡 Open API 검색으로 찾은
+파트너스 링크(data/coupang/pantry_links.json, pipeline.coupang_links 가 주 1회 갱신)로 채운다. 링크가 하나도 없으면 링크 칸은 숨긴다.
 쿠팡 이미지는 쓰지 않는다. 레시피 글은 직접 쓴 것만 싣는다(레시피 사이트 문장 복사 금지).
 """
 from __future__ import annotations
@@ -51,7 +52,10 @@ def r10(x: float) -> int:
     return int(round(x / 10) * 10)
 
 
-def load_pantry(path: str = "config/recipe_pantry.csv") -> dict[str, dict]:
+def load_pantry(path: str = "config/recipe_pantry.csv", links_path: str | None = None) -> dict[str, dict]:
+    """links_path(기본 data/coupang/pantry_links.json): BK님 손 링크가 빈 재료에만 쿠팡 API 로 찾은 링크를 채운다(2026-11-20)."""
+    from .coupang_links import CACHE, load_cache
+    auto = load_cache(links_path or CACHE) if links_path != "" else {}
     out = {}
     with open(path, encoding="utf-8") as f:
         for r in csv.DictReader(f):
@@ -63,6 +67,8 @@ def load_pantry(path: str = "config/recipe_pantry.csv") -> dict[str, dict]:
                 raise ValueError(f"재료 {r['id']}: 허용되지 않은 링크 도메인 {host}")
             if "EXAMPLE" in url:
                 url = ""
+            if not url and r["id"] in auto:
+                url = auto[r["id"]]["url"]
             r["coupangUrl"] = url
             r["packAmount"], r["packPrice"] = float(r["packAmount"]), int(r["packPrice"])
             out[r["id"]] = r
