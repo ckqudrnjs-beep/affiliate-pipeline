@@ -33,7 +33,7 @@ class T(unittest.TestCase):
 
     def test_challenge_hook_with_score(self):
         g = G[0]
-        self.assertEqual(rg.hook_of(g, SAT, 1240), "이 기록 1,240점, 넘을 수 있어?")
+        self.assertEqual(rg.hook_of(g, SAT, 1240), "1,240점 넘을 수 있어?")
         self.assertIn(rg.hook_of(g, SAT, None), rg.HOOKS)
         self.assertIn(rg.hook_of(g, SAT, 0), rg.HOOKS)
 
