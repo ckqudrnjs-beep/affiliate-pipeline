@@ -106,7 +106,8 @@ def collect(today: dt.date) -> dict | None:
                 f"{(today - dt.timedelta(days=45)):%Y%m%d}/{today:%Y%m%d}/0000001")))),
             ("grocery", env("KAMIS_KEY") and env("KAMIS_ID") and (lambda: parse_grocery(R.get_json(
                 "https://www.kamis.or.kr/service/price/xml.do?" + urllib.parse.urlencode(
-                    {"action": "dailySalesList", "p_cert_key": env("KAMIS_KEY"), "p_cert_id": env("KAMIS_ID"), "p_returntype": "json"})))))]
+                    {"action": "dailySalesList", "p_cert_key": env("KAMIS_KEY"), "p_cert_id": env("KAMIS_ID"), "p_returntype": "json"}),
+                **R.KAMIS_TRY))))]
     for name, fn in jobs:
         if not fn:
             print(f"{name}: 키 없음, 건너뜀")
@@ -119,7 +120,26 @@ def collect(today: dt.date) -> dict | None:
         if v:
             data[name] = v
         print(f"{name}: {'OK' if v else '데이터 없음'}")
+    if env("KAMIS_KEY") and "grocery" not in data:
+        prev = carry_grocery(today)
+        if prev:
+            data["grocery"], data["groceryAsOf"] = prev
+            print(f"grocery: 오늘 못 받아 {prev[1]} 값을 그대로 씀")
     return data if len(data) > 1 else None
+
+
+def carry_grocery(today: dt.date, root: pathlib.Path | None = None, days: int = 3) -> tuple[list, str] | None:
+    """KAMIS 가 끝내 응답하지 않은 날: 최근 3일 안에 받은 장바구니 값을 받은 날짜와 함께 이어 쓴다 (2026-11-20).
+    이어 쓴 값은 원래 받은 날짜(groceryAsOf)로 따지므로 3일이 지나면 칸이 빠진다."""
+    for d in load_all(root or OUT, limit=days + 2):
+        day = dt.date.fromisoformat(d.get("date", "1900-01-01"))
+        if day >= today or not d.get("grocery"):
+            continue
+        asof = dt.date.fromisoformat(d.get("groceryAsOf") or d["date"])
+        if (today - asof).days <= days:
+            return d["grocery"], asof.isoformat()
+        return None
+    return None
 
 
 def load_all(root: pathlib.Path = OUT, limit: int = 30) -> list[dict]:
@@ -451,7 +471,8 @@ def today_block(latest: dict | None, root: str = "") -> str:
         basket = ""
         if gr:
             lines.append(grocery_line(gr))
-            basket = '<p class="basket">장바구니: ' + " · ".join(
+            asof = latest.get("groceryAsOf")
+            basket = f'<p class="basket">장바구니{f"({date_label(asof)} 기준)" if asof else ""}: ' + " · ".join(
                 f'{e(i["name"])} {i["price"]:,}원{("(" + e(i["unit"]) + ")") if i["unit"] else ""}' for i in gr[:6]) + "</p>"
         if len(tiles) % 2:
             tiles.append('<div class="tile"><span class="k">매일 아침 6시쯤</span><span class="v" style="font-size:16px">새 숫자로 바뀌어요</span></div>')
