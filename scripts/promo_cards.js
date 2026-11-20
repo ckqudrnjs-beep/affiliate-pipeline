@@ -26,15 +26,21 @@ body{font-family:Jua,sans-serif;color:#fff;overflow:hidden}
 const SIZE = { vertical: [1080, 1920], poster: [1280, 720], calc: [1080, 1350] };
 
 function vertical(s) {
+  // 가운데 축 정렬: 위 글자 묶음 · 가운데 폰 · 아래 주소. 세 덩어리 사이 여백은 flex 로 고르게 (BK 11/20 "균형있게")
   const [front, back] = s.phones;
   return `<style>:root{--em1:#ffd23f;--em2:#ff6fae}
-body{width:1080px;height:1920px;background:radial-gradient(900px 700px at 80% 62%,#6a2bd955,transparent 70%),radial-gradient(700px 600px at 10% 90%,#ff3d7f33,transparent 70%),linear-gradient(180deg,#120a24 0%,#07060d 100%)}
-.top{position:absolute;left:84px;top:150px;right:84px}.kick{font-size:44px;color:#b9a8ff;letter-spacing:2px}
-h1{font-weight:400;font-size:168px;line-height:1.02;margin-top:18px}.sub{font-size:46px;color:#ffffffcc;margin-top:30px}
-.bot{position:absolute;left:84px;bottom:110px;font-size:44px;color:#ffffffaa}.bot b{font-weight:400;color:#ffd23f}</style>
-<div class=top><div class=kick>${esc(s.kick)}</div><h1>${rich(s.t1)}<br>${rich(s.t2)}</h1><div class=sub>${esc(s.sub)}</div></div>
-${back ? `<div class=phone style="width:420px;left:110px;top:900px;transform:rotate(-8deg);opacity:.55;--glow:#ff3d7f44"><img src="${img(back)}"></div>` : ''}
-<div class=phone style="width:${back ? 500 : 430}px;left:${back ? 480 : 325}px;top:${back ? 760 : 700}px;transform:rotate(${back ? 5 : 0}deg);--glow:#7b5cffaa"><img src="${img(front)}"></div>
+body{width:1080px;height:1920px;background:radial-gradient(760px 760px at 50% 66%,#6a2bd960,transparent 70%),radial-gradient(900px 500px at 50% 100%,#ff3d7f22,transparent 70%),linear-gradient(180deg,#120a24 0%,#07060d 100%);
+ display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:130px 80px 110px;text-align:center}
+.kick{font-size:42px;color:#b9a8ff;letter-spacing:2px}
+h1{font-weight:400;font-size:150px;line-height:1.04;margin-top:14px}.sub{font-size:44px;color:#ffffffcc;margin-top:26px}
+.stage{position:relative;width:920px;height:965px}
+.stage .phone{width:460px;left:230px;top:0}
+.stage .back{width:360px;top:110px;opacity:.5;--glow:#ff3d7f44}
+.bot{font-size:42px;color:#ffffffaa}.bot b{font-weight:400;color:#ffd23f}</style>
+<div><div class=kick>${esc(s.kick)}</div><h1>${rich(s.t1)}<br>${rich(s.t2)}</h1><div class=sub>${esc(s.sub)}</div></div>
+<div class=stage>
+${back ? `<div class="phone back" style="left:20px;transform:rotate(-9deg)"><img src="${img(back)}"></div><div class="phone back" style="left:540px;transform:rotate(9deg)"><img src="${img(back)}"></div>` : ''}
+<div class=phone style="--glow:#7b5cffaa"><img src="${img(front)}"></div></div>
 <div class=bot>${esc(s.foot)} <b>${esc(s.url)}</b></div>`;
 }
 
