@@ -1,7 +1,7 @@
 """동전이 만화 쇼츠 조립 (BK 2026-11-19 "재미 먼저, 정보는 곁들이기").
 
 BK 가 Flow(Veo)로 만든 클립 4개 + 자막(주아 글꼴) + 효과음 → media/youtube/<slug>.mp4.
-세계관·구도 규칙: 동전이네 세계관 바이블 (Claude Doc), docs/AI_CLIPS.md 제작 지침.
+세계관·구도 규칙: docs/동전이_세계관_바이블.md, docs/AI_CLIPS.md 제작 지침.
 
 사용: python tools/toon_assemble.py spec.json
 spec = {
