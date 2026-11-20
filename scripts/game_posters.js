@@ -9,13 +9,16 @@
 
 // 사용: node scripts/game_posters.js <사이트 주소> <출력 폴더> <slug> [slug…]
 // 출력: <출력 폴더>/<slug>.png (1280x720). 같은 폴더의 meta 는 playground/games/<slug>/meta.json 에서 읽는다.
+// POSTER_PHONE=1 이면 폰 세로 화면(390x844, 2배)으로 제목 띠 없이 찍어 <slug>-phone.png 로 낸다
+//   (홍보 이미지의 폰 목업용, src/pipeline/promo_cards.py 가 씀. 2026-11-20).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
 const [, , BASE = 'http://localhost:8765', OUT = 'posters', ...SLUGS] = process.argv;
 const GAMES = path.join(__dirname, '..', 'playground', 'games');
-const W = 1280, H = 720;
+const PHONE = process.env.POSTER_PHONE === '1';
+const W = PHONE ? 390 : 1280, H = PHONE ? 844 : 720;
 
 const HELPERS = `(() => {
   // 테스터 전용 게임도 찍을 수 있게(찍는 브라우저 안에서만)
@@ -54,7 +57,9 @@ async function shoot(browser, arg) {
   const meta = E ? { ...meta0, name: E.name, short: E.short } : meta0;
   const R = E ? { ...meta0.poster, ...E } : meta0.poster;
   if (!R) throw new Error(slug + ': meta.json 에 poster 조리법이 없어요');
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: false });
+  const ctx = await browser.newContext(PHONE
+    ? { viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }
+    : { viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: false });
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', (e) => errs.push(e.message));
@@ -67,12 +72,12 @@ async function shoot(browser, arg) {
   if (R.after) await page.evaluate(`(async () => { ${R.after} })()`);
   // 공통으로 숨김: 코인·보너스 알림, 게임이 지정한 요소
   await page.addStyleTag({ content: `#__poster_title{display:flex!important}.btoast,.cheer{display:none!important}${R.hide ? R.hide + '{visibility:hidden!important}' : ''}` });
-  if (R.title !== false) {
+  if (R.title !== false && !PHONE) {
     await page.evaluate(TITLE(meta.name, meta.short, R.font));
     await page.evaluate(() => document.fonts && document.fonts.ready);
   }
   await page.waitForTimeout(150);
-  const file = path.join(OUT, slug + (lang ? '-' + lang : '') + '.png');
+  const file = path.join(OUT, slug + (lang ? '-' + lang : '') + (PHONE ? '-phone' : '') + '.png');
   await page.screenshot({ path: file, type: 'png' });
   await ctx.close();
   if (errs.length) console.log(slug, '페이지 오류:', errs.slice(0, 3).join(' | '));
