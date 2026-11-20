@@ -9,6 +9,12 @@
 - 사람들은 못 본다: 삼촌·조카에게는 금화가 안 보인다. 동전이가 짖고 끌고 가야 알아챈다. 개그는 여기서 나온다.
 - 재미 먼저, 정보는 곁들이기: 한 편에 숫자는 한 번만, 반전 장면(3번 클립 끝)에 자막으로. 숫자는 사이트 데이터만.
 
+## 새는 돈 모양·이야기 틀 돌려 쓰기 (BK 2026-11-20)
+"동전이 새어 나가는 모션이 고정이면 지겹다" → 금화가 창밖으로 날아가는 건 여러 모양 중 하나. 한 편에 모양 하나 + 이야기 틀 하나, **최근 3편과 같은 모양·틀 금지**. 목록은 `config/toon_motifs.json`.
+- 모양 10가지: 창밖으로 날아감 / 물처럼 새서 웅덩이 / 지폐 나비 떼 / 꿀꿀이가 풍선처럼 쪼그라듦 / 금화 눈사람 녹음 / 금화 팝콘 / 끝없는 영수증 / 금화 개미 행렬 / 금화 비눗방울 / 금화 도미노
+- 이야기 틀 5가지: 사건→추격→해결 / 대결(두 방법 겨루기) / 시간 점프(1년 뒤→되감기) / 동전이가 범인 / 꿈
+- 마지막에 꿀꿀이가 기뻐하는 건 유지하되, 모양에 맞게 바꾼다(웅덩이가 거꾸로 꿀꿀이에게 흘러감, 나비가 꿀꿀이 등에 앉음 등).
+
 ## 캐릭터와 고정 문장 (프롬프트에 그대로)
 - 동전이(주인공, 말 없음, 표정·귀·꼬리로만, 참견·실수 많음): `@동전이, a small round two-year-old Shiba Inu puppy with orange and cream fur, big shiny black eyes, curled tail, red collar with a small plain gold coin pendant`
 - 삼촌 만화판(반말 "조카야~", 계산 빠르고 반응 과장, 숫자 한 마디 해결사): `a cheerful Korean man in his fifties in the same cartoon style, green cap with a small plain gold coin badge, thick eyebrows, mustache, rosy nose, khaki fishing vest`
