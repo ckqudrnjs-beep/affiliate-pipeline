@@ -38,7 +38,7 @@ def call(token: str, method: str, body: dict | None = None) -> dict:
 
 
 def main() -> int:
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat = os.environ.get("TELEGRAM_ADMIN_CHAT_ID", "").strip()
     action = (sys.argv[1] if len(sys.argv) > 1 else "info").strip()
     if not token:
@@ -68,7 +68,15 @@ def main() -> int:
     print("밀린 메시지:", info.get("pending_update_count", 0))
     if info.get("last_error_message"):
         print("::warning::마지막 오류:", info.get("last_error_message"))
-        print("  → 401/404 이면 Cloudflare Pages 변수 TELEGRAM_BOT_TOKEN·TELEGRAM_ADMIN_CHAT_ID 를 넣고 다시 배포했는지 확인")
+        e = info.get("last_error_message", "")
+        if "503" in e:
+            print("  → 5락실 서버에 변수가 안 보임: Cloudflare Pages 5raksil 변수(Production) TELEGRAM_BOT_TOKEN·TELEGRAM_ADMIN_CHAT_ID 넣고 새 배포")
+        elif "401" in e:
+            print("  → 토큰이 다름: Cloudflare TELEGRAM_BOT_TOKEN 을 GitHub Secret 과 똑같이(앞뒤 공백 없이) 넣고 새 배포")
+        elif "404" in e:
+            print("  → /api/tg 가 아직 배포 전(또는 옛 배포). Cloudflare Pages 5raksil 최신 배포가 끝났는지 확인")
+    elif info.get("url"):
+        print("오류 없음(정상)")
     return 0
 
 
