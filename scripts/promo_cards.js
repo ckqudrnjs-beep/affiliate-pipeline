@@ -34,7 +34,7 @@ h1{font-weight:400;font-size:168px;line-height:1.02;margin-top:18px}.sub{font-si
 .bot{position:absolute;left:84px;bottom:110px;font-size:44px;color:#ffffffaa}.bot b{font-weight:400;color:#ffd23f}</style>
 <div class=top><div class=kick>${esc(s.kick)}</div><h1>${rich(s.t1)}<br>${rich(s.t2)}</h1><div class=sub>${esc(s.sub)}</div></div>
 ${back ? `<div class=phone style="width:420px;left:110px;top:900px;transform:rotate(-8deg);opacity:.55;--glow:#ff3d7f44"><img src="${img(back)}"></div>` : ''}
-<div class=phone style="width:500px;left:${back ? 480 : 290}px;top:760px;transform:rotate(${back ? 5 : 0}deg);--glow:#7b5cffaa"><img src="${img(front)}"></div>
+<div class=phone style="width:${back ? 500 : 430}px;left:${back ? 480 : 325}px;top:${back ? 760 : 700}px;transform:rotate(${back ? 5 : 0}deg);--glow:#7b5cffaa"><img src="${img(front)}"></div>
 <div class=bot>${esc(s.foot)} <b>${esc(s.url)}</b></div>`;
 }
 

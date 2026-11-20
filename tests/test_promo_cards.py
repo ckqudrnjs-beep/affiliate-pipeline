@@ -37,3 +37,24 @@ class T(unittest.TestCase):
         p = P.raksil_poster(["bag", "hansang", "pusher"], {"bag": "1", "hansang": "2", "pusher": "3"})
         self.assertEqual([c["em"] for c in p["cards"]], ["꽉", "콤보", "우르르"])
         self.assertEqual(P.check(p), [])
+
+
+class NewGames(unittest.TestCase):
+    def test_only_new_games_without_thumbnail(self):
+        import pathlib
+        import tempfile
+        with tempfile.TemporaryDirectory() as t:
+            out = pathlib.Path(t)
+            self.assertNotIn("dodge", P.new_games(out))  # 옛 게임은 만들지 않음
+            old = P.PROMO_FROM
+            try:
+                P.PROMO_FROM = "2026-11-19"
+                self.assertIn("bag", P.new_games(out))
+                (out / "bag.jpg").write_bytes(b"x")
+                self.assertNotIn("bag", P.new_games(out))  # 이미 있으면 다시 안 만듦
+            finally:
+                P.PROMO_FROM = old
+
+    def test_drive_backup_category(self):
+        from pipeline import drive_backup
+        self.assertEqual(drive_backup.category("media/promo/raksil/bag.jpg"), "홍보이미지")
