@@ -62,7 +62,7 @@ function talk3(id, offer, finish) {
 function finish3(id) { const P = G.P; if (id === 'q16' && !useGood('salt', 5)) return false;
   const R = { q13: [4200, 900], q14: [5600, 1200], q15: [5000, 1100], q16: [2800, 800], q17: [12000, 3500] }[id]; if (!R) return false;
   P.q[id].s = 3; gainXp(R[0]); P.gold += R[1];
-  if (id === 'q13') addInv(makeItem('amu3', 2, 27, { id: 1, st: 0 }));
+  if (id === 'q13') addInv(makeItem('ear3', 2, 27, { id: 1, st: 0 }));
   if (id === 'q14') addInv(makeItem('boots3', 2, 29, { id: 1, st: 1 }));
   if (id === 'q15') addInv(makeItem('ring6', 2, 29, { id: 1, st: 0 }));
   if (id === 'q16') { addInv(goods('bhone')); addInv(goods('bglue')); }
@@ -107,7 +107,7 @@ function rustshipAI(m, dt, d, dx, dy) {
   else if (d < 2.2 && m.cd <= 0) { m.an = 'atk'; m.at = 0; m.hitDone = 0; m.cd = rage ? 2 : 2.8; m.kind = 'slam'; G.areas.push({ k: 'warn', x: m.x, y: m.y, r: 2.4, t: 0, life: .8 }); }
   else { const s = (m.orb = (m.orb || 1)); move(m, -dy / d * sp * .6 * s * dt, dx / d * sp * .6 * s * dt); if (Math.random() < dt * .25) m.orb = -s; m.an = 'move'; }
 }
-function ch3Area(a, dt) { return 0; }
+function ch3Area(a, dt) { return foeArea(a, dt); }
 function ch3Goals(Wd, P, goals) { const q = P.q, bq = Wd.bridges[Wd.bq];
   if (q.q14 && q.q14.s === 1) { const i = bq.cells[bq.cells.length >> 1]; goals.push([i % Wd.W + .5, ((i / Wd.W) | 0) + .5]); }
   if (q.q17 && q.q17.s === 1) { const H2 = Wd.islands[Wd.hill]; goals.push([H2.cx, H2.cy]); }

@@ -267,7 +267,7 @@ function drawMob(m) {
   const [mox, moy, msx, msy, mrot] = mobMotion(m); x.save(); x.translate(sx + mox, sy + moy); x.rotate(mrot); x.scale(msx, msy); x.translate(-sx, -sy);
   if (q) { x.save(); x.translate(sx, sy); x.scale(1 + q * .16, 1 - q * .14); x.translate(-sx, -sy); }
   if (m.elite && !m.dead) { x.shadowColor = m.E[1]; x.shadowBlur = 10; }
-  sprite(IM[D.spr], c[0], c[1], c[2], c[3], mobFrame(m), m.dir, sx + (q ? rnd(-1.5, 1.5) : 0), sy, sc0, m.flash, a);
+  sprite(D.tint ? tintedIm(D.spr, D.tint) : IM[D.spr], c[0], c[1], c[2], c[3], mobFrame(m), m.dir, sx + (q ? rnd(-1.5, 1.5) : 0), sy, sc0, m.flash, a);
   x.shadowBlur = 0;
   if (q) x.restore();
   x.restore();

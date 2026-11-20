@@ -68,6 +68,10 @@ Seeing the ending unlocks the next difficulty tier, and beating the Chapter 7 bo
 
 Enemy damage climbs far more slowly than enemy life. So when a new tier feels like a wall, the problem is usually that things won't die, not that you die. If your damage feels short, enchant your weapon before anything else. Sky Charts that drop after the ending open Drifting Isles, which are short repeatable hunting grounds on whatever tier you're playing.
 
+Even on Normal, enemies get stronger chapter by chapter. Chapter 2 starts at enemy life ×1.15 and damage ×1.12, and Chapter 7 reaches life ×1.9 and damage ×1.62, with shorter attack gaps, bigger packs and more elites. Each chapter also mixes in new foes modeled on its own creatures: Shooters that keep their distance and fire shots (three-way from Chapter 3), Tossers that throw rocks and leave marks on the ground, and Swollen creatures that rush you, flash red and burst. Kill a Swollen one while it flashes and it won't explode.
+
+Chapter bosses drop one Legendary at a time, favoring the ones you don't have yet: an amulet, a weapon for your class, or a piece of armor. Regular enemies and elites can very rarely drop Legendaries too.
+
 ## Daily routine and the tailwind
 - **Village Board**: three requests a day (finish all three for a Blessed Whetstone)
 - **Today's Island chest**, the **peddler** whose stock changes every day, and **Airship Errands**
