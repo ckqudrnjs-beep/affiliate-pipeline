@@ -1,0 +1,38 @@
+name: scoreboard
+
+# 주간 성과판 (2026-11-20 BK). 어떤 자동 작업이 조회·검색 유입을 만드는지 docs/SCOREBOARD.md 한 장 + 텔레그램 제안 한 줄.
+# 저장소에 쌓인 숫자만 읽음(새 API 호출·Claude 토큰 없음). 끄기·키우기는 제안만, 실제 변경은 docs/DIRECTION.md 4장 흐름.
+on:
+  schedule:
+    - cron: "20 23 * * 0"   # 월 08:20 KST (07:20 서치 콘솔, 전날 22:41 유튜브 수집 뒤)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  board:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 성과판
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.scoreboard | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: main에 기록
+        run: |
+          git config user.name "scoreboard-bot"
+          git config user.email "scoreboard-bot@users.noreply.github.com"
+          git add docs/SCOREBOARD.md
+          git commit -m "주간 성과판 $(TZ=Asia/Seoul date +%F)" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
