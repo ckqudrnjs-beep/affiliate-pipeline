@@ -34,7 +34,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 - 코인은 무료로만 얻음(현금·거래·뽑기 판매 금지). 새 게임 = 같은 PR에 스킨·공략 글·포스터 (AGENTS.md 7~10).
 - 관리자·게시판·프로필 페이지에는 광고 없음.
 - 5락실 쇼츠: 밸런스게임 쇼츠 매일 17:00 공개, 밸런스 질문 매일 자동 추가.
-- 홍보 이미지(썸네일·가로 포스터·인스타 계산기 카드): 어두운 그라데이션 + 두 줄 제목(한 단어 기울임 강조) + 실제 화면 폰 목업, 주아. 세부 docs/PROMO_DESIGN.md (BK 11/20 "가자", 도구는 홍보 이미지 스레드 PR에서 들어옴). 사이트 안 게임 포스터·레이아웃은 애드센스 승인 전까지 그대로.
+- 홍보 이미지(썸네일·가로 포스터·인스타 계산기 카드): 어두운 그라데이션 + 두 줄 제목(한 단어 기울임 강조) + 실제 화면 폰 목업, 주아. 세부 docs/PROMO_DESIGN.md (BK 11/20 "가자", 도구는 홍보 이미지 스레드 PR에서 들어옴). 사이트 안 게임 포스터·레이아웃은 애드센스 승인 전까지 그대로. 새 게임만 썸네일 자동, 옛 게임은 안 만듦 (BK 11/20).
 
 ### 2-3. 삼촌 유튜브 쇼츠 (@don3chon)
 - **형식: 동전이 캐릭터 영상이 기본, 주말 공개 편은 실사 삼촌 특별편(주 1회)** (BK 11/20 "오늘 올라가는 것부터 캐릭터를 만들어서 영상으로 하고 삼촌은 특별편으로 한번 나오고").
@@ -71,14 +71,14 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 | 삼촌 쇼츠 대본 | 2-3 | EPISODES.md · 동전이_세계관_바이블.md | claude-jobs `toon` 07:10 → BK 고름 → 예약 '쇼츠 대본' 07:40 | `episodes`(main 반영 시) → `youtube` 10:00 업로드 → 19:00 공개 | pipeline.episodes · claude_jobs | Claude API 크레딧 |
 | 삼촌 쇼츠 영상 | 2-3 | AI_CLIPS.md | BK가 Flow 클립 → Claude가 tools/toon_assemble.py | `youtube` | tools/toon_assemble.py | 쇼츠 만화(실사→캐릭터) |
 | 쇼츠 규칙 다듬기 | 2-3 | SHORTS_GROWTH.md · SHORTS_AI_NOTES.md | claude-jobs `shorts` 월 07:30 (PR → BK 병합) | 예약 '주간 조회수 점검' 월 10:23 = **보고만**, `trend-radar` 월 06:50, `yt-stats` 22:41 | claude_jobs.shorts | Claude API 크레딧 |
-| 5락실 게임 | 2-2 | GAME_QUALITY.md · RAKSIL_GUIDES.md | 게임별 스레드 (PR, BK 확인) | `posters` | playground/ | 5락실 · 게임 품질 |
+| 5락실 게임 | 2-2 | GAME_QUALITY.md · RAKSIL_GUIDES.md | 게임별 스레드 (PR, BK 확인) · 예약 '게임 아이템 2주 시안' 짝수 주 월 08:43 (커밋만, BK "올려" 후 배포) | `posters`(+새 게임 세로 썸네일 → `drive-backup` 홍보이미지) | playground/ | 5락실 · 게임 품질 |
 | 5락실 쇼츠 | 2-2 | 5RAKSIL_PROMO.md | 예약 16:13 → Actions `raksil-shorts` 16:23 (자동 승인) | 질문 예약 21:37 (자동 승인) | pipeline.raksil_shorts | 5락실 홍보·쇼츠 |
 | 인스타 | 2-4 | INSTAGRAM_AUTO.md | BK 수동 | — | — | 인스타 |
 | 스레드 | 2-5 | OPERATIONS.md | 없음 (`publish` dry-run) | — | pipeline.publish | — |
 | 네이버 블로그 | 2-7 | — | BK 수동 (claude-jobs `naver` 수동 실행만) | — | — | 네이버 |
 | 감시·검사 | 0 | COMPLIANCE.md · SECURITY.md | `api-check` 06:20·11:20·16:20·21:20, `health` 10:30, `gsc-stats` 07:20, `cf-usage` | 텔레그램 알림 | pipeline.api_check | API 점검 · 보안 |
 | 백업 | — | DRIVE_BACKUP.md | `drive-backup` 03:30, `d1-backup` 일 04:20 | — | pipeline.drive_backup | 드라이브 백업 |
-| **기준·정합성** | 이 파일 | — | 이 파일을 고치는 PR | `consistency` 매일 07:50 → 어긋나면 텔레그램 | pipeline.consistency · tests/test_direction.py | 자동화 어긋남 막는 기준 |
+| **기준·정합성** | 이 파일 | — | 이 파일을 고치는 PR | `consistency` 매일 07:50 → 어긋나면 텔레그램, `scoreboard` 월 08:20 → docs/SCOREBOARD.md + 제안 한 줄 | pipeline.consistency · scoreboard | 자동화 어긋남 막는 기준 |
 
 - '예약' = Claude 예약 작업(저장소 밖에 지시문이 있음), '`이름`' = GitHub Actions 워크플로, `claude-jobs` = Claude API 작업 워크플로(이름 뒤 `toon` 등은 그 안의 작업).
 - 담당 스레드 id (Claude 가 서로 알릴 때): 돈삼촌 사이트 cmsg_01Fq1LsYrf815Jn6tZNPCirgRaBK7XKuuRqJ1ePxZACDTV · 텔레그램 cmsg_01Fq1LsYrf815Jn6tZNPCirgJR6nuyYzahPdtL2UjfcEj5 · 상품 자동 cmsg_01Fq1LsYrf815Jn6tZNPCirgCh9QnzrXhzfjTSXVXr1PLz · Claude API 크레딧 cmsg_01Fq1LsYrf815Jn6tZNPCirg1bUeAAg7sQJ4KtDXcW73Fj · 쇼츠 만화 cmsg_01Fq1LsYrf815Jn6tZNPCirgPhUhQgbmmDVXPq3os6JQRa · 5락실 cmsg_01Fq1LsYrf815Jn6tZNPCirgKrrTYs76w6ss3oJQqLLFpS · 게임 품질 cmsg_01Fq1LsYrf815Jn6tZNPCirgJnV8z4SaBCjzrX9nGvZngp · 5락실 홍보·쇼츠 cmsg_01Fq1LsYrf815Jn6tZNPCirgNTavBwfRNPy31inTt7XKTN · 인스타 cmsg_01Fq1LsYrf815Jn6tZNPCirg532gMQvvC9pRFkZ2F3DEu3 · 네이버 cmsg_01Fq1LsYrf815Jn6tZNPCirgU331LHYpy6SdVBtaq8MzEp · API 점검 cmsg_01Fq1LsYrf815Jn6tZNPCirgVPEuofxxh57QsqeFUuBDc7 · 보안 cmsg_01Fq1LsYrf815Jn6tZNPCirgF6wqPMhBDJN4e7fWv8yfkA · 기준·정합성 cmsg_01Fq1LsYrf815Jn6tZNPCirgJoxotTyY4CAeWA9Xp38WtY. 스레드가 닫혀도 다시 열어 쓴다(같은 영역에 새 스레드를 만들지 않음).
@@ -101,10 +101,10 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 | 결정이 채팅에만 있고 작업은 모름 (11/20 07:40 대본) | 결정이 기준 파일로 안 내려옴 | 4장 2단계 의무 + 작업 프롬프트가 이 파일을 직접 읽음(claude_jobs.direction) |
 | 같은 날 쇼츠 두 개 위험 (11/30 textshort) | 같은 산출물에 만드는 작업이 둘 | 주인 한 명 원칙 + 매일 점검이 '한 날짜·한 채널·파일 하나' 검사 |
 | 규칙 문장이 덧칠로 쌓여 서로 부딪침 | 바뀔 때 옛 규칙을 안 지움 | 4장 3단계 '옛 규칙 지우기' + 분기마다 규칙 문장 정리 |
-| 예약 작업 지시문이 검사에 안 걸림 | 저장소 밖에 있음 | 지시문을 짧게, 세부는 저장소로. 매일 점검은 Actions 예약을 이 표와 대조(Claude 예약 작업은 Actions 에서 못 읽음 → 주간 성과판 때 Claude 가 목록을 이 표와 대조) |
+| 예약 작업 지시문이 검사에 안 걸림 | 저장소 밖에 있음 | 지시문을 짧게, 세부는 저장소로. 매일 점검은 Actions 예약을 이 표와 대조(Claude 예약 작업은 Actions 에서 못 읽음 → 주간 성과판을 볼 때 Claude 가 예약 작업 목록을 이 표와 대조) |
 | docs/ 와 plan/ 이 달라짐 (26개) | 두 곳을 각자 고침 | docs/ 원본, plan/ 은 병합 뒤 복사만 |
 | 스레드끼리 같은 파일을 고침 | 영역 경계 없음 | 3장 담당 스레드, 다른 영역은 알리기만 |
-| 효과 없는 작업이 계속 돎 | 작업별 성과를 안 봄 | 주간 성과판(만드는 중): 작업별 방문·조회 기여 → 끄기·키우기 제안 PR |
+| 효과 없는 작업이 계속 돎 | 작업별 성과를 안 봄 | 주간 성과판 `scoreboard`(월 08:20): 형식·페이지 종류별 조회·검색 유입 → 끄기·키우기 제안(실제 변경은 4장 흐름, BK 확인) |
 
 ## 6. 자동 점검용 (기계가 읽는 칸 — 형식 바꾸지 말 것)
 매일 07:50 정합성 점검(`consistency`)과 tests/test_direction.py 가 이 칸을 읽는다. 값을 바꾸면 위 글도 같이 고친다.
@@ -118,6 +118,8 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 ```
 
 ## 결정 기록 (최신이 위)
+- 2026-11-20: 새 콘텐츠만 홍보 이미지 자동, 이전 콘텐츠는 안 만듦 (BK "향후 새로운 컨텐츠를 만들면 자동적으로" → "네").
+- 2026-11-20: 주간 성과판 `scoreboard`(월 08:20) — docs/SCOREBOARD.md, 이미 꺼진 형식엔 제안 안 함. 방문자·인스타·텔레그램은 아직 못 잼.
 - 2026-11-20: 매일 정합성 점검 `consistency`(07:50) — 꺼 둔 작업 재가동, 표에 없는 작업, 삼촌 쇼츠 하루 2편·간격·상품·형식, 다음 대본 없음, 예약 공개 시각, AGENTS 두 벌을 검사해 텔레그램 한 줄.
 - 2026-11-20: 홍보 이미지 새 디자인(5락실 세로 썸네일·가로 포스터, 돈삼촌 계산기 카드) 도구 `pipeline.promo_cards` (BK "가자"). 사이트 포스터는 승인 뒤.
 - 2026-11-20: 0장 프로젝트 지침, 3장 연결 지도, 4장 수정→반영→배포 흐름, 5장 보강 장치 추가 (BK "정확하게 어떤 것과 어떤 것이 연결되는지 정리, 지침 반영").
