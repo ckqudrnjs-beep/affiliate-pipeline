@@ -75,6 +75,34 @@ def fetch_votes(qid: str) -> dict | None:
         return None
 
 
+def comment_votes(day: dt.date, q: dict | None, log: pathlib.Path | None = None) -> dict | None:
+    """그날 밸런스 쇼츠의 유튜브 공개 댓글을 읽어(읽기만) Claude 가 A/B 로 센다 (BK 11/20 '오락실 쇼츠도 빌드업').
+    사이트 투표와 합쳐 MIN_VOTES 를 넘으면 진짜 % 막대가 나온다. 키·기록이 없거나 실패하면 None."""
+    if not q:
+        return None
+    try:
+        up = json.loads((log or LOG).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    vid = (up.get(day.isoformat()) or {}).get("id")
+    if not vid:
+        return None
+    try:
+        from . import claude_jobs as cj, toon_series
+        r = toon_series.tally(cj, q["a"], q["b"], toon_series.fetch_comments(vid), job="raksil")
+    except Exception as e:
+        print(f"댓글 투표 건너뜀: {e}", file=sys.stderr)
+        return None
+    return {"a": r["a"], "b": r["b"]} if r["a"] + r["b"] else None
+
+
+def merge_votes(*vs: dict | None) -> dict | None:
+    got = [v for v in vs if v]
+    if not got:
+        return None
+    return {"a": sum(int(v.get("a", 0)) for v in got), "b": sum(int(v.get("b", 0)) for v in got)}
+
+
 def result_of(q: dict | None, votes: dict | None) -> dict | None:
     """어제 결과. 실제 표가 MIN_VOTES 이상일 때만."""
     if not q or not votes:
@@ -195,7 +223,8 @@ def title_of(q: dict, band: dict | None = None) -> str:
 def description_of(q: dict, res: dict | None, ai_voice: bool, pick: dict | None = None) -> str:
     lines = [f"오늘의 밸런스게임: {q['a']} vs {q['b']}", "",
              f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}", f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
-             "▶ 매일 17시 새 밸런스게임은 구독으로", ""]
+             "▶ 매일 17시 새 밸런스게임은 구독으로",
+             "▶ 댓글로 A / B 남기면 내일 쇼츠 결과에 같이 세요", ""]
     if res:
         lines += [f"어제 결과({res['n']}표): {res['a']} {res['pa']}% / {res['b']} {res['pb']}%", ""]
     elif pick:
@@ -697,7 +726,8 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         print(f"{day} 질문 없음")
         return None
     yq = pick_question(qs, day - dt.timedelta(days=1), for_shorts=True)
-    res = result_of(yq, fetch_votes(yq["id"]) if yq else None)
+    yday = day - dt.timedelta(days=1)  # 어제 결과 = 사이트 투표 + 어제 쇼츠 댓글 투표 (실제 표만, 합쳐서 20표 이상일 때)
+    res = result_of(yq, merge_votes(fetch_votes(yq["id"]) if yq else None, comment_votes(yday, yq)))
     global _THEME
     _THEME = theme_for(day)
     pick, band = mongle_plan(q)

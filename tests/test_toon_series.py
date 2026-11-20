@@ -137,8 +137,42 @@ class AssembleVoteTest(unittest.TestCase):
         oc = A.outro_of({"vote": {"a": "난방비", "b": "배달비"}})
         self.assertEqual(oc["lines"], ["다음엔 뭐가 샐까?", "A 난방비 / B 배달비"])
         self.assertEqual(oc["big_y"], A.OUTRO["big_y"])
-        with mock.patch("pipeline.toon_series.vote_of", return_value=None):
+        with mock.patch("pipeline.toon_series.ensure_vote", return_value=None):
             self.assertEqual(A.outro_of({"date": "2026-12-04"}), A.OUTRO)
+
+
+class SaturdayStartTest(unittest.TestCase):
+    def test_ensure_vote_opens_from_season(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(T, "ROOT", pathlib.Path(d)):
+            self.assertIsNone(T.ensure_vote("2026-11-24"))  # 시즌 없음
+            T.save({"season": {"id": "s", "title": "t", "goal": "g", "running_gag": "r", "topics": ["난방비", "온수", "김장"]},
+                    "log": [], "polls": []})
+            self.assertIsNone(T.ensure_vote("2026-11-20"))  # 토요일 전
+            self.assertIsNone(T.ensure_vote("2026-11-22"))  # 일요일 = 실사 특별편
+            self.assertEqual(T.ensure_vote("2026-11-24"), {"a": "난방비", "b": "온수"})
+            self.assertEqual(T.ensure_vote("2026-11-24"), {"a": "난방비", "b": "온수"})  # 다시 불러도 같음
+            self.assertIsNone(T.ensure_vote("2026-11-26"))  # 남은 주제 1개뿐
+
+    def test_seed_season_file(self):
+        st = json.loads((pathlib.Path(__file__).resolve().parents[1] / "data/toon/season.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(st["season"]["topics"]), 10)
+        self.assertTrue(all(len(t) <= T.VOTE_MAX for t in st["season"]["topics"]))
+
+
+class RaksilCommentVoteTest(unittest.TestCase):
+    def test_comment_votes_merge(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = pathlib.Path(d) / "up.json"
+            f.write_text(json.dumps({"2026-11-21": {"id": "vid"}}), encoding="utf-8")
+            q = {"a": "라면", "b": "치킨"}
+            with mock.patch("pipeline.toon_series.fetch_comments", return_value=["A"] * 12 + ["치킨"] * 3), \
+                    mock.patch("pipeline.claude_jobs.ask", side_effect=RuntimeError("no key")):
+                cv = R.comment_votes(dt.date(2026, 11, 21), q, log=f)
+            self.assertEqual(cv, {"a": 12, "b": 3})
+            self.assertIsNone(R.comment_votes(dt.date(2026, 11, 22), q, log=f))
+            res = R.result_of({"a": "라면", "b": "치킨"}, R.merge_votes({"a": 2, "b": 3}, cv))
+            self.assertEqual((res["n"], res["pa"]), (20, 70))
+            self.assertIsNone(R.result_of(q, R.merge_votes({"a": 1, "b": 1}, None)))
 
 
 class MongleMemoryTest(unittest.TestCase):

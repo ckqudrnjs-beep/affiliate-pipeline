@@ -53,7 +53,7 @@ def outro_of(spec: dict) -> dict:
     if v is None:
         try:
             from pipeline import toon_series
-            v = toon_series.vote_of(str(spec.get("date") or spec.get("slug", "")[3:13]))
+            v = toon_series.ensure_vote(str(spec.get("date") or spec.get("slug", "")[3:13]))  # 없으면 시즌 주제로 열고 기록
         except Exception:
             v = None
     if not v or not v.get("a") or not v.get("b"):

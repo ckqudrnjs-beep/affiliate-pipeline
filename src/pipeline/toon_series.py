@@ -24,6 +24,7 @@ import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SEASON_REL = "data/toon/season.json"
+SERIES_FROM = "2026-11-21"  # BK 11/20 "토요일부터 적용해줘": 이날 이후 공개 만화 편부터 엔딩 투표
 SEASON_LEN = 10          # 한 시즌 편수 (이틀에 1편 → 약 3주)
 MIN_VOTES = 3            # 댓글 투표가 이만큼 모여야 결과로 쓴다 (새 채널이라 낮게, 숫자는 화면에 안 씀)
 POLL_AGE_H = 20          # 공개 뒤 이만큼 지나야 센다
@@ -141,12 +142,12 @@ def quick_count(a: str, b: str, comments: list[str]) -> dict:
     return {"a": na, "b": nb}
 
 
-def tally(cj, a: str, b: str, comments: list[str]) -> dict:
+def tally(cj, a: str, b: str, comments: list[str], job: str = "toon") -> dict:
     """댓글을 A/B 로 나눠 센다. Claude(싸게 Sonnet) → 실패하면 규칙 셈. 숫자는 댓글 수를 넘지 못한다."""
     if not comments:
         return {"a": 0, "b": 0, "by": "없음"}
     try:
-        r = cj.ask("toon", "유튜브 댓글 투표를 센다. 질문은 '다음 편에 볼 주제 A 또는 B'. 댓글마다 A를 원함/B를 원함/상관없음 중 하나로 보고 "
+        r = cj.ask(job, "유튜브 댓글 투표를 센다. 질문은 'A 또는 B 중 무엇을 고르나'. 댓글마다 A를 원함/B를 원함/상관없음 중 하나로 보고 "
                    "A·B 개수만 JSON 으로. 농담·비꼼도 뜻을 읽어서. 한 댓글은 한 표.",
                    json.dumps({"A": a, "B": b, "댓글": comments}, ensure_ascii=False),
                    schema=TALLY_SCHEMA, model=cj.SONNET, effort="low", max_tokens=200, need=0.02)
@@ -271,6 +272,29 @@ def record(date: str, v: dict, ctx: dict) -> pathlib.Path:
             st["breakout_used"][br.get("from", "")].append(date)
     save(st)
     return season_path()
+
+
+def ensure_vote(date: str) -> dict | None:
+    """조립할 때 그 날짜 투표를 돌려준다. 대본 작업이 안 만든 편(11/21~ BK 클립으로 바로 조립하는 편)은
+    시즌 주제 후보에서 안 쓴 두 개로 투표를 열고 기록한다. 주말(실사 특별편)·SERIES_FROM 전·시즌 없음이면 None."""
+    v = vote_of(date)
+    if v:
+        return v
+    try:
+        d = dt.date.fromisoformat(date)
+    except ValueError:
+        return None
+    st = load()
+    s = st.get("season")
+    if not s or date < SERIES_FROM or d.weekday() >= 5:
+        return None
+    used = {p["a"] for p in st.get("polls", [])} | {p["b"] for p in st.get("polls", [])} | {x.get("topic") for x in st.get("log", [])}
+    free = [t for t in s.get("topics", []) if t not in used]
+    if len(free) < 2:
+        return None
+    st.setdefault("polls", []).append({"date": date, "a": free[0], "b": free[1], "result": None})
+    save(st)
+    return {"a": free[0], "b": free[1]}
 
 
 def vote_of(date: str) -> dict | None:
