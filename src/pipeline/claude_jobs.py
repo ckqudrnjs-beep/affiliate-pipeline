@@ -230,8 +230,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     info = episodes.info_short(today)
     date = info["date"]
     out = ROOT / "data/toon/lab" / f"{date}.md"
-    if out.exists():
-        print(f"{out.name} 이미 있음")
+    if out.exists() or sh("git", "ls-remote", "--heads", "origin", f"auto/toon-{date}", check=False):
+        print(f"{date} 후보 이미 있음 (파일 또는 PR)")
         return 0
     bible = (ROOT / "config/toon_bible.md").read_text(encoding="utf-8")
     system = ("너는 한국 유튜브 쇼츠 만화 '동전이네'의 작가다. 아래 세계관 바이블을 반드시 지킨다.\n\n" + bible

@@ -180,16 +180,29 @@ def pick_concept(d: dt.date, used: list[str]) -> dict | None:
     return random.Random(d.toordinal()).choice(pool)
 
 
+# 2026-11-20 BK "삼촌 쇼츠는 캐릭터 영상으로 하기로 했잖아": 이 날짜부터 요일 형식 대신 전부 동전이 만화.
+TOON_FROM = dt.date(2026, 12, 2)
+TOON_RULE = ("[동전이 만화 2026-11-20 BK] 재미·상황극 먼저, 정보는 곁들이기(숫자는 반전에 한 번). 예전 정보형(1년이면 얼마? 카드·시세 카드·실사 배경) 금지. "
+             "먼저 data/toon/lab/<날짜>.md 를 찾는다(main 에 없으면 git fetch origin auto/toon-<날짜> 후 그 브랜치에서). "
+             "PR 댓글에 BK 번호가 있으면 그 안, 없으면 1안. 후보가 없으면 아무것도 쓰지 말고 끝낸다(07:10 자동 작업이 먼저 만든다). "
+             "title = 그 안의 상황 궁금증, 답 숫자 없이 '?'로 끝. description = 숫자 가정·근거 + 해시태그 3개. takeaway·site_path(숫자 근거 페이지) 필수, "
+             "\"toon_lab\": \"<날짜> N안\". scenes = BK 만화 클립이 늦을 때 쓰는 대체 영상: 같은 이야기 순서의 동전이 skit 4~5줄 + end "
+             "(사건 → 조카 착각 → 반전 숫자 big 한 번 → 동전이 해결 → 삼촌 한 마디), \"style\": \"webtoon\". "
+             "숫자는 그 안의 숫자 상자·근거만. 쇼핑몰·브랜드 이름(알리·쿠팡·테무 등) 금지, '해외직구'처럼 일반 말로. 바이블 config/toon_bible.md. ")
+
+
 def info_short(today: dt.date) -> dict:
     d = next_short_date(today)
     key, name, product, rules = SHORT_FORMATS[d.weekday()]
+    if d >= TOON_FROM:
+        key, name, product, rules = "toon", "동전이 만화", False, SKIT_RULE + TOON_RULE
     specs = [json.loads(p.read_text(encoding="utf-8")) for p in ep_files()]
     used = [x.get("product") for x in specs]
-    concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith("skit") else None
+    concept = pick_concept(d, [x.get("concept") for x in specs if x.get("concept")]) if key.startswith(("skit", "toon")) else None
     return {"concept": concept, "concept_rule": "concept 의 상황·반전·루프를 이 형식에 맞게 쓰고 대본에 \"concept\": id 를 넣는다. "
             "썸네일 문구 공식은 docs/SHORTS_BANK.md." if concept else None,"date": d.isoformat(), "kind": "short", "format": key, "format_name": name, "product_allowed": product,
-            "rules": INFO_RULE + HOME_RULE + rules + (LIVE_RULE + STORY_RULE if d.weekday() in LIVE_DAYS else ""),
-            "style": "live" if d.weekday() in LIVE_DAYS else "webtoon", "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
+            "rules": INFO_RULE + HOME_RULE + rules + (LIVE_RULE + STORY_RULE if d.weekday() in LIVE_DAYS and key != "toon" else ""),
+            "style": "live" if d.weekday() in LIVE_DAYS and key != "toon" else "webtoon", "file": f"data/episodes/{d.isoformat()}-{key}.json", "site_pages": site_pages(),
             "recent_products": [u for u in used if u][-10:],
             "products": products_with_photos(), "clips": sorted(k for k in clips_cfg()),
             "ai_scenes": sorted({c["scene"] for c in live_ai_clips()})}

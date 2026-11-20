@@ -4,6 +4,7 @@
 
 ## 대본 쓰기 전 기획 (2026-11-18부터, BK "쇼츠 기획 도구 내일부터 당장")
 대본 예약 작업(매일 07:40)과 사람이 쓸 때 모두, JSON을 쓰기 전에 `.claude/skills/shorts-planner/SKILL.md` 순서를 따른다.
+**(2026-11-20 BK) 12/2 공개 편부터 요일 형식 대신 전부 동전이 만화(`episodes.TOON_FROM`, 형식 `toon`).** 07:10 Claude API 작업이 만화 대본 후보 PR(`auto/toon-<날짜>`)을 올리고, 07:40 대본 작업은 그 안으로 `data/episodes/<날짜>-toon.json`(제목·설명·대체 영상)을 쓴다. 예전 정보형(1년이면 얼마? 카드·실사 배경)은 쓰지 않는다. 후보가 없으면 그날은 쓰지 않는다.
 0. (2026-11-20) `data/toon/lab/<공개일>.md` 가 있으면 BK가 고른 안(PR 댓글 번호, 없으면 1안)을 바탕으로 쓴다. `docs/SHORTS_AI_NOTES.md` 맨 위 주의 "다음 대본 규칙 제안"도 따른다(Claude API 자동, `pipeline.claude_jobs`).
 1. `docs/SHORTS_TRENDS_WEEKLY.md`(지난 7일 한국 쇼츠 상위, 매주 월 06:50 갱신)에서 오늘 형식에 맞고 **우리 사이트 숫자로 답할 수 있는** 주제를 고른다. 남의 제목·대사·숫자는 쓰지 않는다(방향만 참고).
 2. `docs/SHORTS_WEEKLY.md` 우리 상위 편의 형식·훅을 참고한다.
