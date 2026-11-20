@@ -185,7 +185,7 @@ TOON_FROM = dt.date(2026, 12, 2)
 TOON_RULE = ("[동전이 만화 2026-11-20 BK] 재미·상황극 먼저, 정보는 곁들이기(숫자는 반전에 한 번). 예전 정보형(1년이면 얼마? 카드·시세 카드·실사 배경) 금지. "
              "먼저 data/toon/lab/<날짜>.md 를 찾는다(main 에 없으면 git fetch origin auto/toon-<날짜> 후 그 브랜치에서). "
              "PR 댓글에 BK 번호가 있으면 그 안, 없으면 1안. 후보가 없으면 아무것도 쓰지 말고 끝낸다(07:10 자동 작업이 먼저 만든다). "
-             "title = 그 안의 상황 궁금증, 답 숫자 없이 '?'로 끝. description = 숫자 가정·근거 + 해시태그 3개. takeaway·site_path(숫자 근거 페이지) 필수, "
+             "title = 그 안의 '유튜브 제목'(답 숫자 없이 '?'로 끝). \"band\": {\"top\": 그 안의 제목 띠 흰 줄, \"accent\": 노란 줄} 을 그대로(띠 문구 규칙 docs/SHORTS_BANK.md 1-1, 각 14자 이하). description = 숫자 가정·근거 + 해시태그 3개. takeaway·site_path(숫자 근거 페이지) 필수, "
              "\"toon_lab\": \"<날짜> N안\". scenes = BK 만화 클립이 늦을 때 쓰는 대체 영상: 같은 이야기 순서의 동전이 skit 4~5줄 + end "
              "(사건 → 조카 착각 → 반전 숫자 big 한 번 → 동전이 해결 → 삼촌 한 마디), \"style\": \"webtoon\". "
              "숫자는 그 안의 숫자 상자·근거만. 쇼핑몰·브랜드 이름(알리·쿠팡·테무 등) 금지, '해외직구'처럼 일반 말로. 주말 공개 편은 실사 삼촌 특별편(주 1회): description 에 '실사 삼촌은 AI로 만든 가상 인물이에요' 표시. 바이블 config/toon_bible.md. ")
@@ -423,6 +423,31 @@ def title_errors(spec: dict) -> list[str]:
     for w in ("배 차이", "분의 1"):
         if w in title and not title.endswith("?"):
             e.append(f"제목에 답('{w}') 금지")
+    e += band_errors(spec.get("band"), answers - setup)
+    return e
+
+
+BAND_FROM = "2026-12-04"  # 제목 띠가 들어간 첫 대본 후보(11/22 07:10 생성) 편
+BAND_MAX = 14  # 제목 띠 한 줄 글자 수 (BK 11/20 잘 된 살림 쇼츠 패턴: 위 검은 띠 두 줄)
+MALLS = ("알리", "쿠팡", "테무", "이마트", "홈플러스", "다이소", "네이버쇼핑", "11번가")
+
+
+def band_errors(band, answers: set[str] = frozenset()) -> list[str]:
+    """제목 띠(흰 줄 top + 노란 줄 accent): 두 줄 모두, 짧게, 답 금액·쇼핑몰 이름 없이 (tools/toon_assemble.py 가 그림)."""
+    if not band:
+        return []
+    e = []
+    for k in ("top", "accent"):
+        t = str(band.get(k, "")).strip()
+        if not t:
+            e.append(f"제목 띠 {k} 줄이 비었음 (흰 줄 = 생활 장면, 노란 줄 = 궁금증·숫자 훅)")
+        elif len(t) > BAND_MAX:
+            e.append(f"제목 띠 '{t}' {len(t)}자 — {BAND_MAX}자 이하로")
+        if any(m in t for m in MALLS):
+            e.append(f"제목 띠 '{t}'에 쇼핑몰 이름 — '해외직구'처럼 일반 말로")
+        leak = _nums(t) & set(answers)
+        if leak:
+            e.append(f"제목 띠에 답 숫자 {sorted(leak)} — 답은 숫자 상자에서 한 번만")
     return e
 
 
@@ -521,6 +546,8 @@ def check(spec: dict) -> list[str]:
     if kind == "short" and spec.get("format") != "quiz" and spec.get("date", "") >= SHORT_V3:
         chars = (100, 150)
         e.extend(title_errors(spec))
+        if spec.get("format") == "toon" and spec.get("date", "") >= BAND_FROM and not spec.get("band"):
+            e.append("동전이 편은 제목 띠 band {top, accent} 필수 (대본 후보의 '제목 띠' 줄)")
         if any(s.get("type") == "uncle" for s in scenes):
             e.append("쇼츠에 삼촌 얼굴 영상(uncle) 금지 — 첫 화면이 정지된 얼굴이면 넘김 (skit·hook 로 시작)")
     if not chars[0] <= words <= chars[1]:
