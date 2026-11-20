@@ -73,6 +73,7 @@ def episode_rows(ep_dir: pathlib.Path = pathlib.Path("data/episodes")) -> list[d
                                          or any(c.get("realistic") for c in mj.get("credits") or [])) else "",
                     "ai_clip": "1" if any(c.get("ai") for c in mj.get("credits") or []) else "",
                     "ai_note": mj.get("ai_note", ""),  # 손으로 만든 편(만화 등)의 AI 표시 문구 (2026-11-19)
+                    "quality_ok": quality_ok(spec, mj),
                     "ad": "1" if (spec.get("product") or spec.get("products")) else "0",
                     "date": spec["date"], "kind": spec.get("kind", "short"), "episode": str(ep),
                     "takeaway": spec.get("takeaway", ""), "site": spec.get("site_path", ""), "format": spec.get("format", ""),
@@ -304,11 +305,29 @@ def summary(text: str) -> None:
             f.write(text + "\n")
 
 
+# 품질 게이트 (BK 2026-11-20 "품질이 떨어지는 문구 그리고 영상과 구도는 안하느니 못해").
+# 이 날짜부터 공개하는 삼촌 쇼츠는 동전이 만화(meta style toon)·글자형(engine hyperframes)·사람이 확인한 편(meta quality_ok)만 올린다.
+# 예전처럼 클립이 안 오면 실사판이 대신 나가는 안전망은 없앤다 — 그날은 그냥 쉰다.
+QUALITY_GATE_FROM = "2026-11-23"
+
+
+def quality_ok(spec: dict, meta: dict) -> bool:
+    if (spec.get("date") or "") < QUALITY_GATE_FROM or spec.get("kind", "short") != "short":
+        return True
+    if "quality_ok" in meta:
+        return bool(meta["quality_ok"])
+    return meta.get("style") == "toon" or meta.get("engine") == "hyperframes"
+
+
 def due_rows(queue: list[dict], log: dict, now: dt.datetime, interval: int, lead: int) -> list[tuple[dict, dt.datetime]]:
-    """이번 실행에 올릴 것: 날짜가 정해진 영상(새 기획) 중 공개일이 lead 일 안에 든 것 + 날짜 없는 영상 1개."""
+    """이번 실행에 올릴 것: 날짜가 정해진 영상(새 기획) 중 공개일이 lead 일 안에 든 것 + 날짜 없는 영상 1개.
+    품질 게이트(BK 11/20)를 못 넘은 편은 건너뛰고 요약에 남긴다."""
     out = []
     for r in queue:
         if r["slug"] in log or not (r.get("date") or "").strip():
+            continue
+        if r.get("quality_ok") is False:
+            summary(f"유튜브: {r['slug']} 품질 게이트 미통과 → 올리지 않음 (만화 클립으로 바꾸거나 meta 에 quality_ok: true)")
             continue
         hour = LONG_HOUR if is_long(r) else PUBLISH_HOUR
         slot = dt.datetime.fromisoformat(r["date"]).replace(hour=hour, tzinfo=KST)

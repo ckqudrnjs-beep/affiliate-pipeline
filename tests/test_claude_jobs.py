@@ -104,7 +104,7 @@ class ToonJobTest(unittest.TestCase):
                 self.assertEqual(st["log"][0]["title"], "안7고침")
                 self.assertEqual([p["date"] for p in st["polls"]], ["2026-12-04"])
                 self.assertIn("시즌: **겨울 대작전**", md)
-                self.assertIn("- 엔딩 투표(다음엔 뭐가 샐까?): A 난방비 / B 배달비", md)
+                self.assertIn("- 엔딩 투표(다음엔 어디로 갈까?): A 난방비 / B 배달비", md)
                 pr.assert_called_once()
                 self.assertEqual(C.toon(dt.date(2026, 11, 20)), 0)  # 이미 있으면 다시 안 만듦
                 self.assertEqual(pr.call_count, 1)
@@ -233,3 +233,16 @@ class GscTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MoodGateTest(unittest.TestCase):  # BK 2026-11-20 밤: 네 가지 결 + 품질 게이트
+    def test_mood_rotates_all_four(self):
+        import datetime as dt
+        days = [(dt.date(2026, 11, 21) + dt.timedelta(days=k)).isoformat() for k in range(4)]
+        self.assertEqual(sorted(C.mood_of(d) for d in days), sorted(C.MOODS))
+        self.assertEqual(C.mood_of("2026-11-24"), C.mood_of("2026-11-24"))
+
+    def test_rules_ban_money_framing(self):
+        self.assertIn("금화", C.MOOD_RULE)
+        self.assertIn("중독성", C.MOOD_RULE)
+        self.assertGreater(C.QUALITY_FLOOR, 0)
