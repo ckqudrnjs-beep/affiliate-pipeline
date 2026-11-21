@@ -151,8 +151,9 @@
  },
  {
   "q": "무선청소기 배터리 수명과 교체 비용",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "cordless-vacuum-battery-life-replacement"
  },
  {
   "q": "해외여행 전 챙길 전자기기와 전압·플러그 체크",
