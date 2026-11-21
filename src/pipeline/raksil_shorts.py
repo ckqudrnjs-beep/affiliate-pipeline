@@ -1369,7 +1369,9 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
     if fmt == "split":
         out.append(f"꼬리 한 줄(마지막 컷 글자+음성): '{(pick or {}).get('tail', '')}'" if (pick or {}).get("tail")
                    else "꼬리 한 줄: 없음(마지막 컷은 '댓글로 A? B?')")
-    out.append("대사: " + " / ".join(x for x in lines if x))
+    # 음성용 '에이'·'비' 는 화면 글자로는 A·B (11/21 채점에서 '비!'를 오타로 감점)
+    shown = [x.replace("는 에이!", "는 A!").replace("는 비!", "는 B!").replace("가 에이!", "가 A!").replace("가 비!", "가 B!") for x in lines]
+    out.append("대사(화면 자막 기준): " + " / ".join(x for x in shown if x))
     out.append("고정 장치: 공통 엔딩(몽글이 손 흔들기, '매일 새 게임과 새 질문'), 설명란 '댓글로 A / B 남기면 다음 결과편에 같이 센다'")
     return "\n".join(out)
 
