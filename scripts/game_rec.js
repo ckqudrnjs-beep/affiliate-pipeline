@@ -91,7 +91,9 @@ const VIRTUAL_TIME = `(() => {
   const boxCut = (r, b) => { if (!r) return 0; const w = Math.max(0, Math.min(r.x + r.width, b.x + b.width) - Math.max(r.x, b.x)); const h = Math.max(0, Math.min(r.y + r.height, b.y + b.height) - Math.max(r.y, b.y)); return Math.max(0, 1 - (w * h) / (r.width * r.height)); };
   const cvEnd = cv ? await measure() : null; // 녹화 끝에 다시 재서 도중에 화면이 밀렸는지 확인
   const score = await page.evaluate(() => (window.__demo && typeof window.__demo.score === 'number') ? window.__demo.score : null);
-  fs.writeFileSync(path.join(OUT, 'info.json'), JSON.stringify({ slug: SLUG, demo, started: !!go, frames: n, fps: FPS, score, box, view: [VW, vh], canvas: cv, cut, canvas_end: cvEnd, cut_end: boxCut(cvEnd, box) }));
+  // 마지막 화면에 찍힌 실제 기록 (config 의 final = JS 식). 주간 롱폼의 라운드 기록 도장에만 씀 (2026-11-21).
+  const final = R.final ? await page.evaluate((src) => { try { const v = new Function('return (' + src + ')')(); return typeof v === 'number' && isFinite(v) ? v : null; } catch (e) { return null; } }, R.final) : null;
+  fs.writeFileSync(path.join(OUT, 'info.json'), JSON.stringify({ slug: SLUG, demo, started: !!go, frames: n, fps: FPS, score, final, box, view: [VW, vh], canvas: cv, cut, canvas_end: cvEnd, cut_end: boxCut(cvEnd, box) }));
   console.log('done', SLUG, 'demo', demo, 'frames', n);
   await browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

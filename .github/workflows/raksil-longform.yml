@@ -1,0 +1,92 @@
+name: raksil-longform
+
+# 5락실 주간 롱폼 '주간 챌린지' (BK 2026-11-21 시험): 주 1편 3분 남짓, 나레이션 없음.
+# 앞·중간·뒤 = 회색 후드 애니풍 인물(Kling, 쇼츠와 같은 클립 풀), 가운데 = 실제 게임 봇 녹화 4종.
+# config/raksil_longform.json: on, visibility(private=비공개 업로드해 BK 확인 / schedule=토 20:00 KST 공개 예약).
+# 코드 pipeline.raksil_longform. 저장소 변수 RAKSIL_YT_ENABLED=true 가 아니면 만들기만 하고 아티팩트로 남긴다.
+on:
+  schedule:
+    - cron: "23 0 * * 6"   # 토 09:23 KST (GitHub 예약이 몇 시간 밀려도 20:00 공개 전에 끝나게)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "날짜 YYYY-MM-DD (비우면 오늘)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  long:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 받기
+        if: github.ref == 'refs/heads/main'
+        run: git fetch -q origin main && git reset -q --hard FETCH_HEAD
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-nanum ffmpeg
+          pip install -q pillow numpy
+          mkdir -p "$HOME/fonts"
+          curl -sfL -o "$HOME/fonts/BlackHanSans-Regular.ttf" https://fonts.gstatic.com/s/blackhansans/v24/ea8Aad44WunzF9a-dL6toA8r8nqV.ttf || true
+      - name: 검사
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_longform
+      - name: 녹화 + 만들기 + 올리기
+        env:
+          RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}  # 업로드 링크 알림 (밤 23~07시는 무음)
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          D="${{ inputs.date }}"; D="${D:-$(TZ=Asia/Seoul date +%F)}"
+          PLAN=$(PYTHONPATH=src python -m pipeline.raksil_longform plan "$D")
+          echo "이번 주 롱폼: $PLAN"
+          case "$PLAN" in games:*) ;; *) exit 0 ;; esac
+          export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
+          (cd playground && PG_NO_STATS=1 python build.py /tmp/site >/dev/null)
+          (cd /tmp/site && python -m http.server 8765 >/dev/null 2>&1 &)
+          npm i --no-save --silent playwright@1.63.0 && npx playwright install --with-deps chromium >/dev/null
+          for g in ${PLAN#games: }; do
+            node scripts/game_rec.js http://localhost:8765 "$g" "/tmp/lrec/$g" 40 || echo "녹화 실패: $g"
+          done
+          PYTHONPATH=src python -m pipeline.raksil_longform /tmp/lrec upload "$D"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raksil-longform
+          path: |
+            media/raksil_long/*.mp4
+            media/raksil_long/*.jpg
+            media/raksil_long/*.json
+          retention-days: 14
+      - name: 업로드 기록 저장
+        if: always()
+        run: |
+          F=data/youtube/raksil_longform.json
+          [ -f "$F" ] || exit 0
+          git diff --quiet -- "$F" 2>/dev/null && git ls-files --error-unmatch "$F" >/dev/null 2>&1 && exit 0
+          git config user.name "raksil-bot"
+          git config user.email "raksil-bot@users.noreply.github.com"
+          cp "$F" /tmp/mine.json
+          for i in 1 2 3; do
+            git fetch -q origin main && git reset -q --hard FETCH_HEAD
+            mkdir -p "$(dirname "$F")"
+            python -c "import json,os,sys;f=sys.argv[1];a=json.load(open(f)) if os.path.exists(f) else {};b=json.load(open('/tmp/mine.json'));[a.setdefault(k,v) for k,v in b.items()];json.dump(a,open(f,'w'),ensure_ascii=False,indent=1)" "$F"
+            git add "$F"
+            git commit -q -m "5락실 주간 롱폼 업로드 기록 $(TZ=Asia/Seoul date '+%F')" || exit 0
+            git push -q origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
