@@ -1,0 +1,160 @@
+{
+ "_": "5락실 게임 쇼츠 Kling 클립 목록 (BK 2026-11-21 '1 리액션 컷 + 2 상황극'). on=false 면 꺼짐, 클립에 off=true 면 그 클립만 안 씀(예전 규칙). react_games·situ 게임은 자동 플레이 봇이 있는 게임만(config/raksil_rec.json). 클립은 media/kling/ (720x1280 무음, 휴대폰·모니터 화면이 안 보이는 컷만). ss=시작 초, t=쓸 길이(초). realistic=true 면 유튜브 합성 콘텐츠 표시. 코드 pipeline.raksil_kling, 기준 docs/DIRECTION.md 2-2.",
+ "on": true,
+ "react_games": [
+  "dodge",
+  "tower",
+  "survivor",
+  "tongtong",
+  "starcandy",
+  "raid"
+ ],
+ "react_tops": [
+  "이 판 끝까지 봐",
+  "마지막 1초 실화?",
+  "이거 보고 소리 지름",
+  "숨 참고 보는 판"
+ ],
+ "react_hook": [
+  {
+   "id": "rh-gasp",
+   "file": "media/kling/react-gasp.mp4",
+   "ss": 2.6,
+   "t": 2.2,
+   "realistic": false
+  },
+  {
+   "id": "rh-lean",
+   "file": "media/kling/react-lean.mp4",
+   "ss": 1.0,
+   "t": 2.0,
+   "realistic": false
+  },
+  {
+   "id": "rh-mouth",
+   "file": "media/kling/react-mouth.mp4",
+   "ss": 2.2,
+   "t": 2.0,
+   "realistic": false
+  },
+  {
+   "id": "rh-show",
+   "file": "media/kling/react-show.mp4",
+   "ss": 1.2,
+   "t": 2.0,
+   "realistic": false
+  }
+ ],
+ "react_pay": [
+  {
+   "id": "rp-pillow",
+   "file": "media/kling/react-pillow.mp4",
+   "ss": 2.6,
+   "t": 2.2,
+   "realistic": false
+  },
+  {
+   "id": "rp-cheer",
+   "file": "media/kling/react-cheer.mp4",
+   "ss": 0.8,
+   "t": 2.2,
+   "realistic": false
+  },
+  {
+   "id": "rp-ceiling",
+   "file": "media/kling/react-ceiling.mp4",
+   "ss": 0.6,
+   "t": 2.4,
+   "realistic": false
+  },
+  {
+   "id": "rp-kick",
+   "file": "media/kling/react-kick.mp4",
+   "ss": 2.6,
+   "t": 2.4,
+   "realistic": false
+  }
+ ],
+ "situ": [
+  {
+   "id": "s-ramen",
+   "game": "survivor",
+   "top": "라면 익는 3분, 이걸로 순삭",
+   "file": "media/kling/situ-ramen.mp4",
+   "ss": 0.3,
+   "t": 2.2,
+   "pay": {
+    "file": "media/kling/situ-ramen.mp4",
+    "ss": 3.2,
+    "t": 1.8
+   }
+  },
+  {
+   "id": "s-elevator",
+   "game": "tongtong",
+   "top": "엘리베이터 오기 전에 한 판",
+   "file": "media/kling/situ-elevator.mp4",
+   "ss": 0.3,
+   "t": 2.0,
+   "pay": {
+    "file": "media/kling/situ-elevator.mp4",
+    "ss": 3.4,
+    "t": 1.6
+   }
+  },
+  {
+   "id": "s-bus",
+   "game": "tower",
+   "top": "버스 3분 남았을 때 하는 것",
+   "file": "media/kling/situ-bus.mp4",
+   "ss": 0.0,
+   "t": 2.0,
+   "pay": {
+    "file": "media/kling/situ-bus.mp4",
+    "ss": 3.5,
+    "t": 1.5
+   },
+   "off": true,
+   "why_off": "버스 옆면에 AI가 만든 깨진 한글 글자가 보임 (AI 영상 글자 금지 규칙) — 다시 뽑기 전까지 안 씀"
+  },
+  {
+   "id": "s-laundry",
+   "game": "dodge",
+   "top": "세탁기 다 돌 때까지만",
+   "file": "media/kling/situ-laundry.mp4",
+   "ss": 0.3,
+   "t": 2.0,
+   "pay": {
+    "file": "media/kling/situ-laundry.mp4",
+    "ss": 3.3,
+    "t": 1.7
+   }
+  },
+  {
+   "id": "s-microwave",
+   "game": "starcandy",
+   "top": "전자레인지 1분, 이거 딱",
+   "file": "media/kling/situ-microwave.mp4",
+   "ss": 0.5,
+   "t": 2.2,
+   "pay": {
+    "file": "media/kling/situ-microwave.mp4",
+    "ss": 3.4,
+    "t": 1.6
+   }
+  },
+  {
+   "id": "s-meeting",
+   "game": "raid",
+   "top": "회의 5분 전 대기실에서",
+   "file": "media/kling/situ-meeting.mp4",
+   "ss": 0.3,
+   "t": 2.2,
+   "pay": {
+    "file": "media/kling/situ-meeting.mp4",
+    "ss": 3.3,
+    "t": 1.7
+   }
+  }
+ ]
+}
