@@ -117,11 +117,11 @@ def longform(tracks: list[pathlib.Path], titles: list[str], theme: str, ep_title
             last = nxt
         head = text_png(900, 110, [(ep_title, FONT_EN_L, 40, (255, 255, 255, 235))], td / "head.png", pad=30)
         hi = 3 + len(titles)
-        fc = (f"[0:v]setpts=PTS-STARTPTS[bg];" + chain +
+        fc = (f"[0:v]setpts=PTS-STARTPTS,format=rgba[bg];" + chain +
               f"[{hi}:v]format=rgba,fade=t=in:st=0.5:d=1.5:alpha=1,fade=t=out:st=12:d=1.5:alpha=1[hd];"
               f"[{last}][hd]overlay=(W-w)/2:40:enable='lt(t,14)'[vh];"
               # 파형 (오른쪽 아래)
-              f"[1:a]showwaves=s=520x110:mode=cline:rate={FPS}:colors=0xFFE0B0,format=rgba,colorkey=0x000000:0.1:0[wv];[vh][wv]overlay=W-w-70:{H - 200}[vw];"
+              f"[1:a]aformat=channel_layouts=mono,showwaves=s=520x110:mode=cline:draw=full:rate={FPS}:colors=0xFFE0B0,format=rgba,colorkey=0x000000:0.1:0[wv];[vh][wv]overlay=W-w-70:{H - 200}[vw];"
               # 전체 진행 막대
               f"color=c=0xFFD9A0:s={W}x6:r={FPS}[bar];[vw][bar]overlay=x='-W+W*t/{total:.3f}':y=H-6:shortest=1[v]")
         args = ["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "-1", "-i", str(td / "loop.mp4"),
@@ -174,7 +174,7 @@ def short(track: pathlib.Path, title: str, theme: str, out: pathlib.Path, start:
         fc = (f"[1:a]atrim={start}:{start + length},asetpts=PTS-STARTPTS,afade=t=in:d=1.5,"
               f"afade=t=out:st={length - 2.5}:d=2.5,loudnorm=I=-14:TP=-1.5[a];"
               f"[a]asplit[a1][a2];"
-              f"[a2]showwaves=s=900x140:mode=cline:rate={FPS}:colors=0xFFE0B0,format=rgba,colorkey=0x000000:0.1:0[wv];"
+              f"[a2]aformat=channel_layouts=mono,showwaves=s=900x140:mode=cline:draw=full:rate={FPS}:colors=0xFFE0B0,format=rgba,colorkey=0x000000:0.1:0[wv];"
               f"[0:v][2:v]overlay=(W-w)/2:{int(H * 0.73)}[v1];[v1][wv]overlay=(W-w)/2:{int(H * 0.84)}[v2];"
               f"[3:v]format=rgba,fade=t=in:st={length - 8}:d=0.8:alpha=1[c];"
               f"[v2][c]overlay=(W-w)/2:{int(H * 0.93) - 60}:enable='gte(t,{length - 8})'[v]")
