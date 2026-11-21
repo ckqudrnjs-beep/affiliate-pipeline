@@ -69,7 +69,7 @@ def plan_season(cj, bible: str, date: str, recent: list[str]) -> dict:
             "- title: 시즌 이름(12자 이하, 예 '동전이 겨울 대작전')\n"
             "- goal: 동전이가 시즌 내내 이루려는 귀여운 목표 하나(예 '크리스마스 전에 혼자서 트리 꾸미기'). 돈·저금통 목표 금지(BK 11/20). 편마다 조금씩 다가가거나 멀어진다.\n"
             "- running_gag: 매 편 한 번 나오는 반복 개그(대사 없이 화면으로 되는 것, 예 '조카가 몰래 동전이 간식을 꺼내다 눈빛에 들킴')\n"
-            "- topics: 이 시즌에 다룰 살림 주제 12개(각 8자 이하, 주부 살림, 서로 다르게). 시청자 투표 후보로 쓴다.\n"
+            "- topics: 이 시즌에 다룰 살림 주제 12개(각 8자 이하, 주부 살림, 서로 다르게). 시청자 투표 후보로 쓴다. 돈 말(○○비·요금·절약) 말고 동전이가 가 볼 집 안 장소·물건으로(예 '창가', '빨래 바구니') (BK 11/20 밤 돈 강조 금지).\n"
             "편마다 처음 보는 사람도 이해되는 독립 이야기여야 한다(시즌은 양념).\n최근 편: " + " / ".join(recent[:10]))
     try:
         r = cj.ask("toon", sys_, user, schema=SEASON_SCHEMA, model=cj.SONNET, effort="medium", max_tokens=1500, need=0.05)
@@ -77,7 +77,7 @@ def plan_season(cj, bible: str, date: str, recent: list[str]) -> dict:
         print(f"시즌 기획 건너뜀: {e}")
         r = {"title": "동전이 겨울 대작전", "goal": "크리스마스 전에 혼자서 트리 꾸미기",
              "running_gag": "조카가 몰래 동전이 간식을 꺼내다 눈빛에 들킴",
-             "topics": ["난방비", "전기장판", "온수", "가습기", "배달비", "구독료", "김장", "택배비", "정수기", "세탁기", "건조기", "대기전력"]}
+             "topics": ["창가", "전기장판", "욕실", "가습기", "현관", "김장 날", "택배 상자", "베란다", "세탁기", "냉장고 앞", "주방 창문", "콘센트"]}
     return {"id": date, "title": r["title"][:20], "goal": r["goal"][:60], "running_gag": r["running_gag"][:60],
             "topics": [t[:VOTE_MAX] for t in r.get("topics", []) if t][:12], "started": date}
 

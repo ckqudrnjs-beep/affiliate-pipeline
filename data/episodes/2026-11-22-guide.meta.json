@@ -1,37 +1,19 @@
 {
  "slug": "ep-2026-11-22-guide",
- "seconds": 21.2,
+ "seconds": 30.6,
  "chapters": [],
+ "style": "toon",
  "credits": [
   {
-   "id": "ai-warm-blanket-01",
+   "id": "ai-toon-boiler-01-04",
    "credit": "AI 생성(Veo)",
    "page": "",
-   "query": "warm-blanket",
-   "lines": [
-    0
-   ],
+   "query": "toon",
+   "lines": [],
    "ai": true,
-   "realistic": true
-  },
-  {
-   "id": "pixabay-3802",
-   "credit": "Pixabay · sferrario1968",
-   "page": "https://pixabay.com/videos/id-3802/",
-   "query": "boiler",
-   "lines": [
-    1
-   ]
-  },
-  {
-   "id": "pixabay-42014",
-   "credit": "Pixabay · USA-Reiseblogger",
-   "page": "https://pixabay.com/videos/id-42014/",
-   "query": "thermostat",
-   "lines": [
-    2,
-    3
-   ]
+   "realistic": false
   }
- ]
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-21 BK Flow 클립으로 동전이 만화 '혼자 남은 동전이의 이불 작전' (tools/toon_assemble.py, data/toon/2026-11-24.json). 새 방향(돈 연출 없음, 결: 뻔하지 않은 것). 대본 json scenes 는 이전 실사판 기록."
 }

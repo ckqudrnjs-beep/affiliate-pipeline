@@ -1,0 +1,15 @@
+{
+ "slug": "ep-2026-11-22-guide",
+ "date": "2026-11-24",
+ "out": "media/youtube/ep-2026-11-22-guide.mp4",
+ "hold": 1.0,
+ "small": "돈 줍는 삼촌 · AI 생성 영상",
+ "band": {"top": "다들 출근한 빈 집", "accent": "동전이는 어디 있을까?"},
+ "cuts": [
+  {"clip": "/mnt/project-files/shorts-uncle/만화샘플/1124/toon-boiler-01-clean.mp4", "ss": 0, "t": 7.0, "lines": ["다들 출근한 아침,", "집에는 동전이만 남는다"]},
+  {"clip": "/mnt/project-files/shorts-uncle/만화샘플/1124/toon-boiler-02.mp4", "ss": 0, "t": 7.0, "lines": ["빈 집이 식는 데는", "한 시간이면 충분하다"], "sfx": [["flop", 4.2]]},
+  {"clip": "/mnt/project-files/shorts-uncle/만화샘플/1124/toon-boiler-03.mp4", "ss": 0.5, "t": 7.0, "lines": ["그래서 동전이는", "집에서 제일 따뜻한 곳을 안다"], "sfx": [["ding", 5.6]]},
+  {"clip": "/mnt/project-files/shorts-uncle/만화샘플/1124/toon-boiler-04.mp4", "ss": 0, "t": 4.0, "lines": ["식은 집을 다시 데우는 게", "더 힘들다"]},
+  {"clip": "/mnt/project-files/shorts-uncle/만화샘플/1124/toon-boiler-04.mp4", "ss": 4.0, "t": 4.0, "lines": ["나갈 땐 끄지 말고", "1~2도만 낮춰 두기"]}
+ ]
+}

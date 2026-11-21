@@ -46,10 +46,11 @@
 
 ## 프롬프트 조립 (영어)
 형식(Cartoon.) → 캐릭터 고정 문장 → 동작 하나 → 장소 고정 문장 → 빛 → 구도 하나 → 공통 끝말:
-`Vertical 9:16, 8 seconds, one continuous shot, same cute 3D cartoon look, no text, no numbers, no logos. Keep the top quarter of the frame empty.`
+`The puppy always has exactly four legs and never grows extra paws. Furniture, appliances, seats, doors and walls stay fixed in place unless the action says otherwise. Everything is real-world size, the puppy small next to it. Vertical 9:16, 8 seconds, one continuous shot, same cute 3D cartoon look, no text, no numbers, no logos. Keep the top quarter of the frame empty.`
+(BK 11/21 검수: 시트가 뒤로 빠짐·앞발 4개·차가 너무 작음 → 위 세 문장을 끝말 앞에 늘 넣는다.)
 
 ## 금지
-영상 안 글자·숫자·간판·로고·화면, 실존 인물·연예인 닮은 얼굴, 아이, 한 클립에 동작 여러 개, 특정 브랜드 제품 모양. 상품·구매·할인·제휴 링크 없음.
+영상 안 글자·숫자·간판·로고·화면, 실존 인물·연예인 닮은 얼굴, 아이, 한 클립에 동작 여러 개, 특정 브랜드 제품 모양. 동전이가 앞발로 물건을 잡기·펼치기·누르기(코·입·몸으로만), 움직이면 안 되는 가구·좌석이 움직일 여지가 있는 동작(그 물건은 'fixed in place'로 못 박기), 차·가구를 작게 그리기(실제 크기, 강아지가 작게) (BK 11/21). 상품·구매·할인·제휴 링크 없음.
 
 ## 실사판 특별편 (주 1회, 주말 공개 편)
 - 실사 삼촌과 실제 시바 같은 동전이가 같은 이야기를 한다. 한 편 안에서 만화·실사를 섞지 않는다. 유튜브 '변경·합성 콘텐츠' 표시 필수.
