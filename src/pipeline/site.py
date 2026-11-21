@@ -321,7 +321,8 @@ def adfit_slot(ads: bool) -> str:
 
 
 def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: dict | None = None, hero: str = "",
-         ads: bool = True, noindex: bool = False, og: str = "og/default.png", crumbs: list[tuple[str, str]] | None = None) -> str:
+         ads: bool = True, noindex: bool = False, og: str = "og/default.png", crumbs: list[tuple[str, str]] | None = None,
+         affiliate: bool = False) -> str:
     """ads=False: 애드센스 코드 제외(상품 페이지). noindex=True: 검색 색인 제외(제휴 위주 얇은 페이지)."""
     e = html.escape
     client = adsense_client()
@@ -333,8 +334,9 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     ld = ld or {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": url}
     lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
     # 대가성 문구 띠: 제휴 링크(rel=sponsored)가 있는 페이지와 상품 페이지에만 (홈은 2026-11-16 BK 확인 후 상품 칸 옆 한 줄로 대체) (2026-11-16, 애드센스 심사 대비 — 계산기·소개처럼 링크 없는 페이지가 광고 페이지처럼 보이지 않게)
+    # affiliate=True: 상품 카드·상품 페이지 링크가 있는 글 (2026-11-21: 네이버 상자가 없는 글은 [광고]가 글 끝에만 있었음 → 맨 위에도)
     adbar = (f'<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>'
-             if ("sponsored" in body or path.startswith("p/")) else "")
+             if (affiliate or "sponsored" in body or path.startswith("p/")) else "")
     # 바닥글의 가격·제휴 안내도 대가성 띠와 같은 조건일 때만 (2026-11-16: 계산기·퀴즈까지 제휴 사이트처럼 보이지 않게)
     foot_note = ("가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요."
                  f"<br>{BRAND} · 제휴 링크로 구매하셔도 가격은 같습니다." if adbar else f"{BRAND} · 생활비를 숫자로 계산해 보는 개인 사이트")
@@ -839,7 +841,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
                           + [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in qs if cl and Q.cluster(q) == cl][:2])
         (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + tg_box() + more, root="../",
             path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
-            crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")]), encoding="utf-8")
+            crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")], affiliate=A.has_affiliate(a)), encoding="utf-8")
     reps = R.load_all()
     (o / "report").mkdir(exist_ok=True)
     (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "휘발유·경유 가격, 장바구니 농산물 물가, 달러 환율을 공공 데이터로 매주 월요일 정리하고 지난주와 비교합니다.",

@@ -804,7 +804,14 @@ def check(today: dt.date | None = None) -> int:
         if fs:
             items.append(fs[-1])
     texts = {str(f.relative_to(ROOT)): f.read_text(encoding="utf-8")[:12000] for f in items}
-    system = ("너는 한국 광고·플랫폼 정책 검사관이다. 다음을 찾는다: 공정위 대가성 표기 누락(상품 카드·제휴가 있는데 [광고] 없음), "
+    # 글 JSON에는 표기가 없다: 사이트 코드가 만들 때 자동으로 붙인다 → 실제 붙는 문구를 같이 보낸다 (2026-11-21 오탐)
+    from . import articles, site
+    for f in items:
+        if f.parent.name == "articles" and articles.has_affiliate(json.loads(f.read_text(encoding="utf-8"))):
+            texts[str(f.relative_to(ROOT)) + " (사이트에 자동으로 붙는 표기)"] = (
+                f"페이지 맨 위(본문·링크보다 먼저) 띠: [광고] {site.DISCLOSURE}\n상품 카드 바로 위: {articles.CARD_AD}")
+    system = ("너는 한국 광고·플랫폼 정책 검사관이다. 다음을 찾는다: 공정위 대가성 표기 누락(상품 카드·제휴가 있는데 [광고] 없음. "
+              "'(사이트에 자동으로 붙는 표기)' 항목이 있으면 그 문구가 실제 페이지에 붙으므로 누락이 아니다), "
               "쇼츠·인스타·스레드용 글에 제휴 링크나 판매·특가 문구, 개인·사업자 정보 노출, 건강 효능 주장, 가짜 체험담, "
               "근거 없는 과장. 문제 없으면 ok=true. 문제는 '파일: 무엇' 한 줄씩.")
     res = ask("check", system, json.dumps(texts, ensure_ascii=False), model=HAIKU, effort="low", schema=CHECK, max_tokens=2000, need=0.05)
