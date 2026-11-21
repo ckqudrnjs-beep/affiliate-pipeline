@@ -91,7 +91,7 @@ BK가 정한 상시 규칙. 어떤 작업도 예외 없음. 세부 작업 규칙
 
 ### 2-9. BEEKAY SONGS 노래 채널 (@beekaysongs, 구 Deep Work Lab)
 - BK가 Suno(유료 플랜)로 만든 아이돌·보이그룹 노래 + 가끔 발라드. 곡마다 그 곡의 커버를 입힌 전곡 영상 + 후렴 쇼츠 40초.
-- BK 손: 곡 mp3 를 드라이브 'BEEKAY SONGS 곡 넣는 곳'에 넣기만. 화·금 10:13 KST 1곡씩 자동(`music-channel` 워크플로, `pipeline.music_channel`).
+- BK 손: 곡 mp3 를 드라이브 'BEEKAY SONGS'에 넣기만. 화·금 10:13 KST 1곡씩 자동(`music-channel` 워크플로, `pipeline.music_channel`).
 - 설명란에 AI 음악 표기 + 가사, 실제 가수·그룹 이름 금지, 주 2곡까지. 처음엔 비공개 업로드(config visibility=private) → BK 확인 뒤 schedule(19:00).
 - 제휴 링크·상품 없음(광고 수익만). 자세한 것은 docs/MUSIC_CHANNEL.md.
 

@@ -1,6 +1,6 @@
 """BEEKAY SONGS 노래 채널 자동 업로드 (BK 2026-11-21 21:05 '시작하자').
 
-흐름: BK가 Suno 곡(mp3)을 구글 드라이브 폴더 'BEEKAY SONGS 곡 넣는 곳'에 넣는다
+흐름: BK가 Suno 곡(mp3)을 구글 드라이브 폴더 'BEEKAY SONGS'에 넣는다
   → (화·금 실행) 아직 안 올린 곡 1개를 받아
   → 곡 파일 안의 커버(또는 같은 이름의 jpg/png)로 전곡 커버 영상 + 후렴 40초 쇼츠를 만들고 (music_cover)
   → 설명란에 AI 음악 표기 + 가사(곡 파일 안 가사)를 넣어 BEEKAY SONGS 채널에 올린다.
@@ -79,8 +79,21 @@ def clean_lyrics(raw: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
+def version_of(name: str) -> str:
+    """같은 곡의 여성·남성 버전 구분 (파일 이름 기준)."""
+    low = name.lower()
+    if any(k in low for k in ("여성", "여자", "female", "girl")):
+        return "Female ver."
+    if any(k in low for k in ("남성", "남자", "male", "boy")):
+        return "Male ver."
+    return ""
+
+
 def title_of(tags: dict, fallback: str) -> str:
     t = (tags.get("title") or "").strip() or re.sub(r"[_-]+", " ", pathlib.Path(fallback).stem).strip()
+    v = version_of(pathlib.Path(fallback).name)
+    if v and v.lower() not in t.lower():
+        t = f"{t} ({v})"
     return t[:80]
 
 
@@ -275,9 +288,12 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         except KeyError as e:
             summary(f"Secret 없음: {e.args[0]} → 아직 연결 전이라 쉼 (docs/MUSIC_CHANNEL.md)")
             return 0
-        jobs = pending(drive_inbox(dtoken, cfg.get("inbox_folder", "BEEKAY SONGS 곡 넣는 곳")), log)
+        folder = cfg.get("inbox_folder", "BEEKAY SONGS")
+        files = drive_inbox(dtoken, folder)
+        jobs = pending(files, log)
         if not jobs:
-            summary("새 곡 없음 (드라이브 폴더에 아직 안 올린 곡이 없음)")
+            summary(f"새 곡 없음 (드라이브 '{folder}' 폴더 파일 {len(files)}개, 아직 안 올린 곡 0개"
+                    + (" — 폴더를 못 찾았거나 비어 있음)" if not files else ")"))
             return 0
     done = 0
     for job in jobs[: int(cfg.get("max_per_run", 1))]:

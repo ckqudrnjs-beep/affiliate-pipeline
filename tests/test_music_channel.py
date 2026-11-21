@@ -54,6 +54,11 @@ class MusicChannelTest(unittest.TestCase):
         self.assertEqual([x["id"] for x in p], ["a"])
         self.assertEqual(p[0]["cover"]["id"], "b")
 
+    def test_version_suffix(self):
+        self.assertEqual(mc.title_of({"title": "다른 차원 끝"}, "다른 차원 끝 남자 버전.mp3"), "다른 차원 끝 (Male ver.)")
+        self.assertEqual(mc.title_of({"title": "다른 차원 끝"}, "다른차원끝_여성.mp3"), "다른 차원 끝 (Female ver.)")
+        self.assertEqual(mc.title_of({"title": "곡"}, "곡.mp3"), "곡")
+
     @NEED_RENDER
     def test_best_window(self):
         import numpy as np
