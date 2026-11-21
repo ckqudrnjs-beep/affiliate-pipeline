@@ -1,6 +1,6 @@
 {
  "slug": "ep-2026-11-24-skit-calc",
- "seconds": 32.7,
+ "seconds": 37.9,
  "chapters": [],
  "style": "toon",
  "credits": [
@@ -9,6 +9,15 @@
    "credit": "AI 생성(Veo)",
    "page": "",
    "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
+  },
+  {
+   "id": "ai-toon-ending-A2",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "ending",
    "lines": [],
    "ai": true,
    "realistic": false

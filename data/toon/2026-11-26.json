@@ -60,5 +60,11 @@
     "어디서 넣느냐가 더 크다"
    ]
   }
- ]
+ ],
+ "ending": {
+  "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/toon-ending-A2.mp4",
+  "ss": 1.0,
+  "t": 7.0,
+  "at": 0.5
+ }
 }

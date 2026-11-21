@@ -82,7 +82,8 @@ def check_shorts(d: dict, eps: list[dict], today: dt.date, toon_from: dt.date | 
     for day, files in by_day.items():
         if len(files) > cap:
             probs.append(f"삼촌 쇼츠 {day} 에 {len(files)}편 ({', '.join(files)}) — 하루 {cap}편까지")
-    days = sorted(by_day)
+    # 번외편(format toon-sok, BK 11/21 '쉬는 날 11/27')은 본편 사이 쉬는 날에 끼우는 시험 편 → 간격 계산에서 뺀다
+    days = sorted({e["date"] for e in future if e["format"] != "toon-sok"})
     if every:
         for a, b in zip(days, days[1:]):
             if (b - a).days < every:
@@ -93,7 +94,7 @@ def check_shorts(d: dict, eps: list[dict], today: dt.date, toon_from: dt.date | 
                 probs.append(f"{e['file']} 에 상품({e['product']}) — 삼촌 쇼츠는 상품 없음")
     if toon_from:
         for e in future:
-            if e["date"] >= toon_from and e["format"] != "toon":
+            if e["date"] >= toon_from and e["format"] not in ("toon", "toon-sok"):
                 probs.append(f"{e['file']} 형식 {e['format']} — {toon_from} 부터는 toon(캐릭터 영상)만")
     if every and days:
         due = days[-1] + dt.timedelta(days=every)

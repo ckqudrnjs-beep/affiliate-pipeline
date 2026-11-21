@@ -32,6 +32,11 @@ class ConsistencyTest(unittest.TestCase):
         p = c.check_shorts(D, [ep("2026-11-30", "guide", name="a.json"), ep("2026-11-30", "prices", name="b.json")], T)
         self.assertTrue(any("2편" in x for x in p))
 
+    def test_bonus_on_off_day_not_a_gap(self):
+        # 번외편(toon-sok)은 본편 사이 쉬는 날에 끼워도 간격·형식 경고 없음 (BK 11/21)
+        p = c.check_shorts(D, [ep("2026-11-26"), ep("2026-11-27", "toon-sok"), ep("2026-11-28")], T, dt.date(2026, 11, 23))
+        self.assertFalse([x for x in p if "간격" in x or "형식" in x], p)
+
     def test_gap_product_and_format(self):
         p = c.check_shorts(D, [ep("2026-12-02", "guide"), ep("2026-12-03", product="x")], T, dt.date(2026, 12, 2))
         joined = "\n".join(p)

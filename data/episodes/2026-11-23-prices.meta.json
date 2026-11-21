@@ -1,6 +1,6 @@
 {
  "slug": "ep-2026-11-23-prices",
- "seconds": 31.4,
+ "seconds": 36.6,
  "chapters": [],
  "style": "toon",
  "credits": [
@@ -9,6 +9,15 @@
    "credit": "AI 생성(Veo)",
    "page": "",
    "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
+  },
+  {
+   "id": "ai-toon-ending-A2",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "ending",
    "lines": [],
    "ai": true,
    "realistic": false
