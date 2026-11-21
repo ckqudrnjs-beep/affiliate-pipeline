@@ -1,6 +1,6 @@
 {
  "slug": "ep-2026-11-22-guide",
- "seconds": 30.6,
+ "seconds": 36.1,
  "chapters": [],
  "style": "toon",
  "credits": [
@@ -9,6 +9,15 @@
    "credit": "AI 생성(Veo)",
    "page": "",
    "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
+  },
+  {
+   "id": "ai-toon-ending-A2",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "ending",
    "lines": [],
    "ai": true,
    "realistic": false
