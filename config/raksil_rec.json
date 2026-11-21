@@ -1,5 +1,5 @@
 {
- "_": "5락실 쇼츠 녹화 방법 (게임별, 없으면 시작 버튼만 누름). hash=게임 테스트 모드(순위 미반영), once=시작 뒤 한 번, tick=매 프레임(i=프레임 번호). 녹화 중 /api 쓰기 요청은 모두 막음. view=[가로,세로] 화면 크기, square=true 면 가운데 정사각형만.",
+ "_": "5락실 쇼츠 녹화 방법 (게임별, 없으면 시작 버튼만 누름). hash=게임 테스트 모드(순위 미반영), once=시작 뒤 한 번, tick=매 프레임(i=프레임 번호). 녹화 중 /api 쓰기 요청은 모두 막음. view=[가로,세로] 화면 크기, square=true 면 가운데 정사각형만. final=녹화 끝 화면의 실제 기록을 읽는 JS 식(주간 롱폼 기록 도장), final_unit=단위.",
  "raid": {
   "hash": "nrdebug",
   "once": "__nr.ch(1,'knight');__nr.bot(true)",
@@ -15,18 +15,44 @@
  },
  "dodge": {
   "hash": "dgdebug",
-  "once": "__dg.bot(true)"
+  "once": "__dg.bot(true)",
+  "final": "Math.floor(__dg.G().score)",
+  "final_unit": "점"
  },
  "tongtong": {
   "hash": "ttdebug",
-  "once": "__tt.bot=true"
+  "once": "__tt.bot=true",
+  "final": "Math.floor(Math.max(0,__tt.x))",
+  "final_unit": "m"
  },
  "tower": {
   "hash": "twdebug",
-  "tick": "if(i%20==10)__tw.build(1,6)"
+  "tick": "if(i%20==10)__tw.build(1,6)",
+  "final": "__tw.state().floors",
+  "final_unit": "층"
  },
  "starcandy": {
   "hash": "scdebug",
-  "tick": "if(i%26==0)__sc.aim(12+Math.random()*76);if(i%26==8)__sc.drop()"
+  "tick": "if(i%26==0)__sc.aim(12+Math.random()*76);if(i%26==8)__sc.drop()",
+  "final": "__sc.state().score",
+  "final_unit": "점"
+ },
+ "bag": {
+  "hash": "bgdebug",
+  "once": "__bg.bot(true)",
+  "final": "__bg.state().total",
+  "final_unit": "점"
+ },
+ "pusher": {
+  "hash": "cpdebug",
+  "once": "__cp.bot(true)",
+  "final": "__cp.state().score",
+  "final_unit": "점"
+ },
+ "hansang": {
+  "hash": "hsdebug",
+  "once": "__hs.bot(true)",
+  "final": "__hs.state().cash",
+  "final_unit": "원"
  }
 }
