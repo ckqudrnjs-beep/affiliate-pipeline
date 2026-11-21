@@ -1517,7 +1517,7 @@ def video_body(meta: dict, publish_at: dt.datetime | None = None) -> dict:
         "snippet": {"title": meta["title"], "description": meta["description"], "tags": meta.get("tags", TAGS),
                     "categoryId": meta.get("category", "24"), "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
         "status": {**status, "selfDeclaredMadeForKids": False,
-                   "containsSyntheticMedia": bool(meta.get("voiced")), "embeddable": True},
+                   "containsSyntheticMedia": bool(meta.get("voiced") or meta.get("synthetic")), "embeddable": True},
     }
 
 
@@ -1555,6 +1555,8 @@ def upload_meta(meta: dict) -> int:
     log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"],
                 "a": meta.get("a", ""), "b": meta.get("b", ""), "pick": meta.get("pick"),
                 "format": meta.get("format", "classic")}  # 몽글이 기억 (mongle_memory)
+    if meta.get("kling"):  # Kling 게임 쇼츠: 직전 3편 클립 겹침 금지 (raksil_kling.recent_ids)
+        log[key]["kling"] = meta["kling"]
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
