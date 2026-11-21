@@ -538,10 +538,48 @@ def run_long(day: dt.date) -> int:
     return 0
 
 
+def promote_private(cfg: dict, log: dict, day: dt.date) -> list[str]:
+    """schedule 로 바뀐 뒤, BK 확인용 비공개로 올렸던 화를 그날 promote_hour(20시) 공개 예약으로 바꾼다.
+    (다음 화 21시보다 먼저). 토큰에 youtube 권한이 없으면 실패를 알리고 BK 가 스튜디오에서 공개."""
+    work = cfg.get("work", "")
+    todo = [k for k, v in log.items() if k.startswith(work + "/") and v.get("visibility") == "private" and v.get("id")]
+    if cfg.get("visibility") != "schedule" or not todo:
+        return []
+    if os.environ.get("WEBNOVEL_YT_ENABLED", "").lower() != "true" or not cfg.get("on"):
+        return []
+    import urllib.request
+    from .youtube import access_token
+    need = ("YT_CLIENT_ID", "YT_CLIENT_SECRET", "WEBNOVEL_YT_REFRESH_TOKEN")
+    if not all(os.environ.get(x) for x in need):
+        return []
+    tok = access_token(*(os.environ[x] for x in need))
+    at = publish_at(day, int(cfg.get("promote_hour", 20)))
+    late = at <= dt.datetime.now(KST) + dt.timedelta(minutes=10)
+    out = []
+    for k in sorted(todo):
+        st = {"privacyStatus": "public"} if late else {
+            "privacyStatus": "private", "publishAt": at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+        body = {"id": log[k]["id"], "status": {**st, "selfDeclaredMadeForKids": False, "embeddable": True}}
+        req = urllib.request.Request("https://www.googleapis.com/youtube/v3/videos?part=status", data=json.dumps(body).encode(),
+                                     method="PUT", headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(req, timeout=30).read()
+            log[k]["visibility"] = "schedule"
+            out.append(f"{k} → {'바로 공개' if late else f'{at:%m/%d %H:%M} 공개 예약'}")
+        except Exception as e:  # noqa: BLE001
+            out.append(f"{k} 공개 전환 실패({e}) → 스튜디오에서 공개로 바꿔 주세요: https://youtu.be/{log[k]['id']}")
+    LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+    return out
+
+
 def run_short(day: dt.date) -> int:
     from .youtube import access_token, summary, upload
     cfg = load(CFG, {}); log = load(LOG, {})
     work = cfg.get("work", "")
+    done = promote_private(cfg, log, day)
+    if done:
+        msg = "📖 웹소설 비공개 화 공개 전환: " + " / ".join(done)
+        summary(msg); _notify(msg)
     ep = next_episode(cfg, log)
     if not ep:
         summary("웹소설: 올릴 화 없음 (비공개 첫 화 BK 확인 대기이거나 시즌 끝)")

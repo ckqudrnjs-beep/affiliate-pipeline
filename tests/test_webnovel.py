@@ -42,6 +42,19 @@ class WebnovelDataTest(unittest.TestCase):
         self.assertEqual(s["publishAt"], "2030-01-01T12:00:00Z")
 
 
+class WebnovelPromoteTest(unittest.TestCase):
+    def test_promote_needs_schedule_and_token(self):
+        log = {"husband-regress/01": {"id": "x", "visibility": "private"}}
+        self.assertEqual(w.promote_private({"work": "husband-regress", "visibility": "private", "on": True}, log, w.dt.date(2026, 11, 22)), [])
+        import os
+        old = os.environ.pop("WEBNOVEL_YT_ENABLED", None)
+        try:
+            self.assertEqual(w.promote_private({"work": "husband-regress", "visibility": "schedule", "on": True}, log, w.dt.date(2026, 11, 22)), [])
+        finally:
+            if old is not None:
+                os.environ["WEBNOVEL_YT_ENABLED"] = old
+
+
 class WebnovelLongTest(unittest.TestCase):
     W = "husband-regress"
 

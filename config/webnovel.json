@@ -1,11 +1,12 @@
 {
  "on": true,
- "visibility": "private",
+ "visibility": "schedule",
  "hour": 21,
  "work": "husband-regress",
  "playlist_id": "",
  "bgm": [],
  "long": true,
  "long_hour": 22,
- "_설명": "visibility: private = 첫 화만 비공개로 올리고 BK 확인을 기다림 / schedule = 매일 hour(KST)에 다음 화 공개 예약. bgm: BK Suno 곡 경로(media/bgm/webnovel/*.mp3), 비면 효과음만. playlist_id: 작품 재생목록 ID(토큰에 youtube 권한이 있을 때만 자동 추가). long: 일요일 몰아보기(쇼츠 5화+번외, 가로) 만들기, long_hour(KST)에 공개 예약."
+ "_설명": "visibility: private = 첫 화만 비공개로 올리고 BK 확인을 기다림 / schedule = 매일 hour(KST)에 다음 화 공개 예약. bgm: BK Suno 곡 경로(media/bgm/webnovel/*.mp3), 비면 효과음만. playlist_id: 작품 재생목록 ID(토큰에 youtube 권한이 있을 때만 자동 추가). long: 일요일 몰아보기(쇼츠 5화+번외, 가로) 만들기, long_hour(KST)에 공개 예약.",
+ "promote_hour": 20
 }

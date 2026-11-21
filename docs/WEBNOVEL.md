@@ -30,6 +30,7 @@
 - 매일 16:23 KST 예약 → 다음 화를 만들어 **21:00 KST 공개 예약**(늦게 돌면 바로 공개).
 - `selfDeclaredMadeForKids=false`(아동용 아님) 자동. ep 에 `"ai": true` 면 설명란 AI 표기, `"ai_realistic": true` 면 합성 콘텐츠 표시.
 - `visibility: private` 이면 **첫 화만 비공개로 올리고 멈춤** → BK 확인 → `schedule` 로 바꾸면 매일 진행.
+- `schedule` 로 바뀐 첫 실행에서 비공개로 올렸던 화는 그날 `promote_hour`(20:00 KST) 공개 예약으로 자동 전환(토큰에 youtube 권한 필요, 실패하면 텔레그램으로 링크 → 스튜디오에서 공개).
 - 기록 `data/youtube/webnovel.json`. 멈추기: 저장소 변수 `WEBNOVEL_YT_ENABLED` 를 `false`.
 - **롱폼 몰아보기(일요일)**: 쇼츠 5화(1~5, 6~10, 11~15)가 모두 공개되면 그 주 일요일에 가로 1920x1080 영상(약 3분)을 만들어 **22:00 KST 공개 예약**. 구성: 표지 → 화마다 챕터 카드 + 본문 → **번외(롱폼 전용)** → 다음 몰아보기 예고. 설명란에 챕터 시간 자동. 번외 대본 `data/webnovel/works/<작품>/extra/NN.json`(`after` = 묶음 마지막 화)이 없으면 만들지 않는다(쇼츠 이어 붙이기만 하면 재사용 콘텐츠로 볼 수 있음). 끄기: config `long: false`. 손으로: Run workflow 에서 `long` 체크.
 
