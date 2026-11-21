@@ -1,6 +1,7 @@
 """Claude API 크레딧(Max 구독, 매달 100달러·이월 없음)으로 돌리는 자동 작업 모음 (2026-11-20 BK).
 
 결과는 모두 BK가 휴대폰에서 승인하는 형태로만 나간다: PR(병합 = 승인) 또는 텔레그램 알림.
+단, 동전이 대본(toon)은 BK 11/21 결정으로 1안 PR 을 자동 병합하고 알림을 보내지 않는다(병합이 막힐 때만 알림).
 main 에 바로 반영하는 것은 사용 금액 장부(data/api_usage/)뿐이다.
 
 작업 (python -m pipeline.claude_jobs <작업>):
@@ -635,9 +636,19 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     if url and below:
         notify(f"⚠️ 동전이 {date} 편은 기획안을 {replans}번 새로 짜도 대본 점수가 최후 기준 아래({top}/{MAX_SCORE} < {QUALITY_SOFT})라 쉬는 걸 추천해요. "
                f"클립은 만들지 마세요. 후보는 참고로 남겼어요.\n{url}")
-    elif url:
-        notify(f"🐶 동전이 {date} 편 대본 후보 2안이 올라왔어요. 휴대폰에서 보고 병합(=1안 진행)하거나 댓글로 번호를 남겨 주세요.\n{url}")
+    elif url and not auto_merge(url):  # BK 11/21 "추천 제안으로 진행하고 메세지는 생략": 1안 자동 병합, 알림 없음
+        notify(f"🐶 동전이 {date} 편 대본 1안을 자동으로 확정하려다 병합이 막혔어요(충돌 등). 휴대폰에서 병합해 주세요.\n{url}")
     return 0
+
+
+def auto_merge(url: str) -> bool:
+    """대본 후보 PR 을 바로 병합(= 1안 진행). 막히면 False → 그때만 텔레그램."""
+    try:
+        sh("gh", "pr", "merge", url, "--merge")
+        return True
+    except subprocess.CalledProcessError as e:
+        print("자동 병합 실패:", (e.stderr or "").strip()[:300])
+        return False
 
 
 # ---------- 2. 서치콘솔 제목·설명 개선 ----------
