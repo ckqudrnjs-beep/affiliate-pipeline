@@ -90,7 +90,7 @@ def version_of(name: str) -> str:
 
 
 def title_of(tags: dict, fallback: str) -> str:
-    t = (tags.get("title") or "").strip() or re.sub(r"[_-]+", " ", pathlib.Path(fallback).stem).strip()
+    t = (tags.get("title") or "").strip() or re.sub(r"[_-]+", " ", re.sub(r"\s*\(\d+\)$", "", pathlib.Path(fallback).stem)).strip()
     v = version_of(pathlib.Path(fallback).name)
     if v and v.lower() not in t.lower():
         t = f"{t} ({v})"
@@ -178,21 +178,43 @@ def _get(token: str, url: str) -> dict:
         return json.load(r)
 
 
-def drive_inbox(token: str, folder_name: str) -> list[dict]:
-    q = urllib.parse.quote(f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false")
-    folders = _get(token, f"{DRIVE}/files?q={q}&fields=files(id,name)").get("files", [])
-    if not folders:
-        return []
-    fid = folders[0]["id"]
-    q = urllib.parse.quote(f"'{fid}' in parents and trashed = false")
-    files, page = [], ""
-    while True:
-        r = _get(token, f"{DRIVE}/files?q={q}&fields=nextPageToken,files(id,name,mimeType,createdTime,size)"
-                        f"&orderBy=createdTime&pageSize=100" + (f"&pageToken={page}" if page else ""))
-        files += r.get("files", [])
-        page = r.get("nextPageToken", "")
-        if not page:
-            return files
+DIAG: list[str] = []
+
+
+def drive_inbox(token: str, folder_name: str, folder_id: str = "") -> list[dict]:
+    """folder_id 가 있으면 그 폴더를 바로 읽는다(이름 검색은 색인 지연·동명 폴더 문제가 있음)."""
+    DIAG.clear()
+    ids: list[str] = []
+    if folder_id:
+        try:
+            _get(token, f"{DRIVE}/files/{folder_id}?fields=id")
+            ids = [folder_id]
+        except urllib.error.HTTPError as e:
+            DIAG.append(f"폴더 id 접근 실패 HTTP {e.code} (다른 구글 계정 토큰이거나 권한 범위 문제)")
+    if not ids:
+        q = urllib.parse.quote(f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false")
+        ids = [f["id"] for f in _get(token, f"{DRIVE}/files?q={q}&fields=files(id)").get("files", [])]
+        DIAG.append(f"이름으로 찾은 폴더 {len(ids)}개")
+    if not ids:
+        try:
+            seen = len(_get(token, f"{DRIVE}/files?pageSize=20&fields=files(id)").get("files", []))
+            DIAG.append(f"토큰으로 보이는 파일 {seen}개" + (" — 이 토큰은 드라이브 파일을 못 봄(drive.readonly 아님?)" if not seen else ""))
+            info = _get(token, f"https://oauth2.googleapis.com/tokeninfo?access_token={token}")
+            DIAG.append("권한: " + info.get("scope", "?").replace("https://www.googleapis.com/auth/", ""))
+        except Exception as e:  # noqa: BLE001 진단용
+            DIAG.append(f"진단 실패 {e}")
+    files: list[dict] = []
+    for fid in ids:
+        q = urllib.parse.quote(f"'{fid}' in parents and trashed = false")
+        page = ""
+        while True:
+            r = _get(token, f"{DRIVE}/files?q={q}&fields=nextPageToken,files(id,name,mimeType,createdTime,size)"
+                            f"&orderBy=createdTime&pageSize=100" + (f"&pageToken={page}" if page else ""))
+            files += r.get("files", [])
+            page = r.get("nextPageToken", "")
+            if not page:
+                break
+    return files
 
 
 def pending(files: list[dict], log: dict) -> list[dict]:
@@ -289,11 +311,12 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
             summary(f"Secret 없음: {e.args[0]} → 아직 연결 전이라 쉼 (docs/MUSIC_CHANNEL.md)")
             return 0
         folder = cfg.get("inbox_folder", "BEEKAY SONGS")
-        files = drive_inbox(dtoken, folder)
+        files = drive_inbox(dtoken, folder, cfg.get("inbox_folder_id", ""))
         jobs = pending(files, log)
         if not jobs:
             summary(f"새 곡 없음 (드라이브 '{folder}' 폴더 파일 {len(files)}개, 아직 안 올린 곡 0개"
-                    + (" — 폴더를 못 찾았거나 비어 있음)" if not files else ")"))
+                    + (" — 폴더를 못 찾았거나 비어 있음)" if not files else ")")
+                    + ("\n진단: " + " / ".join(DIAG) if DIAG else ""))
             return 0
     done = 0
     for job in jobs[: int(cfg.get("max_per_run", 1))]:
