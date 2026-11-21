@@ -135,15 +135,17 @@ class ToonJobTest(unittest.TestCase):
             with mock.patch.object(C, "ROOT", root), mock.patch("pipeline.episodes.info_short", return_value=info), \
                     mock.patch.object(C, "REFINE_ROUNDS", 0), mock.patch.object(C, "REPLAN_ROUNDS", 1), \
                     mock.patch.object(C, "ask", side_effect=replies), \
-                    mock.patch.object(C, "open_pr", return_value="u"), mock.patch.object(C, "notify") as note:
+                    mock.patch.object(C, "open_pr", return_value="u"), mock.patch.object(C, "notify") as note, \
+                    mock.patch.object(C, "auto_merge", return_value=True) as merge:
                 self.assertEqual(C.toon(dt.date(2026, 11, 21)), 0)
+                merge.assert_called_once_with("u")  # BK 11/21: 1안 자동 진행
+                note.assert_not_called()  # 알림 생략
                 md = (root / "data/toon/lab/2026-12-05.md").read_text(encoding="utf-8")
                 self.assertIn("[새 기획 1차", C.ask.call_args_list[2].args[2])
                 self.assertIn("약점7", C.ask.call_args_list[2].args[2])  # 떨어진 안의 지적이 새 기획에 들어감
                 self.assertIn("1안: 새안1  (점수 50/60)", md)
                 self.assertIn("새 기획 1번", md)
                 self.assertNotIn("쉬는 걸 추천", md)
-                self.assertIn("대본 후보 2안", note.call_args.args[0])
 
 class CacheTest(unittest.TestCase):
     def test_cache_cost(self):
