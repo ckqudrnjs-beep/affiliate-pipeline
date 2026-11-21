@@ -25,5 +25,6 @@
       "pair_of": "1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW",
       "ask": "여성 버전과 남성 버전, 어느 쪽이 더 좋아요? 댓글로 알려 주세요 💬"
     }
-  }
+  },
+  "require_cover": true
 }

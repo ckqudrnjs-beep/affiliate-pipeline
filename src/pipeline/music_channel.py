@@ -338,6 +338,12 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
     done = 0
     for job in jobs[: int(cfg.get("max_per_run", 1))]:
         ov = dict(rel.get(job["id"], {}))
+        if cfg.get("require_cover") and not ov.get("cover") and not job.get("cover"):
+            msg = (f"🎵 BEEKAY SONGS: '{job['name']}' 커버 그림이 없어 보류 — 드라이브에 같은 이름 jpg 를 넣거나, "
+                   "Claude 에게 그림 커버(Kling 크레딧 4개)를 부탁하세요.")
+            summary(msg)
+            notify(msg)
+            continue
         pair = log.get(ov.get("pair_of", ""), {})
         if ov.get("ask") and pair.get("video_id"):
             ov["_extra"] = (f"🎧 {pair.get('title', '다른 버전')}: https://youtu.be/{pair['video_id']}\n"
