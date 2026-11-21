@@ -68,5 +68,21 @@ class MusicChannelTest(unittest.TestCase):
         self.assertTrue(55 <= s <= 61, s)
 
 
+class TestReleases(unittest.TestCase):
+    def test_fixed_slots(self):
+        import datetime as dt
+        from pipeline.music_channel import fixed_slots, KST
+        now = dt.datetime(2026, 11, 21, 23, 0, tzinfo=KST)
+        a, b = fixed_slots({"publish_at": "2026-11-25T19:00:00+09:00"}, now)
+        self.assertEqual((a.day, b.day), (25, 26))
+        self.assertIsNone(fixed_slots({"publish_at": "2026-11-21T19:00:00+09:00"}, now))
+        self.assertIsNone(fixed_slots({}, now))
+
+    def test_extra_line(self):
+        from pipeline.music_channel import description
+        d = description("T", "", "C", extra="🎧 다른 버전: https://youtu.be/x\n어느 쪽이 더 좋아요?")
+        self.assertIn("youtu.be/x", d.split("\n")[2])
+
+
 if __name__ == "__main__":
     unittest.main()

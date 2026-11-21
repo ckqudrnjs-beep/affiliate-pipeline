@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 import pathlib
 import random
+import re
 import subprocess
 import tempfile
 
@@ -95,12 +96,22 @@ def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str
         _bg(cover, W, H).save(td / "bg.png")
         fg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(fg)
+        m = re.match(r"^(.*?)\s*\(([^()]*)\)\s*$", title)
+        main_t, ver = (m.group(1), m.group(2)) if m else (title, "")
+
+        def fit(text, size, bold, max_w):
+            while size > 36 and d.textlength(text, font=font(fsel(text, bold), size)) > max_w:
+                size -= 4
+            return size
         if vertical:
             card = _card(cover, 860)
             fg.alpha_composite(card, ((W - card.width) // 2, 230))
             y = 230 + card.height + 10
-            for text, size, col, bold in ((title, 84, (255, 255, 255, 255), True), (artist, 44, (255, 255, 255, 210), False),
-                                          (tag, 34, (255, 210, 240, 220), False)):
+            rows = [(main_t, fit(main_t, 84, True, W - 100), (255, 255, 255, 255), True)]
+            if ver:
+                rows.append((ver, 40, (255, 225, 245, 240), False))
+            rows += [(artist, 44, (255, 255, 255, 210), False), (tag, 34, (255, 210, 240, 220), False)]
+            for text, size, col, bold in rows:
                 f = font(fsel(text, bold), size)
                 tw = d.textlength(text, font=f)
                 d.text(((W - tw) / 2, y), text, font=f, fill=col)
@@ -116,9 +127,12 @@ def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str
             cx = 170
             fg.alpha_composite(card, (cx - card.width // 10, (H - card.height) // 2))
             tx = cx + 720 + 120
-            y = H // 2 - 150
-            for text, size, col, bold in ((tag, 34, (255, 210, 240, 230), False), (title, 92, (255, 255, 255, 255), True),
-                                          (artist, 46, (255, 255, 255, 210), False)):
+            y = H // 2 - (190 if ver else 150)
+            rows = [(tag, 34, (255, 210, 240, 230), False), (main_t, fit(main_t, 92, True, W - tx - 100), (255, 255, 255, 255), True)]
+            if ver:
+                rows.append((ver, 42, (255, 225, 245, 240), False))
+            rows.append((artist, 46, (255, 255, 255, 210), False))
+            for text, size, col, bold in rows:
                 f = font(fsel(text, bold), size)
                 d.text((tx, y), text, font=f, fill=col)
                 y += int(size * 1.6)

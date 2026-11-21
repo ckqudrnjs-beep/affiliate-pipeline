@@ -1,22 +1,28 @@
 {
- "1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW": {
-  "name": "다른 차원 끝.mp3",
-  "title": "다른 차원 끝",
-  "tag": "K-POP · IDOL",
-  "date": "2026-11-21",
-  "video_id": "QPHArJ5Vr54",
-  "short_id": "fr6epk0IT-A",
-  "publish_at": "private",
-  "short_publish_at": "private"
- },
- "1BDs9czCgljX116WZEdQzTVG-1c0t2z8M": {
-  "name": "Across the dream (1).mp3",
-  "title": "Across the dream",
-  "tag": "K-POP · IDOL",
-  "date": "2026-11-21",
-  "video_id": "shnDQQQkQ9Q",
-  "short_id": "4HBbFneW42Q",
-  "publish_at": "private",
-  "short_publish_at": "private"
- }
+ "_old": [
+  {
+   "name": "다른 차원 끝.mp3",
+   "title": "다른 차원 끝",
+   "tag": "K-POP · IDOL",
+   "date": "2026-11-21",
+   "video_id": "QPHArJ5Vr54",
+   "short_id": "fr6epk0IT-A",
+   "publish_at": "private",
+   "short_publish_at": "private",
+   "drive_id": "1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW",
+   "replaced": "새 커버로 다시 올림 11/21 — BK가 스튜디오에서 삭제"
+  },
+  {
+   "name": "Across the dream (1).mp3",
+   "title": "Across the dream",
+   "tag": "K-POP · IDOL",
+   "date": "2026-11-21",
+   "video_id": "shnDQQQkQ9Q",
+   "short_id": "4HBbFneW42Q",
+   "publish_at": "private",
+   "short_publish_at": "private",
+   "drive_id": "1BDs9czCgljX116WZEdQzTVG-1c0t2z8M",
+   "replaced": "새 커버로 다시 올림 11/21 — BK가 스튜디오에서 삭제"
+  }
+ ]
 }
