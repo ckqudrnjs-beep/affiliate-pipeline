@@ -461,6 +461,8 @@ def band_errors(band, answers: set[str] = frozenset()) -> list[str]:
 def check(spec: dict) -> list[str]:
     if spec.get("engine") == "hyperframes":  # 2026-11-16 글자형 Shorts (pipeline.textshort): 장면·내레이션 없음
         return check_textshort(spec)
+    if spec.get("format") == "toon-sok":  # 2026-11-21 번외 '동전이 속마음': 클립+자막만(data/toon/<날짜>.json), 장면·내레이션 없음
+        return check_sok(spec)
     e = []
     kind = spec.get("kind", "short")
     if kind not in ("short", "long"):
@@ -963,6 +965,19 @@ def render(path: pathlib.Path) -> pathlib.Path:
     path.with_suffix(".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"완성: {out} ({t_acc:.1f}초, {out.stat().st_size / 1e6:.1f}MB)")
     return out
+
+
+def check_sok(spec: dict) -> list[str]:
+    e = []
+    try:
+        dt.date.fromisoformat(spec.get("date", ""))
+    except ValueError:
+        e.append("date 형식")
+    if spec.get("product") or spec.get("products"):
+        e.append("번외편은 상품 없음")
+    if not spec.get("description", "").strip():
+        e.append("설명 필요")
+    return e + title_errors(spec)
 
 
 def check_textshort(spec: dict) -> list[str]:

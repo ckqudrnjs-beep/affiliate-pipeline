@@ -1,0 +1,28 @@
+{
+ "slug": "ep-2026-11-27-sok",
+ "seconds": 39.2,
+ "chapters": [],
+ "style": "toon",
+ "credits": [
+  {
+   "id": "ai-toon-sok-01-04",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
+  },
+  {
+   "id": "ai-toon-ending-A2",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "ending",
+   "lines": [],
+   "ai": true,
+   "realistic": false
+  }
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-21 BK Flow 클립 B1~B4로 번외 1편 '요즘 것들은 창문을 몰라' (data/toon/2026-11-27.json). 결: 한없이 즐거운 것 + 인사이트, 끝 '허허.'"
+}
