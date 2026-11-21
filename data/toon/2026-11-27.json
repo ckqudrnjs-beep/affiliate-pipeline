@@ -1,0 +1,60 @@
+{
+ "slug": "ep-2026-11-27-sok",
+ "date": "2026-11-27",
+ "out": "media/youtube/ep-2026-11-27-sok.mp4",
+ "hold": 1.0,
+ "small": "돈 줍는 삼촌 · AI 생성 영상",
+ "band": {
+  "top": "번외 · 동전이 속마음",
+  "accent": "요즘 것들은 창문을 몰라"
+ },
+ "vote": false,
+ "cuts": [
+  {
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/sok/toon-sok-01.mp4",
+   "ss": 0,
+   "t": 7.5,
+   "lines": [
+    "내가 이 집에서",
+    "두 해를 살았는데 말이야"
+   ]
+  },
+  {
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/sok/toon-sok-02-clean.mp4",
+   "ss": 0,
+   "t": 7.5,
+   "lines": [
+    "우리 막내는 창문을 열면",
+    "닫을 줄을 몰라"
+   ]
+  },
+  {
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/sok/toon-sok-03-clean.mp4",
+   "ss": 0,
+   "t": 7.5,
+   "lines": [
+    "겨울 환기는 짧게, 여러 번",
+    "그게 다야"
+   ]
+  },
+  {
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/sok/toon-sok-04-clean.mp4",
+   "ss": 0,
+   "t": 8.0,
+   "lines": [
+    "살림은 티가 안 나야",
+    "잘한 거야. 허허."
+   ]
+  }
+ ],
+ "ending": {
+  "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/toon-ending-A2.mp4",
+  "ss": 1.0,
+  "t": 7.0,
+  "at": 0.5
+ },
+ "outro_lines": [
+  "동전이 다음 이야기는",
+  "내일 저녁 7시"
+ ]
+}

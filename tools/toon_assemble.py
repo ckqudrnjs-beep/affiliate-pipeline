@@ -58,6 +58,8 @@ def outro_of(spec: dict) -> dict:
         except Exception:
             v = None
     if not v or not v.get("a") or not v.get("b"):
+        if spec.get("outro_lines"):  # 이틀 간격이 아닌 편(예: 쉬는 날 번외)은 예고 문구를 직접 ("내일 저녁 7시")
+            return dict(OUTRO, lines=list(spec["outro_lines"]))
         return OUTRO
     return dict(OUTRO, lines=["다음엔 어디로 갈까?", f"A {v['a']} / B {v['b']}"], big="댓글로 골라 줘!", sub="많이 고른 걸로 만들어요")
 
