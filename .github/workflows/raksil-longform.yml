@@ -26,11 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 최신 main 받기
         if: github.ref == 'refs/heads/main'
         run: git fetch -q origin main && git reset -q --hard FETCH_HEAD
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: 준비
@@ -62,7 +62,7 @@ jobs:
             node scripts/game_rec.js http://localhost:8765 "$g" "/tmp/lrec/$g" 40 || echo "녹화 실패: $g"
           done
           PYTHONPATH=src python -m pipeline.raksil_longform /tmp/lrec upload "$D"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: raksil-longform

@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: src
       - name: 지난 점검 상태 불러오기
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .apicheck
           key: apicheck-${{ github.run_id }}
@@ -52,7 +52,7 @@ jobs:
         run: PYTHONPATH=src python3 -m pipeline.api_check
       - name: 점검 상태 저장
         if: always() && hashFiles('.apicheck/state.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .apicheck
           key: apicheck-${{ github.run_id }}
