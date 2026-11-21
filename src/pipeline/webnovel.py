@@ -7,7 +7,8 @@
 - 업로드: 웹소설 채널 전용 토큰 WEBNOVEL_YT_REFRESH_TOKEN, 아동용 아님(selfDeclaredMadeForKids=False) 자동,
   AI 그림을 쓴 화(ep "ai": true)는 설명란 표기 + containsSyntheticMedia.
   config visibility=private 이면 첫 화만 비공개로 올리고 멈춤(BK 확인), schedule 이면 매일 hour 시 공개 예약.
-사용: python -m pipeline.webnovel next | render [화] | run [YYYY-MM-DD]
+- 롱폼 몰아보기(BK 2026-11-21): 일요일마다 쇼츠 5화 묶음 + 롱폼 전용 번외(extra/NN.json)를 가로 영상으로, long_hour 시 공개 예약.
+사용: python -m pipeline.webnovel next | render [화] | long [묶음] | run [YYYY-MM-DD]
 """
 from __future__ import annotations
 
@@ -27,6 +28,8 @@ LOG = ROOT / "data" / "youtube" / "webnovel.json"
 OUT = ROOT / "media" / "webnovel"
 W, H, FPS = 1080, 1920, 30
 BAND = 230          # 위 검은 제목 띠
+LW, LH, LBAND = 1920, 1080, 120   # 롱폼 몰아보기(가로)
+LONG_EVERY = 5      # 몇 화마다 몰아보기 한 편
 MAXW = 960          # 글 한 줄 최대 폭(px)
 STY = {"n": ("R", 64, "white"), "q": ("B", 68, "quote"), "r": ("B", 84, "accent"), "g": ("B", 56, "gold"),
        "s": ("R", 40, "gray"), "big": ("B", 96, "white"), "bigr": ("B", 104, "accent")}
@@ -177,29 +180,35 @@ def motif(d, kind: str, cx: float, cy: float, pal: dict) -> None:
             d.ellipse([cx - 40, cy - 40 + k * 85, cx + 40, cy + 40 + k * 85], outline=(90, 90, 100), width=3)
 
 
-def fit(text: str, kind: str, size: int):
+def fit(text: str, kind: str, size: int, maxw: int = MAXW):
     f = _font(kind, size)
-    while f.getlength(text) > MAXW and size > 30:
+    while f.getlength(text) > maxw and size > 30:
         size -= 4; f = _font(kind, size)
     return f, size
 
 
-def draw_card(card: dict, pal: dict, upto: int | None = None, alpha: float = 1.0, final: bool = False):
+def draw_card(card: dict, pal: dict, upto: int | None = None, alpha: float = 1.0, final: bool = False, wide: bool = False):
+    """wide=True 는 롱폼 몰아보기용 가로 1920x1080: 모티프는 왼쪽, 글은 오른쪽."""
     from PIL import ImageDraw
     lines, mot = card["lines"], card.get("motif")
-    im = background(pal["accent_bg"] if final else pal["bg"]); d = ImageDraw.Draw(im)
-    top = BAND + 40
+    w, h = (LW, LH) if wide else (W, H)
+    im = background(pal["accent_bg"] if final else pal["bg"], w, h); d = ImageDraw.Draw(im)
+    top = LBAND if wide else BAND + 40
+    tx, maxw = (w * (0.6 if mot else 0.5), int(w * (0.62 if mot else 0.8))) if wide else (w / 2, MAXW)
     if mot:
-        motif(d, mot, W / 2, top + (H - top) * 0.25, pal)
-    fonts = [fit(t, STY[s][0], STY[s][1]) for t, s in lines]
+        if wide:
+            motif(d, mot, w * 0.24, top + (h - top) * 0.5, pal)
+        else:
+            motif(d, mot, W / 2, top + (H - top) * 0.25, pal)
+    fonts = [fit(t, STY[s][0], STY[s][1], maxw) for t, s in lines]
     gap = 34; total = sum(sz for _, sz in fonts) + gap * (len(lines) - 1)
-    cy = top + (H - top) * (0.55 if mot else 0.45) - total / 2
+    cy = top + (h - top) * (0.5 if wide else 0.55 if mot else 0.45) - total / 2
     n = len(lines) if upto is None else upto
     for i, ((t, s), (f, sz)) in enumerate(zip(lines, fonts)):
         if i < n:
             a = alpha if i == n - 1 else 1.0
             col = tuple(int(c * a + 18 * (1 - a)) for c in pal[STY[s][2]])
-            d.text((W / 2, cy + sz / 2), t, font=f, fill=col, anchor="mm")
+            d.text((tx, cy + sz / 2), t, font=f, fill=col, anchor="mm")
         cy += sz + gap
     return im, d
 
@@ -269,8 +278,9 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
     return final
 
 
-def sound(starts, durs, last_story: int, total: float, path: str) -> str:
-    """효과음만 합성: 낮은 울림 + 장 넘김 + 끝 두 장 앞 심장 소리 + 반전 직전 정적 + 반전 타격음."""
+def sound(starts, durs, last_story, total: float, path: str) -> str:
+    """효과음만 합성: 낮은 울림 + 장 넘김 + 끝 두 장 앞 심장 소리 + 반전 직전 정적 + 반전 타격음.
+    last_story 는 반전 카드 번호 하나 또는 목록(롱폼은 화마다 하나)."""
     import numpy as np
     sr = 44100; n = int(sr * (total + 0.5)); x = np.arange(n) / sr
     buf = 0.10 * np.sin(2 * np.pi * 55 * x) * (0.6 + 0.4 * np.sin(2 * np.pi * 0.15 * x)) + 0.05 * np.sin(2 * np.pi * 82.4 * x)
@@ -284,18 +294,161 @@ def sound(starts, durs, last_story: int, total: float, path: str) -> str:
 
     for j in range(1, len(starts)):
         add(starts[j], tone(220, 0.8, 0.08, 4))
-    beat0 = starts[max(0, last_story - 2)]
-    for j in range(int((starts[last_story] - beat0) / 0.75)):
-        add(beat0 + 0.4 + j * 0.75, tone(50, 0.25, 0.5, 18))
-    s = int(starts[last_story] * sr)
-    buf[max(0, s - int(0.35 * sr)):s] *= 0.05
-    add(starts[last_story], sum(tone(fr, 2.5, 0.25, 1.5) for fr in (110, 116.5, 233, 466)))
+    for ls in ([last_story] if isinstance(last_story, int) else last_story):
+        beat0 = starts[max(0, ls - 2)]
+        for j in range(int((starts[ls] - beat0) / 0.75)):
+            add(beat0 + 0.4 + j * 0.75, tone(50, 0.25, 0.5, 18))
+        s = int(starts[ls] * sr)
+        buf[max(0, s - int(0.35 * sr)):s] *= 0.05
+        add(starts[ls], sum(tone(fr, 2.5, 0.25, 1.5) for fr in (110, 116.5, 233, 466)))
     fade = np.ones(n); m = int(sr * 1.5); fade[-m:] = np.linspace(1, 0, m); buf *= fade
     buf = np.clip(buf, -1, 1)
     with wave.open(path, "wb") as wv:
         wv.setnchannels(1); wv.setsampwidth(2); wv.setframerate(sr)
         wv.writeframes((buf * 32000).astype(np.int16).tobytes())
     return path
+
+
+# ---------- 롱폼 몰아보기 (BK 2026-11-21: 주 1회, 5화 묶음 + 롱폼에서만 보는 번외 장면) ----------
+# 쇼츠를 그냥 이어 붙이면 '재사용 콘텐츠'로 보일 수 있어 번외(data/.../extra/NN.json, after=묶음 마지막 화)가 없으면 만들지 않는다.
+def extras(work: str) -> dict[int, dict]:
+    out = {}
+    for p in sorted((WORKS / work / "extra").glob("*.json")):
+        x = load(p, {})
+        if x.get("after"):
+            out[int(x["after"])] = x
+    return out
+
+
+def long_key(work: str, k: int) -> str:
+    return f"{work}/long-{k:02d}"
+
+
+def long_group(work: str, k: int) -> list[dict]:
+    lo, hi = (k - 1) * LONG_EVERY + 1, k * LONG_EVERY
+    return [e for e in episodes(work) if lo <= e["no"] <= hi]
+
+
+def next_long(cfg: dict, log: dict, day: dt.date) -> int | None:
+    """쇼츠 5화가 모두 올라갔고(공개일이 오늘 이전) 번외가 있으며 아직 안 만든 가장 이른 묶음 번호."""
+    work = cfg.get("work", ""); ex = extras(work)
+    for k in range(1, len(episodes(work)) // LONG_EVERY + 1):
+        if long_key(work, k) in log:
+            continue
+        grp = long_group(work, k)
+        rows = [log.get(key(work, e["no"])) for e in grp]
+        if len(grp) < LONG_EVERY or not all(rows) or k * LONG_EVERY not in ex:
+            return None
+        if any(r.get("visibility") == "private" for r in rows):
+            return None
+        if max(r.get("date", "9999") for r in rows) > day.isoformat():
+            return None
+        return k
+    return None
+
+
+def long_cards(work: str, k: int) -> tuple[list[dict], list[tuple[str, int]]]:
+    """[{card, secs, final, label}] 와 챕터 목록 [(이름, 카드 번호)]."""
+    se = season(work); grp = long_group(work, k); ex = extras(work)[k * LONG_EVERY]
+    a, b = grp[0]["no"], grp[-1]["no"]
+    seq: list[dict] = []; chap: list[tuple[str, int]] = [("시작", 0)]
+
+    def put(card, secs, final=False, label=""):
+        seq.append({"card": card, "secs": secs, "final": final, "label": label})
+
+    put({"lines": [["오리지널 웹소설", "s"], [se["title"], "g"], [f"{a}화 ~ {b}화 몰아보기", "big"],
+                   [f"+ 번외 「{ex['title']}」 (몰아보기에서만)", "s"]], "motif": None}, 4.0, label="몰아보기")
+    for e in grp:
+        chap.append((f"{e['no']}화 {e['title']}", len(seq)))
+        put({"lines": [[f"{e['no']}화", "g"], [e["title"], "big"]], "motif": None}, 2.4, label=f"{e['no']}화")
+        for i, c in enumerate(e["cards"]):
+            put(c, card_secs(c), final=(i == len(e["cards"]) - 1), label=f"{e['no']}화")
+    chap.append((f"번외 {ex['title']}", len(seq)))
+    put({"lines": [["번외", "bigr"], [ex["title"], "big"], ["쇼츠에는 없는 이야기", "s"]], "motif": None}, 3.0, label="번외")
+    for i, c in enumerate(ex["cards"]):
+        put(c, card_secs(c), final=(i == len(ex["cards"]) - 1), label="번외")
+    if len(episodes(work)) > b:
+        end = {"lines": [["다음 몰아보기", "s"], [f"{b + 1}화 ~ {b + LONG_EVERY}화", "g"],
+                         ["쇼츠로는 매일 밤 한 화씩", "n"], ["구독하면 다음 화 알림이 가요", "s"]], "motif": None}
+    else:
+        end = {"lines": [[se["title"], "g"], ["시즌 1 끝", "big"], ["구독하면 다음 이야기 알림이 가요", "s"]], "motif": None}
+    put(end, 5.0, label="")
+    return seq, chap
+
+
+def stamp(sec: float) -> str:
+    sec = int(sec)
+    return f"{sec // 60}:{sec % 60:02d}"
+
+
+def render_long(work: str, k: int, out_dir: pathlib.Path = OUT) -> tuple[pathlib.Path, list[str]]:
+    import numpy as np
+    from PIL import Image
+    se = season(work); pal = palette(se)
+    seq, chap = long_cards(work, k)
+    durs = [x["secs"] for x in seq]
+    starts = np.cumsum([0] + durs[:-1]); total = float(sum(durs))
+    finals = [i for i, x in enumerate(seq) if x["final"]]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = out_dir / f"{work}-long-{k:02d}"
+    ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{LW}x{LH}",
+                           "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20",
+                           f"{stem}.v.mp4"], stdin=subprocess.PIPE)
+    head = se["title"]; cache: dict = {}
+    for f in range(int(total * FPS)):
+        t = f / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
+        card = seq[j]["card"]; nl = len(card["lines"]); per = min(0.55, max(0.2, (durs[j] - 0.8) / nl))
+        upto = min(nl, int(lt / per) + 1); a = min(1.0, (lt - (upto - 1) * per) / 0.35)
+        ck = (j, upto, round(a, 2))
+        if ck not in cache:
+            im, d = draw_card(card, pal, upto, a, final=seq[j]["final"], wide=True)
+            d.rectangle([0, 0, LW, LBAND], fill=(0, 0, 0))
+            d.text((60, LBAND / 2), head, font=fit(head, "B", 48)[0], fill=pal["gold"], anchor="lm")
+            if seq[j]["label"]:
+                d.text((LW - 60, LBAND / 2), seq[j]["label"], font=_font("R", 40), fill=pal["gray"], anchor="rm")
+            if len(cache) > 200:
+                cache.clear()
+            cache[ck] = im
+        im = cache[ck]
+        fade = min(1.0, lt / 0.25, (durs[j] - lt) / 0.25) if j else min(1.0, (durs[j] - lt) / 0.25)
+        if seq[j]["final"] and lt < 0.12:
+            fade = 0.0
+        ff.stdin.write((Image.blend(Image.new("RGB", (LW, LH)), im, max(0.0, fade)) if fade < 1 else im).tobytes())
+    ff.stdin.close(); ff.wait()
+    wav = sound(starts, durs, finals, total, f"{stem}.wav")
+    final = pathlib.Path(f"{stem}.mp4")
+    bgm = [ROOT / b for b in load(CFG, {}).get("bgm", []) if (ROOT / b).exists()]
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", f"{stem}.v.mp4", "-i", wav]
+    if bgm:
+        cmd += ["-stream_loop", "-1", "-i", str(bgm[k % len(bgm)]), "-filter_complex",
+                f"[2:a]volume=0.18,afade=t=out:st={total - 2:.2f}:d=2[b];[1:a][b]amix=inputs=2:normalize=0[a]",
+                "-map", "0:v", "-map", "[a]"]
+    else:
+        cmd += ["-map", "0:v", "-map", "1:a"]
+    cmd += ["-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", f"{total:.2f}", str(final)]
+    subprocess.run(cmd, check=True)
+    for q in (f"{stem}.v.mp4", wav):
+        pathlib.Path(q).unlink(missing_ok=True)
+    return final, [f"{stamp(starts[i])} {name}" for name, i in chap]
+
+
+def long_title(se: dict, work: str, k: int) -> str:
+    grp = long_group(work, k); ex = extras(work)[k * LONG_EVERY]
+    return f"{se['title']} {grp[0]['no']}~{grp[-1]['no']}화 몰아보기 + 번외 「{ex['title']}」 | 웹소설"[:100]
+
+
+def long_body(se: dict, work: str, k: int, chapters: list[str], visibility: str, at: dt.datetime | None) -> dict:
+    status = ({"privacyStatus": "private", "publishAt": at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+              if visibility == "schedule" and at else {"privacyStatus": "public" if visibility == "schedule" else "private"})
+    desc = (f"{se['title']} 쇼츠 {LONG_EVERY}화를 한 번에, 그리고 몰아보기에서만 보는 번외 장면까지.\n\n"
+            + "\n".join(chapters)
+            + "\n\n쇼츠로는 매일 밤 한 화씩 올라갑니다.\n"
+            "이 채널이 직접 쓴 오리지널 창작 웹소설입니다. 등장인물·단체는 실제와 관계없습니다.\n"
+            f"#웹소설 #몰아보기 #{se.get('genre', '').split(' ')[0]} #한화만더")
+    return {"snippet": {"title": long_title(se, work, k), "description": desc,
+                        "tags": ["웹소설", "몰아보기", "회귀", "복수극", se["title"], "한화만더"],
+                        "categoryId": "24", "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
+            "status": {**status, "selfDeclaredMadeForKids": False, "containsSyntheticMedia": False, "embeddable": True}}
 
 
 # ---------- 업로드 ----------
@@ -331,7 +484,61 @@ def add_to_playlist(tok: str, playlist: str, vid: str) -> bool:
         return False
 
 
-def run(day: dt.date) -> int:
+def run(day: dt.date, long: bool | None = None) -> int:
+    """매일 쇼츠 한 화. 일요일(또는 long=True)엔 몰아보기도."""
+    rc = run_short(day)
+    if long or (long is None and day.weekday() == 6):
+        rc = max(rc, run_long(day))
+    return rc
+
+
+def _notify(msg: str) -> None:
+    try:
+        from .claude_jobs import notify
+        notify(msg)
+    except Exception as e:  # noqa: BLE001
+        print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
+
+
+def run_long(day: dt.date) -> int:
+    from .youtube import access_token, summary, upload
+    cfg = load(CFG, {}); log = load(LOG, {}); work = cfg.get("work", "")
+    k = next_long(cfg, log, day)
+    if not k:
+        summary("웹소설 몰아보기: 만들 묶음 없음 (쇼츠 5화가 아직 덜 올라갔거나 번외 없음)")
+        return 0
+    ex = extras(work)[k * LONG_EVERY]
+    bad = policy_problems(ex)
+    if bad:
+        summary(f"웹소설 몰아보기 {k} 번외 정책 검사 탈락 → 안 올림: {bad}")
+        return 1
+    se = season(work)
+    video, chapters = render_long(work, k)
+    summary(f"웹소설 몰아보기 만듦: {video.name}\n" + "\n".join(chapters))
+    if os.environ.get("WEBNOVEL_YT_ENABLED", "").lower() != "true" or not cfg.get("on") or not cfg.get("long", True):
+        summary(f"웹소설 몰아보기 dry-run: {long_title(se, work, k)}")
+        return 0
+    need = ("YT_CLIENT_ID", "YT_CLIENT_SECRET", "WEBNOVEL_YT_REFRESH_TOKEN")
+    if not all(os.environ.get(x) for x in need):
+        summary("웹소설 채널 비밀값 없음 → 몰아보기 업로드 안 함")
+        return 1
+    tok = access_token(*(os.environ[x] for x in need))
+    vis = cfg.get("visibility", "private")
+    at = publish_at(day, int(cfg.get("long_hour", 22)))
+    if at <= dt.datetime.now(KST) + dt.timedelta(minutes=10):
+        at = None
+    r = upload(tok, long_body(se, work, k, chapters, vis, at), video)
+    pl = cfg.get("playlist_id") and add_to_playlist(tok, cfg["playlist_id"], r["id"])
+    log = load(LOG, {})
+    log[long_key(work, k)] = {"id": r["id"], "date": day.isoformat(), "title": long_title(se, work, k), "visibility": vis}
+    LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+    when = f"{at:%m/%d %H:%M} 공개 예약" if at else ("바로 공개" if vis == "schedule" else "비공개")
+    msg = f"📚 웹소설 몰아보기 {k} 업로드 ({when}): https://youtu.be/{r['id']}" + ("" if pl or not cfg.get("playlist_id") else "\n(재생목록 추가 실패: 손으로 추가)")
+    summary(msg); _notify(msg)
+    return 0
+
+
+def run_short(day: dt.date) -> int:
     from .youtube import access_token, summary, upload
     cfg = load(CFG, {}); log = load(LOG, {})
     work = cfg.get("work", "")
@@ -365,12 +572,7 @@ def run(day: dt.date) -> int:
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = (f"{at:%m/%d %H:%M} 공개 예약" if at else "바로 공개") if vis == "schedule" else "비공개(BK 확인용)"
     msg = f"📖 웹소설 {se['title']} {ep['no']}화 업로드 ({when}): https://youtu.be/{r['id']}" + ("" if pl or not cfg.get("playlist_id") else "\n(재생목록 추가 실패: 손으로 추가)")
-    summary(msg)
-    try:
-        from .claude_jobs import notify
-        notify(msg)
-    except Exception as e:  # noqa: BLE001
-        print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
+    summary(msg); _notify(msg)
     return 0
 
 
@@ -386,9 +588,14 @@ def main(argv: list[str]) -> int:
         ep = next(e for e in episodes(work) if e["no"] == no)
         print(render(work, ep))
         return 0
+    if cmd == "long":
+        work = cfg["work"]; k = int(argv[1]) if len(argv) > 1 else 1
+        v, ch = render_long(work, k)
+        print(v); print("\n".join(ch))
+        return 0
     if cmd == "run":
         day = dt.date.fromisoformat(argv[1]) if len(argv) > 1 and argv[1] else dt.datetime.now(KST).date()
-        return run(day)
+        return run(day, True if "--long" in argv else None)
     print(__doc__)
     return 2
 

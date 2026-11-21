@@ -21,6 +21,7 @@
 ## 2. 대본 형식
 - `data/webnovel/works/<작품>/season.json`: 제목, 장르, 인물, 색(style).
 - `data/webnovel/works/<작품>/ep/NN.json`: `cards` = [{"lines": [[글, 스타일]], "motif": 모티프}], `next` = 다음 화 제목.
+- 번외 `extra/NN.json`: `after`, `title`, `pov`(시점 인물), `cards` 형식은 ep 와 같음.
 - 스타일: n 본문 / q 대사 / r 강조(빨강) / g 금색 / s 작게 / big·bigr 크게. 한 줄 15자 안팎(넘치면 자동으로 글자 줄임).
 - 모티프: wine, wine_dark, wine2, phone, phone_msg, paper, clock, gift, pearl, rec, glass, light (코드로 그림).
 - 새 작품을 시작할 때는 season.json style 색을 바꾸고, 필요하면 모티프를 추가한다.
@@ -30,6 +31,7 @@
 - `selfDeclaredMadeForKids=false`(아동용 아님) 자동. ep 에 `"ai": true` 면 설명란 AI 표기, `"ai_realistic": true` 면 합성 콘텐츠 표시.
 - `visibility: private` 이면 **첫 화만 비공개로 올리고 멈춤** → BK 확인 → `schedule` 로 바꾸면 매일 진행.
 - 기록 `data/youtube/webnovel.json`. 멈추기: 저장소 변수 `WEBNOVEL_YT_ENABLED` 를 `false`.
+- **롱폼 몰아보기(일요일)**: 쇼츠 5화(1~5, 6~10, 11~15)가 모두 공개되면 그 주 일요일에 가로 1920x1080 영상(약 3분)을 만들어 **22:00 KST 공개 예약**. 구성: 표지 → 화마다 챕터 카드 + 본문 → **번외(롱폼 전용)** → 다음 몰아보기 예고. 설명란에 챕터 시간 자동. 번외 대본 `data/webnovel/works/<작품>/extra/NN.json`(`after` = 묶음 마지막 화)이 없으면 만들지 않는다(쇼츠 이어 붙이기만 하면 재사용 콘텐츠로 볼 수 있음). 끄기: config `long: false`. 손으로: Run workflow 에서 `long` 체크.
 
 ## 4. BK 1회 설정 (약 10분)
 돈삼촌 업로드에 쓰는 Google Cloud OAuth 앱을 그대로 쓰고, **'한 화만 더' 채널용 갱신 토큰만** 새로 받는다.
