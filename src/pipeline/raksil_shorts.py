@@ -135,6 +135,9 @@ BAND_SYS = """\n\n[제목 띠] 화면 맨 위 검은 띠에 들어갈 두 줄 �
 top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) = 무엇인지·결론. 각 12자 이하, 숫자·퍼센트·가짜 통계 금지
 ("한국인 99%" "상위 10%" 같은 말 금지), 지능·외모 비하 금지, 광고 말 금지. 오늘 질문에 맞춰 구체적으로.
 예) top "고민 없이 고르면" accent "찐 어른 인정" / top "친구랑 꼭 갈리는" accent "라면 vs 치킨".
+제목 패턴(BK 11/21 결정): ① 지시어로 숨기기 환영 — 답을 다 말하지 않고 '이거' '이 질문'으로 궁금증 남기기
+(예: top "이 질문 하나로" accent "성격 다 나옴" / top "이건 그냥" accent "밸런스게임 아님"). ② 숫자는 실제 시간만(예: "3초 안에 고르면"),
+통계·%·순위·남의 조회수·돈 금액은 금지. ③ "~하지 마세요" "몰랐으면 손해" 같은 손실 회피·금기 경고는 쓰지 않는다.
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
@@ -326,13 +329,22 @@ BAND_H, BAND_SIZE, BAND_MAX = 330, 100, 12
 JUA = pathlib.Path(__file__).resolve().parents[2] / "config/fonts/Jua-Regular.ttf"  # 삼촌 띠와 같은 주아체
 BAND_BANK = [("3초 안에 고르면", "결단력 인정"), ("친구랑 꼭 갈리는", "밸런스게임"), ("의외로 정답이", "둘로 나뉜다"),
              ("고민 없이 고르면", "찐 어른 인정"), ("이거 바로 고르면", "직진형 인간"), ("댓글 싸움 나는", "밸런스게임"),
-             ("1초 만에 고르면", "눈치 백단"), ("둘 다 싫으면", "댓글로 항의")]
-BANNED_BAND = BANNED_WHY + ("상위", "천재", "지능", "아이큐", "IQ", "한국인", "99", "1등")
+             ("1초 만에 고르면", "눈치 백단"), ("둘 다 싫으면", "댓글로 항의"),
+             ("이 질문 하나로", "성격 다 나옴"), ("이건 그냥", "밸런스게임 아님"), ("이거 고르는 사람", "따로 있다")]
+# 11/21 BK 결정: 지시어로 숨기기 채택, 숫자는 실제 시간·게임 기록만, 손실 회피·금기 경고는 안 씀.
+BANNED_BAND = BANNED_WHY + ("상위", "천재", "지능", "아이큐", "IQ", "한국인", "99", "1등",
+                             "하지 마세요", "하지마세요", "몰랐으면", "손해", "날릴 뻔", "만원", "억")
 
 
 def band_font(size: int):
     from PIL import ImageFont
     return ImageFont.truetype(str(JUA), size) if JUA.exists() else font(size)
+
+
+def real_numbers_only(t: str) -> bool:
+    """숫자는 실제 시간(N초)만 허용 (BK 11/21: 가짜 통계·%·금액 금지). 게임 기록 점수는 raksil_games 가 기록에서 직접 넣는다."""
+    import re
+    return not any(c.isdigit() for c in re.sub(r"\d{1,2}초", "", t))
 
 
 def clean_band(b) -> dict | None:
@@ -341,7 +353,7 @@ def clean_band(b) -> dict | None:
         return None
     top, acc = (" ".join(str(b.get(k, "")).split()).strip(" .") for k in ("top", "accent"))
     for t in (top, acc):
-        if not t or len(t) > BAND_MAX or any(w in t for w in BANNED_BAND) or any(c.isdigit() for c in t):
+        if not t or len(t) > BAND_MAX or any(w in t for w in BANNED_BAND) or not real_numbers_only(t):
             return None
     return {"top": top, "accent": acc}
 
