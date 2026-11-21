@@ -1,19 +1,19 @@
 {
  "slug": "ep-2026-11-25-guide",
- "seconds": 19.9,
+ "seconds": 32.8,
  "chapters": [],
+ "style": "toon",
  "credits": [
   {
-   "id": "pixabay-30704",
-   "credit": "Pixabay · iha31",
-   "page": "https://pixabay.com/videos/id-30704/",
-   "query": "laundry",
-   "lines": [
-    0,
-    1,
-    2,
-    3
-   ]
+   "id": "ai-toon-dryer-01-04",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
   }
- ]
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-21 BK Flow 클립으로 동전이 만화 '동전이 건조기 구경' (data/toon/2026-11-30.json). 새 방향, 결: 여운. 대본 json scenes 는 이전 실사판 기록."
 }
