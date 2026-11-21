@@ -50,7 +50,7 @@ jobs:
           # 암호화 확인: 평문 SQL 흔적이 없어야 함
           if zcat -f "out/5raksil-db-$d.sql.gz.gpg" 2>/dev/null | grep -q "CREATE TABLE"; then echo "::error::암호화 실패"; exit 1; fi
           ls -l out
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: d1-5raksil-db-encrypted
           path: out/*.gpg
