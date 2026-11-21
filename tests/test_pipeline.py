@@ -179,6 +179,15 @@ class SiteTest(unittest.TestCase):
             body = html.split("<body>", 1)[1]
             self.assertNotIn('class="adbar"', body)  # 홈 맨 위 띠는 없음 (2026-11-16)
             self.assertIn("수수료를 받습니다", body.split('id="picks"', 1)[1][:600])  # 상품 칸 바로 위 한 줄
+            # 상품 카드·상품 링크가 있는 글은 맨 위 [광고] 띠가 본문보다 먼저 (2026-11-21)
+            from pipeline import articles as A
+            for a in A.load():
+                g = (pathlib.Path(d) / "guide" / f"{a['slug']}.html").read_text(encoding="utf-8").split("<body>", 1)[1]
+                if A.has_affiliate(a):
+                    self.assertIn('class="adbar"', g, a["slug"])
+                    self.assertLess(g.index('class="adbar"'), g.index('class="article"'), a["slug"])
+                else:
+                    self.assertNotIn('class="adbar"', g, a["slug"])
 
 
 class CurateTest(unittest.TestCase):

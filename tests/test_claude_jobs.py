@@ -281,3 +281,22 @@ class MoodGateTest(unittest.TestCase):  # BK 2026-11-20 밤: 네 가지 결 + �
         self.assertIn("금화", C.MOOD_RULE)
         self.assertIn("중독성", C.MOOD_RULE)
         self.assertGreater(C.QUALITY_FLOOR, 0)
+
+
+class PolicyCheckTest(unittest.TestCase):
+    def test_article_gets_auto_disclosure(self):
+        seen = {}
+
+        def fake_ask(job, system, user, **kw):
+            seen["user"] = json.loads(user)
+            return {"ok": True, "problems": []}
+        with mock.patch.object(C, "ask", fake_ask), mock.patch.object(C, "notify", lambda t: True):
+            C.check(dt.date(2026, 11, 21))
+        keys = [k for k in seen["user"] if k.startswith("data/articles/")]
+        self.assertTrue(keys)
+        from pipeline import articles as A
+        art = json.loads((C.ROOT / keys[0]).read_text(encoding="utf-8"))
+        auto = [k for k in keys if "자동으로 붙는 표기" in k]
+        self.assertEqual(bool(auto), A.has_affiliate(art))
+        if auto:
+            self.assertIn("[광고]", seen["user"][auto[0]])

@@ -36,6 +36,11 @@ def load(data_dir: str = "data") -> list[dict]:
     return sorted(out, key=lambda a: a["date"], reverse=True)
 
 
+def has_affiliate(a: dict) -> bool:
+    """상품 카드나 본문 속 상품 페이지 링크(p/…)가 있으면 제휴 글 → 페이지 맨 위에 [광고] 띠를 붙인다."""
+    return bool(a.get("products") or a.get("naver")) or "](p/" in a.get("body", "")
+
+
 def _inline(t: str, root: str) -> str:
     t = html.escape(t)
     t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
@@ -99,10 +104,13 @@ def naver_box(picks: list[dict]) -> str:
             f'<p class="small">인증·A/S·빠른 배송이 중요한 물건은 국내 판매처를 권해요. 가격은 판매처에서 확인하세요.</p><ul>{li}</ul></section>')
 
 
+CARD_AD = "[광고] 아래 상품은 제휴 링크로 연결됩니다. 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다."
+
+
 def page_body(a: dict, cards: str, naver: str = "") -> str:
     e = html.escape
     d = dt.date.fromisoformat(a["date"])
-    ad = (f'<h2>삼촌이 고른 물건</h2><p class="ad">[광고] 아래 상품은 제휴 링크로 연결됩니다. 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다.</p>'
+    ad = (f'<h2>삼촌이 고른 물건</h2><p class="ad">{CARD_AD}</p>'
           f'<div class="grid">{cards}</div>') if cards else ""
     return (f'<article class="article"><p class="small"><a href="../guide.html">삼촌의 글</a></p><h1>{e(a["title"])}</h1>'
             f'<p class="meta">{d.year}년 {d.month}월 {d.day}일 · <a href="../about.html">돈 줍는 삼촌</a></p><p class="lede">{e(a["desc"])}</p>'
