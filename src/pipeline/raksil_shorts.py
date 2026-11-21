@@ -483,15 +483,18 @@ def panel(img, box, color, label: str, text: str):
     f = font(92)
     dr.text((x0 + 40 + r, cy + 4), label, font=f, fill=BG + (255,), anchor="mm")
     tx0 = x0 + 40 + 2 * r + 30
-    f, ls, size = fit(dr, text, x1 - tx0 - 40, y1 - y0 - 50, 110)
+    f, ls, size = fit(dr, text, x1 - tx0 - 40, y1 - y0 - 50, PANEL_TEXT)
     glow_text(img, ((tx0 + x1 - 30) / 2, cy), ls, f, size, color, glow=14)
 
 
 # 2026-11-20 1안: 몽글이가 두 선택지 사이에서 고민(첫 1초) → 3·2·1 → 반전 → 'B를 고른 나:' 반응 컷.
 # 몽글이·말풍선·글자는 쇼츠 오른쪽 버튼(x≥900)과 아래 제목 자리(y≥1540)를 피한다. 위는 제목 띠(BAND_H).
-PANEL_A, PANEL_B = (60, 370, W - 60, 640), (60, 720, W - 60, 990)
-VS_Y = 680
-MG_X, MG_FLOOR, MG_K = 400, 1530, 1.35
+# 2026-11-21: 11/20 편 계속 시청 15.8%(예전 45~64%) → 첫 0.5초에 질문이 크게 보이도록 칸을 키우고(띠 아래~995,
+# 오른쪽 버튼 자리 y≥1000 은 비움) 글자 시작 크기 130, 몽글이는 작게(1.35→0.85) 아래로.
+PANEL_A, PANEL_B = (40, 350, W - 40, 660), (40, 690, W - 40, 995)
+VS_Y = 675
+PANEL_TEXT = 130
+MG_X, MG_FLOOR, MG_K = 400, 1530, 0.85
 MG_TOP = MG_FLOOR - int(395 * MG_K)  # 몽글이 머리 꼭대기 근처
 REACT_D = 1.4  # 반응 컷 길이(초, BGM 이 있으면 박자에 맞춤)
 # 길이 상한 (11/20 긴 질문 편 18.9초 → 엔딩 빼고 약 10초): 질문 음성 3.4초·반전 음성 2.6초를 넘으면 빠르게 읽는다.
@@ -577,7 +580,7 @@ def react_layer(q: dict, side: str, k: float):
     from PIL import Image, ImageDraw
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     dr = ImageDraw.Draw(img)
-    dr.rectangle((0, BAND_H, W, MG_TOP - 10), fill=BG + (int(245 * min(1.0, k / 0.15)),))
+    dr.rectangle((0, BAND_H, W, min(MG_TOP - 10, 995)), fill=BG + (int(245 * min(1.0, k / 0.15)),))
     col = PINK if side == "a" else CYAN
     s = 150 if k > 0.08 else 170
     glow_text(img, (W / 2, 560), [f"{side.upper()}를 고른 나:"], font(s), s, WHITE, glow=16)
@@ -841,7 +844,7 @@ def _dim(img, box, a: int = 170):
 def _overlay(img, a: int = 235):
     from PIL import Image, ImageDraw
     ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(ov).rectangle((0, BAND_H, W, MG_TOP - 10), fill=BG + (a,))
+    ImageDraw.Draw(ov).rectangle((0, BAND_H, W, min(MG_TOP - 10, 995)), fill=BG + (a,))
     img.alpha_composite(ov)
 
 
@@ -851,7 +854,7 @@ def _bubble_at(img, x: float, y: float, text: str, k: float = 1.0):
 
 
 # --- 1) 몽글이 갈림길: 화면을 좌우로 갈라 몽글이가 이쪽저쪽 기웃 → 한쪽으로 뛰어감 → 그쪽에 불 ---
-HALF_A, HALF_B = (40, BAND_H + 30, W // 2 - 10, 990), (W // 2 + 10, BAND_H + 30, W - 40, 990)
+HALF_A, HALF_B = (30, BAND_H + 30, W // 2 - 8, 995), (W // 2 + 8, BAND_H + 30, W - 30, 995)  # 11/21 위아래로 키움
 SPLIT_DX = {"a": -150, "b": 230, "mid": 140}  # 몽글이 위치 (오른쪽 버튼 자리 x≥900 을 피함)
 
 
@@ -860,11 +863,15 @@ def split_card(q: dict, band: dict | None):
     if not draw_band(img, band):
         header(img)
     for side, box, col in (("a", HALF_A, PINK), ("b", HALF_B, CYAN)):
-        _box(img, box, col)
-        cx = (box[0] + box[2]) / 2
-        _label(img, cx, box[1] + 100, col, side.upper())
-        _text_in(img, (box[0] + 30, box[1] + 180, box[2] - 30, box[1] + 420), q[side], col, 92)
+        _split_side(img, side, box, col, q[side])
     return img
+
+
+def _split_side(img, side: str, box, col, text: str, compact: bool = False):
+    """갈림길 한쪽 칸. compact 면 질문을 칸 위쪽(~430)에만 써서 아래에 PICK·이유·투표 막대 자리를 남긴다."""
+    _box(img, box, col)
+    _label(img, (box[0] + box[2]) / 2, box[1] + 90, col, side.upper())
+    _text_in(img, (box[0] + 22, box[1] + 165, box[2] - 22, box[1] + 430 if compact else box[3] - 30), text, col, 120)
 
 
 def split_frame(t: float, starts: list[float], ctx: dict):
@@ -875,7 +882,7 @@ def split_frame(t: float, starts: list[float], ctx: dict):
     if sc == 0:  # 가운데서 좌우 두리번 + 땀
         look = int(lt / 0.45) % 2 == 1
         mg.draw(img, "shock" if lt < 0.8 else "neutral", dx=SPLIT_DX["mid"], rot=7 if look else -7, flip=look)
-        _bubble_at(img, MG_X + SPLIT_DX["mid"] - 120, MG_TOP + 70, "어느 쪽?", min(1.0, lt / 0.25))
+        _bubble_at(img, MG_X + SPLIT_DX["mid"] - 120, MG_TOP - 10, "어느 쪽?", min(1.0, lt / 0.25))
     elif sc == 1:  # A 쪽으로 살금 → 고개 젓고 → B 쪽으로 → 다시 가운데
         half = (starts[2] - starts[1]) / 2
         side = "a" if lt < half else "b"
@@ -884,14 +891,16 @@ def split_frame(t: float, starts: list[float], ctx: dict):
         _dim(img, HALF_B if side == "a" else HALF_A, 120)
         mg.draw(img, "neutral" if k < 1 else "shock", dx=dx, dy=-30 * abs(math.sin(lt * 14)), flip=side == "b",
                 rot=5 * math.sin(lt * 14))
-        _bubble_at(img, MG_X + dx - 60, MG_TOP + 70, f"{side.upper()}면...", min(1.0, k * 2))
+        _bubble_at(img, MG_X + dx - 60, MG_TOP - 10, f"{side.upper()}면...", min(1.0, k * 2))
     elif sc == 2:  # 결정: 고른 쪽에 불, 다른 쪽 어둡게 (실제 투표면 양쪽 세로 막대)
+        for side, box, col in (("a", HALF_A, PINK), ("b", HALF_B, CYAN)):
+            _split_side(img, side, box, col, q[side], compact=True)  # 11/21 칸이 커져 아래 글과 겹치지 않게 질문을 위로
         if res:
             kk = min(1.0, lt / 0.8)
             for side, box, col in (("a", HALF_A, PINK), ("b", HALF_B, CYAN)):
                 pct = res["p" + side]
                 from PIL import ImageDraw
-                h = int((box[3] - box[1] - 40) * pct / 100 * kk)
+                h = int((box[3] - box[1] - 470) * pct / 100 * kk)  # 질문 글자(위쪽 ~430) 아래에서만 차오른다
                 ImageDraw.Draw(img).rounded_rectangle((box[0] + 20, box[3] - 20 - h, box[2] - 20, box[3] - 20), radius=30,
                                                       fill=col + (110,))
                 glow_text(img, ((box[0] + box[2]) / 2, box[3] - 110), [f"{round(pct * kk)}%"], font(110), 110, YEL, glow=10)
@@ -967,7 +976,7 @@ def versus_frame(t: float, starts: list[float], ctx: dict):
     if sc == 0:
         _card(img, 1.0, None, 6 * math.sin(lt * 5))
         mg.draw(img, "happy", dx=-180, dy=-20 * abs(math.sin(lt * 4)), rot=4 * math.sin(lt * 4))
-        _bubble_at(img, MG_X - 30, MG_TOP + 110, "맞혀 봐!", min(1.0, lt / 0.25))
+        _bubble_at(img, MG_X - 30, MG_TOP + 20, "맞혀 봐!", min(1.0, lt / 0.25))
     elif sc == 1:  # 카드 위에 3·2·1 (덜덜)
         num = 3 - min(2, int(lt / step))
         _card(img, 1.0, None, 14 * math.sin(lt * 50), str(num))
@@ -1188,6 +1197,7 @@ GATE_FLOOR, GATE_MIN = 32, 6    # 4칸 × 10점 중 32점(평균 8), 한 칸이�
 GATE_TRIES, GATE_FRESH_AFTER = 8, 2
 # 최후: 다 미달이어도 최고안이 GATE_SOFT 점 이상·한 칸도 GATE_SOFT_MIN 미만이 없으면 그 안으로 올리고 알림. 그 아래면 그날만 쉼.
 GATE_SOFT, GATE_SOFT_MIN = 28, 5
+BIG_MIN_TEXT = 80                              # classic·split 은 칸이 커진 만큼 이보다 작으면 다른 형식으로
 MIN_TEXT = 56                                  # 선택지 글자가 이보다 작아지면 그 형식에는 질문이 너무 길다(구도 탈락)
 GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 10초짜리 밸런스게임 쇼츠(마스코트 몽글이) 한 편의 기획을 냉정하게 1~10점 채점한다.
 채널 기준(BK): 품질이 떨어지는 문구·영상·구도는 안 하느니 못하다. 한 편은 아래 결 중 적어도 하나가 강해야 하고, 중독성이 있어야 한다.
@@ -1299,12 +1309,13 @@ def text_size(text: str, w: int, h: int, start: int) -> int:
 
 def layout_ok(fmt: str, qs3: list[dict]) -> bool:
     """구도 검사: 그 형식의 칸에서 선택지 글자가 MIN_TEXT 이상으로 들어가는지."""
-    boxes = {"classic": (726, 220, 110), "split": (420, 240, 92), "result": (420, 315, 88), "quick": (420, 320, 86),
+    boxes = {"classic": (766, 260, PANEL_TEXT), "split": (458, 440, 120), "result": (420, 315, 88), "quick": (420, 320, 86),
              "versus": (620, 170, 84)}
     w, h, st = boxes[fmt]
+    least = BIG_MIN_TEXT if fmt in ("classic", "split") else MIN_TEXT  # 11/21 큰 칸 형식은 첫 화면 글자가 커야 의미가 있다
     for q in (qs3 if fmt == "quick" else qs3[:1]):
         for side in ("a", "b"):
-            if text_size(q[side], w, h, st) < MIN_TEXT:
+            if text_size(q[side], w, h, st) < least:
                 return False
     return True
 
