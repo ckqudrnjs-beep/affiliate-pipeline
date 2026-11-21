@@ -1,6 +1,6 @@
 name: music-channel
 
-# BEEKAY SONGS 노래 채널 (BK 2026-11-21): 드라이브 'BEEKAY SONGS 곡 넣는 곳' 의 새 Suno 곡 1개 →
+# BEEKAY SONGS 노래 채널 (BK 2026-11-21): 드라이브 'BEEKAY SONGS' 의 새 Suno 곡 1개 →
 # 커버 영상(전곡) + 후렴 쇼츠 40초 → 업로드. 코드 pipeline.music_channel, 설정 config/music_channel.json, 문서 docs/MUSIC_CHANNEL.md
 # 저장소 변수 MUSIC_YT_ENABLED=true 가 아니면 만들기만 하고 아티팩트로 남긴다. 멈추려면 config on=false.
 on:

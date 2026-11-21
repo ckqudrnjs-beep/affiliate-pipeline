@@ -2,7 +2,7 @@
   "_doc": "BEEKAY SONGS (구 Deep Work Lab) 노래 채널. docs/MUSIC_CHANNEL.md. visibility: private=비공개 업로드(BK 확인) / schedule=공개 예약",
   "on": true,
   "channel": "BEEKAY SONGS",
-  "inbox_folder": "BEEKAY SONGS 곡 넣는 곳",
+  "inbox_folder": "BEEKAY SONGS",
   "visibility": "private",
   "publish_hour": 19,
   "short_delay_days": 1,
