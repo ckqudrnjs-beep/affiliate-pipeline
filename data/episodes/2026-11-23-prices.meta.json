@@ -1,27 +1,19 @@
 {
  "slug": "ep-2026-11-23-prices",
- "seconds": 21.7,
+ "seconds": 31.4,
  "chapters": [],
+ "style": "toon",
  "credits": [
   {
-   "id": "pixabay-175",
-   "credit": "Pixabay · Republica",
-   "page": "https://pixabay.com/videos/id-175/",
-   "query": "gas-station",
-   "lines": [
-    0
-   ]
-  },
-  {
-   "id": "pixabay-12564",
-   "credit": "Pixabay · ARTXROOM",
-   "page": "https://pixabay.com/videos/id-12564/",
-   "query": "money-coins",
-   "lines": [
-    1,
-    2,
-    3
-   ]
+   "id": "ai-toon-gas-01-04",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
   }
- ]
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-21 BK Flow 클립으로 동전이 만화 '동전이의 첫 드라이브' (tools/toon_assemble.py, data/toon/2026-11-26.json). 새 방향, 결: 여운. 대본 json scenes 는 이전 실사판 기록."
 }

@@ -1,19 +1,19 @@
 {
  "slug": "ep-2026-11-24-skit-calc",
- "seconds": 20.6,
+ "seconds": 32.7,
  "chapters": [],
+ "style": "toon",
  "credits": [
   {
-   "id": "pixabay-119",
-   "credit": "Pixabay · Coverr-Free-Footage",
-   "page": "https://pixabay.com/videos/id-119/",
-   "query": "money-coins",
-   "lines": [
-    0,
-    1,
-    2,
-    3
-   ]
+   "id": "ai-toon-humid-01-04",
+   "credit": "AI 생성(Veo)",
+   "page": "",
+   "query": "toon",
+   "lines": [],
+   "ai": true,
+   "realistic": false
   }
- ]
+ ],
+ "ai_note": "영상은 AI(Veo)로 만든 만화예요.",
+ "note": "2026-11-21 BK Flow 클립으로 동전이 만화 '동전이 vs 구름' (data/toon/2026-11-28.json). 새 방향, 결: 뻔하지 않은 것. 대본 json scenes 는 이전 실사판 기록."
 }
