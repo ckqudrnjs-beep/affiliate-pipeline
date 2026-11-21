@@ -42,6 +42,39 @@ class WebnovelDataTest(unittest.TestCase):
         self.assertEqual(s["publishAt"], "2030-01-01T12:00:00Z")
 
 
+class WebnovelLongTest(unittest.TestCase):
+    W = "husband-regress"
+
+    def _log(self, upto, vis="schedule", date="2026-11-25"):
+        return {w.key(self.W, n): {"id": "x", "date": date, "visibility": vis} for n in range(1, upto + 1)}
+
+    def test_extras_exist_and_pass_policy(self):
+        ex = w.extras(self.W)
+        self.assertEqual(sorted(ex), [5, 10, 15])
+        for x in ex.values():
+            self.assertEqual(w.policy_problems(x), [], x["title"])
+
+    def test_next_long_waits_for_five_public_eps(self):
+        cfg = {"work": self.W, "visibility": "schedule"}
+        day = w.dt.date(2026, 11, 29)
+        self.assertIsNone(w.next_long(cfg, self._log(4), day))
+        self.assertEqual(w.next_long(cfg, self._log(5), day), 1)
+        self.assertIsNone(w.next_long(cfg, self._log(5, vis="private"), day))
+        self.assertIsNone(w.next_long(cfg, self._log(5, date="2026-12-01"), day))
+        log = self._log(10); log[w.long_key(self.W, 1)] = {"id": "y"}
+        self.assertEqual(w.next_long(cfg, log, day), 2)
+
+    def test_long_chapters_and_body(self):
+        seq, chap = w.long_cards(self.W, 1)
+        self.assertEqual(chap[0], ("시작", 0))
+        self.assertEqual(len(chap), 7)  # 시작 + 5화 + 번외
+        self.assertTrue(chap[-1][0].startswith("번외"))
+        body = w.long_body(w.season(self.W), self.W, 1, ["0:00 시작"], "schedule", None)
+        self.assertFalse(body["status"]["selfDeclaredMadeForKids"])
+        self.assertNotIn("#shorts", body["snippet"]["title"])
+        self.assertLessEqual(len(body["snippet"]["title"]), 100)
+
+
 @NEED_RENDER
 class WebnovelDrawTest(unittest.TestCase):
     def test_cards_draw(self):
@@ -51,6 +84,11 @@ class WebnovelDrawTest(unittest.TestCase):
             for c in e["cards"] + [w.end_card(se, e, pal)]:
                 im, _ = w.draw_card(c, pal)
                 self.assertEqual(im.size, (w.W, w.H))
+
+    def test_wide_card_draw(self):
+        se = w.season("husband-regress"); pal = w.palette(se)
+        im, _ = w.draw_card({"lines": [["그때 휴대폰이 울렸다.", "n"]], "motif": "phone_msg"}, pal, wide=True)
+        self.assertEqual(im.size, (w.LW, w.LH))
 
 
 if __name__ == "__main__":
