@@ -65,8 +65,25 @@ class T(unittest.TestCase):
         self.assertEqual(desc.count("/games/dodge"), 1)
         self.assertTrue(rg.title_of(g, "kling", "이 판 끝까지 봐").startswith("이 판 끝까지 봐 | 별똥별 피하기"))
 
-    def test_shipped_config_is_off(self):
-        self.assertFalse(rk.load().get("on"))
+    def test_off_clip_skipped(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = pathlib.Path(d)
+            c = cfg(r)
+            c["react_hook"][0]["off"] = True
+            self.assertEqual(rk.pick(MON, {}, G, {}, c, r)["ids"][0], "h2")
+
+    def test_shipped_clips_exist_and_bot_games(self):
+        """실제 설정의 클립 파일이 저장소에 있고, 게임은 자동 플레이 봇이 있는 게임만."""
+        import json
+        c = rk.load()
+        bots = set(json.loads(pathlib.Path("config/raksil_rec.json").read_text(encoding="utf-8"))) - {"_"}
+        rows = c.get("react_hook", []) + c.get("react_pay", []) + c.get("situ", [])
+        for row in rows:
+            self.assertTrue(pathlib.Path(row["file"]).exists(), row["file"])
+            self.assertGreater(float(row.get("t", 0)), 1.0)
+        for s in c.get("situ", []):
+            self.assertIn(s["game"], bots)
+        self.assertTrue(set(c.get("react_games", [])) <= bots)
 
 
 if __name__ == "__main__":

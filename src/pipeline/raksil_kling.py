@@ -53,7 +53,7 @@ def pick(day: dt.date, log: dict, games: list[dict], last_shown: dict[str, str],
     seed = day.toordinal()
 
     def fresh(rows):
-        return [c for c in rows if _ok(c, root) and c.get("id") not in used]
+        return [c for c in rows if _ok(c, root) and not c.get("off") and c.get("id") not in used]
 
     def react():
         hooks, pays = fresh(cfg.get("react_hook", [])), fresh(cfg.get("react_pay", []))

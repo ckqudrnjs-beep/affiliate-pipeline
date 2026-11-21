@@ -116,6 +116,7 @@ HOOKS = ["이게 설치 없이 된다고?", "폰에서 바로 되는 게임", "�
 # 11/21 BK 결정: 지시어로 숨기기('이 게임, 그냥 퍼즐이 아니에요') 채택, 숫자는 실제 기록 점수·시간만, 손실 회피·금기 경고는 안 씀.
 SKIP_START = 1.0  # 녹화 앞부분(시작 버튼·메뉴) 건너뜀
 MAX_PLAY = 13.0
+KLING_PLAY = 7.5  # Kling 형식: 훅 약 2초 + 실제 플레이 7.5초 + 결과 컷 약 2초 = 약 11초 (5락실 쇼츠 약 10초 규칙)
 
 
 def hook_of(g: dict, day: dt.date, score: float | None = None) -> str:
@@ -253,6 +254,29 @@ def game_band(g: dict, hook: str) -> dict:
     return {"top": hook, "accent": g["name"]}
 
 
+def still_tail(frames: list, thr: float = 1.5, keep: float = 0.4) -> int:
+    """끝에서부터 거의 안 움직이는 프레임(게임 오버로 멈춘 화면)을 찾아 그 앞 + keep 초까지의 개수. 움직임이 계속이면 전체."""
+    import numpy as np
+    from PIL import Image
+
+    def small(p):
+        with Image.open(p) as im:
+            return np.asarray(im.convert("L").resize((96, 96)), np.float32)
+    n = len(frames)
+    if n < FPS * 7:
+        return n
+    prev, last_move = small(frames[-1]), n
+    for i in range(n - 2, int(FPS * 6) - 1, -1):
+        cur = small(frames[i])
+        if float(np.abs(cur - prev).mean()) > thr:
+            last_move = i + 1
+            break
+        prev = cur
+    else:
+        return max(int(FPS * 6), n)
+    return min(n, max(int(FPS * 6), last_move + int(keep * FPS)))
+
+
 def frame_layer(g: dict, kind: str, band: dict | None = None):
     from PIL import ImageDraw
     img = rs.background(17)
@@ -319,8 +343,10 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     tr = bgm.pick("game", day)
     if tr:
         frames = frames[: max(int(FPS * 6), round(bgm.snap(len(frames) / FPS, tr, 1, "down") * FPS))]
+    if kl:  # 봇이 죽은 뒤 멈춘 화면(게임 오버)은 잘라 냄 — 리액션 컷이 바로 이어지게
+        frames = frames[: still_tail(frames)]
     if kl:  # Kling 컷이 앞뒤로 붙는 만큼 플레이는 짧게 (전체 약 13초 + 엔딩)
-        frames = frames[: int(FPS * max(6.0, MAX_PLAY - kl["hook"].get("t", 2.0) - kl["pay"].get("t", 2.0) + 3.0))]
+        frames = frames[: int(FPS * KLING_PLAY)]
     hk_d = float(kl["hook"].get("t", 2.0)) if kl else 0.0
     py_d = float(kl["pay"].get("t", 2.0)) if kl else 0.0
     play_d = len(frames) / FPS + hk_d + py_d  # 아래 소리·CTA 계산은 Kling 컷 포함 길이 기준
