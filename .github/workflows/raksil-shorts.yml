@@ -54,7 +54,7 @@ jobs:
           path: ~/.cache/supertonic3
           key: supertonic-3-v1
       - name: 검사
-        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range tests.test_raksil_games tests.test_raksil_meme
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range tests.test_raksil_games tests.test_raksil_meme tests.test_raksil_kling
       - name: 만들기 + 올리기
         env:
           RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
