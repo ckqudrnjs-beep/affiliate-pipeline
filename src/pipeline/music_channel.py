@@ -31,6 +31,7 @@ import urllib.parse
 import urllib.request
 
 KST = dt.timezone(dt.timedelta(hours=9))
+ROOT = pathlib.Path(".")
 CFG = pathlib.Path("config/music_channel.json")
 LOG = pathlib.Path("data/music/uploaded.json")
 WORK = pathlib.Path("media/music")
@@ -144,8 +145,8 @@ def genre_tag(bpm: float) -> str:
     return "BALLAD · 발라드" if 0 < bpm < 88 else "K-POP · IDOL"
 
 
-def description(title: str, lyrics: str, channel: str, short: bool = False) -> str:
-    parts = [f"{title} — {channel}", "", AI_NOTE]
+def description(title: str, lyrics: str, channel: str, short: bool = False, extra: str = "") -> str:
+    parts = [f"{title} — {channel}"] + (["", extra] if extra else []) + ["", AI_NOTE]
     if not short and lyrics:
         parts += ["", "🎤 가사 Lyrics", "", lyrics]
     parts += ["", "#KPOP #AImusic #Suno #신곡" + (" #shorts" if short else "")]
@@ -236,10 +237,14 @@ def download(token: str, fid: str, dest: pathlib.Path) -> pathlib.Path:
 
 
 # ---------- 만들기 ----------
-def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str = "") -> dict:
+def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str = "", ov: dict | None = None) -> dict:
+    """ov = config releases[드라이브 id]: title / cover(저장소 경로) / publish_at / short_publish_at / extra."""
     from .music_cover import extract_cover, video
+    ov = ov or {}
     tags = tags_of(audio)
-    title = title_of(tags, name or audio.name)
+    title = ov.get("title") or title_of(tags, name or audio.name)
+    if ov.get("cover") and (ROOT / ov["cover"]).exists():
+        cover = ROOT / ov["cover"]
     hit = banned_hit(title)
     if hit:
         raise ValueError(f"제목에 실제 가수·그룹 이름({hit})이 있어 올리지 않음: {title}")
@@ -259,7 +264,8 @@ def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str =
     lyr = lyrics_of(tags)
     return {"title": title, "tag": tag, "bpm": an["bpm"], "short_start": start, "video": full["video"],
             "short": sh["video"], "cover": str(cov), "lyrics": bool(lyr),
-            "desc": description(title, lyr, channel), "short_desc": description(title, lyr, channel, short=True)}
+            "desc": description(title, lyr, channel, extra=ov.get("_extra", "")),
+            "short_desc": description(title, lyr, channel, short=True)}
 
 
 def summary(text: str) -> None:
@@ -278,10 +284,19 @@ def notify(text: str) -> None:
         print("알림 실패:", e)
 
 
-def upload_pair(meta: dict, cfg: dict, now: dt.datetime) -> dict:
+def fixed_slots(ov: dict, now: dt.datetime) -> tuple[dt.datetime | None, dt.datetime | None] | None:
+    """config 에 날짜를 박아 둔 곡(예: 여성 버전 먼저, 남성 버전 3일 뒤). 이미 지난 시각이면 None → 기본 규칙."""
+    if not ov.get("publish_at"):
+        return None
+    a = dt.datetime.fromisoformat(ov["publish_at"])
+    b = dt.datetime.fromisoformat(ov["short_publish_at"]) if ov.get("short_publish_at") else a + dt.timedelta(days=1)
+    return (a, b) if a > now + dt.timedelta(minutes=30) else None
+
+
+def upload_pair(meta: dict, cfg: dict, now: dt.datetime, ov: dict | None = None) -> dict:
     from .youtube import access_token, upload
     token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
-    at_main, at_short = slots(now, cfg)
+    at_main, at_short = fixed_slots(ov or {}, now) or slots(now, cfg)
     channel = cfg.get("channel", "BEEKAY SONGS")
     r1 = upload(token, video_body(f"{meta['title']} | {channel}", meta["desc"], at_main), pathlib.Path(meta["video"]))
     r2 = upload(token, video_body(f"{meta['title']} 🎧 #shorts", meta["short_desc"], at_short, short=True),
@@ -318,15 +333,22 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
                     + (" — 폴더를 못 찾았거나 비어 있음)" if not files else ")")
                     + ("\n진단: " + " / ".join(DIAG) if DIAG else ""))
             return 0
+    rel = cfg.get("releases", {})
+    jobs.sort(key=lambda j: rel.get(j["id"], {}).get("publish_at", "9999"))
     done = 0
     for job in jobs[: int(cfg.get("max_per_run", 1))]:
+        ov = dict(rel.get(job["id"], {}))
+        pair = log.get(ov.get("pair_of", ""), {})
+        if ov.get("ask") and pair.get("video_id"):
+            ov["_extra"] = (f"🎧 {pair.get('title', '다른 버전')}: https://youtu.be/{pair['video_id']}\n"
+                            f"{ov['ask']}")
         try:
             if local:
                 audio, cover = pathlib.Path(job["path"]), None
             else:
                 audio = download(dtoken, job["id"], WORK / "in" / job["name"])
                 cover = download(dtoken, job["cover"]["id"], WORK / "in" / job["cover"]["name"]) if job.get("cover") else None
-            meta = make(audio, cover, cfg, job["name"])
+            meta = make(audio, cover, cfg, job["name"], ov)
         except (ValueError, subprocess.CalledProcessError) as e:
             summary(f"::error::{job['name']} 만들기 실패: {e}")
             notify(f"🎵 BEEKAY SONGS: '{job['name']}' 영상 만들기 실패 — {e}")
@@ -338,7 +360,7 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
                     f"— MUSIC_YT_ENABLED=true 가 아니라 안 올림\n```\n{meta['desc'][:1500]}\n```")
             continue
         try:
-            res = upload_pair(meta, cfg, now)
+            res = upload_pair(meta, cfg, now, ov)
         except KeyError as e:
             summary(f"::error::Secret 없음: {e.args[0]} (docs/MUSIC_CHANNEL.md)")
             return 1

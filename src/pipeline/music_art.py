@@ -341,3 +341,29 @@ def make_cover(title: str, version: str = "", art: Image.Image | None = None, st
     if out:
         im.save(out, quality=93)
     return im
+
+
+def art_cover(painting: Image.Image, title: str, version: str = "", out: pathlib.Path | None = None) -> Image.Image:
+    """AI 그림(정사각) 위에 제목만 얹는 커버. 그림이 주인공이라 글자는 아래쪽에 작게."""
+    im = painting.convert("RGB").resize((S, S), Image.LANCZOS).convert("RGBA")
+    grad = Image.new("L", (1, 256))
+    for y in range(256):
+        grad.putpixel((0, y), int(max(0, (y - 150) / 106) ** 1.5 * 200))
+    shade = Image.new("RGBA", (S, S), (10, 6, 24, 255))
+    shade.putalpha(grad.resize((S, S)))
+    im.alpha_composite(shade)
+    d = ImageDraw.Draw(im)
+    kind = "ko" if _has_ko(title) else "en_x"
+    f = _fit(d, title, kind, S - 260, 150, 60)
+    w, h, b = _text_size(d, title, f)
+    ty = S - 150 - h
+    _glow_text(im, ((S - w) // 2 - b[0], ty - b[1]), title, f, (255, 252, 255), (150, 110, 255), 18, 2)
+    d = ImageDraw.Draw(im)
+    t = "BEEKAY SONGS" + (f"  ·  {version.upper()}" if version else "")
+    fs = _font("en_m", 28)
+    tw = _text_size(d, t, fs, 7)[0]
+    _spaced(d, ((S - tw) // 2, S - 105), t, fs, (235, 228, 255), 7)
+    im = im.convert("RGB")
+    if out:
+        im.save(out, quality=93)
+    return im

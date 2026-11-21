@@ -4,9 +4,26 @@
   "channel": "BEEKAY SONGS",
   "inbox_folder": "BEEKAY SONGS",
   "inbox_folder_id": "1e12jFPlpBjJcrO6die7jyL5dtleDYfUG",
-  "visibility": "private",
+  "visibility": "schedule",
   "publish_hour": 19,
   "short_delay_days": 1,
   "short_length": 40,
-  "max_per_run": 1
+  "max_per_run": 2,
+  "_releases_doc": "드라이브 파일 id별 고정값. BK 11/21: 여성 버전 먼저 공개, 남성 버전은 3일 뒤 + 댓글 질문. 커버=Kling 그림(BK 확인).",
+  "releases": {
+    "1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW": {
+      "title": "다른 차원 끝 (Female ver.)",
+      "cover": "config/music/covers/다른차원끝-female.jpg",
+      "publish_at": "2026-11-22T19:00:00+09:00",
+      "short_publish_at": "2026-11-23T19:00:00+09:00"
+    },
+    "1BDs9czCgljX116WZEdQzTVG-1c0t2z8M": {
+      "title": "다른 차원 끝 (Male ver. Feat. Female)",
+      "cover": "config/music/covers/다른차원끝-male.jpg",
+      "publish_at": "2026-11-25T19:00:00+09:00",
+      "short_publish_at": "2026-11-26T19:00:00+09:00",
+      "pair_of": "1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW",
+      "ask": "여성 버전과 남성 버전, 어느 쪽이 더 좋아요? 댓글로 알려 주세요 💬"
+    }
+  }
 }
