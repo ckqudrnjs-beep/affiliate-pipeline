@@ -171,6 +171,19 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertEqual(r.recent_formats(3, log), ["quick", "split", "classic"])
         self.assertIsNone(r.comment_votes(dt.date(2026, 11, 22), QS[1], log))  # 3연속 편 댓글은 A/B 표로 안 셈
 
+    def test_tail_line_and_natural_dialogue(self):
+        # 11/21 편집장 지적: '대.' 어색, 중독성 장치 없음 → 자연스러운 대사 + 질문 맞춤 꼬리 한 줄
+        q = QS[1]
+        self.assertNotIn("대.", r.script(q, None)[0])
+        self.assertIn("아니면", r.script(q, None)[0])
+        p = r.clean_pick({"pick": "a", "why": "국물이 반이야", "tail": "라면 국물에 밥 만 사람?"})
+        self.assertEqual(p["tail"], "라면 국물에 밥 만 사람?")
+        self.assertEqual(r.fmt_script("split", q, None, p)[3], "라면 국물에 밥 만 사람?")
+        self.assertIn("꼬리 한 줄", r.brief_of("split", q, None, p, r.fmt_script("split", q, None, p)))
+        for bad in ("내일은 2탄: 일기 vs 탐구", "구독하면 알려줄게", "가" * 17, "댓글 안 쓰면 몽글이 울어"):
+            self.assertNotIn("tail", r.clean_pick({"pick": "a", "why": "x", "tail": bad}), bad)
+        self.assertEqual(r.fmt_script("split", q, None, {"pick": "a", "why": "x"})[3], "")  # 꼬리 없으면 원래대로
+
     def test_format_scripts(self):
         q = QS[1]
         pick = {"pick": "a", "why": "라면은 국물이 반이야"}

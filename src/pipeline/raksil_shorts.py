@@ -129,6 +129,16 @@ MONGLE_SYS = """너는 유튜브 쇼츠 '5락실 밸런스게임'의 마스코�
 오늘 질문 A/B 중 하나를 고르고, 피식 웃게 되는 엉뚱하지만 공감 가는 이유를 한 줄로 말한다.
 규칙: 이유는 공백 포함 20자 이하 한국어 반말, 숫자·통계·퍼센트 금지(몽글이 개인 의견일 뿐), 특정 사람·브랜드·게임 이름 금지,
 비하·혐오·선정·위험한 행동 금지, 이모지·해시태그 금지. 예) A "이불 밖은 위험하니까", B "브런치는 사진이 반이야"."""
+# 11/21 BK 알림(8번 다시 짜도 최고 21/40, 가장 약한 칸 = 중독성): 기획안 안에 중독성 장치가 없었다(대사 틀은 고정, 끝은 '댓글로 A? B?').
+# → 질문마다 맞춘 '꼬리 한 줄'(마지막 컷 글자 + 음성)을 몽글이 선택과 같이 짠다. 시리즈 예고처럼 지킬 수 없는 약속은 쓰지 않는다.
+TAIL_MAX = 16
+TAIL_CAP = 1.8  # 꼬리 한 줄 음성 최대 초 (넘으면 빠르게)
+TAIL_SYS = """
+
+[꼬리 한 줄 tail] 마지막 컷('너는 어느 쪽?' 아래)에 크게 뜨고 몽글이가 읽는 한 줄. 공백 포함 16자 이하 반말.
+이 질문을 고른 사람만 아는 구체적인 장면·고백을 꺼내 댓글로 자기 얘기를 쓰고 싶게 한다(예: 일기 질문 → '날씨 전부 맑음이었던 사람?',
+늦잠 질문 → '알람 다섯 번 끈 사람 손'). 몽글이 이유의 농담을 한 번 더 받아쳐도 좋다(반복 개그).
+금지: 구독·좋아요·'댓글 안 쓰면' 같은 협박·보상 약속, '내일 2탄'처럼 지킬 수 없는 예고, 숫자 통계·퍼센트."""
 
 
 BAND_SYS = """\n\n[제목 띠] 화면 맨 위 검은 띠에 들어갈 두 줄 제목 후보 3개도 낸다(BK 11/20, 5락실 분야 잘 된 쇼츠 패턴).
@@ -176,9 +186,9 @@ def mongle_plan(q: dict, feedback: str = "") -> tuple[dict | None, dict | None]:
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
         if feedback:  # 품질 게이트에서 떨어진 이유 → 다시 짜기 (BK 11/20 '안 하느니 못해')
             rules += "[편집장 지적 — 이번엔 이것을 고쳐서]\n" + feedback + "\n\n"
-        r = cj.ask("raksil", MONGLE_SYS + BAND_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
-                   effort="low", max_tokens=700, need=0.03,
-                   schema=cj.obj({"pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "bands": bands}))
+        r = cj.ask("raksil", MONGLE_SYS + TAIL_SYS + BAND_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
+                   effort="low", max_tokens=800, need=0.03,
+                   schema=cj.obj({"pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "tail": cj.S, "bands": bands}))
     except Exception as e:  # 예산·네트워크·거절 → 반전 없이 '정답은 없다'
         print(f"몽글이의 선택 실패: {e}", file=sys.stderr)
         return None, None
@@ -196,7 +206,19 @@ def clean_pick(r) -> dict | None:
     why = " ".join(str(r.get("why", "")).split()).strip(" .!")
     if not why or len(why) > WHY_MAX or any(w in why for w in BANNED_WHY):
         return None
-    return {"pick": r["pick"], "why": why}
+    out = {"pick": r["pick"], "why": why}
+    tail = clean_tail(r.get("tail"))
+    if tail:
+        out["tail"] = tail
+    return out
+
+
+def clean_tail(t) -> str:
+    """꼬리 한 줄 검사 (TAIL_SYS). 규칙에 안 맞으면 빈 문자열 → 마지막 컷은 원래대로 '댓글로 A? B?'."""
+    t = " ".join(str(t or "").split()).strip(" .")
+    if not t or len(t) > TAIL_MAX or any(w in t for w in BANNED_WHY + ("2탄", "다음 편", "내일은", "안 쓰면", "안 달면")):
+        return ""
+    return t
 
 
 def script(q: dict, res: dict | None, pick: dict | None = None) -> list[str]:
@@ -215,7 +237,7 @@ def script(q: dict, res: dict | None, pick: dict | None = None) -> list[str]:
     if n > LONG_Q:  # 아주 긴 질문은 화면 글자에 맡기고 짧게 (다 읽으면 5초가 넘음)
         first = "에이야, 비야? 3초 안에 골라!"
     else:
-        first = f"{q['a']}. 대. {q['b']}." + ("" if n > 24 else " 너라면?")
+        first = f"{q['a']}? 아니면 {q['b']}?" + ("" if n > 24 else " 너라면?")  # 11/21 편집장: '대.' 가 어색 → 자연스러운 말
     return [first, "", mid]
 
 
@@ -795,8 +817,10 @@ def yesterday_entry(yday: dt.date, log: pathlib.Path | None = None) -> dict | No
 def fmt_script(fmt: str, q: dict, res: dict | None, pick: dict | None, prev: dict | None = None) -> list[str]:
     """형식별 장면 대사 (빈 문자열 = 대사 없음). classic 은 script() 그대로."""
     say = {"a": "에이", "b": "비"}
-    if fmt == "classic" or fmt == "split":
+    if fmt == "classic":
         return script(q, res, pick) + [""]
+    if fmt == "split":  # 마지막 컷 '너는 어느 쪽?' + 꼬리 한 줄(있으면 몽글이가 읽는다)
+        return script(q, res, pick) + [(pick or {}).get("tail", "") if not res else ""]
     if fmt == "versus":
         return ["몽글이는 벌써 골랐어. 너도 골라!", "", f"몽글이는 {say[pick['pick']]}! {pick['why']}.", ""]
     if fmt == "result":
@@ -806,7 +830,7 @@ def fmt_script(fmt: str, q: dict, res: dict | None, pick: dict | None, prev: dic
         else:
             first = f"어제 몽글이는 {say[prev['pick']['pick']]}! 너희는?"
         n = len(q["a"]) + len(q["b"])
-        third = "그럼 오늘은? 댓글로 골라 줘!" if n > LONG_Q else f"오늘은? {q['a']}. 대. {q['b']}."
+        third = "그럼 오늘은? 댓글로 골라 줘!" if n > LONG_Q else f"오늘은? {q['a']}? 아니면 {q['b']}?"
         return [first, "", third, ""]
     if fmt == "quick":
         return ["밸런스게임 3연속! 바로 골라!", "", "", "", ""]
@@ -924,7 +948,11 @@ def split_frame(t: float, starts: list[float], ctx: dict):
     else:  # 너는?
         _overlay(img, int(235 * min(1.0, lt / 0.15)))
         glow_text(img, (W / 2, 560), ["너는", "어느 쪽?"], font(150), 150, WHITE, glow=16)
-        glow_text(img, (W / 2, 880), ["댓글로 A? B?"], font(96), 96, CYAN, glow=12)
+        tail = (pick or {}).get("tail", "") if not res else ""
+        if tail:  # 꼬리 한 줄 (11/21): 질문에 맞춘 댓글 부르는 한 줄
+            _text_in(img, (90, 790, W - 90, 1010), tail, CYAN, 96, 12)
+        else:
+            glow_text(img, (W / 2, 880), ["댓글로 A? B?"], font(96), 96, CYAN, glow=12)
         mg.draw(img, "happy", dx=SPLIT_DX["mid"], dy=-90 * abs(math.sin(lt * 7)), rot=8 * math.sin(lt * 7),
                 flip=int(lt * 3.5) % 2 == 1)
     return img
@@ -1150,7 +1178,7 @@ def fmt_durations(fmt: str, clips: list, tr: dict | None) -> tuple[list[float], 
     sn = (lambda x: bgm.snap(x, tr, 1, "up")) if tr else (lambda x: x)
     v = [len(c) / SR for c in clips]
     if fmt in ("classic", "split", "versus"):
-        d = [max(2.6, v[0] + 0.4), 3 * step, max(2.8, v[2] + 0.5), REACT_D]
+        d = [max(2.6, v[0] + 0.4), 3 * step, max(2.8, v[2] + 0.5), max(REACT_D, v[3] + 0.4 if len(v) > 3 else 0)]
         return [sn(d[0]), d[1], sn(d[2]), sn(d[3])], step
     if fmt == "result":
         d = [max(2.6, v[0] + 0.4), 0.5, max(2.6, v[2] + 0.4), 1.6]
@@ -1208,7 +1236,11 @@ GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 
 - addictive(중독성): 댓글을 달고 싶고, 다음 편·다시 보기를 부르는 장치(시리즈·반복 개그·내일 발표·루프)가 산다.
 - copy(문구): 제목 띠 두 줄·몽글이 대사가 가볍지 않고 자연스러운 한국어. 낚시·가짜 통계·말장난 남발·막연한 말이면 3점 이하.
 - layout(구도): 이 형식의 화면에 질문 길이·내용이 어울리고 첫 1초에 다 읽힌다.
-note 에는 가장 약한 점을 고치는 구체적인 지시 한두 문장(띠·이유를 어떻게 바꿀지)."""
+점수 눈금(모든 칸 같은 기준, 11/21 — 눈금이 없어 매번 16~23점에 몰리고 지적이 회차마다 뒤집혔다):
+3 이하 = 올리면 채널에 손해(어색·낚시·틀린 말), 5 = 흠은 없지만 밋밋, 7 = 이 채널 평균보다 볼 만함,
+8 = 스크롤을 멈추고 끝까지 보게 되는 수준(채널 통과선), 10 = 같은 분야 상위 쇼츠급. 10초 길이·고정 엔딩 같은 형식 자체로는 깎지 않는다.
+기획안에서 고칠 수 있는 것은 질문(A·B)·몽글이 이유·꼬리 한 줄·제목 띠뿐이다(화면 틀·공통 엔딩은 고정). 시리즈 예고 같은 지킬 수 없는 약속은 감점.
+note 에는 가장 약한 점을 고치는 구체적인 지시 한두 문장(질문·이유·꼬리 한 줄·띠 중 무엇을 어떻게 바꿀지)."""
 GATE_SCHEMA_PROPS = ("fresh", "insight", "afterglow", "joy", "addictive", "copy", "layout")
 
 
@@ -1262,7 +1294,8 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> tuple[dict, d
         from . import claude_jobs as cj
         mode = ("[새 기획] 지금 소재로는 더 고쳐도 안 된다. 소재를 완전히 바꾼 새 밸런스 질문을 만든다. 아래 지난 시도들과 소재·말투가 겹치면 안 된다."
                 if fresh else "[고치기] 같은 소재는 살리되 편집장 지적대로 질문(조건·상황을 붙여 고민되게)·몽글이 이유·띠를 고친다.")
-        past = "\n".join(f"- {h['a']} vs {h['b']} / 띠 '{h.get('band', '')}' / 이유 '{h.get('why', '')}' → {h['score']}/40, 지적: {h['note']}"
+        past = "\n".join(f"- {h['a']} vs {h['b']} / 띠 '{h.get('band', '')}' / 이유 '{h.get('why', '')}' / 꼬리 '{h.get('tail', '')}'"
+                         f" → {h['score']}/40, 지적: {h['note']}"
                          for h in history[-5:])
         recent = recent_bands()
         user = (f"{mode}\n\n지금 기획: A '{q['a']}' vs B '{q['b']}'\n편집장 점수: "
@@ -1271,8 +1304,9 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> tuple[dict, d
                 + (f"직전 3편 제목 띠(같은 말·같은 틀 금지): {' / '.join(recent)}\n" if recent else "")
                 + mongle_memory())
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
-        r = cj.ask("raksil", REPLAN_SYS + BAND_SYS, user.strip(), model=cj.SONNET, effort="medium", max_tokens=1500, need=0.03,
-                   schema=cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "bands": bands}))
+        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.SONNET, effort="medium", max_tokens=1600,
+                   need=0.03, schema=cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
+                                             "tail": cj.S, "bands": bands}))
     except Exception as e:
         print(f"기획안 다시 짜기 실패: {e}", file=sys.stderr)
         return None
@@ -1293,7 +1327,7 @@ def judge(kind: str, brief: str) -> dict | None:
         from . import claude_jobs as cj
         props = {k: cj.I for k in GATE_SCHEMA_PROPS}
         props["note"] = cj.S
-        r = cj.ask("raksil", GATE_SYS, f"[{kind}]\n{brief}", model=cj.SONNET, effort="low", max_tokens=600, need=0.02,
+        r = cj.ask("raksil", GATE_SYS, f"[{kind}]\n{brief}", model=cj.SONNET, effort="medium", max_tokens=900, need=0.02,
                    schema=cj.obj(props))
     except Exception as e:
         print(f"품질 채점 실패(코드 검사만): {e}", file=sys.stderr)
@@ -1332,7 +1366,16 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
         out.append(f"질문{i + 1 if fmt == 'quick' else ''}: A '{x['a']}' vs B '{x['b']}'")
     if pick:
         out.append(f"몽글이의 선택: {pick['pick'].upper()} — 이유 '{pick['why']}'")
-    out.append("대사: " + " / ".join(x for x in lines if x))
+    if fmt == "split":
+        out.append(f"꼬리 한 줄(마지막 컷 글자+음성): '{(pick or {}).get('tail', '')}'" if (pick or {}).get("tail")
+                   else "꼬리 한 줄: 없음(마지막 컷은 '댓글로 A? B?')")
+    # 음성용 '에이'·'비' 는 화면 글자로는 A·B (11/21 채점에서 '비!'를 오타로 감점)
+    shown = [x.replace("는 에이!", "는 A!").replace("는 비!", "는 B!").replace("가 에이!", "가 A!").replace("가 비!", "가 B!") for x in lines]
+    out.append("대사(화면 자막 기준): " + " / ".join(x for x in shown if x))
+    if fmt == "quick" and qs3 and len(qs3) > 1:
+        out.append("질문2·3: 그날 사이트 질문으로 고정(이번 기획에서 못 바꿈) — 감점·지적하지 말 것")
+    out.append("고정 장치(채점·지적 대상 아님): 형식 틀 대사('바로 골라!', '너라면?', '너는 어느 쪽?' 등), "
+               "공통 엔딩(몽글이 손 흔들기, '매일 새 게임과 새 질문'), 설명란 '댓글로 A / B 남기면 다음 결과편에 같이 센다'(실제로 셈)")
     return "\n".join(out)
 
 
@@ -1362,8 +1405,10 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     # 기획 → 채점 → 미달이면 편집장 지적대로 기획안(질문까지)을 고쳐 다시, 같은 소재가 연속 미달이면 새 소재로. 채점 최대 GATE_TRIES 번.
     # 끝까지 미달이면 최고안이 GATE_SOFT 이상일 때 그 안으로, 그 아래면 그날만 쉰다. 키가 없거나 채점이 안 되면 구도(코드) 검사만.
     tries, best, plan, hist, streak = 0, None, None, [], 0
-    pool = [] if extra else [x for x in day_qs if x["id"] != q["id"]]  # 다시 짜기가 안 될 때(API 실패) 쓸 그날의 다른 질문
+    # 다시 짜기가 안 될 때(API 실패) 쓸 그날의 다른 질문. 흔한 질문(COMMON_Q)은 어차피 '뻔함'으로 떨어지니 뺀다 (11/21 피자 끝 빵 2번 낭비)
+    pool = [] if extra else [x for x in day_qs if x["id"] != q["id"] and not any(w in x["a"] + x["b"] for w in COMMON_Q)]
     qq = q
+    no_quick = False  # 3연속은 다시 짜기가 질문1만 바꿀 수 있어(질문2·3·틀 대사는 그날 고정) 한 번 미달이면 다른 형식으로 (11/22 8번 21점)
     pick, band = mongle_plan(qq)
     for _ in range(GATE_TRIES * 2):  # 구도 탈락(채점 없이 다시 짜기)까지 포함한 안전 상한
         if tries >= GATE_TRIES:
@@ -1372,7 +1417,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         pick = None if res else pick
         band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
         # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건(+구도) 안 되면 다음, 직전 3편 형식은 건너뜀
-        ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
+        ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3 and not no_quick,
               "result": bool(yq and (res or prev))}
         ok = {f: v and layout_ok(f, today3 if f == "quick" else [qq]) for f, v in ok.items()}
         sc = None
@@ -1394,11 +1439,12 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
             if passed:
                 plan = cand + (sc,)
                 break
+            no_quick = no_quick or fmt == "quick"
         else:  # 어느 형식 칸에도 글자가 안 들어감 → 짧게 다시 짜기
             total = 0
             sc = {"layout": 1, "note": "선택지가 길어 화면 칸에 안 들어간다. 선택지를 각 10자 안팎으로 짧고 또렷하게."}
         hist.append({"a": qq["a"], "b": qq["b"], "band": f"{(band or {}).get('top', '')} / {(band or {}).get('accent', '')}",
-                     "why": (pick or {}).get("why", ""), "score": total, "note": str(sc.get("note", ""))[:300]})
+                     "why": (pick or {}).get("why", ""), "tail": (pick or {}).get("tail", ""), "score": total, "note": str(sc.get("note", ""))[:300]})
         streak += 1
         fresh = streak >= GATE_FRESH_AFTER
         nxt = replan(qq, sc, hist, fresh)
@@ -1424,7 +1470,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         return meta
     q, today3, pick, band, fmt, lines = plan[:6]
     gate = plan[6] if len(plan) > 6 else None
-    caps = {"classic": [VOICE_CAP[0], 0, VOICE_CAP[1]], "split": [VOICE_CAP[0], 0, VOICE_CAP[1], 0],
+    caps = {"classic": [VOICE_CAP[0], 0, VOICE_CAP[1]], "split": [VOICE_CAP[0], 0, VOICE_CAP[1], TAIL_CAP],
             "versus": [2.4, 0, VOICE_CAP[1], 0], "result": [2.6, 0, VOICE_CAP[0], 0], "quick": [1.6, 0, 0, 0, 0]}[fmt]
     clips, voiced = tts(lines, caps=caps, speed=1.15)
 
