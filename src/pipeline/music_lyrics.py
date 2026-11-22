@@ -64,10 +64,16 @@ def transcribe(audio: pathlib.Path, start: float, length: float, model: str = "s
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", str(start), "-t", str(length), "-i", str(audio),
                         "-ac", "1", "-ar", "16000", str(wav)], check=True)
         try:
+            import numpy as np
+            raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(wav), "-f", "f32le", "-ac", "1", "-ar", "16000", "-"],
+                                 check=True, capture_output=True).stdout
+            pcm = np.frombuffer(raw, dtype=np.float32)  # PyAV 버전 차이(open metadata_errors) 피하려고 직접 디코딩
             m = WhisperModel(model, device="cpu", compute_type="int8")
-            segs, _ = m.transcribe(str(wav), language="ko", vad_filter=False, beam_size=5,
+            segs, _ = m.transcribe(pcm, language="ko", vad_filter=False, beam_size=5,
                                    condition_on_previous_text=False)
-            return [(s.start, s.end, s.text) for s in segs]
+            out = [(s.start, s.end, s.text) for s in segs]
+            print(f"받아쓰기 {len(out)}구간:", " / ".join(t.strip() for _, _, t in out)[:300])
+            return out
         except Exception as e:  # noqa: BLE001 모델 다운로드 실패 등은 자막 없이 진행
             print("가사 받아쓰기 실패:", e)
             return []
