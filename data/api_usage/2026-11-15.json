@@ -1265,5 +1265,15 @@
   "cache": 0,
   "cache_w": 0,
   "usd": 0.0056
+ },
+ {
+  "date": "2026-11-22",
+  "job": "check",
+  "model": "claude-haiku-5-5",
+  "in": 5989,
+  "out": 933,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0011
  }
 ]
