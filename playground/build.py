@@ -146,6 +146,7 @@ h2 small{font-family:-apple-system,"Noto Sans KR",sans-serif;font-size:14px;font
 .ad{margin:30px 0;text-align:center}.ad>small{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
 .stat{background:#0a0518;border:2px dashed var(--line);border-radius:14px;padding:12px 14px;margin:14px 0;font-size:15px}.stat small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 .next{display:flex;justify-content:flex-end;margin:6px 0 0}
+.ytbox{border:2px dashed var(--line);border-radius:14px;padding:12px 14px;margin:14px 0;font-size:15px}.ytbox a{font-weight:700}
 /* in-game */
 input.ans{font:inherit;font-size:18px;width:100%;padding:12px;border-radius:12px;border:2px solid var(--b);background:#0a0518;color:var(--ink);box-shadow:inset 0 0 10px #22d3ee33}
 input.ans:focus{outline:none;box-shadow:0 0 0 3px #22d3ee55}
@@ -1266,6 +1267,7 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
         head += '<script type="application/ld+json">' + json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + "</script>"
     ad = ad_slot(cfg) if path not in NO_ADS_PATHS else ""
     body = body.replace("<!--AD-->", ad)
+    yt_foot = f'<a href="{esc(yt_url(cfg))}" target="_blank" rel="noopener">유튜브</a>' if yt_url(cfg) else ""
     if 'class="ad" data-m=' in body:
         script += ADFIT_JS
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">{verify}<meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1275,8 +1277,21 @@ def page(cfg, *, path, title, desc, body, script="", noindex=False, jsonld=None,
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Press+Start+2P&display=swap"><style>{CSS}{GUIDE_CSS}{BONUS_CSS}{PROFILE_CSS}{ADMIN_CSS if path == 'admin' else ''}{BOARD_CSS if path in ('board', 'admin') else ''}</style>{head}</head><body>
 <header><div class="wrap"><a class="logo" href="/"><span>5</span>락실</a><nav><a href="/games">게임</a><a href="/guide">공략</a><a href="/archive" aria-label="밸런스게임"><span class="rk-i">⚖️</span><span class="rk-t">밸런스<span class="hs">게임</span></span></a><a href="/rank" aria-label="순위"><span class="rk-i">🏆</span><span class="rk-t">순위</span></a><a class="me" href="/profile" aria-label="내 프로필"><i>👤</i><b>프로필 만들기</b></a><a class="att" href="/bonus" aria-label="출석체크·코인 상점, 보유 코인"><em>출석·상점</em>🪙<b>0</b></a></nav></div></header>
 <main class="wrap">{body}</main>
-<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
+<footer><div class="wrap"><p class="gameover">GAME OVER? CONTINUE ▶</p><a href="/about">소개</a><a href="/board">게시판</a><a href="/contact">문의</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a>{yt_foot}<p>투표는 익명입니다. 이름·로그인 없이 참여하며, 개인을 알아볼 수 있는 정보는 저장하지 않습니다.</p></div></footer>
 <script>{SHARE_JS}{BONUS_JS}{PROFILE_JS}{script}</script><script>var VH={json.dumps(urlparse(cfg["baseUrl"]).hostname)};{VISIT_JS}</script>{kakao}</body></html>"""
+
+
+def yt_url(cfg: dict) -> str:
+    """유튜브 채널 구독 확인 창 주소 (2026-11-22 BK '구독 좋아요 올릴 방안'). config 에 없으면 빈 문자열 → 링크 안 붙임."""
+    u = (cfg.get("youtubeUrl") or "").strip()
+    return u + "?sub_confirmation=1" if u.startswith("https://www.youtube.com/") else ""
+
+
+def yt_box(cfg: dict) -> str:
+    """질문 페이지 투표 아래 한 줄: 몽글이 쇼츠로 이어 주기."""
+    u = yt_url(cfg)
+    return (f'<p class="ytbox">📺 매일 오후 5시, 유튜브 쇼츠로도 새 밸런스게임이 올라와요. '
+            f'<a href="{esc(u)}" target="_blank" rel="noopener">5락실 유튜브 보기 ▶</a></p>') if u else ""
 
 
 def qcard(q, n=None, link=True):
@@ -1335,7 +1350,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           f"<div class=\"sec\" id=\"games\"><h2>🕹️ 오늘의 기계</h2><span class=\"tag\">SELECT GAME</span></div>{trial}{grid}"
           "<!--AD-->"
           + (f"<div class=\"sec\" id=\"guides\"><h2>📖 공략·가이드</h2><span class=\"tag\">GUIDE</span></div>{guide_cards(guides[:4], games_by)}<p><a href=\"/guide\">공략 전체 보기 →</a></p>" if guides else "") +
-          f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}"
+          f"<div class=\"sec\" id=\"vs\"><h2>⚖️ 오늘의 밸런스게임 <small class=\"muted\">{d.month}월 {d.day}일</small></h2><span class=\"tag\">VS</span></div>{cards}{yt_box(cfg)}"
           f"<p><a href=\"/archive\">지난 밸런스게임 전체 보기 →</a></p>", VOTE_JS,
           jsonld=[{"@context": "https://schema.org", "@type": "WebSite", "name": cfg["siteName"], "alternateName": "오락실", "url": cfg["baseUrl"].rstrip("/") + "/"}])
 
@@ -1347,7 +1362,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         others = "".join(f'<li><a href="/q/{x["id"]}">{esc(x["a"])} vs {esc(x["b"])}</a></li>' for x in qs if x["id"] != q["id"])
         others = "<ul class=\"list\">" + "".join(others.split("</li>")[:6]) + "</ul>" if others else ""
         write(f"q/{q['id']}", title, desc,
-              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}{st}"
+              f"<h1>{esc(q['a'])} vs {esc(q['b'])}</h1><p class=\"lead\">{q['date']} 밸런스게임</p>{qcard(q, link=False)}{st}{yt_box(cfg)}"
               f"<p class=\"next\"><a class=\"btn\" href=\"/q/{nxt['id']}\">다음 밸런스게임 ▶</a></p><!--AD--><h2>다른 질문</h2>{others}<h2>오락실 게임</h2>{grid}", VOTE_JS,
               jsonld=[crumbs(cfg, [("밸런스게임", "archive"), (f"{q['a']} vs {q['b']}", f"q/{q['id']}")])],
               og=f"og/q/{q['id']}.png" if (HERE / "static" / "og" / "q" / f"{q['id']}.png").exists() else None,

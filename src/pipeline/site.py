@@ -74,6 +74,15 @@ def low_label(p: dict) -> str:
 
 
 TELEGRAM_URL = "https://t.me/don3chon_deal"
+# 2026-11-22 BK '구독 좋아요 올릴 방안': 사이트에서 유튜브로 가는 길이 없었다 → 글 끝 한 줄 + 바닥글 링크.
+# ?sub_confirmation=1 은 유튜브 공식 '구독 확인 창' 주소 (누르면 구독 여부를 이용자가 직접 고름).
+YOUTUBE_URL = "https://www.youtube.com/@don3chon?sub_confirmation=1"
+
+
+def yt_box() -> str:
+    """글 끝 유튜브 한 줄. 광고 영역·주소는 건드리지 않는 일반 링크."""
+    return (f'<aside class="ytbox"><p><b>동전이 만화로도 봐요</b> · 강아지 동전이가 우리 집 살림을 뒤집어 놓는 짧은 만화, '
+            f'이틀에 한 편 저녁 7시에 올라와요.</p><a class="btn" href="{YOUTUBE_URL}" target="_blank" rel="noopener">유튜브에서 보기</a></aside>')
 
 
 def tg_box() -> str:
@@ -193,7 +202,8 @@ main.wrap{padding-block:8px 80px}
 /* 쿠팡 가이드(공지 160): 상단 표시는 본문보다 크거나 눈에 띄는 색. 본문 16px과 같은 크기 + 초록 강조 */
 .adbar{font-size:16px;font-weight:600;color:var(--green);background:var(--greenbg);border-bottom:1px solid var(--line);line-height:1.6}
 .adbar .wrap{padding-block:8px}
-.tgbox{border:1px solid var(--line);background:var(--greenbg);padding:16px 18px;margin:32px 0}.tgbox p{margin:0 0 12px}.tgbox .small{margin:12px 0 0;color:var(--muted)}
+.tgbox{border:1px solid var(--line);background:var(--greenbg);padding:16px 18px;margin:32px 0}
+.ytbox{border:1px solid var(--line);padding:14px 18px;margin:0 0 32px}.ytbox p{margin:0 0 10px}.tgbox p{margin:0 0 12px}.tgbox .small{margin:12px 0 0;color:var(--muted)}
 header.top{border-bottom:1px solid var(--line);background:var(--bg)}
 header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px}
 .logo{font:600 22px/1 var(--display);color:var(--ink);text-decoration:none;letter-spacing:-.02em}
@@ -380,7 +390,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
 <nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}shopping.html">장보기 리스트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
-<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>{foot_note}</div></footer>
+<footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="{YOUTUBE_URL}" target="_blank" rel="noopener">유튜브</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>{foot_note}</div></footer>
 <script>{VIDEO_JS};{VISIT_JS}</script>
 </body></html>"""
 
@@ -864,7 +874,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
         others = same + [x for x in arts if x is not a and x not in same]
         more += link_list("같이 보면 좋은 글", [(f"{x['slug']}.html", x["title"], x["desc"]) for x in others[:3]]
                           + [(f"../q/{q['slug']}.html", q["h1"], q["title"]) for q in qs if cl and Q.cluster(q) == cl][:2])
-        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + tg_box() + more, root="../",
+        (o / "guide" / f"{a['slug']}.html").write_text(page(f"{a['title']} | {BRAND}", a["desc"], A.page_body(a, cards, nv) + tg_box() + more + yt_box(), root="../",
             path=f"guide/{a['slug']}.html", ld=A.ld(a, BASE), og=S.og_path("guide", a["slug"]),
             crumbs=[("삼촌의 글", "guide.html"), (a["title"], f"guide/{a['slug']}.html")], affiliate=A.has_affiliate(a)), encoding="utf-8")
     reps = R.load_all()

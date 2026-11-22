@@ -8,7 +8,7 @@
 - 글자는 5락실 쇼츠와 같은 폰트(Black Han Sans). 하트·재생 모양은 글자가 아니라 도형으로 그려 깨질 일이 없다.
 - 이미 만든 mp4 뒤에 이어 붙인다(append). 몽글이 색은 날짜마다 바뀐다.
 
-실행(미리보기): PYTHONPATH=src python -m pipeline.raksil_ending [YYYY-MM-DD]  → media/raksil/ending-preview.mp4
+실행(미리보기): PYTHONPATH=src python -m pipeline.raksil_ending [--balance] [YYYY-MM-DD]  → media/raksil/ending-preview.mp4
 """
 from __future__ import annotations
 
@@ -27,6 +27,9 @@ LIKE_Y, SUB_Y = 615, 805
 BTN_X0, BTN_X1 = 150, 800
 MONGLE_Y = 1420  # 몽글이 발 위치
 REASON = "매일 새 게임과 새 질문"  # 가운뎃점(·)은 폰트에 없어 쓰지 않는다
+# 2026-11-22 BK '구독 좋아요 올릴 방안' → 막연한 부탁 대신 다음 편 볼 이유(올라오는 시각)를 준다.
+# 내일 질문을 미리 보여주는 건 하지 않는다: 품질 게이트가 질문을 자주 다시 짜서 예고와 실제가 달라질 수 있다.
+REASON_BALANCE = "매일 오후 5시 새 질문"
 URL, URL_Y = "5raksil.com", 462  # 2026-11-20 BK: 쇼츠에 사이트 주소 (화면 글자만, 링크·스티커 아님)
 
 
@@ -110,7 +113,7 @@ def bubble(img, x: float, y: float, text: str, k: float) -> None:
     img.alpha_composite(ov)
 
 
-def frame(t: float, spr, body, bg):
+def frame(t: float, spr, body, bg, reason: str = REASON):
     """엔딩 t초 장면."""
     from PIL import Image, ImageDraw
     img = bg.copy()
@@ -137,7 +140,7 @@ def frame(t: float, spr, body, bg):
         d = ImageDraw.Draw(img)
         d.ellipse((hx - 42, hy - 42, hx + 42, hy + 42), fill=body + (255,), outline=(74, 44, 48, 255), width=5)
     bubble(img, x + spr.width * 0.80 + 50, MONGLE_Y - spr.height * 0.64, "또 놀러 와!", ease_back((t - 0.55) / 0.3))
-    rs.glow_text(img, (W / 2, 345), [REASON], rs.font(60), 60, rs.CYAN, glow=6)
+    rs.glow_text(img, (W / 2, 345), [reason], rs.font(60), 60, rs.CYAN, glow=6)
     url(img, ease_back((t - 0.05) / 0.3))
     return img
 
@@ -171,7 +174,7 @@ def audio_clip():
     return np.clip(a, -1, 1)
 
 
-def render_clip(out: pathlib.Path, day: dt.date) -> pathlib.Path:
+def render_clip(out: pathlib.Path, day: dt.date, reason: str = REASON) -> pathlib.Path:
     import wave
     spr, body = mongle(day)
     bg = rs.background(31)
@@ -186,7 +189,7 @@ def render_clip(out: pathlib.Path, day: dt.date) -> pathlib.Path:
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
                            "-movflags", "+faststart", str(out)], stdin=subprocess.PIPE)
     for i in range(int(DUR * FPS)):
-        ff.stdin.write(frame(i / FPS, spr, body, bg).convert("RGB").tobytes())
+        ff.stdin.write(frame(i / FPS, spr, body, bg, reason).convert("RGB").tobytes())
     ff.stdin.close()
     ok = ff.wait() == 0
     wav.unlink(missing_ok=True)
@@ -195,10 +198,10 @@ def render_clip(out: pathlib.Path, day: dt.date) -> pathlib.Path:
     return out
 
 
-def append(mp4: pathlib.Path, day: dt.date) -> float:
-    """mp4 뒤에 엔딩을 이어 붙여 같은 파일로 바꾼다. 늘어난 초를 돌려준다."""
+def append(mp4: pathlib.Path, day: dt.date, reason: str = REASON) -> float:
+    """mp4 뒤에 엔딩을 이어 붙여 같은 파일로 바꾼다. 늘어난 초를 돌려준다. reason=버튼 위 이유 한 줄."""
     mp4 = pathlib.Path(mp4)
-    end = render_clip(mp4.with_name(mp4.stem + "-ending.mp4"), day)
+    end = render_clip(mp4.with_name(mp4.stem + "-ending.mp4"), day, reason)
     tmp = mp4.with_name(mp4.stem + "-joined.mp4")
     fc = ("[0:v]setsar=1,fps=30[v0];[1:v]setsar=1,fps=30[v1];"
           "[0:a]aformat=sample_rates=44100:channel_layouts=mono[a0];[1:a]aformat=sample_rates=44100:channel_layouts=mono[a1];"
@@ -215,9 +218,11 @@ def append(mp4: pathlib.Path, day: dt.date) -> float:
 
 
 def main(argv: list[str]) -> int:
+    reason = REASON_BALANCE if "--balance" in argv else REASON
+    argv = [a for a in argv if a != "--balance"]
     day = dt.date.fromisoformat(argv[1]) if len(argv) > 1 else dt.datetime.now(rs.KST).date()
     rs.OUT.mkdir(parents=True, exist_ok=True)
-    out = render_clip(rs.OUT / "ending-preview.mp4", day)
+    out = render_clip(rs.OUT / "ending-preview.mp4", day, reason)
     print(out)
     return 0
 

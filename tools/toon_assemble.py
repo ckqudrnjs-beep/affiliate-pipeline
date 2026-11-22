@@ -48,6 +48,10 @@ YELLOW = (255, 214, 0)
 OUTRO = {"lines": ["동전이 다음 이야기는", "모레 저녁 7시"], "big": "구독 좋아요 꾹!", "sub": "다음 편 안 놓치게", "big_y": 420, "hold": 2.8}
 
 
+# 2026-11-22 BK '구독 좋아요 올릴 방안': 투표 편엔 '구독' 말이 통째로 빠졌다 → 결과 편 시각 + 구독 한마디를 남긴다.
+VOTE_SUB = "결과는 모레 저녁 7시, 구독 꾹!"
+
+
 def outro_of(spec: dict) -> dict:
     """엔딩 예고 문구. 시즌 투표가 있으면 '다음엔 어디로 갈까? A/B', 없으면 기본 예고."""
     v = spec.get("vote")
@@ -61,7 +65,7 @@ def outro_of(spec: dict) -> dict:
         if spec.get("outro_lines"):  # 이틀 간격이 아닌 편(예: 쉬는 날 번외)은 예고 문구를 직접 ("내일 저녁 7시")
             return dict(OUTRO, lines=list(spec["outro_lines"]))
         return OUTRO
-    return dict(OUTRO, lines=["다음엔 어디로 갈까?", f"A {v['a']} / B {v['b']}"], big="댓글로 골라 줘!", sub="많이 고른 걸로 만들어요")
+    return dict(OUTRO, lines=["다음엔 어디로 갈까?", f"A {v['a']} / B {v['b']}"], big="댓글로 골라 줘!", sub=VOTE_SUB)
 
 
 def fix(t):  # 주아에 없는 글자 → 네모(두부)로 나옴: '…' '·'
