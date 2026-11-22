@@ -743,7 +743,7 @@ def adsense(today: dt.date | None = None) -> int:
               "형식: ## 한 줄 판정, ## 바로 고칠 것(최대 5개, 파일·페이지·고치는 방법), ## 나중에(최대 3개), ## 좋은 점(2개). "
               "개인·사업자 정보를 페이지에 더 넣으라는 제안은 하지 마라(운영자 비공개 방침). 제휴 링크 숨기기는 클로킹이라 제안 금지.")
     user = f"사이트 don3chon.com, 전체 {len(pages)}페이지 중 일부 본문 텍스트:\n\n{sample}"
-    report = ask("adsense", system, user, effort="high", max_tokens=12000, need=1.2)
+    report = ask("adsense", system, user, effort="high", max_tokens=32000, need=1.2)  # 12000 에서 잘림 (11/22)
     out = ROOT / "docs/reviews" / f"adsense-{today.isoformat()}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(f"# 애드센스 심사관 점검 {today.isoformat()} (Claude API 자동)\n\n{report}\n", encoding="utf-8")
