@@ -106,16 +106,15 @@
    "id": "s-bus",
    "game": "tower",
    "top": "버스 3분 남았을 때 하는 것",
-   "file": "media/kling/situ-bus.mp4",
+   "file": "media/kling/situ-bus-clean.mp4",
    "ss": 0.0,
    "t": 2.0,
    "pay": {
-    "file": "media/kling/situ-bus.mp4",
+    "file": "media/kling/situ-bus-clean.mp4",
     "ss": 3.5,
     "t": 1.5
    },
-   "off": true,
-   "why_off": "버스 옆면에 AI가 만든 깨진 한글 글자가 보임 (AI 영상 글자 금지 규칙) — 다시 뽑기 전까지 안 씀"
+   "note": "11/22 깨진 AI 글자 띠(세로 580~810px)를 흐림 처리한 판(situ-bus-clean.mp4)으로 다시 씀 (BK '크레딧 써서 만든 건 활용'). 원본 media/kling/situ-bus.mp4 는 쓰지 않음"
   },
   {
    "id": "s-laundry",
