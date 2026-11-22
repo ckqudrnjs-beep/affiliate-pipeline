@@ -116,5 +116,34 @@ class WebnovelDrawTest(unittest.TestCase):
         self.assertEqual(im.size, (w.LW, w.LH))
 
 
+
+class WebnovelSubscribeHooksTest(unittest.TestCase):
+    def test_description_playlist_top(self):
+        se = w.season(WORK); ep = w.episodes(WORK)[2]
+        d = w.description_of(se, ep, {}, "PLx")
+        self.assertTrue(d.startswith("⏮ 1화부터 정주행: https://www.youtube.com/playlist?list=PLx\n"))
+        self.assertNotIn("정주행", w.description_of(se, ep, {}))
+
+    def test_end_card_tells_time(self):
+        se = w.season(WORK); ep = w.episodes(WORK)[2]
+        texts = [t for t, _ in w.end_card(se, ep, w.palette(se))["lines"]]
+        self.assertIn("내일 밤 9시", texts); self.assertIn("구독해야 알림이 와요", texts)
+
+    def test_comment_text(self):
+        eps = w.episodes(WORK)
+        self.assertIn("내일 밤 9시", w.comment_text(eps[2]))
+        self.assertIn("youtu.be/ZZ", w.comment_text(eps[2], {"next": "ZZ"}))
+        self.assertIn("시즌", w.comment_text(eps[-1]))
+
+    def test_post_comments_targets_past_public_only(self):
+        from unittest import mock
+        log = {w.key(WORK, 1): {"id": "A", "date": "2026-11-21", "visibility": "schedule"},
+               w.key(WORK, 2): {"id": "B", "date": "2026-11-22", "visibility": "schedule", "commented": True},
+               w.key(WORK, 3): {"id": "C", "date": "2026-11-23", "visibility": "schedule"}}
+        with mock.patch("urllib.request.urlopen") as u:
+            done, err = w.post_comments("t", WORK, w.dt.date(2026, 11, 23), log)
+        self.assertEqual(done, [1]); self.assertIsNone(err); self.assertEqual(u.call_count, 1)
+        self.assertTrue(log[w.key(WORK, 1)]["commented"]); self.assertNotIn("commented", log[w.key(WORK, 3)])
+
 if __name__ == "__main__":
     unittest.main()

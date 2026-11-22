@@ -93,7 +93,8 @@ def links_of(work: str, no: int, log: dict) -> dict:
     return {"first": g(1) if no > 1 else None, "prev": g(no - 1), "next": g(no + 1)}
 
 
-def description_of(se: dict, ep: dict, links: dict | None = None) -> str:
+def description_of(se: dict, ep: dict, links: dict | None = None, playlist: str | None = None) -> str:
+    top = f"⏮ 1화부터 정주행: https://www.youtube.com/playlist?list={playlist}\n" if playlist else ""
     body = " ".join(t for c in ep["cards"] for t, _ in c["lines"])
     nxt = ep.get("next", {}); lk = links or {}
     tail = f"다음 화: {nxt['no']}화 {nxt['title']}" if nxt.get("title") else nxt.get("season_end", "")
@@ -107,7 +108,7 @@ def description_of(se: dict, ep: dict, links: dict | None = None) -> str:
     if nav:
         tail += "\n" + "\n".join(nav)
     ai = "\nAI로 만든 그림이 포함되어 있습니다." if ep.get("ai") else ""
-    return (f"{se['title']} {ep['no']}화 — {ep['title']}\n\n{body}\n\n{tail}\n\n"
+    return (f"{top}{se['title']} {ep['no']}화 — {ep['title']}\n\n{body}\n\n{tail}\n\n"
             f"이 채널이 직접 쓴 오리지널 창작 웹소설입니다. 등장인물·단체는 실제와 관계없습니다.{ai}\n"
             f"#웹소설 #{se.get('genre', '').split(' ')[0]} #복수극 #한화만더")
 
@@ -231,7 +232,7 @@ def draw_card(card: dict, pal: dict, upto: int | None = None, alpha: float = 1.0
 def end_card(se: dict, ep: dict, pal: dict) -> dict:
     nxt = ep.get("next", {})
     if nxt.get("title"):
-        return {"lines": [["다음 화", "s"], [f"{nxt['no']}화", "g"], [nxt["title"], "big"], ["구독하면 다음 화 알림이 가요", "s"]], "motif": None}
+        return {"lines": [["다음 화", "s"], [f"{nxt['no']}화", "g"], [nxt["title"], "big"], ["내일 밤 9시", "r"], ["구독해야 알림이 와요", "s"]], "motif": None}
     return {"lines": [[f"{se['title']}", "g"], [nxt.get("season_end", "시즌 끝"), "big"], ["구독하면 다음 이야기 알림이 가요", "s"]], "motif": None}
 
 
@@ -478,7 +479,8 @@ def video_body(se: dict, ep: dict, visibility: str, at: dt.datetime | None, link
         status = {"privacyStatus": "public"}
     else:
         status = {"privacyStatus": "private"}
-    return {"snippet": {"title": title_of(se, ep), "description": description_of(se, ep, links),
+    pl = load(CFG, {}).get("playlist_id")
+    return {"snippet": {"title": title_of(se, ep), "description": description_of(se, ep, links, pl),
                         "tags": ["웹소설", "회귀", "복수극", "로맨스판타지", se["title"], "한화만더"],
                         "categoryId": "24", "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
             "status": {**status, "selfDeclaredMadeForKids": False,
@@ -508,6 +510,38 @@ def link_prev(tok: str, se: dict, work: str, ep: dict, new_id: str, log: dict) -
             print(f"{prev['no']}화 링크 실패: {e}", file=sys.stderr)
             ok = False
     return ok
+
+
+def comment_text(ep: dict, links: dict | None = None) -> str:
+    """고정용 댓글: 다음 화 예고 한 줄 + 연재 시간. (고정은 API가 없어 BK가 손으로)"""
+    nxt = ep.get("next", {}); lk = links or {}
+    if not nxt.get("title"):
+        return f"시즌 1 끝까지 봐 주셔서 고마워요. {nxt.get('season_end', '시즌 2 준비 중')} · 구독하면 새 시즌 알림이 가요."
+    line = f"▶ 다음 화 {nxt['no']}화 「{nxt['title']}」"
+    line += f": https://youtu.be/{lk['next']}" if lk.get("next") else " · 내일 밤 9시"
+    return line + "\n매일 밤 9시 연재 · 구독해야 알림이 와요"
+
+
+def post_comments(tok: str, work: str, day: dt.date, log: dict) -> tuple[list[int], str | None]:
+    """공개된 지난 화(어제까지) 중 댓글이 없는 화에 예고 댓글을 단다(commentThreads.insert,
+    youtube.force-ssl 권한 필요). 성공한 화는 기록에 commented=True. (단 화 번호들, 마지막 오류)"""
+    import urllib.request
+    done, err = [], None
+    for e in episodes(work):
+        row = log.get(key(work, e["no"])) or {}
+        if not row.get("id") or row.get("commented") or row.get("visibility") == "private" or row.get("date", "9") >= day.isoformat():
+            continue
+        body = {"snippet": {"videoId": row["id"], "topLevelComment": {"snippet": {"textOriginal": comment_text(e, links_of(work, e["no"], log))}}}}
+        req = urllib.request.Request("https://www.googleapis.com/youtube/v3/commentThreads?part=snippet",
+                                     data=json.dumps(body).encode(), method="POST",
+                                     headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(req, timeout=30).read()
+            row["commented"] = True; done.append(e["no"])
+        except Exception as x:  # noqa: BLE001
+            err = str(x); print(f"{e['no']}화 댓글 실패: {x}", file=sys.stderr)
+            break
+    return done, err
 
 
 def add_to_playlist(tok: str, playlist: str, vid: str) -> bool:
@@ -647,12 +681,15 @@ def run_short(day: dt.date) -> int:
     pl = cfg.get("playlist_id") and add_to_playlist(tok, cfg["playlist_id"], r["id"])
     linked = link_prev(tok, se, work, ep, r["id"], log)
     log[key(work, ep["no"])] = {"id": r["id"], "date": day.isoformat(), "title": title_of(se, ep), "visibility": vis}
+    cm, cerr = post_comments(tok, work, day, log) if cfg.get("comments", True) else ([], None)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = (f"{at:%m/%d %H:%M} 공개 예약" if at else "바로 공개") if vis == "schedule" else "비공개(BK 확인용)"
     msg = (f"📖 웹소설 {se['title']} {ep['no']}화 업로드 ({when}): https://youtu.be/{r['id']}"
            + ("" if pl or not cfg.get("playlist_id") else "\n(재생목록 추가 실패: 손으로 추가)")
-           + ("" if linked is not False else "\n(이전 화 설명란 '다음 화' 링크 추가 실패)"))
+           + ("" if linked is not False else "\n(이전 화 설명란 '다음 화' 링크 추가 실패)")
+           + (f"\n💬 예고 댓글: {', '.join(map(str, cm))}화 (스튜디오에서 '고정'만 눌러 주세요)" if cm else "")
+           + (f"\n(예고 댓글 실패: 토큰에 youtube.force-ssl 권한이 필요할 수 있음, docs/WEBNOVEL.md 4장)" if cerr else ""))
     summary(msg); _notify(msg)
     return 0
 
