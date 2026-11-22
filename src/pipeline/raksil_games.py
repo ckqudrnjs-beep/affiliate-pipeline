@@ -20,6 +20,7 @@ import pathlib
 import subprocess
 import sys
 
+from . import raksil_kling as rk
 from . import raksil_shorts as rs
 
 W, H, FPS, SR = rs.W, rs.H, rs.FPS, rs.SR
@@ -90,6 +91,10 @@ def plan(day: dt.date, games: list[dict], log: dict, hold: bool = False,
     for g in games:
         if g["slug"] not in OLD_GAMES and g["slug"] not in done:
             return ("game", g["slug"], "new")
+    # 2026-11-21 BK 카드 "1 리액션 컷 + 2 상황극": 월·수·금 Kling 상황극·리액션 + 실제 녹화 (config/raksil_kling.json on 일 때만)
+    kl = rk.pick(day, log, games, history(log))
+    if kl:
+        return ("game", kl["game"], "kling")
     if not rotation:
         return ("none", None, None)
     if day.weekday() == 0:
@@ -111,6 +116,7 @@ HOOKS = ["이게 설치 없이 된다고?", "폰에서 바로 되는 게임", "�
 # 11/21 BK 결정: 지시어로 숨기기('이 게임, 그냥 퍼즐이 아니에요') 채택, 숫자는 실제 기록 점수·시간만, 손실 회피·금기 경고는 안 씀.
 SKIP_START = 1.0  # 녹화 앞부분(시작 버튼·메뉴) 건너뜀
 MAX_PLAY = 13.0
+KLING_PLAY = 7.5  # Kling 형식: 훅 약 2초 + 실제 플레이 7.5초 + 결과 컷 약 2초 = 약 11초 (5락실 쇼츠 약 10초 규칙)
 
 
 def hook_of(g: dict, day: dt.date, score: float | None = None) -> str:
@@ -134,18 +140,24 @@ def lines(g: dict, kind: str) -> list[str]:
 
 def title_of(g: dict, kind: str, hook: str = "") -> str:
     hook = hook or HOOKS[0]
+    if kind == "kling":
+        return f"{hook} | {g['name']} #5락실 #웹게임 #shorts"[:95]
     if kind == "new":
         return f"[신작] {g['name']} | {hook} #5락실 #shorts"[:95]
     return f"{g['name']} | {hook} #5락실 #shorts"[:95]
 
 
-def description_of(g: dict, kind: str, voiced: bool) -> str:
+def description_of(g: dict, kind: str, voiced: bool, kl: dict | None = None) -> str:
     head = f"5락실 신작 '{g['name']}' 공개!" if kind == "new" else f"5락실 무료 웹게임 '{g['name']}'"
     ls = [head, g["short"], "",
           f"▶ 설치 없이 바로 하기: {rs.SITE}/games/{g['slug']}",
           f"▶ 다른 무료 게임·매일 밸런스게임: {rs.SITE}",
           "▶ 새 게임 소식은 구독으로", "",
           "영상 속 플레이는 자동 플레이(테스트 모드) 화면입니다. 게임 속 그래픽·캐릭터는 모두 5락실이 만든 디자인입니다."]
+    if kl:
+        ls.insert(3, f"▶ 바로 하기(쇼츠 전용 주소): {rs.SITE}/games/{g['slug']}?ref=yt-{kl['format']}")
+        ls.pop(4)
+        ls.append(rk.AI_NOTE)
     if voiced:
         ls.append("내레이션: AI 음성")
     ls.append("#웹게임 #무료게임 #5락실")
@@ -170,6 +182,7 @@ GAME_REPLAN_SYS = """너는 5락실 유튜브 쇼츠(무료 웹게임 자동 플
 - line(첫 대사, 공백 포함 30자 이하 반말): 화면을 보며 바로 따라 하고 싶게 만드는 구체적인 한 줄. 게임 이름을 넣는다. 광고 말·구독 부탁 금지.
 - 게임 설명에 없는 기능·보상은 지어내지 않는다. 화면은 자동 플레이 녹화라 특정 순간에 맞춘 반응·벌칙·내일 예고는 쓰지 않는다."""
 HOOK_MAX, LINE_MAX = 14, 30
+KIND_TXT = {"new": "신작 소개", "play": "플레이", "kling": "상황극·리액션 + 실제 플레이"}
 
 
 def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) -> tuple[str, str] | None:
@@ -208,7 +221,7 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
     hist, best, streak = [], None, 0
     bank = [h for i in range(len(HOOKS)) for h in [HOOKS[(day.toordinal() + i) % len(HOOKS)]] if h != hook]
     for n in range(rs.GATE_TRIES):
-        brief = (f"게임 쇼츠({'신작 소개' if kind == 'new' else '플레이'}): 자동 플레이 화면 약 10초 + 몽글이 엔딩.\n"
+        brief = (f"게임 쇼츠({KIND_TXT.get(kind, '플레이')}): {'Kling 사람 장면 + ' if kind == 'kling' else ''}자동 플레이 화면 약 10초 + 몽글이 엔딩.\n"
                  f"게임: {g['name']} — {g.get('short', '')}\n제목 띠: 흰 줄 '{hook}' / 노란 줄 '{g['name']}'\n"
                  f"제목: {title_of(g, kind, hook)}\n대사: " + " / ".join(say))
         sc = rs.judge("5락실 게임 쇼츠 (layout 은 띠 글자가 첫 1초에 읽히는지로). 이 칸은 밸런스 쇼츠가 아니라 게임 쇼츠다: "
@@ -242,6 +255,29 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
 def game_band(g: dict, hook: str) -> dict:
     """2026-11-20 BK 패턴: 위쪽 검은 띠 두 줄 = 흰 줄 도전 후킹 + 노란 줄 게임 이름 ("고지능자만 가능한 / 선 잇기 게임" 꼴)."""
     return {"top": hook, "accent": g["name"]}
+
+
+def still_tail(frames: list, thr: float = 1.5, keep: float = 0.4) -> int:
+    """끝에서부터 거의 안 움직이는 프레임(게임 오버로 멈춘 화면)을 찾아 그 앞 + keep 초까지의 개수. 움직임이 계속이면 전체."""
+    import numpy as np
+    from PIL import Image
+
+    def small(p):
+        with Image.open(p) as im:
+            return np.asarray(im.convert("L").resize((96, 96)), np.float32)
+    n = len(frames)
+    if n < FPS * 7:
+        return n
+    prev, last_move = small(frames[-1]), n
+    for i in range(n - 2, int(FPS * 6) - 1, -1):
+        cur = small(frames[i])
+        if float(np.abs(cur - prev).mean()) > thr:
+            last_move = i + 1
+            break
+        prev = cur
+    else:
+        return max(int(FPS * 6), n)
+    return min(n, max(int(FPS * 6), last_move + int(keep * FPS)))
 
 
 def frame_layer(g: dict, kind: str, band: dict | None = None):
@@ -297,7 +333,9 @@ def cta_card(g: dict, t: float):
     return img
 
 
-def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib.Path = rs.OUT) -> dict | None:
+def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib.Path = rs.OUT,
+           kl: dict | None = None) -> dict | None:
+    """kind 'kling' 이면 kl(raksil_kling.pick 결과): Kling 훅 컷 → 실제 플레이 → Kling 결과 컷 → 주소 카드 → 엔딩."""
     import numpy as np
     frames = sorted(rec.glob("f*.jpg"))[int(SKIP_START * FPS):][: int(MAX_PLAY * FPS)]
     if len(frames) < FPS * 6:
@@ -308,8 +346,14 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     tr = bgm.pick("game", day)
     if tr:
         frames = frames[: max(int(FPS * 6), round(bgm.snap(len(frames) / FPS, tr, 1, "down") * FPS))]
-    play_d = len(frames) / FPS
-    hook = hook_of(g, day, rec_score(rec))
+    if kl:  # 봇이 죽은 뒤 멈춘 화면(게임 오버)은 잘라 냄 — 리액션 컷이 바로 이어지게
+        frames = frames[: still_tail(frames)]
+    if kl:  # Kling 컷이 앞뒤로 붙는 만큼 플레이는 짧게 (전체 약 13초 + 엔딩)
+        frames = frames[: int(FPS * KLING_PLAY)]
+    hk_d = float(kl["hook"].get("t", 2.0)) if kl else 0.0
+    py_d = float(kl["pay"].get("t", 2.0)) if kl else 0.0
+    play_d = len(frames) / FPS + hk_d + py_d  # 아래 소리·CTA 계산은 Kling 컷 포함 길이 기준
+    hook = kl["top"] if kl else hook_of(g, day, rec_score(rec))
     say = lines(g, kind)
     hook, say, why, judged = gate(g, kind, day, hook, say)
     if why:  # 품질 게이트 미통과 → 오늘은 쉬고 알림 (기록 안 함 → 다음 차례에 다시)
@@ -318,7 +362,7 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
         return {"date": day.isoformat(), "qid": f"game-{g['slug']}-{kind}-{day.isoformat()}", "key": key,
                 "kind": "게임", "skip": why, "title": "", "file": ""}
     clips, voiced = rs.tts(say)
-    v0 = (0.4, 0.4 + len(clips[0]) / SR) if voiced else (0.4, 2.6)
+    v0 = (hk_d + 0.4, hk_d + 0.4 + len(clips[0]) / SR) if voiced else (hk_d + 0.4, hk_d + 2.6)
     cta_d = bgm.snap(max(2.4, len(clips[1]) / SR + 0.5), tr, 1, "up")
     total = play_d + cta_d
 
@@ -356,14 +400,22 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
                            "-r", str(FPS), "-i", "-", "-i", str(wav), "-c:v", "libx264", "-preset", "medium",
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
                            "-movflags", "+faststart", str(mp4)], stdin=subprocess.PIPE)
+    if kl:
+        for img in rk.frames(pathlib.Path(kl["hook"]["file"]), float(kl["hook"].get("ss", 0)), hk_d, W, H, FPS):
+            rs.draw_band(rk.dim_top(img, rs.BAND_H + 40), band_)
+            ff.stdin.write(img.convert("RGB").tobytes())
     for i, fp in enumerate(frames):
-        t = i / FPS
+        t = hk_d + i / FPS
         img = base.copy()
         gi, pos = game_fit(fp)
         img.paste(gi, pos)
         if v0[0] <= t < v0[1] + 0.3 and voiced:  # 음성 자막 (후킹은 위 제목 띠가 끝까지 맡는다)
             band(img, SUB_Y, say[0], 62, rs.WHITE)
         ff.stdin.write(img.convert("RGB").tobytes())
+    if kl:
+        for img in rk.frames(pathlib.Path(kl["pay"]["file"]), float(kl["pay"].get("ss", 0)), py_d, W, H, FPS):
+            rs.draw_band(rk.dim_top(img, rs.BAND_H + 40), band_)
+            ff.stdin.write(img.convert("RGB").tobytes())
     ctas = {}
     for i in range(int(cta_d * FPS)):
         k = int(i / FPS * 3) % 2
@@ -384,9 +436,11 @@ def render(rec: pathlib.Path, g: dict, kind: str, day: dt.date, out_dir: pathlib
     if g.get("genre"):
         tags.insert(2, str(g["genre"]).replace(" ", ""))
     meta = {"date": day.isoformat(), "qid": f"game-{g['slug']}-{kind}-{day.isoformat()}", "key": key,
-            "file": str(mp4), "title": title_of(g, kind, hook), "description": description_of(g, kind, voiced),
+            "file": str(mp4), "title": title_of(g, kind, hook), "description": description_of(g, kind, voiced, kl),
             "voiced": voiced, "hour": HOUR, "schedule": True, "category": "20", "game": g["slug"],
-            "tags": tags, "seconds": round(total, 1), "kind": "게임", "gate": judged}
+            "tags": tags, "seconds": round(total, 1), "kind": "게임", "gate": judged, "play_at": hk_d, "play_n": len(frames)}
+    if kl:
+        meta.update({"kling": {"format": kl["format"], "ids": kl["ids"]}, "synthetic": kl.get("realistic", False)})
     (out_dir / f"{key}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
@@ -445,6 +499,8 @@ def check(rec: pathlib.Path, meta: dict) -> list[str]:
         errs.append("녹화 정보(info.json) 없음")
     errs += check_record(info)
     frames = sorted(rec.glob("f*.jpg"))[int(SKIP_START * FPS):][: int(MAX_PLAY * FPS)]
+    if meta.get("kling"):  # render 와 같은 길이로 (Kling 컷 뒤 플레이 구간만 검사)
+        frames = frames[: int(meta.get("play_n", len(frames)))]
     if not frames:
         return errs + ["녹화 프레임 없음"]
     with Image.open(frames[0]) as f0:
@@ -453,7 +509,7 @@ def check(rec: pathlib.Path, meta: dict) -> list[str]:
     picks = sample_times(len(frames))
     sheet = Image.new("RGB", (W // 4 * len(picks) or 1, H // 4), (0, 0, 0))
     for j, i in enumerate(picks):
-        t = (i + 0.5) / FPS
+        t = (i + 0.5) / FPS + float(meta.get("play_at", 0))
         raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{t:.3f}", "-i", str(mp4), "-frames:v", "1",
                               "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
         if len(raw) != W * H * 3:
@@ -500,7 +556,13 @@ def main(argv: list[str]) -> int:
     if not g:
         print("게임 없음", slug)
         return 1
-    meta = render(rec, g, kind, day)
+    kl = None
+    if kind == "kling":
+        kl = rk.pick(day, load_log(), discover(), history(load_log()))
+        if not kl or kl["game"] != slug:
+            print("Kling 설계가 없거나 게임이 다름 → 쉼", kl)
+            return 0
+    meta = render(rec, g, kind, day, kl=kl)
     if not meta:
         return 0
     if meta.get("skip"):

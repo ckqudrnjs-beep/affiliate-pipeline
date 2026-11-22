@@ -14,6 +14,26 @@ MON, THU, SAT = dt.date(2026, 11, 16), dt.date(2026, 11, 19), dt.date(2026, 11, 
 
 
 class T(unittest.TestCase):
+    def setUp(self):  # 옛 규칙 시험은 Kling 형식 꺼진 상태로 (실제 config/raksil_kling.json 과 무관하게)
+        self._load = rg.rk.load
+        rg.rk.load = lambda *a, **k: {}
+
+    def tearDown(self):
+        rg.rk.load = self._load
+
+    def test_kling_slot_mon_wed_fri_after_new_intro(self):
+        """BK 11/21 '1 리액션 컷 + 2 상황극': Kling 이 켜져 있으면 월·수·금은 Kling 게임 쇼츠, 신작 소개가 있으면 그게 먼저."""
+        rg.rk.load = self._load
+        if not rg.rk.load().get("on"):
+            self.skipTest("Kling 꺼짐")
+        games = [dict(g, slug=s, name=s) for g, s in zip(G * 2, ["dodge", "tower", "survivor"])]
+        done = {"2026-11-01-game-tower-new": {}, "2026-11-01-game-survivor-new": {}}
+        what, slug, kind = rg.plan(MON, games, done)
+        self.assertEqual((what, kind), ("game", "kling"))
+        self.assertEqual(rg.plan(dt.date(2026, 11, 17), games, done, rotation=False), ("none", None, None))  # 화요일
+        newg = games + [{"slug": "brandnew", "name": "새 게임", "short": "", "order": 0}]
+        self.assertEqual(rg.plan(MON, newg, done), ("game", "brandnew", "new"))
+
     def test_discover_reads_meta(self):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)

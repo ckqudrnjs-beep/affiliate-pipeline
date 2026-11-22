@@ -1,0 +1,22 @@
+{
+ "_": "5락실 주간 롱폼 '주간 챌린지' (BK 2026-11-21 시험). on=false 면 안 만듦. visibility: private=비공개 업로드(BK 확인용) / schedule=토 20:00 KST 공개 예약. missions: 게임별 미션 문장({s}=실제 플레이 초), 편마다 돌아감. themes: 상황극 클립 id → 제목·인트로 문구. 코드 pipeline.raksil_longform, 기준 docs/DIRECTION.md.",
+ "on": true,
+ "visibility": "private",
+ "themes": {
+  "s-ramen": "라면 익는 동안",
+  "s-elevator": "엘리베이터 기다리며",
+  "s-laundry": "세탁기 도는 동안",
+  "s-microwave": "전자레인지 돌리는 동안",
+  "s-meeting": "회의 시작 전에",
+  "s-bus": "버스 기다리며"
+ },
+ "missions": {
+  "dodge": ["{s}초 동안 별똥별 피하기", "{s}초 버티면서 별 줍기"],
+  "tower": ["{s}초 안에 어디까지 쌓을까?", "흔들림 없이 최대한 높이"],
+  "starcandy": ["{s}초 동안 최대한 합치기", "넘치기 전에 큰 사탕 만들기"],
+  "tongtong": ["박자 맞춰 {s}초 달리기", "몇 m까지 갈 수 있을까?"],
+  "bag": ["봉투 꽉꽉 채워 점수 내기", "{s}초 안에 장바구니 정리"],
+  "pusher": ["코인 밀어서 점수 쌓기", "{s}초 동안 코인 떨어뜨리기"],
+  "hansang": ["한 상 차려서 돈 벌기", "{s}초 동안 손님 상 차리기"]
+ }
+}

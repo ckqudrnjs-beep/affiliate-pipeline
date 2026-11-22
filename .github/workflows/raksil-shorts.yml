@@ -54,7 +54,7 @@ jobs:
           path: ~/.cache/supertonic3
           key: supertonic-3-v1
       - name: 검사
-        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range tests.test_raksil_games tests.test_raksil_meme
+        run: PYTHONPATH=src python -m unittest tests.test_raksil_shorts tests.test_raksil_range tests.test_raksil_games tests.test_raksil_meme tests.test_raksil_kling tests.test_raksil_shorts_legacy
       - name: 만들기 + 올리기
         env:
           RAKSIL_YT_ENABLED: ${{ vars.RAKSIL_YT_ENABLED }}
@@ -66,9 +66,20 @@ jobs:
           YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}  # 어제 쇼츠 댓글 투표 읽기만 (raksil_shorts.comment_votes)
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}  # 품질 게이트 미통과로 쉰 날 알림 (BK 11/20)
           TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+          # 형식 고정 스위치: 저장소 변수 RAKSIL_FORMAT. legacy = 11/19 옛 형식 비교(raksil_shorts_legacy),
+          # split/quick/versus/result/classic = 그 형식 고정(비교도 멈춤), 비우면 날마다 돌리기 + 11/22~29 격일 비교. RAKSIL_LEGACY_ENDING=on 이면 옛 형식에도 엔딩.
+          RAKSIL_FORMAT: ${{ vars.RAKSIL_FORMAT }}
+          RAKSIL_LEGACY_ENDING: ${{ vars.RAKSIL_LEGACY_ENDING }}
         run: |
           export RAKSIL_FONT="$HOME/fonts/BlackHanSans-Regular.ttf"
-          PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
+          # 11/22~11/29 은 변수 없이도 격일 비교(옛 형식 11/23·25·27·29). 기준: raksil_shorts_legacy.pick
+          FMT=$(PYTHONPATH=src python -m pipeline.raksil_shorts_legacy pick "${{ inputs.date }}")
+          if [ "$FMT" = legacy ]; then
+            echo "옛 형식(11/19) 비교 편 ($FMT)"
+            PYTHONPATH=src python -m pipeline.raksil_shorts_legacy upload ${{ inputs.date }}
+          else
+            PYTHONPATH=src python -m pipeline.raksil_shorts upload ${{ inputs.date }}
+          fi
       - name: 20:00 게임 쇼츠 (새 게임 소개 > 월 네온 사격장 > 목 게임 로테이션)
         if: ${{ inputs.qid == '' || inputs.qid == null }}
         env:

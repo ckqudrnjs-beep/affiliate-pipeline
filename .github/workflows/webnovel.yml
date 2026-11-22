@@ -1,0 +1,87 @@
+name: webnovel
+
+# 웹소설 쇼츠 '한 화만 더' (BK 2026-11-21): 하루 한 화, 글 카드 세로 쇼츠.
+# config/webnovel.json: on, visibility(private=첫 화만 비공개로 올리고 BK 확인 대기 / schedule=매일 hour 시 KST 공개 예약), work.
+# 일요일엔 롱폼 몰아보기(쇼츠 5화 + 번외, 가로)도 만들어 long_hour(22시) 공개 예약 (BK 2026-11-21).
+# 코드 pipeline.webnovel. 저장소 변수 WEBNOVEL_YT_ENABLED=true 가 아니면 만들기만 하고 아티팩트로 남긴다.
+on:
+  schedule:
+    - cron: "23 7 * * *"   # 16:23 KST (예약이 몇 시간 밀려도 21:00 공개 전에 끝나게)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "날짜 YYYY-MM-DD (비우면 오늘)"
+        required: false
+        default: ""
+      long:
+        description: "몰아보기도 만들기 (요일 무관)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+jobs:
+  novel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 main 받기
+        if: github.ref == 'refs/heads/main'
+        run: git fetch -q origin main && git reset -q --hard FETCH_HEAD
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+          pip install -q pillow numpy
+          mkdir -p "$HOME/fonts"
+          for f in GowunBatang-Bold GowunBatang-Regular; do
+            curl -sfL -o "$HOME/fonts/$f.ttf" "https://raw.githubusercontent.com/google/fonts/main/ofl/gowunbatang/$f.ttf" || true
+          done
+      - name: 검사
+        run: PYTHONPATH=src python -m unittest tests.test_webnovel
+      - name: 만들기 + 올리기
+        env:
+          WEBNOVEL_YT_ENABLED: ${{ vars.WEBNOVEL_YT_ENABLED }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          WEBNOVEL_YT_REFRESH_TOKEN: ${{ secrets.WEBNOVEL_YT_REFRESH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}  # 업로드 링크 알림 (밤 23~07시는 무음)
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          D="${{ inputs.date }}"; D="${D:-$(TZ=Asia/Seoul date +%F)}"
+          L=""; [ "${{ inputs.long }}" = "true" ] && L="--long"
+          PYTHONPATH=src python -m pipeline.webnovel run "$D" $L
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webnovel
+          path: media/webnovel/*.mp4
+          retention-days: 14
+      - name: 업로드 기록 저장
+        if: always()
+        run: |
+          F=data/youtube/webnovel.json
+          [ -f "$F" ] || exit 0
+          git diff --quiet -- "$F" 2>/dev/null && git ls-files --error-unmatch "$F" >/dev/null 2>&1 && exit 0
+          git config user.name "webnovel-bot"
+          git config user.email "webnovel-bot@users.noreply.github.com"
+          cp "$F" /tmp/mine.json
+          for i in 1 2 3; do
+            git fetch -q origin main && git reset -q --hard FETCH_HEAD
+            mkdir -p "$(dirname "$F")"
+            python -c "import json,os,sys;f=sys.argv[1];a=json.load(open(f)) if os.path.exists(f) else {};b=json.load(open('/tmp/mine.json'));[a.setdefault(k,v) for k,v in b.items()];json.dump(a,open(f,'w'),ensure_ascii=False,indent=1)" "$F"
+            git add "$F"
+            git commit -q -m "웹소설 업로드 기록 $(TZ=Asia/Seoul date '+%F')" || exit 0
+            git push -q origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
