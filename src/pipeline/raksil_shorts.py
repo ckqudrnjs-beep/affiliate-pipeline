@@ -1225,7 +1225,7 @@ def fmt_sfx(fmt: str, starts: list[float], step: float) -> list[tuple]:
 GATE_FLOOR, GATE_MIN = 32, 6    # 4칸 × 10점 중 32점(평균 8), 한 칸이라도 6 미만이면 탈락
 # BK 11/21 01:31 "아니 기획안을 바꿔야지 스킵하면 안돼": 미달이면 편집장 지적대로 기획안(질문 자체·몽글이 이유·띠)을 고쳐 다시 만든다.
 # 같은 소재로 고친 안이 GATE_FRESH_AFTER 번 연속 미달이면 소재를 통째로 바꾼 새 기획. 채점은 최대 GATE_TRIES 번.
-GATE_TRIES, GATE_FRESH_AFTER = 8, 2
+GATE_TRIES, GATE_FRESH_AFTER = 12, 2  # 11/22: 다시 짜기 1번 = 안 REPLAN_N 개 → 채점 12번 ≈ 묶음 4개
 # 최후: 다 미달이어도 최고안이 GATE_SOFT 점 이상·한 칸도 GATE_SOFT_MIN 미만이 없으면 그 안으로 올리고 알림. 그 아래면 그날만 쉼.
 GATE_SOFT, GATE_SOFT_MIN = 28, 5
 BIG_MIN_TEXT = 80                              # classic·split 은 칸이 커진 만큼 이보다 작으면 다른 형식으로
@@ -1288,8 +1288,11 @@ def clean_q(a, b) -> tuple[str, str] | None:
     return a, b
 
 
-def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> tuple[dict, dict | None, dict | None] | None:
-    """편집장 지적(sc.note·점수)과 지난 시도로 기획안을 새로 짠다 → (고친 질문, 몽글이 선택, 제목 띠). 실패면 None.
+REPLAN_N = 3
+
+
+def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> list[tuple[dict, dict | None, dict | None]] | None:
+    """편집장 지적(sc.note·점수)과 지난 시도로 기획안을 새로 짠다 → [(고친 질문, 몽글이 선택, 제목 띠)] 최대 REPLAN_N 개. 실패면 None.
     fresh=False 는 같은 소재를 지적대로 고치기, True 는 소재를 바꾼 새 질문. 질문 id 는 그대로(그날 기록·중복 검사용)."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         return None
@@ -1308,19 +1311,24 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> tuple[dict, d
                 + mongle_memory())
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
         # 11/22: Sonnet·1600 토큰으로 8번 고쳐도 최고 21~25/40 → 다시 짜기는 Opus, 생각할 자리도 넉넉히(잘리면 다시 짜기 실패)
-        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=8000,
-                   need=0.1, schema=cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
-                                             "tail": cj.S, "bands": bands}))
+        # 11/22 (BK '짜는 방식 바꾸기'): 하나씩 고치면 편집장이 매번 다른 데를 지적해 25~26점에서 맴돈다
+        # → 한 번에 서로 다른 안 REPLAN_N 개를 내고 모두 채점해 가장 나은 안을 다음 바탕으로
+        user += f"\n\n서로 확실히 다른 안 {REPLAN_N}개를 plans 에 낸다(질문 소재·각도가 서로 달라야 한다)."
+        plan_schema = cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
+                              "tail": cj.S, "bands": bands})
+        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=16000,
+                   need=0.2, schema=cj.obj({"plans": cj.arr(plan_schema)}))
     except Exception as e:
         print(f"기획안 다시 짜기 실패: {e}", file=sys.stderr)
         return None
-    ab = clean_q(r.get("a"), r.get("b")) if isinstance(r, dict) else None
-    if not ab:
-        return None
-    if fresh and any(w in ab[0] + ab[1] for w in COMMON_Q):
-        return None
-    q2 = {**q, "a": ab[0], "b": ab[1], "rewritten": True}
-    return q2, clean_pick(r), best_band(r.get("bands"), recent_bands())
+    out, seen = [], set()
+    for p in (r.get("plans") or [] if isinstance(r, dict) else [])[:REPLAN_N]:
+        ab = clean_q(p.get("a"), p.get("b")) if isinstance(p, dict) else None
+        if not ab or ab in seen or (fresh and any(w in ab[0] + ab[1] for w in COMMON_Q)):
+            continue
+        seen.add(ab)
+        out.append(({**q, "a": ab[0], "b": ab[1], "rewritten": True}, clean_pick(p), best_band(p.get("bands"), recent_bands())))
+    return out or None
 
 
 def judge(kind: str, brief: str) -> dict | None:
@@ -1418,6 +1426,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     no_quick = False  # 3연속은 다시 짜기가 질문1만 바꿀 수 있어(질문2·3·틀 대사는 그날 고정) 한 번 미달이면 다른 형식으로 (11/22 8번 21점)
     pick, band = mongle_plan(qq)
     blocked = ""
+    queue, batch = [], []  # 다시 짜기가 한 번에 낸 안들(채점 대기), 이번 묶음 채점 결과
     for _ in range(GATE_TRIES * 2):  # 구도 탈락(채점 없이 다시 짜기)까지 포함한 안전 상한
         if tries >= GATE_TRIES:
             break
@@ -1456,13 +1465,21 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
             sc = {"layout": 1, "note": "선택지가 길어 화면 칸에 안 들어간다. 선택지를 각 10자 안팎으로 짧고 또렷하게."}
         hist.append({"a": qq["a"], "b": qq["b"], "band": f"{(band or {}).get('top', '')} / {(band or {}).get('accent', '')}",
                      "why": (pick or {}).get("why", ""), "tail": (pick or {}).get("tail", ""), "score": total, "note": str(sc.get("note", ""))[:300]})
+        batch.append((total, qq, sc))
+        if queue:  # 한 번에 짠 여러 안 중 아직 채점 안 한 안부터 (BK 11/22 '짜는 방식 바꾸기')
+            qq, pick, band = queue.pop(0)
+            print(f"같이 짠 다른 안: {qq['a']} vs {qq['b']}")
+            continue
         streak += 1
         fresh = streak >= GATE_FRESH_AFTER
-        nxt = replan(qq, sc, hist, fresh)
+        _, base_q, base_sc = max(batch, key=lambda t: t[0])  # 이번 묶음의 최고안을 바탕으로 다시 짠다
+        batch = []
+        nxt = replan(base_q, base_sc, hist, fresh)
+        nxt = nxt if isinstance(nxt, list) else [nxt] if nxt else []
         if nxt:
-            qq, pick, band = nxt
+            (qq, pick, band), queue = nxt[0], nxt[1:]
             streak = 0 if fresh else streak
-            print(f"기획안 {'새 소재로' if fresh else '고쳐서'} 다시: {qq['a']} vs {qq['b']}")
+            print(f"기획안 {'새 소재로' if fresh else '고쳐서'} 다시 ({len(nxt)}안): " + " / ".join(f"{c[0]['a']} vs {c[0]['b']}" for c in nxt))
         elif pool:  # 다시 짜기 실패 → 그날의 다른 질문
             qq, streak = pool.pop(0), 0
             pick, band = mongle_plan(qq)

@@ -316,6 +316,31 @@ class RaksilShortsTest(unittest.TestCase):
             self._gate_restore(saved)
 
     @NEED_RENDER
+    def test_gate_judges_every_plan_of_a_batch(self):
+        """BK 11/22 '짜는 방식 바꾸기': 다시 짜기가 낸 여러 안을 모두 채점한 뒤에야 다시 짜고, 묶음 최고안을 바탕으로."""
+        def sc(t, note):
+            return {"fresh": t, "insight": t, "afterglow": t, "joy": t, "addictive": t, "copy": t, "layout": t, "note": note}
+        scores = {1: sc(5, "첫 안"), 2: sc(5, "묶음1"), 3: sc(6, "묶음2 최고"), 4: sc(5, "묶음3"), 5: sc(9, "")}
+        n = {"i": 0}
+
+        def replan(q, sc_, hist, fresh):
+            n["i"] += 1
+            return [({**q, "a": f"안{n['i']}-{k}", "b": f"반대{n['i']}-{k}", "rewritten": True},
+                     {"pick": "a", "why": "손잡이잖아"}, {"top": "비 오는 날", "accent": f"우산 {k}"}) for k in range(3)]
+        d, saved, calls = self._gate_env(lambda k: scores.get(k, sc(5, "x")), replan)
+        try:
+            import unittest.mock as um
+            with um.patch.object(r, "tts", side_effect=RuntimeError("stop")):
+                with self.assertRaises(RuntimeError):
+                    r.render(dt.date(2026, 12, 5), d)
+            self.assertEqual(calls["judge"], 5)
+            self.assertEqual(len(calls["replan"]), 2)  # 1번째 미달 → 3안, 3안 모두 채점 뒤 한 번 더
+            self.assertEqual(calls["replan"][1][1], "묶음2 최고")  # 묶음 최고안의 지적으로
+            self.assertEqual(calls["replan"][1][0], "안1-1")
+        finally:
+            self._gate_restore(saved)
+
+    @NEED_RENDER
     def test_gate_soft_last_resort(self):
         """끝까지 미달이어도 최고안이 최후 기준 이상이면 쉬지 않고 그 안으로 진행."""
         mid = {"fresh": 7, "insight": 4, "afterglow": 4, "joy": 4, "addictive": 7, "copy": 7, "layout": 8, "note": "조금 약함"}

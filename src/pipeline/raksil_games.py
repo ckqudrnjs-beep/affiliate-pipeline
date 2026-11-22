@@ -185,8 +185,8 @@ HOOK_MAX, LINE_MAX = 14, 30
 KIND_TXT = {"new": "신작 소개", "play": "플레이", "kling": "상황극·리액션 + 실제 플레이"}
 
 
-def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) -> tuple[str, str] | None:
-    """편집장 지적으로 띠 흰 줄(도전 후킹)과 첫 대사를 다시 짠다 → (hook, line). 키가 없거나 실패면 None."""
+def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) -> list[tuple[str, str]] | None:
+    """편집장 지적으로 띠 흰 줄(도전 후킹)과 첫 대사를 다시 짠다 → [(hook, line)] 최대 rs.REPLAN_N 개. 키가 없거나 실패면 None."""
     import os
     if not os.environ.get("ANTHROPIC_API_KEY"):
         return None
@@ -200,18 +200,24 @@ def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) 
                 + json.dumps({k: sc.get(k) for k in rs.GATE_SCHEMA_PROPS}, ensure_ascii=False)
                 + f"\n편집장 지적: {sc.get('note', '')}\n\n지난 시도(되풀이 금지):\n{past}")
         # 11/22: Sonnet·800 토큰은 생각에 잘려 다시 짜기가 자주 실패 → 문구 은행 후킹만 돌다 22/40 쉼. Opus·넉넉한 한도로
-        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.OPUS, effort="medium", max_tokens=8000, need=0.1,
-                   schema=cj.obj({"hook": cj.S, "line": cj.S}))
+        # 11/22 (BK '짜는 방식 바꾸기'): 한 번에 서로 다른 안 rs.REPLAN_N 개 → 모두 채점해 가장 나은 안을 다음 바탕으로
+        user += f"\n\n흰 줄과 첫 대사는 한 흐름으로 이어지게(첫 대사가 흰 줄의 목표를 받아 긴장을 올린다). 서로 확실히 다른 안 {rs.REPLAN_N}개를 plans 에 낸다."
+        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.OPUS, effort="medium", max_tokens=12000, need=0.15,
+                   schema=cj.obj({"plans": cj.arr(cj.obj({"hook": cj.S, "line": cj.S}))}))
     except Exception as e:
         print(f"게임 기획안 다시 짜기 실패: {e}", file=sys.stderr)
         return None
-    if not isinstance(r, dict):
-        return None
-    hook, line = (" ".join(str(r.get(k, "")).split()).strip() for k in ("hook", "line"))
+    out = []
     bad = rs.BANNED_BAND + ("구독", "설치 없이")
-    if not hook or len(hook) > HOOK_MAX or not line or len(line) > LINE_MAX or any(w in hook + line for w in bad):
-        return None
-    return hook, line
+    for p in (r.get("plans") or [] if isinstance(r, dict) else [])[:rs.REPLAN_N]:
+        if not isinstance(p, dict):
+            continue
+        hook, line = (" ".join(str(p.get(k, "")).split()).strip() for k in ("hook", "line"))
+        if not hook or len(hook) > HOOK_MAX or not line or len(line) > LINE_MAX or any(w in hook + line for w in bad):
+            continue
+        if (hook, line) not in out:
+            out.append((hook, line))
+    return out or None
 
 
 def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[str, list[str], str, dict | None]:
@@ -220,6 +226,7 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
     다시 짜기가 안 되면(키·API 실패) 문구 은행의 다른 후킹. 끝까지 미달이면 최고안이 rs.GATE_SOFT 이상일 때 그 안, 아니면 쉼.
     → (쓸 후킹, 쓸 대사, 쉬는 이유 — 진행이면 '', 채점 결과)."""
     hist, best, streak = [], None, 0
+    queue, batch = [], []  # 다시 짜기가 한 번에 낸 안들(채점 대기), 이번 묶음 채점 결과
     bank = [h for i in range(len(HOOKS)) for h in [HOOKS[(day.toordinal() + i) % len(HOOKS)]] if h != hook]
     for n in range(rs.GATE_TRIES):
         brief = (f"게임 쇼츠({KIND_TXT.get(kind, '플레이')}): {'Kling 사람 장면 + ' if kind == 'kling' else ''}자동 플레이 화면 약 10초 + 몽글이 엔딩.\n"
@@ -242,11 +249,20 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
         if not best or total > best[0]:
             best = (total, hook, list(say), sc)
         hist.append({"hook": hook, "line": say[0], "score": total, "note": str(sc.get("note", ""))[:300]})
+        batch.append((total, sc))
+        if queue:  # 한 번에 짠 여러 안 중 아직 채점 안 한 안부터
+            nh, nl = queue.pop(0)
+            hook, say = nh, [nl] + list(say[1:])
+            continue
         streak += 1
         fresh = streak >= rs.GATE_FRESH_AFTER
-        nxt = replan_hook(g, kind, sc, hist, fresh)
+        base_sc = max(batch, key=lambda x: x[0])[1]  # 이번 묶음 최고안의 지적으로 다시 짠다
+        batch = []
+        nxt = replan_hook(g, kind, base_sc, hist, fresh)
+        nxt = nxt if isinstance(nxt, list) else [nxt] if nxt else []
         if nxt:
-            hook, say = nxt[0], [nxt[1]] + list(say[1:])
+            (nh, nl), queue = nxt[0], nxt[1:]
+            hook, say = nh, [nl] + list(say[1:])
             streak = 0 if fresh else streak
         elif bank:
             hook = bank.pop(0)
