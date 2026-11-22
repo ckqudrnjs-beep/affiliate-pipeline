@@ -1,0 +1,39 @@
+# 5락실 새·바뀐 페이지를 네이버(서치어드바이저)·빙에 IndexNow 로 알린다 (BK 2026-11-22).
+# main 에 게임·공략·질문이 들어오면 배포(2~4분)를 기다렸다가 새 주소만 보낸다. 비밀 필요 없음(키 파일은 공개용).
+name: indexnow
+on:
+  push:
+    branches: [main]
+    paths: ["playground/games/**", "playground/guides/**", "playground/static/*.txt"]
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "사이트맵 전체 보내기"
+        type: boolean
+        default: false
+concurrency: { group: indexnow, cancel-in-progress: false }
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - uses: actions/cache/restore@v4
+        with:
+          path: .indexnow-seen.txt
+          key: indexnow-seen-${{ github.run_id }}
+          restore-keys: indexnow-seen-
+      - name: 바뀐 파일
+        id: ch
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "files=$(git diff --name-only HEAD~1 HEAD -- playground | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+      - name: IndexNow 보내기
+        run: python scripts/indexnow.py --seen .indexnow-seen.txt ${{ inputs.all && '--all' || '' }} --changed ${{ steps.ch.outputs.files }}
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .indexnow-seen.txt
+          key: indexnow-seen-${{ github.run_id }}
