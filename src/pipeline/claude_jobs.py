@@ -491,9 +491,18 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + series_text + early_rules
             + "(사이트 근거는 system 끝 목록)")
     # 1시간 캐시: 작가 호출(출력 2만+ 토큰)과 채점 뒤의 다듬기 호출 사이가 5분을 넘기 쉽다
-    res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5,
-              cache="1h")
-    vs = res["variants"][:n]
+    # 생각(effort high)+후보 n개가 32000 을 넘겨 잘린 일(11/22) → 한도 64000, 그래도 잘리면 후보 수를 줄여 한 번 더
+    vs = []
+    for k in (n, max(2, n // 2)):
+        try:
+            vs = ask("toon", system, user.replace(f"서로 확실히 다른 {n}개", f"서로 확실히 다른 {k}개"),
+                     schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=64000, need=1.5,
+                     cache="1h")["variants"][:k]
+            break
+        except RuntimeError as e:
+            if "max_tokens" not in str(e) or k != n:
+                raise
+            print(f"작가 호출 잘림 ({k}개) → 후보 수 줄여 다시")
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=이 편의 결(뻔하지 않음·인사이트·여운·한없이 즐거움)을 제대로 살렸는지 + 중독성(반복 개그·다시 보게 되는 마지막 컷·끝-처음 루프·귀에 남는 소리), aha=뻔하지 않은 관점·여운이 있고 숫자를 쓴다면 사이트 근거가 맞는지(근거 틀리면 1점), "
                  "bible=세계관·캐릭터·구도 규칙 + 소동 모양·틀·장소·훅 유형·제목 틀의 신선함(직전 3편과 겹치면 1점, 금화·저금통·돈 강조·뻔한 문제→절약 구성이면 1점), "
@@ -526,7 +535,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
                         "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성·제목 띠 문구를 끌어올려라. 순서 그대로 돌려줘.\n\n"
                         + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False),
-                        schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
+                        schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000,
                         need=0.6, cache="1h")["variants"][:len(weak)]
             if not fixed:
                 break
@@ -559,7 +568,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                            f"통과선({QUALITY_FLOOR}/{MAX_SCORE}) 아래였다. 채점 메모의 지적을 모두 반영해, 아래 안들과 겹치지 않게 "
                            f"주제 각도·첫 3초 훅·개그·제목 띠를 완전히 바꾼 새 후보 {k}개를 써라.\n"
                            + json.dumps(fails, ensure_ascii=False),
-                           schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.0,
+                           schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=64000, need=1.0,
                            cache="1h")["variants"][:k]
                 break
             except Exception as e:  # 잘림·예산·네트워크
