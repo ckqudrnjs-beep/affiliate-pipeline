@@ -17,8 +17,17 @@ jobs:
           from pipeline import youtube as Y
           t = Y.access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
           vid = "iy1cNnUDnp0"
-          st = Y.get_video(t, vid)["status"]
+          import urllib.error
+          try:
+              st = Y.api(t, "GET", f"{Y.VIDEOS_URL}?part=status&id={vid}")["items"][0]["status"]
+          except urllib.error.HTTPError as e:
+              print(e.read().decode()[:500]); raise
           keep = {k: st[k] for k in ("embeddable","license","publicStatsViewable","selfDeclaredMadeForKids","containsSyntheticMedia") if k in st}
-          Y.api(t, "PUT", f"{Y.VIDEOS_URL}?part=status", {"id": vid, "status": {**keep, "privacyStatus": "private"}})
-          print("now:", Y.get_video(t, vid)["status"].get("privacyStatus"), Y.get_video(t, vid)["status"].get("publishAt"))
+          print("before:", st.get("privacyStatus"), st.get("publishAt"))
+          try:
+              Y.api(t, "PUT", f"{Y.VIDEOS_URL}?part=status", {"id": vid, "status": {**keep, "privacyStatus": "private"}})
+          except urllib.error.HTTPError as e:
+              print(e.read().decode()[:500]); raise
+          st = Y.api(t, "GET", f"{Y.VIDEOS_URL}?part=status&id={vid}")["items"][0]["status"]
+          print("now:", st.get("privacyStatus"), st.get("publishAt"))
           PY
