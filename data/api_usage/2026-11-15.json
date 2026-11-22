@@ -1714,5 +1714,16 @@
   "cache_w": 0,
   "batch": true,
   "usd": 0.1725
+ },
+ {
+  "date": "2026-11-22",
+  "job": "adsense",
+  "model": "claude-opus-5-5",
+  "in": 26272,
+  "out": 8549,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.138
  }
 ]
