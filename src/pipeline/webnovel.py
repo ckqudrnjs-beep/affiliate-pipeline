@@ -87,10 +87,25 @@ def title_of(se: dict, ep: dict) -> str:
     return f"{se['title']} {ep['no']}화 | {ep['title']} #웹소설 #shorts"[:100]
 
 
-def description_of(se: dict, ep: dict) -> str:
+def links_of(work: str, no: int, log: dict) -> dict:
+    """설명란 연결용 영상 ID: 1화·이전 화·다음 화(이미 올라간 것만)."""
+    g = lambda n: (log.get(key(work, n)) or {}).get("id")  # noqa: E731
+    return {"first": g(1) if no > 1 else None, "prev": g(no - 1), "next": g(no + 1)}
+
+
+def description_of(se: dict, ep: dict, links: dict | None = None) -> str:
     body = " ".join(t for c in ep["cards"] for t, _ in c["lines"])
-    nxt = ep.get("next", {})
+    nxt = ep.get("next", {}); lk = links or {}
     tail = f"다음 화: {nxt['no']}화 {nxt['title']}" if nxt.get("title") else nxt.get("season_end", "")
+    if lk.get("next"):
+        tail = f"▶ 다음 화 {nxt.get('no', ep['no'] + 1)}화 {nxt.get('title', '')}: https://youtu.be/{lk['next']}"
+    elif nxt.get("title"):
+        tail += " (내일 밤 9시)"
+    nav = [f"◀ 이전 화: https://youtu.be/{lk['prev']}"] if lk.get("prev") else []
+    if lk.get("first") and lk.get("first") != lk.get("prev"):
+        nav.append(f"⏮ 1화부터 보기: https://youtu.be/{lk['first']}")
+    if nav:
+        tail += "\n" + "\n".join(nav)
     ai = "\nAI로 만든 그림이 포함되어 있습니다." if ep.get("ai") else ""
     return (f"{se['title']} {ep['no']}화 — {ep['title']}\n\n{body}\n\n{tail}\n\n"
             f"이 채널이 직접 쓴 오리지널 창작 웹소설입니다. 등장인물·단체는 실제와 관계없습니다.{ai}\n"
@@ -456,18 +471,43 @@ def publish_at(day: dt.date, hour: int) -> dt.datetime:
     return dt.datetime.combine(day, dt.time(hour), KST)
 
 
-def video_body(se: dict, ep: dict, visibility: str, at: dt.datetime | None) -> dict:
+def video_body(se: dict, ep: dict, visibility: str, at: dt.datetime | None, links: dict | None = None) -> dict:
     if visibility == "schedule" and at:
         status = {"privacyStatus": "private", "publishAt": at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     elif visibility == "schedule":
         status = {"privacyStatus": "public"}
     else:
         status = {"privacyStatus": "private"}
-    return {"snippet": {"title": title_of(se, ep), "description": description_of(se, ep),
+    return {"snippet": {"title": title_of(se, ep), "description": description_of(se, ep, links),
                         "tags": ["웹소설", "회귀", "복수극", "로맨스판타지", se["title"], "한화만더"],
                         "categoryId": "24", "defaultLanguage": "ko", "defaultAudioLanguage": "ko"},
             "status": {**status, "selfDeclaredMadeForKids": False,
                        "containsSyntheticMedia": bool(ep.get("ai_realistic")), "embeddable": True}}
+
+
+def link_prev(tok: str, se: dict, work: str, ep: dict, new_id: str, log: dict) -> bool | None:
+    """새 화를 올린 뒤, 다음 화 링크가 아직 없는 이전 화들 설명란을 고친다(videos.update, youtube 권한).
+    성공한 화는 기록에 linked=True. 고칠 화가 없으면 None, 하나라도 실패하면 False."""
+    import urllib.request
+    full = {**log, key(work, ep["no"]): {"id": new_id}}
+    todo = [e for e in episodes(work) if e["no"] < ep["no"] and (log.get(key(work, e["no"])) or {}).get("id")
+            and not log[key(work, e["no"])].get("linked")]
+    if not todo:
+        return None
+    ok = True
+    for prev in todo:
+        row = log[key(work, prev["no"])]
+        snip = video_body(se, prev, "private", None, links_of(work, prev["no"], full))["snippet"]
+        req = urllib.request.Request("https://www.googleapis.com/youtube/v3/videos?part=snippet",
+                                     data=json.dumps({"id": row["id"], "snippet": snip}).encode(), method="PUT",
+                                     headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(req, timeout=30).read()
+            row["linked"] = True
+        except Exception as e:  # noqa: BLE001
+            print(f"{prev['no']}화 링크 실패: {e}", file=sys.stderr)
+            ok = False
+    return ok
 
 
 def add_to_playlist(tok: str, playlist: str, vid: str) -> bool:
@@ -603,13 +643,16 @@ def run_short(day: dt.date) -> int:
     at = publish_at(day, int(cfg.get("hour", 21)))
     if at <= dt.datetime.now(KST) + dt.timedelta(minutes=10):
         at = None
-    r = upload(tok, video_body(se, ep, vis, at), video)
+    r = upload(tok, video_body(se, ep, vis, at, links_of(work, ep["no"], log)), video)
     pl = cfg.get("playlist_id") and add_to_playlist(tok, cfg["playlist_id"], r["id"])
+    linked = link_prev(tok, se, work, ep, r["id"], log)
     log[key(work, ep["no"])] = {"id": r["id"], "date": day.isoformat(), "title": title_of(se, ep), "visibility": vis}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = (f"{at:%m/%d %H:%M} 공개 예약" if at else "바로 공개") if vis == "schedule" else "비공개(BK 확인용)"
-    msg = f"📖 웹소설 {se['title']} {ep['no']}화 업로드 ({when}): https://youtu.be/{r['id']}" + ("" if pl or not cfg.get("playlist_id") else "\n(재생목록 추가 실패: 손으로 추가)")
+    msg = (f"📖 웹소설 {se['title']} {ep['no']}화 업로드 ({when}): https://youtu.be/{r['id']}"
+           + ("" if pl or not cfg.get("playlist_id") else "\n(재생목록 추가 실패: 손으로 추가)")
+           + ("" if linked is not False else "\n(이전 화 설명란 '다음 화' 링크 추가 실패)"))
     summary(msg); _notify(msg)
     return 0
 
