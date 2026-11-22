@@ -1601,7 +1601,7 @@ def upload_meta(meta: dict) -> int:
     from .youtube import access_token, summary, upload
     log = json.loads(LOG.read_text(encoding="utf-8")) if LOG.exists() else {}
     key = meta.get("key", meta["date"])
-    if key in log or any(v.get("qid") == meta["qid"] for v in log.values()):
+    if key in log or any(v.get("qid") == meta["qid"] and not v.get("skipped") for v in log.values()):  # 쉰 기록은 같은 질문 재도전을 막지 않음
         summary(f"{key} 이미 올림")
         return 0
     if meta.get("skip"):  # 품질 게이트 미통과 → 그날은 쉬고 BK 에게 알림, 예비 실행이 또 만들지 않게 기록

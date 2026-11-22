@@ -126,6 +126,27 @@ class RaksilShortsTest(unittest.TestCase):
         finally:
             r.LOG = old
 
+    def test_skipped_record_does_not_block_same_qid(self):
+        """쉰 기록(skipped)은 같은 질문으로 다시 만든 편을 막지 않고, 올린 기록만 막는다."""
+        import json, os, pathlib, tempfile
+        from unittest import mock
+        from pipeline import youtube
+        d = pathlib.Path(tempfile.mkdtemp())
+        old = r.LOG
+        r.LOG = d / "log.json"
+        said = []
+        try:
+            os.environ.pop("RAKSIL_YT_ENABLED", None)
+            with mock.patch.object(youtube, "summary", side_effect=said.append):
+                r.LOG.write_text(json.dumps({"2026-11-22-skip3": {"skipped": True, "qid": "20261122-1", "format": "skip"}}))
+                r.upload_meta({"date": "2026-11-22", "qid": "20261122-1", "title": "t"})
+                r.LOG.write_text(json.dumps({"2026-11-22-hidden": {"id": "x", "qid": "20261122-1"}}))
+                r.upload_meta({"date": "2026-11-22", "qid": "20261122-1", "title": "t"})
+        finally:
+            r.LOG = old
+        self.assertIn("dry-run", said[0])
+        self.assertIn("이미 올림", said[1])
+
     @NEED_RENDER
     def test_balance_frames_keep_shorts_ui_free(self):
         """오른쪽 버튼 자리(x≥900, y 1000~1540)와 아래 제목 자리(y≥1560 위 격자 제외)에 몽글이·글자가 없다."""
