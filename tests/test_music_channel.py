@@ -85,6 +85,7 @@ class TestReleases(unittest.TestCase):
 
 
 class TestExtrasLyrics(unittest.TestCase):
+    @NEED_RENDER
     def test_extra_windows_no_overlap(self):
         import numpy as np
         from pipeline.music_channel import extra_windows
