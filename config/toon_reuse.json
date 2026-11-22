@@ -1,5 +1,5 @@
 {
- "_": "이미 크레딧(Flow/Veo)을 써서 만들었는데 아직 본편에 안 나간 동전이 클립 (BK 11/22 '크레딧이나 비용을 써서 만든 것들은 가능하면 활용'). toon 대본 작가가 컷 하나를 이 클립으로 잡을 수 있다(cuts[].reuse = id, 한 편에 최대 1개). 잡힌 컷은 BK 가 Flow 로 새로 안 만들어도 된다. 금화·저금통·돈 그림이 있는 클립은 넣지 않는다(11/20 톤 규칙). 쓴 클립은 used 에 공개일을 적고 다시 안 쓴다(재사용 콘텐츠 판정 피하기).",
+ "_": "이미 크레딧(Flow/Veo)을 써서 만들었는데 아직 본편에 안 나간 동전이 클립 (BK 11/22 '크레딧이나 비용을 써서 만든 것들은 가능하면 활용'). toon 대본 작가가 컷 하나를 이 클립으로 잡을 수 있다(cuts[].reuse = id, 한 편에 최대 1개). 잡힌 컷은 BK 가 Flow 로 새로 안 만들어도 된다. 11/22 BK 'veo 크레딧 사용 되었던 것은 예외로' → 이미 크레딧 써서 만든 클립은 금화가 있어도 쓴다(새로 만드는 클립엔 금화 금지 그대로). 쓴 클립은 used 에 공개일을 적고 다시 안 쓴다(재사용 콘텐츠 판정 피하기).",
  "clips": [
   {
    "id": "entry-shoes",
@@ -8,7 +8,51 @@
    "screen": "저녁 현관, 동전이가 신발 더미를 보고 폴짝 뛰어들었다가 신발을 머리에 얹고 나옴 (금화 없음)",
    "place": "현관",
    "from": "11/21 김치찌개 편(금화 규칙으로 보류) 3번 컷",
-   "used": ""
+   "used": "2026-11-22",
+   "used_note": "김치찌개 편이 11/22 그대로 공개되면서 이미 나감"
+  }
+ ],
+ "endings_": "엔딩 클립 돌려쓰기 (BK 11/22 'veo 크레딧 사용 되었던 것은 예외로'). spec ending.clip 이 \"auto\" 면 tools/toon_assemble.py 가 공개일로 고른다: (날짜 서수 // 2) % 개수 → 이틀 간격 본편은 매번 다른 엔딩. 순서를 바꾸면 이미 정한 편의 엔딩이 바뀌니 끝에만 덧붙인다.",
+ "endings": [
+  {
+   "id": "cand-3",
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/cand-3.mp4",
+   "ss": 2.0,
+   "t": 6.0,
+   "at": 0.5,
+   "note": "앉아서 손 흔들기 + 금가루 (1초에 컷 튐 → 2초부터)"
+  },
+  {
+   "id": "cand-1",
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/cand-1.mp4",
+   "ss": 1.0,
+   "t": 7.0,
+   "at": 0.5,
+   "note": "옆에서 삐죽 + 손 흔들기, 금가루"
+  },
+  {
+   "id": "A2",
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/toon-ending-A2.mp4",
+   "ss": 1.0,
+   "t": 7.0,
+   "at": 0.5,
+   "note": "창가 눈 + 손 흔들기 (금화 없음)"
+  },
+  {
+   "id": "cand-2",
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/cand-2.mp4",
+   "ss": 0.5,
+   "t": 7.5,
+   "at": 2.5,
+   "note": "꿀꿀이 옆 만세 + 금화 터짐"
+  },
+  {
+   "id": "A",
+   "clip": "/mnt/project-files/shorts-uncle/만화샘플/ending/toon-ending-A.mp4",
+   "ss": 1.0,
+   "t": 7.0,
+   "at": 0.5,
+   "note": "옛 엔딩 A, 옆에서 삐죽 + 금가루"
   }
  ]
 }
