@@ -28,9 +28,9 @@ class PickTest(unittest.TestCase):
         import datetime as dt
         from pipeline import raksil_shorts_legacy as L
         self.assertEqual(L.pick(dt.date(2026, 11, 22)), "new")
-        self.assertEqual(L.pick(dt.date(2026, 11, 23)), "legacy")
+        self.assertEqual(L.pick(dt.date(2026, 11, 23)), "new")  # 11/22 고정 기간: 비교 끝
         self.assertEqual(L.pick(dt.date(2026, 11, 28)), "new")
-        self.assertEqual(L.pick(dt.date(2026, 11, 29)), "legacy")
+        self.assertEqual(L.pick(dt.date(2026, 11, 29)), "new")
         self.assertEqual(L.pick(dt.date(2026, 11, 30)), "new")
         self.assertEqual(L.pick(dt.date(2026, 11, 21)), "new")
         self.assertEqual(L.pick(dt.date(2026, 11, 22), "legacy"), "legacy")

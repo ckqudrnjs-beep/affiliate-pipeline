@@ -493,6 +493,9 @@ def pick(day: dt.date, force: str = "") -> str:
         return "legacy"
     if force:
         return "new"
+    from .shorts_lock import locked  # 11/22 BK 카드 '새 형식으로 고정': 고정 기간엔 격일 비교 끝, 새 형식만
+    if locked("5raksil", day):
+        return "new"
     if AB_START <= day <= AB_END and (day - AB_START).days % 2 == 1:
         return "legacy"
     return "new"
