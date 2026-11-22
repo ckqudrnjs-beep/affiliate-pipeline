@@ -228,3 +228,4 @@
 - feed.xml = 공략 글(/guide/*) 최신순 50개. q 페이지는 noindex 라 피드에서 뺌.
 - don3chon.com 모든 페이지 푸터에 5raksil.com 링크(구글이 돈삼촌 색인 페이지를 통해 5락실 발견).
 - BK: GSC URL 검사 → 색인 생성 요청(하루 약 10개), feed.xml 사이트맵 추가 제출, 네이버 서치어드바이저·Bing 웹마스터 등록.
+- 네이버 IndexNow (2026-11-22): 서치어드바이저 수집이 11월 중순 5페이지 뒤 멈춰서 추가. 키 파일 `static/51a65e446919aab35804afef44b9a0ad.txt`(공개용, 지우거나 이름 바꾸지 말 것). Actions `indexnow` 가 main 에 게임·공략이 들어오면 배포를 기다렸다가 새·바뀐 주소(사이트맵에 있는 것만)를 네이버·빙에 보낸다. 손으로 전체 보내기: Actions → indexnow → Run workflow → '사이트맵 전체 보내기'. 사이트맵·RSS 는 11/12 서치어드바이저 제출 완료.
