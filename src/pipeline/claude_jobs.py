@@ -44,7 +44,7 @@ OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 CYCLE_DAY = 15          # 크레딧 회차 시작일(이번 회차 12/14 만료 → 15일 시작으로 본다)
 CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
-JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 1.0, "early": 1.0, "polish": 95.0}
+JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 5.0, "early": 1.0, "polish": 95.0}
 POLISH_DAYS = 7         # 회차 끝 며칠 전부터 polish 가 남은 돈을 쓴다
 # 배치(Message Batches, 입·출력 50% 할인, 대부분 1시간 안) — 급하지 않은 작업만 (BK 11/20 "배치도 진행")
 # raksil·early(공개 시각에 맞춰야 함)·check(하루 몇 센트)·naver(직접 돌림)는 일반 호출.
