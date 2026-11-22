@@ -1188,5 +1188,243 @@
     }
    ]
   }
+ },
+ "2026-11-22": {
+  "sc-domain:don3chon.com": {
+   "clicks": 1,
+   "impressions": 38,
+   "position": 18.2,
+   "top_query": [
+    {
+     "key": "1kwh 가격",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 8.0
+    },
+    {
+     "key": "ep10 nc",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 21.0
+    },
+    {
+     "key": "라디에이터 전기세",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 53.0
+    },
+    {
+     "key": "알리 달러 원화 차이",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 5.0
+    },
+    {
+     "key": "알리 원화 달러 차이",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 5.0
+    },
+    {
+     "key": "알리 직구 관세",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 69.0
+    },
+    {
+     "key": "알리익스프레스 관세 계산기",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 55.0
+    },
+    {
+     "key": "알리익스프레스 무이자 할부",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 2.0
+    },
+    {
+     "key": "알리익스프레스 어필리에이트",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 4.0
+    },
+    {
+     "key": "입는 전기담요",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 60.0
+    }
+   ],
+   "top_page": [
+    {
+     "key": "https://don3chon.com/news/drop-baseus-tire-inflator-2026-11-11",
+     "clicks": 1,
+     "impressions": 1,
+     "position": 3.0
+    },
+    {
+     "key": "https://don3chon.com/",
+     "clicks": 0,
+     "impressions": 3,
+     "position": 30.7
+    },
+    {
+     "key": "https://don3chon.com/calc/aliexpress",
+     "clicks": 0,
+     "impressions": 13,
+     "position": 19.5
+    },
+    {
+     "key": "https://don3chon.com/calc/electric",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 8.0
+    },
+    {
+     "key": "https://don3chon.com/calc/heater",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 6.0
+    },
+    {
+     "key": "https://don3chon.com/guide",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 35.5
+    },
+    {
+     "key": "https://don3chon.com/guide/ali-black-friday-checklist",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 2.0
+    },
+    {
+     "key": "https://don3chon.com/guide/electric-blanket-vs-mat-bill",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 36.5
+    },
+    {
+     "key": "https://don3chon.com/news",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 3.0
+    },
+    {
+     "key": "https://don3chon.com/news/drop-baseus-ep10-nc-earbuds-2026-11-11",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 21.0
+    }
+   ],
+   "sitemaps": [
+    {
+     "path": "https://don3chon.com/feed.xml",
+     "last_read": "2026-11-19",
+     "errors": 0,
+     "submitted": 36,
+     "indexed": 0
+    },
+    {
+     "path": "https://don3chon.com/sitemap.xml",
+     "last_read": "2026-11-19",
+     "errors": 0,
+     "submitted": 73,
+     "indexed": 0
+    }
+   ]
+  },
+  "sc-domain:5raksil.com": {
+   "clicks": 2,
+   "impressions": 20,
+   "position": 9.2,
+   "top_query": [
+    {
+     "key": "락실",
+     "clicks": 0,
+     "impressions": 7,
+     "position": 8.9
+    }
+   ],
+   "top_page": [
+    {
+     "key": "https://5raksil.com/",
+     "clicks": 2,
+     "impressions": 2,
+     "position": 1.0
+    },
+    {
+     "key": "http://5raksil.com/",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 6.0
+    },
+    {
+     "key": "https://5raksil.com/about",
+     "clicks": 0,
+     "impressions": 9,
+     "position": 12.1
+    },
+    {
+     "key": "https://5raksil.com/en/sky",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 7.0
+    },
+    {
+     "key": "https://5raksil.com/games/chosung",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 8.0
+    },
+    {
+     "key": "https://5raksil.com/games/dodge",
+     "clicks": 0,
+     "impressions": 3,
+     "position": 10.0
+    },
+    {
+     "key": "https://5raksil.com/games/lasso",
+     "clicks": 0,
+     "impressions": 1,
+     "position": 3.0
+    },
+    {
+     "key": "https://5raksil.com/games/range",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 3.0
+    },
+    {
+     "key": "https://5raksil.com/games/starlight",
+     "clicks": 0,
+     "impressions": 2,
+     "position": 5.5
+    },
+    {
+     "key": "https://5raksil.com/games/tongtong",
+     "clicks": 0,
+     "impressions": 4,
+     "position": 6.8
+    }
+   ],
+   "sitemaps": [
+    {
+     "path": "https://5raksil.com/feed.xml",
+     "last_read": "2026-11-21",
+     "errors": 0,
+     "submitted": 22,
+     "indexed": 0
+    },
+    {
+     "path": "https://5raksil.com/sitemap.xml",
+     "last_read": "2026-11-20",
+     "errors": 0,
+     "submitted": 51,
+     "indexed": 0
+    }
+   ]
+  }
  }
 }

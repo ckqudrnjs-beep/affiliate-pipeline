@@ -199,7 +199,8 @@ def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) 
                 + f"게임 설명: {g.get('description', '')}\n편집장 점수: "
                 + json.dumps({k: sc.get(k) for k in rs.GATE_SCHEMA_PROPS}, ensure_ascii=False)
                 + f"\n편집장 지적: {sc.get('note', '')}\n\n지난 시도(되풀이 금지):\n{past}")
-        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.SONNET, effort="medium", max_tokens=800, need=0.02,
+        # 11/22: Sonnet·800 토큰은 생각에 잘려 다시 짜기가 자주 실패 → 문구 은행 후킹만 돌다 22/40 쉼. Opus·넉넉한 한도로
+        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.OPUS, effort="medium", max_tokens=8000, need=0.1,
                    schema=cj.obj({"hook": cj.S, "line": cj.S}))
     except Exception as e:
         print(f"게임 기획안 다시 짜기 실패: {e}", file=sys.stderr)
@@ -228,6 +229,10 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
                       "화면은 자동 플레이 녹화라 특정 순간에 맞춘 몽글이 반응·벌칙·내일 예고는 넣을 수 없고, 노란 줄은 게임 이름 고정, "
                       "둘째 대사(사이트 안내)와 몽글이 엔딩도 고정이다. 이것들로 감점하지 말고, 바꿀 수 있는 것은 흰 줄 후킹과 첫 대사뿐 — "
                       "note 도 그 둘만 지시", brief)
+        if sc and sc.get("blocked"):  # 예산 소진 → 채점 없이 올리지 않음 (11/22)
+            if best and rs.gate_soft(best[3]):
+                return best[1], best[2], "", {**best[3], "soft": True}
+            return hook, say, f"채점 예산이 막혀 채점 없이 올리지 않음 — {sc['blocked']}", None
         if sc is None:
             return hook, say, "", None  # 채점 불가 → 화면 검사(check)만
         total, ok = rs.gate_total(sc)

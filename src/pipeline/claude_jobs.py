@@ -44,7 +44,7 @@ OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 CYCLE_DAY = 15          # 크레딧 회차 시작일(이번 회차 12/14 만료 → 15일 시작으로 본다)
 CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
-JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 1.0, "early": 1.0, "polish": 95.0}
+JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 5.0, "early": 1.0, "polish": 95.0}
 POLISH_DAYS = 7         # 회차 끝 며칠 전부터 polish 가 남은 돈을 쓴다
 # 배치(Message Batches, 입·출력 50% 할인, 대부분 1시간 안) — 급하지 않은 작업만 (BK 11/20 "배치도 진행")
 # raksil·early(공개 시각에 맞춰야 함)·check(하루 몇 센트)·naver(직접 돌림)는 일반 호출.
@@ -491,9 +491,18 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + series_text + early_rules
             + "(사이트 근거는 system 끝 목록)")
     # 1시간 캐시: 작가 호출(출력 2만+ 토큰)과 채점 뒤의 다듬기 호출 사이가 5분을 넘기 쉽다
-    res = ask("toon", system, user, schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.5,
-              cache="1h")
-    vs = res["variants"][:n]
+    # 생각(effort high)+후보 n개가 32000 을 넘겨 잘린 일(11/22) → 한도 64000, 그래도 잘리면 후보 수를 줄여 한 번 더
+    vs = []
+    for k in (n, max(2, n // 2)):
+        try:
+            vs = ask("toon", system, user.replace(f"서로 확실히 다른 {n}개", f"서로 확실히 다른 {k}개"),
+                     schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=64000, need=1.5,
+                     cache="1h")["variants"][:k]
+            break
+        except RuntimeError as e:
+            if "max_tokens" not in str(e) or k != n:
+                raise
+            print(f"작가 호출 잘림 ({k}개) → 후보 수 줄여 다시")
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=이 편의 결(뻔하지 않음·인사이트·여운·한없이 즐거움)을 제대로 살렸는지 + 중독성(반복 개그·다시 보게 되는 마지막 컷·끝-처음 루프·귀에 남는 소리), aha=뻔하지 않은 관점·여운이 있고 숫자를 쓴다면 사이트 근거가 맞는지(근거 틀리면 1점), "
                  "bible=세계관·캐릭터·구도 규칙 + 소동 모양·틀·장소·훅 유형·제목 틀의 신선함(직전 3편과 겹치면 1점, 금화·저금통·돈 강조·뻔한 문제→절약 구성이면 1점), "
@@ -526,7 +535,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             fixed = ask("toon", system, "아래 대본 후보들을 채점 메모의 약점을 모두 고쳐 다시 써 줘. 같은 주제·숫자·근거는 유지하고 "
                         "훅(첫 1초 움직임)·개그(잡으려다 실패)·자막 명확성·제목 띠 문구를 끌어올려라. 순서 그대로 돌려줘.\n\n"
                         + json.dumps([{"대본": vs[i], "채점": scores.get(i, {})} for i in weak], ensure_ascii=False),
-                        schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=16000,
+                        schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000,
                         need=0.6, cache="1h")["variants"][:len(weak)]
             if not fixed:
                 break
@@ -551,18 +560,25 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         fails = [{"제목": vs[i].get("title"), "제목 띠": f"{vs[i].get('band_top', '')} / {vs[i].get('band_accent', '')}",
                   "훅": vs[i].get("hook"), "개그": vs[i].get("gag"), "점수": scores.get(i, {})}
                  for i in sorted(scores, key=lambda i: -scores[i].get("total", 0))[:4]]
-        try:
-            more = ask("toon", system, user + f"\n\n[새 기획 {replans}차 — BK 11/21 '기획안을 바꿔야지 스킵하면 안돼'] 아래 안들은 다듬어도 "
-                       f"통과선({QUALITY_FLOOR}/{MAX_SCORE}) 아래였다. 채점 메모의 지적을 모두 반영해, 아래 안들과 겹치지 않게 "
-                       f"주제 각도·첫 3초 훅·개그·제목 띠를 완전히 바꾼 새 후보 {REPLAN_N}개를 써라.\n"
-                       + json.dumps(fails, ensure_ascii=False),
-                       schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=20000, need=1.0,
-                       cache="1h")["variants"][:REPLAN_N]
-            if not more:
+        more = None
+        # 11/22 12/6 편: 4개를 한 번에 쓰다 20000 토큰에서 잘려 1차에서 바로 멈춤 → 상한을 올리고, 잘리면 개수를 줄여 한 번 더
+        for k in (REPLAN_N, max(1, REPLAN_N // 2)):
+            try:
+                more = ask("toon", system, user + f"\n\n[새 기획 {replans}차 — BK 11/21 '기획안을 바꿔야지 스킵하면 안돼'] 아래 안들은 다듬어도 "
+                           f"통과선({QUALITY_FLOOR}/{MAX_SCORE}) 아래였다. 채점 메모의 지적을 모두 반영해, 아래 안들과 겹치지 않게 "
+                           f"주제 각도·첫 3초 훅·개그·제목 띠를 완전히 바꾼 새 후보 {k}개를 써라.\n"
+                           + json.dumps(fails, ensure_ascii=False),
+                           schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=64000, need=1.0,
+                           cache="1h")["variants"][:k]
                 break
+            except Exception as e:  # 잘림·예산·네트워크
+                print(f"새 기획 {replans}차 ({k}개) 실패: {e}")
+        if not more:
+            break
+        try:
             judged2 = ask("toon", judge_sys, json.dumps(more, ensure_ascii=False), schema=JUDGE, effort="medium", need=0.3, cache="5m")
-        except Exception as e:  # 예산·네트워크 → 지금까지의 최고안으로
-            print(f"새 기획 실패: {e}")
+        except Exception as e:
+            print(f"새 기획 채점 실패: {e}")
             break
         base = len(vs)
         vs.extend(more)
@@ -727,7 +743,7 @@ def adsense(today: dt.date | None = None) -> int:
               "형식: ## 한 줄 판정, ## 바로 고칠 것(최대 5개, 파일·페이지·고치는 방법), ## 나중에(최대 3개), ## 좋은 점(2개). "
               "개인·사업자 정보를 페이지에 더 넣으라는 제안은 하지 마라(운영자 비공개 방침). 제휴 링크 숨기기는 클로킹이라 제안 금지.")
     user = f"사이트 don3chon.com, 전체 {len(pages)}페이지 중 일부 본문 텍스트:\n\n{sample}"
-    report = ask("adsense", system, user, effort="high", max_tokens=12000, need=1.2)
+    report = ask("adsense", system, user, effort="high", max_tokens=32000, need=1.2)  # 12000 에서 잘림 (11/22)
     out = ROOT / "docs/reviews" / f"adsense-{today.isoformat()}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(f"# 애드센스 심사관 점검 {today.isoformat()} (Claude API 자동)\n\n{report}\n", encoding="utf-8")

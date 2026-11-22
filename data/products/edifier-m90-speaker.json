@@ -16,5 +16,6 @@
  "check": "관부가세(150달러 초과 여부), 입력 단자(광·USB·AUX), 전원 220V 지원",
  "commission": 7.0,
  "status": "active",
- "addedDate": "2026-11-10"
+ "addedDate": "2026-11-10",
+ "missingDays": 1
 }
