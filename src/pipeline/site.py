@@ -42,6 +42,21 @@ CATEGORIES = {"clean": "청소", "heat": "겨울 난방", "living": "생활·조
 # 쿠팡 파트너스 공식 권장 문구를 그대로 쓴다 ("포스팅" 대신 바꾸지 않음)
 DISCLOSURE = ("이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. "
               "알리익스프레스 어필리에이트 링크도 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다.")
+COUPANG_LINE, ALI_LINE = DISCLOSURE.split(". ", 1)
+COUPANG_LINE += "."
+
+
+def disclosure_for(body: str) -> str:
+    """페이지에 실제로 있는 제휴사만 적는다 (2026-11-22 애드센스 점검: 쿠팡 링크만 있는 레시피에 알리 문구가 붙어 있었음).
+    어느 쪽 링크인지 알 수 없으면(내부 상품 링크만 있는 글 등) 두 문장을 모두 적는다."""
+    cp, ali = "coupang.com" in body, "aliexpress" in body
+    if cp and not ali:
+        return COUPANG_LINE
+    if ali and not cp:
+        return "이 페이지에는 알리익스프레스 어필리에이트 링크가 포함되어 있어 구매 시 일정액의 수수료를 제공받습니다."
+    return DISCLOSURE
+
+
 MIN_NOTE = 40
 # 상품 정리 규칙 (docs/PRODUCTS_AUTO.md): 철 지난 계절 상품은 잠시 내렸다가 철이 오면 자동으로 다시 올린다
 NEW_DAYS = 14  # 새로 들어온 물건: 등록(addedDate) 후 14일 동안만 홈 칸·NEW 표시. 상품 자체는 남는다.
@@ -53,13 +68,18 @@ PRODUCT_NOINDEX = bool(CFG.get("productNoindex", True))
 BASE = CFG.get("baseUrl", "https://don3chon.com").rstrip("/")  # 판단 글이 이보다 짧으면 페이지를 만들지 않는다
 
 
+def low_label(p: dict) -> str:
+    n = int(p.get("lowDays") or 30)
+    return "알리 최근 30일 최저가" if n >= 30 else f"알리 기록 {n}일 중 최저가"
+
+
 TELEGRAM_URL = "https://t.me/don3chon_deal"
 
 
 def tg_box() -> str:
     """텔레그램 가격 알림 구독 버튼 (BK OK 2026-11-13). 채널 글에는 제휴 링크가 있으므로 그 사실을 함께 적는다."""
     return (f'<aside class="tgbox"><p><b>가격 내려가면 알려 드릴까요?</b><br>'
-            f'삼촌이 소개한 물건이 30일 최저가로 내려가면 텔레그램으로 하루 최대 3개만 보내 드려요.</p>'
+            f'삼촌이 소개한 물건이 최근 기록 중 최저가로 내려가면 텔레그램으로 하루 최대 3개만 보내 드려요.</p>'
             f'<a class="btn" href="{TELEGRAM_URL}" target="_blank" rel="noopener">텔레그램으로 알림 받기</a>'
             f'<p class="small">알림 글에는 알리익스프레스 제휴 링크가 들어가며, 구매 시 수수료를 받을 수 있어요.</p></aside>')
 
@@ -123,6 +143,9 @@ def load(path="config/site_products.csv", allow_examples: bool = False, data_dir
             last30 = [pr for d, pr in h if dt.date.fromisoformat(d) >= dt.date.fromisoformat(h[-1][0]) - dt.timedelta(days=30)]
             if len(last30) >= 7:
                 r["low30"] = str(min(last30))
+                # 기록이 30일이 안 되면 '최근 30일'이라고 쓰지 않는다 (실제 기록 기간을 적는다)
+                first = min(dt.date.fromisoformat(d) for d, _ in h if dt.date.fromisoformat(d) >= dt.date.fromisoformat(h[-1][0]) - dt.timedelta(days=30))
+                r["lowDays"] = str((dt.date.fromisoformat(h[-1][0]) - first).days + 1)
         # 예시 줄(가짜 가격·링크)은 실제 사이트에 내보내지 않는다 (쿠팡 약관 8조 2항 19호, 표시광고법)
         if any("EXAMPLE" in (r.get(k) or "") for k in ("aliUrl", "coupangUrl")) and not allow_examples:
             print(f"건너뜀(예시 데이터): {r['slug']}", file=sys.stderr)
@@ -335,7 +358,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
     lds = [ld] + ([S.crumbs(BASE, crumbs)] if crumbs else [])
     # 대가성 문구 띠: 제휴 링크(rel=sponsored)가 있는 페이지와 상품 페이지에만 (홈은 2026-11-16 BK 확인 후 상품 칸 옆 한 줄로 대체) (2026-11-16, 애드센스 심사 대비 — 계산기·소개처럼 링크 없는 페이지가 광고 페이지처럼 보이지 않게)
     # affiliate=True: 상품 카드·상품 페이지 링크가 있는 글 (2026-11-21: 네이버 상자가 없는 글은 [광고]가 글 끝에만 있었음 → 맨 위에도)
-    adbar = (f'<div class="adbar"><div class="wrap">[광고] {DISCLOSURE}</div></div>'
+    adbar = (f'<div class="adbar"><div class="wrap">[광고] {disclosure_for(body)}</div></div>'
              if (affiliate or "sponsored" in body or path.startswith("p/")) else "")
     # 바닥글의 가격·제휴 안내도 대가성 띠와 같은 조건일 때만 (2026-11-16: 계산기·퀴즈까지 제휴 사이트처럼 보이지 않게)
     foot_note = ("가격은 표시한 날짜 기준이며 바뀔 수 있습니다. 구매 전 판매 페이지에서 최종 가격·배송일을 확인하세요."
@@ -435,7 +458,7 @@ def product_page(p: dict) -> str:
 <div class="receipt">
 <div><span>알리 (해외 배송)</span><span>{won(int(p['aliPrice']))}</span></div>
 {f'<div><span>소개 당시 가격 ({p["baseDate"]})</span><span>{won(int(p["basePrice"]))} · {change_badge(p)}</span></div>' if p.get("change") else ''}
-{f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
+{f'<div><span>{low_label(p)}</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
 <div class="sum"><span>{p.get('lifeMonths') or 12}개월 쓰면 한 달에</span><span>{won(p['monthAli'])}</span></div>
 </div>"""
     else:
@@ -452,8 +475,8 @@ def product_page(p: dict) -> str:
 <div class="receipt">
 <div><span>쿠팡{f' · {e(p["coupangName"])}' if p.get("coupangName") else ''}</span><span>{won(int(p['coupangPrice']))}</span></div>
 <div><span>알리 (배송 약 {p['shipDays']}일)</span><span>{won(int(p['aliPrice']))}</span></div>
-<div class="sum"><span>차액</span><span>{'알리' if p['diff'] >= 0 else '쿠팡'}이 {won(abs(p['diff']))} 쌈 ({abs(p['ratio'])}%)</span></div>
-{f'<div><span>알리 최근 30일 최저가</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
+<div class="sum"><span>차액</span><span>{'알리가' if p['diff'] >= 0 else '쿠팡이'} {won(abs(p['diff']))} 쌈 ({abs(p['ratio'])}%)</span></div>
+{f'<div><span>{low_label(p)}</span><span>{won(int(p["low30"]))}</span></div>' if p.get("low30") else ''}
 {f'<div><span>하루 더 기다릴 때마다 (쿠팡 하루 배송 가정)</span><span>{won(p["perDay"])} 절약</span></div>' if p['diff'] > 0 else '<div><span>기다릴 이유</span><span>없음 (쿠팡이 더 쌈)</span></div>'}
 <div><span>{p['lifeMonths']}개월 쓰면 한 달에</span><span>알리 {won(p['monthAli'])} / 쿠팡 {won(p['monthCp'])}</span></div>
 </div>
@@ -583,7 +606,7 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
 {RC.home_block(RC.load())}
 {N.home_block(news, sales)}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
-<div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 같은 날짜로 나란히 놓고 차액과 비율을 계산합니다.</p></div>
+<div class="principles"><div><b>차액을 계산합니다</b><p>알리와 쿠팡에서 기능이 비슷한 제품의 가격을 나란히 놓고, 가격을 확인한 날짜를 함께 적어 차액과 비율을 계산합니다.</p></div>
 <div><b>기다림에도 값을 매깁니다</b><p>해외 배송을 하루 더 기다릴 때마다 얼마를 아끼는지 보여 드립니다. 몇천 원 차이면 빠른 배송을 권합니다.</p></div>
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
 <!--ADFIT-->
@@ -682,7 +705,7 @@ $('aout').onclick=function(){ak.value='';try{sessionStorage.removeItem('d3_admk'
 load()})();"""
 
 PRIVACY = """<h1>개인정보처리방침</h1>
-<p class="small">시행일: 2026년 11월 15일</p>
+<p class="small">시행일: 2026년 11월 22일 (텔레그램 가격 알림 항목 추가)</p>
 <h2>1. 수집하는 개인정보</h2>
 <p class="note">돈 줍는 삼촌(don3chon.com, 이하 '사이트')은 회원가입·댓글·결제 기능이 없으며 이름·전화번호 같은 개인정보를 직접 수집하지 않습니다. 계산기에 넣은 값과 '찜하기' 목록은 이용자의 브라우저(localStorage)에만 저장되고 서버로 전송되지 않습니다.</p>
 <h2>2. 쿠키와 광고</h2>
@@ -694,7 +717,9 @@ PRIVACY = """<h1>개인정보처리방침</h1>
 <h2>4. 방문 통계</h2>
 <p class="note">사이트는 Cloudflare Web Analytics로 방문 수를 집계합니다. 이 도구는 쿠키를 쓰지 않고 개인을 식별하지 않는 형태로 페이지 조회 수만 셉니다.</p>
 <p class="note">하루 방문자 수를 알기 위해 브라우저마다 하루 한 번 운영자의 집계 서버(5raksil.com)에 빈 신호를 보냅니다. 서버는 접속 IP 주소를 날짜·비밀값과 함께 되돌릴 수 없는 해시값으로 바꿔 그날 하루만 보관하고, 다음 날에는 날짜별 방문자 숫자만 남기고 해시값을 삭제합니다. 원래 IP 주소는 저장하지 않습니다. 브라우저에는 오늘 이미 집계됐는지 표시하는 날짜만 저장됩니다.</p>
-<h2>5. 문의</h2>
+<h2>5. 텔레그램 가격 알림</h2>
+<p class="note">가격 알림은 누구나 볼 수 있는 텔레그램 공개 채널(t.me/don3chon_deal)로 보냅니다. 구독(채널 참여)과 해지(채널 나가기)는 텔레그램 앱에서 이용자가 직접 하며, 운영자는 구독자의 이름·전화번호·텔레그램 계정 정보를 따로 받거나 저장하지 않습니다. 채널 이용에는 <a href="https://telegram.org/privacy" rel="noopener" target="_blank">텔레그램 개인정보처리방침</a>이 적용됩니다.</p>
+<h2>6. 문의</h2>
 <p class="note">개인정보 관련 문의는 <a href="contact.html">문의 페이지</a>의 연락처로 보내 주세요. 이 방침이 바뀌면 이 페이지에 시행일과 함께 알립니다.</p>"""
 
 ABOUT = """<h1>돈 줍는 삼촌 소개</h1>

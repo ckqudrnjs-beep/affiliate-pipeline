@@ -112,15 +112,15 @@ def load(data_dir: str = "data", pantry: dict | None = None) -> list[dict]:
 def title(r: dict) -> str:
     if is_party(r):
         return f"홈파티 {r['name']} {yield_label(r)} 재료비 {won(r['batch'])}, 1인분 원가 {won(r['total'])}"  # 검색 결과에서 잘리지 않게 짧게 (2026-11-17)
-    return f"{r['name']} 1인분 원가 {won(r['total'])}, 배달보다 {won(r['save'] // 100 * 100)} 아끼는 레시피"
+    return f"{r['name']} 1인분 원가 {won(r['total'])}, 배달보다 {won(r['save'])} 아끼는 레시피"
 
 
 def desc(r: dict) -> str:
     if is_party(r):
         return (f"{r['name']} {yield_label(r)}을 집에서 만들면 재료비 약 {won(r['batch'])}(1인분 {won(r['total'])})이에요. "
-                f"배달(약 {won(r['deliveryBatch'])})보다 {won(r['saveBatch'] // 100 * 100)} 아껴요. 재료별 원가와 만드는 법을 정리했어요.")
+                f"배달(약 {won(r['deliveryBatch'])})보다 {won(r['saveBatch'])} 아껴요. 재료별 원가와 만드는 법을 정리했어요.")
     return (f"{r['name']} 1인분을 집에서 만들면 재료비 약 {won(r['total'])}이에요. 배달(약 {won(r['delivery'])})보다 "
-            f"{won(r['save'] // 100 * 100)} 아껴요. 재료별 원가와 만드는 법을 정리했어요.")
+            f"{won(r['save'])} 아껴요. 재료별 원가와 만드는 법을 정리했어요.")
 
 
 def shop_box(rows: list[dict]) -> str:
@@ -185,7 +185,7 @@ def page_body(r: dict, others: list[dict]) -> str:
 
 def list_body(recs: list[dict], pantry: dict[str, dict]) -> str:
     e = html.escape
-    items = "".join(f'<li><a href="recipe/{r["slug"]}.html"><b>{e(r["name"])}</b><span>1인분 {won(r["total"])} · 배달보다 {won(r["save"] // 100 * 100)} ↓</span></a></li>'
+    items = "".join(f'<li><a href="recipe/{r["slug"]}.html"><b>{e(r["name"])}</b><span>1인분 {won(r["total"])} · 배달보다 {won(r["save"])} ↓</span></a></li>'
                     for r in sorted((r for r in recs if not is_party(r)), key=lambda r: -r["save"]))
     party = party_block(recs)
     used = {i["id"] for r in recs for i in r["ingredients"]}

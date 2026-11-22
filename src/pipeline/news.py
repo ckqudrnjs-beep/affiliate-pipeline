@@ -85,8 +85,12 @@ def news_items(news: list[dict], root: str = "", limit: int | None = None) -> st
     return f'<ul class="news">{"".join(out)}</ul>'
 
 
-def sales_list(sales: list[dict]) -> str:
+def sales_list(sales: list[dict], today: dt.date | None = None) -> str:
     e = html.escape
+    today = today or (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)).date()
+    sales = [s for s in sales if dt.date.fromisoformat(s["date"]) >= today]  # 지난 행사는 '다가오는 세일'에서 뺀다
+    if not sales:
+        return '<p class="small">다가오는 큰 세일 일정이 정해지면 여기에 올려요.</p>'
     rows = "".join(f'<li><span class="dday" data-date="{e(s["date"])}">{dt.date.fromisoformat(s["date"]).month}/{dt.date.fromisoformat(s["date"]).day}</span>'
                    f'<div><b>{e(s["name"])}</b><span>{dt.date.fromisoformat(s["date"]).month}월 {dt.date.fromisoformat(s["date"]).day}일 · {e(s.get("note", ""))}</span></div></li>'
                    for s in sorted(sales, key=lambda s: s["date"]))
