@@ -362,7 +362,9 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         jobs = pending(files, log)
         try:
             run_extras(dtoken, cfg, log, now, enabled)
-        except (urllib.error.HTTPError, subprocess.CalledProcessError, KeyError) as e:
+        except urllib.error.HTTPError as e:
+            summary(f"::warning::추가 쇼츠 실패: HTTP {e.code} {e.read().decode('utf-8', 'replace')[:300]}")
+        except (subprocess.CalledProcessError, KeyError) as e:
             summary(f"::warning::추가 쇼츠 실패: {e}")
         if not jobs:
             summary(f"새 곡 없음 (드라이브 '{folder}' 폴더 파일 {len(files)}개, 아직 안 올린 곡 0개"
