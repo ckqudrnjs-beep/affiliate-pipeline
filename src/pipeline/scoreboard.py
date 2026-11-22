@@ -121,6 +121,21 @@ def suggest(yt: dict[str, dict[str, list[dict]]]) -> list[str]:
     return out
 
 
+def per_k(rows: list[dict], key: str) -> str:
+    """1천 회당 구독·좋아요 (2026-11-22 BK '구독 좋아요 올릴 방안'). 조회 0이면 '-'."""
+    v = sum(r.get("views", 0) for r in rows)
+    return f"{sum(r.get(key, 0) for r in rows) * 1000 / v:.1f}" if v else "-"
+
+
+def conversion_lines(groups: dict[str, list[dict]]) -> list[str]:
+    """채널 전체 구독 전환 한 줄 + 끝까지 본 비율 55% 이상/미만 비교 (11/22: 5락실 구독은 55%+ 쇼츠에서만 나왔다)."""
+    rows = [r for rs in groups.values() for r in rs]
+    hi = [r for r in rows if r.get("avg_pct", 0) >= 55]
+    lo = [r for r in rows if r.get("avg_pct", 0) < 55]
+    return [f"- 구독 전환: 1천 회당 구독 {per_k(rows, 'subs')}명, 좋아요 {per_k(rows, 'likes')}개 "
+            f"(시청 비율 55% 이상 {len(hi)}편 구독 {per_k(hi, 'subs')} / 미만 {len(lo)}편 {per_k(lo, 'subs')})", ""]
+
+
 def render(today: dt.date, yt, search, cost, tips) -> str:
     L = [f"# 주간 성과판 (SCOREBOARD.md) — {today.isoformat()}", "",
          "> 매주 월 08:20 자동(`scoreboard`). 숫자는 저장소에 쌓인 지난 28일 값(유튜브 분석·서치 콘솔)만 쓴다. "
@@ -128,12 +143,14 @@ def render(today: dt.date, yt, search, cost, tips) -> str:
          "## 제안", *([f"- {t}" for t in tips] or ["- 이번 주는 눈에 띄게 낮거나 높은 형식 없음"]), ""]
     for ch, groups in yt.items():
         L += [f"## 유튜브 — {'삼촌' if ch == 'uncle' else '5락실'} (형식별, 지난 28일)", "",
-              "| 형식(만든 작업) | 편 수 | 평균 조회 | 평균 시청 비율 | 공유 | 구독 |", "|---|---|---|---|---|---|"]
+              *conversion_lines(groups),
+              "| 형식(만든 작업) | 편 수 | 평균 조회 | 평균 시청 비율 | 공유 | 구독 | 1천 회당 구독 | 1천 회당 좋아요 |",
+              "|---|---|---|---|---|---|---|---|"]
         for g, rows in sorted(groups.items(), key=lambda kv: -sum(r.get("views", 0) for r in kv[1]) / len(kv[1])):
             n = len(rows)
             L.append(f"| {g} | {n} | {sum(r.get('views', 0) for r in rows) / n:.0f} | "
                      f"{sum(r.get('avg_pct', 0) for r in rows) / n:.0f}% | {sum(r.get('shares', 0) for r in rows)} | "
-                     f"{sum(r.get('subs', 0) for r in rows)} |")
+                     f"{sum(r.get('subs', 0) for r in rows)} | {per_k(rows, 'subs')} | {per_k(rows, 'likes')} |")
         L.append("")
     for site, kinds in search.items():
         L += [f"## 검색 유입 — {site} (페이지 종류별, 지난 28일 상위 페이지)", "",

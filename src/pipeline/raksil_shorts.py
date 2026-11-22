@@ -1567,8 +1567,8 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")
     wav.unlink()
-    from .raksil_ending import append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
-    total += add_ending(mp4, day)
+    from .raksil_ending import REASON_BALANCE, append as add_ending  # 2026-11-20 BK: 몽글이 구독·좋아요 엔딩
+    total += add_ending(mp4, day, REASON_BALANCE)  # 11/22: 이유 = 올라오는 시각
     bgm.mix(mp4, tr)
     meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band, fmt), "band": band,
             "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "gate": gate, "rewritten": bool(q.get("rewritten")), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
