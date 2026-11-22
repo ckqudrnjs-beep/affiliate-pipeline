@@ -140,8 +140,10 @@ def best_window(rms, fps: float, length: float, duration: float) -> float:
     return round(i / fps, 2)
 
 
-def extra_windows(rms, fps: float, length: float, duration: float, used: list[float], n: int) -> list[float]:
-    """이미 쓴 구간과 겹치지 않는 다음으로 꽉 찬 구간 n개 (같은 곡에서 쇼츠 더 만들기)."""
+def extra_windows(rms, fps: float, length: float, duration: float, used: list[float], n: int,
+                  gap: float | None = None) -> list[float]:
+    """이미 쓴 구간 시작점과 gap 초 이상 떨어진 다음으로 꽉 찬 구간 n개 (같은 곡에서 쇼츠 더 만들기)."""
+    gap = length if gap is None else gap
     import numpy as np
     w = int(length * fps)
     if len(rms) <= w:
@@ -158,7 +160,7 @@ def extra_windows(rms, fps: float, length: float, duration: float, used: list[fl
         t = i / fps
         if t + length > duration - 3:
             continue
-        if all(abs(t - u) >= length for u in taken):
+        if all(abs(t - u) >= gap for u in taken):
             out.append(round(float(t), 2))
             taken.append(t)
             if len(out) >= n:
@@ -434,17 +436,25 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
         if not plan or not ent or not ent.get("video_id"):
             continue
         have = ent.setdefault("extras", [])
-        todo = [(k, p) for k, p in enumerate(plan) if k >= len(have)]
-        todo = [(k, p) for k, p in todo if dt.datetime.fromisoformat(p["publish_at"]) > now + dt.timedelta(minutes=30)]
+        done_k = {e.get("k", i) for i, e in enumerate(have)}
+        todo = [(k, p) for k, p in enumerate(plan) if k not in done_k
+                and now + dt.timedelta(minutes=30) < dt.datetime.fromisoformat(p["publish_at"])
+                <= now + dt.timedelta(days=float(cfg.get("extras_ahead_days", 4.5)))]  # 하루 업로드 한도 때문에 가까운 것만
         if not todo:
             continue
         audio = download(dtoken, fid, WORK / "in" / ent["name"])
         an = analyse(audio)
-        length = float(cfg.get("short_length", 40))
+        base_len = float(cfg.get("short_length", 40))
         main_start = float(ov["short_start"]) if ov.get("short_start") is not None else \
-            best_window(an["rms"], an["fps"], length, an["duration"])
+            best_window(an["rms"], an["fps"], base_len, an["duration"])
         used = [main_start] + [e["start"] for e in have]
-        starts = extra_windows(an["rms"], an["fps"], length, an["duration"], used, len(todo))
+        picks = []
+        for k, p in todo:
+            ln = float(p.get("length", base_len))
+            got = extra_windows(an["rms"], an["fps"], ln, an["duration"], used, 1, float(p.get("gap", ln)))
+            if got:
+                used.append(got[0])
+                picks.append((k, p, got[0], ln))
         tags = tags_of(audio)
         lyr = lyrics_of(tags)
         title = ent["title"]
@@ -452,7 +462,7 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
         if not cov or not cov.exists():
             continue
         channel = cfg.get("channel", "BEEKAY SONGS")
-        for (k, p), st in zip(todo, starts):
+        for k, p, st, length in picks:
             subs = subtitles(audio, lyr, st, length) if cfg.get("short_lyrics", True) else []
             stem = re.sub(r"[^0-9A-Za-z가-힣]+", "-", title).strip("-")[:40]
             out = video(audio, cov, title, channel, ent.get("tag", ""), WORK / f"{stem}-extra{k + 1}.mp4", vertical=True,
@@ -470,9 +480,9 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
                     "#KPOP #AImusic #Suno #신곡 #shorts")
             at = dt.datetime.fromisoformat(p["publish_at"])
             r = upload(token, video_body(yt_title, desc, at, short=True), pathlib.Path(out["video"]))
-            have.append({"short_id": r["id"], "start": st, "publish_at": at.isoformat(), "subs": len(subs)})
+            have.append({"k": k, "short_id": r["id"], "start": st, "length": length, "publish_at": at.isoformat(), "subs": len(subs)})
             LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
-            summary(f"추가 쇼츠 예약: {yt_title} → {at.isoformat()[:16]} ({mm}부터 40초, 자막 {len(subs)}줄)\n"
+            summary(f"추가 쇼츠 예약: {yt_title} → {at.isoformat()[:16]} ({mm}부터 {int(length)}초, 자막 {len(subs)}줄)\n"
                     f"https://studio.youtube.com/video/{r['id']}/edit")
             done += 1
     return done
