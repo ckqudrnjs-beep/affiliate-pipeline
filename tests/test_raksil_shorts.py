@@ -258,6 +258,35 @@ class RaksilShortsTest(unittest.TestCase):
             self.assertLess((diff[1560:, :] > 60).mean(), 0.002, (fn.__name__, t))
 
 
+    @NEED_RENDER
+    def test_home_feed_safe_frame(self):
+        """11/22 BK: 유튜브 앱 홈 피드 미리보기(가운데 4:5 = y 285~1635)에서 띠·글자가 잘리지 않게 내용 전체를 안전 구역으로."""
+        import numpy as np
+        q, mg = QS[1], r.Mongle(dt.date(2026, 11, 21))
+        band = {"top": "친구랑 꼭 갈리는", "accent": "밸런스게임"}
+        pick = {"pick": "b", "why": "치킨은 진리야"}
+        under = r.background()
+        try:
+            r._LAYER = True
+            ctx = {"q": q, "res": None, "pick": pick, "mg": mg, "step": 0.7, "base": r.versus_card(q, band)}
+            frames = [r.versus_frame(t, [0.0, 2.6, 4.7, 7.5], ctx) for t in (0.3, 5.0, 8.0)]
+            frames.append(r.balance_frame(0.3, [0.0, 2.6, 4.7, 7.5], r.question_card(q), r.twist_card(None, q, pick), None, mg))
+        finally:
+            r._LAYER = False
+        ref = np.asarray(under.convert("RGB")).astype(int)
+        top = (r.H - r.W * 5 // 4) // 2
+        x0, y0, x1, y1 = r.safe_box()
+        self.assertGreaterEqual(y0, top)
+        self.assertLessEqual(y1, 1580)  # 아래 제목·채널 이름 자리 위
+        for i, f in enumerate(frames):
+            a = np.asarray(r.to_safe(f, under).convert("RGB")).astype(int)
+            diff = np.abs(a - ref).sum(axis=2) > 60
+            self.assertFalse(diff[:top].any(), i)
+            self.assertFalse(diff[y1 + 2:].any(), i)
+            self.assertLess(diff[1120:1600, 900:].mean(), 0.002, i)  # 오른쪽 버튼 자리 (원래 y≥1000 규칙이 옮겨진 곳)
+        self.assertEqual(r.to_safe(frames[0], under).getpixel((5, y0 + 20))[:3], (0, 0, 0))  # 띠는 폭 전체
+        self.assertNotEqual(r.to_safe(frames[3], under).getpixel((5, y0 + 20))[:3], (0, 0, 0))  # 띠 없으면 검은 막대 없음
+
     def test_gate_total(self):
         """품질 게이트: 결 넷 중 최고 + 중독성 + 문구 + 구도, 32/40 이상이고 한 칸도 6 미만이 없어야 통과."""
         good = {"fresh": 9, "insight": 3, "afterglow": 2, "joy": 4, "addictive": 8, "copy": 8, "layout": 8}

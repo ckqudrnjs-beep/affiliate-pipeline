@@ -21,13 +21,16 @@ class BandTest(unittest.TestCase):
         import toon_assemble as t
         im = t.layer(["추워서 김치찌개", "배달 시켰더니..."], "한 그릇 9,260원 차이", "sub", bigy=420,
                      band={"top": "추운 날 김치찌개 배달", "accent": "집밥이랑 얼마 차이?"})
-        self.assertEqual(im.getpixel((10, 10))[:3], (0, 0, 0))  # 띠는 불투명 검정
-        self.assertEqual(im.getpixel((10, 10))[3], 255)
-        self.assertEqual(im.getpixel((10, t.BAND_H + 30))[3], 0)  # 띠 아래는 영상이 보임
+        y0 = t.BAND_Y + 10
+        self.assertEqual(im.getpixel((10, y0))[:3], (0, 0, 0))  # 띠는 불투명 검정
+        self.assertEqual(im.getpixel((10, y0))[3], 255)
+        self.assertEqual(im.getpixel((10, 10))[3], 0)  # 11/22: 맨 위는 비움 (홈 피드 미리보기에서 잘리는 곳)
+        self.assertEqual(im.getpixel((10, t.BAND_Y + t.BAND_H + 30))[3], 0)  # 띠 아래는 영상이 보임
         alpha = im.split()[3]
-        # 노란 숫자 상자가 띠·자막 아래로 밀려 내려감 (bigy 420 → 띠 360 + 자막 두 줄 아래)
-        ys = [y for y in range(t.BAND_H, 1100) if im.getpixel((t.W // 2 - 300, y))[:3] == (255, 213, 60)]
-        self.assertTrue(ys and min(ys) > t.BAND_H + 100 + 2 * 116, ys[:1])
+        # 노란 숫자 상자가 띠·자막 아래로 밀려 내려감 (bigy 420 → 띠 + 자막 두 줄 아래)
+        bot = t.BAND_Y + t.BAND_H
+        ys = [y for y in range(bot, 1300) if im.getpixel((t.W // 2 - 300, y))[:3] == (255, 213, 60)]
+        self.assertTrue(ys and min(ys) > bot + 90 + 2 * 116, ys[:1])
         self.assertTrue(alpha.getbbox())
 
     @NEED_PIL
@@ -36,8 +39,17 @@ class BandTest(unittest.TestCase):
         import toon_assemble as t
         im = Image.new("RGBA", (t.W, t.H))
         t.draw_band(ImageDraw.Draw(im), {"top": "열네 글자 넘는 아주 긴 제목 줄 예시", "accent": "짧게"})
-        white = [x for y in range(60, 200) for x in range(t.W) if im.getpixel((x, y))[:3] == (255, 255, 255)]
-        self.assertTrue(white and min(white) >= 20 and max(white) <= t.W - 20)
+        white = [x for y in range(t.BAND_Y, t.BAND_Y + 160) for x in range(t.W) if im.getpixel((x, y))[:3] == (255, 255, 255)]
+        self.assertTrue(white and min(white) >= 60 and max(white) <= t.W - 60)
+
+    @NEED_PIL
+    def test_home_feed_safe(self):
+        """11/22 BK: 홈 피드 미리보기(가운데 4:5 자르기 = y 285~1635)에서 띠·자막이 잘리지 않는다."""
+        import toon_assemble as t
+        top = (t.H - t.W * 5 // 4) // 2
+        for band in (None, {"top": "추운 날 김치찌개 배달", "accent": "집밥이랑 얼마 차이?"}):
+            box = t.layer(["추워서 김치찌개", "배달 시켰더니..."], band=band).split()[3].getbbox()
+            self.assertGreaterEqual(box[1], top, band)
 
 
 if __name__ == "__main__":

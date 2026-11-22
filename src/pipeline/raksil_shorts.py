@@ -461,8 +461,37 @@ def theme_for(day: dt.date) -> tuple:
     return THEMES[day.toordinal() % len(THEMES)]
 
 
+# 2026-11-22 BK "유튜브 앱 첫 화면에서 글자가 잘린다": 홈 피드 미리보기는 가운데를 기준으로 위아래를 잘라 보여 줘서
+# 맨 위(y 0~330) 제목 띠가 잘렸다. → 장면 내용(원래 y 0~SAFE_SRC_H)을 SAFE_K 배로 줄여 y SAFE_TOP 부터 그린다.
+# 배경(그라데이션·별·격자)만 화면 전체에 깔고, 제목 띠는 폭 전체 검은 띠로 이어 그린다. 형식·문구는 그대로(PR #343).
+# 결과 안전 구역: 위 SAFE_TOP(홈 피드 4:5 자르기·위 아이콘 아래) ~ 아래 약 1570(제목·채널 이름 위), 오른쪽 버튼 자리 비움.
+SAFE_TOP, SAFE_K, SAFE_SRC_H = 290, 0.83, 1540
+_LAYER = False  # True 면 background() 가 투명 바탕을 돌려준다(내용만 그려서 to_safe 로 옮김)
+
+
+def safe_box() -> tuple[int, int, int, int]:
+    """줄인 내용이 놓이는 자리 (x0, y0, x1, y1)."""
+    w, h = round(W * SAFE_K), round(SAFE_SRC_H * SAFE_K)
+    x0 = (W - w) // 2
+    return x0, SAFE_TOP, x0 + w, SAFE_TOP + h
+
+
+def to_safe(content, under):
+    """투명 바탕에 그린 장면(content)을 줄여 안전 구역에 놓는다. under = 화면 전체 배경."""
+    from PIL import Image, ImageDraw
+    x0, y0, x1, y1 = safe_box()
+    src = content.crop((0, 0, W, SAFE_SRC_H)).resize((x1 - x0, y1 - y0), Image.LANCZOS)
+    img = under.copy()
+    if content.getpixel((4, 4))[3] == 255 and content.getpixel((4, 4))[:3] == (0, 0, 0):  # 제목 띠가 있으면 폭 전체로
+        ImageDraw.Draw(img).rectangle([0, y0, W, y0 + round(BAND_H * SAFE_K) - 1], fill=(0, 0, 0, 255))
+    img.alpha_composite(src, (x0, y0))
+    return img
+
+
 def background(seed: int = 5):
     from PIL import Image, ImageDraw
+    if _LAYER:
+        return Image.new("RGBA", (W, H), (0, 0, 0, 0))
     bg, bg2, grid, s0 = _THEME
     img = Image.new("RGBA", (W, H), bg + (255,))
     dr = ImageDraw.Draw(img)
@@ -1414,7 +1443,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     if yq and prev and prev.get("a") and (prev.get("a"), prev.get("b")) != (yq["a"], yq["b"]):
         yq, site_votes = {**yq, "a": prev["a"], "b": prev["b"]}, None  # 어제 쇼츠는 다시 짠 질문 → 사이트 표는 다른 질문이라 빼고 댓글 표만
     res = result_of(yq, merge_votes(site_votes, comment_votes(yday, yq)))
-    global _THEME
+    global _THEME, _LAYER
     _THEME = theme_for(day)
     prev = prev if prev and isinstance(prev.get("pick"), dict) and prev["pick"].get("pick") in ("a", "b") and yq else None
     day_qs = sorted((x for x in qs if x.get("date") == day.isoformat()), key=lambda x: (shorts_penalty(x), x["id"]))
@@ -1537,6 +1566,9 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         w.setframerate(SR)
         w.writeframes((audio * 32767).astype("<i2").tobytes())
 
+    _LAYER = False
+    under = background()  # 화면 전체 배경 (오늘 테마)
+    _LAYER = True  # 이 아래 장면 카드는 투명 바탕에 그려 안전 구역으로 옮긴다 (11/22 홈 피드 잘림)
     mg = Mongle(day)
     ctx = {"q": q, "res": res, "pick": pick, "mg": mg, "step": step}
     if fmt == "classic":
@@ -1561,8 +1593,11 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
                            "-r", str(FPS), "-i", "-", "-i", str(wav), "-c:v", "libx264", "-preset", "medium",
                            "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-shortest",
                            "-movflags", "+faststart", str(mp4)], stdin=subprocess.PIPE)
-    for i in range(int(total * FPS)):
-        ff.stdin.write(frame(i / FPS).convert("RGB").tobytes())
+    try:
+        for i in range(int(total * FPS)):
+            ff.stdin.write(to_safe(frame(i / FPS), under).convert("RGB").tobytes())
+    finally:
+        _LAYER = False
     ff.stdin.close()
     if ff.wait() != 0:
         raise RuntimeError("ffmpeg 실패")

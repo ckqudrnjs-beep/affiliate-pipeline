@@ -30,7 +30,7 @@
 
 ## 구도 메뉴 (한 편 4클립은 서로 다른 구도, 카메라 움직임은 클립당 하나)
 동전이 눈높이 `camera at puppy eye level close to the floor` / 올려다보기 `low angle looking up` / 내려다보기 `top-down overhead shot` / 넓은 설정샷 `wide shot showing the whole room` / 얼굴 클로즈업 `close-up on the puppy's face` / 앞발 클로즈업 `extreme close-up of the paw` / 어깨 너머 `over-the-shoulder shot from behind the puppy` / 창밖에서 안으로 `shot from outside the window looking in` / 천천히 다가가기 `slow push-in` / 옆으로 따라가기 `side tracking shot following the puppy` / 고정 카메라(개그는 고정이 제일 웃김) `fixed camera` / 유리 너머 `view from inside the fridge as the door opens`
-기본 순서: 넓게(장소) → 가까이(반응) → 고정(개그) → 눈높이(해결). 주인공은 화면 가운데 아래, 위 1/4은 자막 자리로 비움.
+기본 순서: 넓게(장소) → 가까이(반응) → 고정(개그) → 눈높이(해결). 주인공은 화면 가운데 아래, 위 1/3은 제목 띠·자막 자리로 비움(11/22 홈 피드 잘림 대응).
 
 ## 귀여움 규칙 (매 편 표정 2개 + 개그 1개)
 - 표정: 귀 쫑긋(발견), 눈 동그래+입 벌림(충격), 고개 갸웃(의아), 볼 빵빵(분함), 눈 감고 미소(만족), 축 처진 눈(절망)
@@ -46,7 +46,7 @@
 
 ## 프롬프트 조립 (영어)
 형식(Cartoon.) → 캐릭터 고정 문장 → 동작 하나 → 장소 고정 문장 → 빛 → 구도 하나 → 공통 끝말:
-`The puppy always has exactly four legs and never grows extra paws. Furniture, appliances, seats, doors and walls stay fixed in place unless the action says otherwise. Everything is real-world size, the puppy small next to it. Vertical 9:16, 8 seconds, one continuous shot, same cute 3D cartoon look, no text, no numbers, no logos. Keep the top quarter of the frame empty.`
+`The puppy always has exactly four legs and never grows extra paws. Furniture, appliances, seats, doors and walls stay fixed in place unless the action says otherwise. Everything is real-world size, the puppy small next to it. Vertical 9:16, 8 seconds, one continuous shot, same cute 3D cartoon look, no text, no numbers, no logos. Keep the top third of the frame empty.`
 (BK 11/21 검수: 시트가 뒤로 빠짐·앞발 4개·차가 너무 작음 → 위 세 문장을 끝말 앞에 늘 넣는다.)
 
 ## 금지

@@ -41,7 +41,10 @@ from pipeline import bgm  # noqa: E402
 W, H, FPS = 1080, 1920, 30
 FONT = pathlib.Path(__file__).resolve().parent.parent / "config/fonts/Jua-Regular.ttf"  # OFL, '…' 글자 없음 → '...'
 BROWN = (70, 40, 20)
-BAND_H, BAND_SIZE, BAND_MAXW = 360, 104, W - 70  # 제목 띠: 높이(=화면 19%, Veo 프롬프트가 비워 두는 위 1/4 안), 글자 크기, 최대 폭
+BAND_H, BAND_SIZE, BAND_MAXW = 300, 92, W - 140  # 제목 띠: 높이, 글자 크기, 최대 폭(양옆 70px 여백)
+# 2026-11-22 BK "유튜브 앱 첫 화면에서 글자가 잘린다": 홈 피드 미리보기는 가운데 기준으로 위아래를 잘라(4:5 정도)
+# 맨 위 띠·자막이 잘린다 → 띠는 y BAND_Y 부터, 띠 없는 편 자막도 CAP_Y 부터. Veo 프롬프트는 위 1/3 비우기.
+BAND_Y, CAP_Y = 290, 400
 YELLOW = (255, 214, 0)
 # 2026-11-19 BK "2일에 하나씩인데 컨텐츠에 구독 좋아요를 어필해야": 이유형 CTA(보상 약속 금지), 이틀 간격이라 '모레'.
 # 2026-11-20 밤 BK "돈이 샌다 표현은 하지 말고" → '새는 돈' 문구 뺌.
@@ -86,17 +89,17 @@ def draw_band(d, band: dict | None) -> int:
     if not rows:
         return 0
     from PIL import ImageFont
-    d.rectangle([0, 0, W, BAND_H], fill=(0, 0, 0, 255))
+    d.rectangle([0, BAND_Y, W, BAND_Y + BAND_H], fill=(0, 0, 0, 255))
     size = BAND_SIZE
     while size > 64 and max(d.textlength(t, font=ImageFont.truetype(str(FONT), size)) for t, _ in rows) > BAND_MAXW:
         size -= 4
     f = ImageFont.truetype(str(FONT), size)
     gap = size + 26
-    y = BAND_H / 2 + 14 - gap * (len(rows) - 1) / 2  # 위쪽 상태바 여백을 조금 더 둔다
+    y = BAND_Y + BAND_H / 2 + 4 - gap * (len(rows) - 1) / 2
     for t, col in rows:
         d.text((W / 2, y), t, font=f, fill=col, anchor="mm")
         y += gap
-    return BAND_H
+    return BAND_Y + BAND_H
 
 
 def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92, band=None):
@@ -107,7 +110,7 @@ def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92, band=None
     sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d, sd = ImageDraw.Draw(im), ImageDraw.Draw(sh)
     top = draw_band(d, band)
-    y = top + 100 if top else 190  # 띠가 있으면 자막은 띠 바로 아래
+    y = top + 90 if top else CAP_Y  # 띠가 있으면 자막은 띠 바로 아래 (11/22 둘 다 홈 피드 안전 구역 안)
     if top:  # 숫자 상자가 자막·띠와 겹치지 않게 아래로
         bigy = max(bigy, y + len(lines) * (size + 24) + 10)
     for t in lines:
