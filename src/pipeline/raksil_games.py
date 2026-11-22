@@ -199,7 +199,7 @@ def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) 
                 + f"게임 설명: {g.get('description', '')}\n편집장 점수: "
                 + json.dumps({k: sc.get(k) for k in rs.GATE_SCHEMA_PROPS}, ensure_ascii=False)
                 + f"\n편집장 지적: {sc.get('note', '')}\n\n지난 시도(되풀이 금지):\n{past}")
-        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.SONNET, effort="medium", max_tokens=800, need=0.02,
+        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.SONNET, effort="medium", max_tokens=3000, need=0.02,
                    schema=cj.obj({"hook": cj.S, "line": cj.S}))
     except Exception as e:
         print(f"게임 기획안 다시 짜기 실패: {e}", file=sys.stderr)
