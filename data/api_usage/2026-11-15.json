@@ -1406,5 +1406,16 @@
   "cache_w": 0,
   "batch": true,
   "usd": 0.0115
+ },
+ {
+  "date": "2026-11-22",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 2894,
+  "out": 32000,
+  "cache": 15345,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.3273
  }
 ]
