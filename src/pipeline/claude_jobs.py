@@ -551,18 +551,25 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         fails = [{"제목": vs[i].get("title"), "제목 띠": f"{vs[i].get('band_top', '')} / {vs[i].get('band_accent', '')}",
                   "훅": vs[i].get("hook"), "개그": vs[i].get("gag"), "점수": scores.get(i, {})}
                  for i in sorted(scores, key=lambda i: -scores[i].get("total", 0))[:4]]
-        try:
-            more = ask("toon", system, user + f"\n\n[새 기획 {replans}차 — BK 11/21 '기획안을 바꿔야지 스킵하면 안돼'] 아래 안들은 다듬어도 "
-                       f"통과선({QUALITY_FLOOR}/{MAX_SCORE}) 아래였다. 채점 메모의 지적을 모두 반영해, 아래 안들과 겹치지 않게 "
-                       f"주제 각도·첫 3초 훅·개그·제목 띠를 완전히 바꾼 새 후보 {REPLAN_N}개를 써라.\n"
-                       + json.dumps(fails, ensure_ascii=False),
-                       schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=20000, need=1.0,
-                       cache="1h")["variants"][:REPLAN_N]
-            if not more:
+        more = None
+        # 11/22 12/6 편: 4개를 한 번에 쓰다 20000 토큰에서 잘려 1차에서 바로 멈춤 → 상한을 올리고, 잘리면 개수를 줄여 한 번 더
+        for k in (REPLAN_N, max(1, REPLAN_N // 2)):
+            try:
+                more = ask("toon", system, user + f"\n\n[새 기획 {replans}차 — BK 11/21 '기획안을 바꿔야지 스킵하면 안돼'] 아래 안들은 다듬어도 "
+                           f"통과선({QUALITY_FLOOR}/{MAX_SCORE}) 아래였다. 채점 메모의 지적을 모두 반영해, 아래 안들과 겹치지 않게 "
+                           f"주제 각도·첫 3초 훅·개그·제목 띠를 완전히 바꾼 새 후보 {k}개를 써라.\n"
+                           + json.dumps(fails, ensure_ascii=False),
+                           schema=obj({"variants": arr(VARIANT)}), effort="high", max_tokens=32000, need=1.0,
+                           cache="1h")["variants"][:k]
                 break
+            except Exception as e:  # 잘림·예산·네트워크
+                print(f"새 기획 {replans}차 ({k}개) 실패: {e}")
+        if not more:
+            break
+        try:
             judged2 = ask("toon", judge_sys, json.dumps(more, ensure_ascii=False), schema=JUDGE, effort="medium", need=0.3, cache="5m")
-        except Exception as e:  # 예산·네트워크 → 지금까지의 최고안으로
-            print(f"새 기획 실패: {e}")
+        except Exception as e:
+            print(f"새 기획 채점 실패: {e}")
             break
         base = len(vs)
         vs.extend(more)
