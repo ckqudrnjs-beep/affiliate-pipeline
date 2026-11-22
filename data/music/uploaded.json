@@ -33,7 +33,21 @@
   "video_id": "Av6rFQjLBe8",
   "short_id": "3c9hcvH06tU",
   "publish_at": "2026-11-22T19:00:00+09:00",
-  "short_publish_at": "2026-11-23T19:00:00+09:00"
+  "short_publish_at": "2026-11-23T19:00:00+09:00",
+  "extras": [
+   {
+    "short_id": "8qup1SpOrhE",
+    "start": 157.34,
+    "publish_at": "2026-11-24T19:00:00+09:00",
+    "subs": 0
+   },
+   {
+    "short_id": "iMGsh6ncXiY",
+    "start": 48.55,
+    "publish_at": "2026-11-27T19:00:00+09:00",
+    "subs": 0
+   }
+  ]
  },
  "1BDs9czCgljX116WZEdQzTVG-1c0t2z8M": {
   "name": "Across the dream (1).mp3",
