@@ -4,7 +4,7 @@
 const cab=document.getElementById('rx-cab'),c=document.getElementById('rx'),x=c.getContext('2d'),sh=document.getElementById('sh'),again=document.getElementById('rx-again'),log=document.getElementById('log');
 const FN='"Press Start 2P",monospace',FK='"Black Han Sans",system-ui,sans-serif';
 // 미니 상점 신호 색(겉모습만): 기본 빨강→초록, 바다 보라→하늘, 사탕 분홍→노랑
-const PADC={'':['#ff3b4e','#2bff88','초록'],ocean:['#7b5cff','#22d3ee','하늘색'],candy:['#ff4fc3','#ffd23f','노란색']};
+const PADC={'':['#ff3b4e','#2bff88','초록'],ocean:['#7b5cff','#22d3ee','하늘색'],candy:['#ff4fc3','#ffd23f','노란색'],sunset:['#5b2a86','#ff9a1f','주황색']};
 let W=0,H=0,d=1,st='idle',t0=0,tm=0,goPend=false,rs=[],fx=[],shake=0,last=0,msg='',msgT=0,pc=PADC[''],best=0,flash=0;
 try{best=+localStorage.getItem('rx_best')||0}catch(e){}
 function size(){d=Math.min(devicePixelRatio||1,2);W=cab.clientWidth;H=cab.clientHeight;c.width=W*d;c.height=H*d}

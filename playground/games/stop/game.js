@@ -27,7 +27,7 @@ function hit(){ac();if(over){start();return}const cz=zx+zw/2,g=G(),bx=px(pos);
   const nb=score>best;if(nb){best=score;try{localStorage.setItem('st_best_'+KST,score)}catch(e){}}
   $('st-rs').innerHTML=(nb&&score?'<b class="nb">NEW BEST</b> ':'')+'<b>'+score+'점</b> · '+lv+'단계 · 오늘 최고 '+best+'점';$('st-res').hidden=false;
   if(window.submitScore)submitScore(score)}}
-function burst(X,Y,n,col){const shape=FX==='heart'?'h':FX==='star'?'s':'';for(let i=0;i<n;i++){const a=Math.random()*6.283,v=80+Math.random()*260;fx.push({x:X,y:Y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-80,t:0,l:.5+Math.random()*.5,col:shape?(i%2?'#fff':(FX==='heart'?'#ff5fa8':'#ffd23f')):col,sh:shape,s:shape?8+Math.random()*6:3})}}
+function burst(X,Y,n,col){if(FX==='spark')n=Math.round(n*1.6);const shape=FX==='heart'?'h':FX==='star'?'s':'';for(let i=0;i<n;i++){const a=Math.random()*6.283,v=80+Math.random()*260;fx.push({x:X,y:Y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-80,t:0,l:.5+Math.random()*.5,col:shape?(i%2?'#fff':(FX==='heart'?'#ff5fa8':'#ffd23f')):FX==='spark'?['#fff6a8','#ffb347','#ff5a1f','#ffffff'][i%4]:col,sh:shape,s:shape?8+Math.random()*6:3})}}
 $('st-again').onclick=e=>{e.stopPropagation();start()};
 $('st-sh').onclick=e=>{e.stopPropagation();shareText('5락실 딱 멈춰! '+KST.slice(5)+'\n🎯 '+lv+'단계 '+score+'점. 이겨 볼래?\n'+challengeUrl(score))};
 cab.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;e.preventDefault();hit()});
@@ -64,7 +64,7 @@ function draw(now){requestAnimationFrame(draw);const rdt=(now-last)/1000,dt=Math
  x.strokeStyle='#3ddc84';x.lineWidth=2;x.shadowColor='#3ddc84';x.shadowBlur=12;x.strokeRect(za,g.gy-r,zb-za,g.gh);x.shadowBlur=0;
  // 막대(바늘) + 잔상
  const bx=px(pos);if(run){trail.push(bx);if(trail.length>8)trail.shift()}else trail=[];
- const bc=BAR==='gold'?'#ffd23f':BAR==='rainbow'?`hsl(${(T*240)%360},100%,65%)`:'#ffffff',bg2=BAR==='gold'?'#ffb000':BAR==='rainbow'?'#ff7ad9':'#22d3ee';
+ const bc=BAR==='gold'?'#ffd23f':BAR==='rainbow'?`hsl(${(T*240)%360},100%,65%)`:BAR==='ice'?'#e6fbff':'#ffffff',bg2=BAR==='gold'?'#ffb000':BAR==='rainbow'?'#ff7ad9':BAR==='ice'?'#7fd8ff':'#22d3ee';
  x.globalCompositeOperation='lighter';trail.forEach((tx,i)=>{x.globalAlpha=(i+1)/trail.length*.25;x.fillStyle=bg2;x.fillRect(tx-3,g.gy-r-6,6,g.gh+12)});x.globalAlpha=1;gl(bx,g.gy,g.gh*1.1,bg2,.55);x.globalCompositeOperation='source-over';
  if(!(over&&started&&shake>0&&Math.floor(T*20)%2)){x.shadowColor=bg2;x.shadowBlur=16;x.fillStyle=bc;x.beginPath();x.roundRect?x.roundRect(bx-4,g.gy-r-10,8,g.gh+20,4):x.rect(bx-4,g.gy-r-10,8,g.gh+20);x.fill();x.shadowBlur=0;
   x.fillStyle=bc;x.beginPath();x.moveTo(bx-9,g.gy-r-18);x.lineTo(bx+9,g.gy-r-18);x.lineTo(bx,g.gy-r-8);x.fill()}
