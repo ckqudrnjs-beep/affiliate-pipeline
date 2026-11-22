@@ -444,7 +444,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         print(f"{date} 후보 이미 있음 (파일 또는 PR)")
         return 0
     bible = (ROOT / "config/toon_bible.md").read_text(encoding="utf-8")
-    special = dt.date.fromisoformat(date).weekday() >= 5  # 주말 공개 편 = 실사 삼촌 특별편 (BK 11/20, 바이블 주 1회)
+    from .shorts_lock import locked  # 11/22 BK 고정안: 고정 기간(~12/13)엔 특별편 없이 동전이 만화만
+    special = dt.date.fromisoformat(date).weekday() >= 5 and not locked("uncle", date)  # 주말 공개 편 = 실사 삼촌 특별편 (BK 11/20, 바이블 주 1회)
     kind = ("이번 편은 '실사판 특별편'이다. 바이블의 실사판 규칙대로 실사 삼촌이 직접 나오고 프롬프트는 Photorealistic. 으로 쓴다.\n"
             "단 1번 컷(첫 3초)은 반드시 동전이 만화 장면으로 시작하고, 실사 삼촌 얼굴은 2번 컷부터 나온다. 썸네일·첫 화면에 실사 얼굴 금지 "
             "(BK 11/20: AI 실사 얼굴로 시작한 편은 모두 20회 아래, 만화·카드로 시작한 편은 300~1,200회).\n"

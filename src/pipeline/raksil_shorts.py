@@ -1660,7 +1660,33 @@ def main(argv: list[str]) -> int:
     meta = render(day)
     if not meta:
         return 0
+    fb = fallback_legacy(meta, day)
+    if fb is not None:
+        return fb if cmd == "upload" else 0
     return upload_meta(meta) if cmd == "upload" else 0
+
+
+def fallback_legacy(meta: dict, day: dt.date, upload: bool = True) -> int | None:
+    """11/22 BK 고정안: 고정 기간에 밸런스 새 형식이 품질 게이트로 '쉼'이면 쉬지 않고 옛 형식(11/19까지, 편당 1,000회대)으로 대신 올린다.
+    매일 꾸준히 같은 시청자에게 보이는 게 우선. 기록 format 은 'legacy-fallback' (격일 비교 판정에서 따로 셈). 해당 없으면 None."""
+    from .shorts_lock import locked
+    if not meta.get("skip") or meta.get("kind") == "게임" or not locked("5raksil", day):
+        return None
+    from . import raksil_shorts_legacy as legacy
+    lm = legacy.render(day)
+    if not lm:
+        return None
+    lm["format"] = "legacy-fallback"
+    msg = f"5락실 밸런스 {day} 새 형식이 기준 아래라 옛 형식으로 대신 올려요 (고정 기간, 쉬는 날 없음)."
+    print(msg)
+    if not upload:
+        return 0
+    try:
+        from .claude_jobs import notify
+        notify("ℹ️ " + msg)
+    except Exception as e:
+        print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
+    return legacy.upload_meta(lm)
 
 
 if __name__ == "__main__":

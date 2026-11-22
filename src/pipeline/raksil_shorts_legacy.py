@@ -472,7 +472,7 @@ def upload_meta(meta: dict) -> int:
     sched = meta.get("schedule", meta.get("key", meta["date"]) == meta["date"])
     at = publish_time(meta, dt.datetime.now(KST)) if sched else None
     r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
-    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"], "format": "legacy"}
+    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"], "format": meta.get("format", "legacy")}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"

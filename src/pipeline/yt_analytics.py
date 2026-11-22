@@ -23,6 +23,7 @@ import urllib.request
 from .youtube import KST, access_token
 
 OUT = pathlib.Path("data/youtube/analytics.json")
+AUD = pathlib.Path("data/youtube/audience.json")  # 채널별 나이·성별 비율 (BK 11/22 '타깃층에 맞춰서' → 타깃 확인용)
 API = "https://youtubeanalytics.googleapis.com/v2/reports"
 METRICS = "views,averageViewPercentage,averageViewDuration,shares,likes,subscribersGained"
 CHANNELS = {"uncle": "YT_ANALYTICS_REFRESH_TOKEN", "5raksil": "RAKSIL_YT_ANALYTICS_REFRESH_TOKEN"}
@@ -34,6 +35,23 @@ def query(token: str, start: str, end: str) -> dict:
     req = urllib.request.Request(API + "?" + urllib.parse.urlencode(q), headers={"Authorization": f"Bearer {token}"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read())
+
+
+def query_audience(token: str, start: str, end: str) -> dict:
+    q = {"ids": "channel==MINE", "startDate": start, "endDate": end, "metrics": "viewerPercentage",
+         "dimensions": "ageGroup,gender", "sort": "gender,ageGroup"}
+    req = urllib.request.Request(API + "?" + urllib.parse.urlencode(q), headers={"Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
+
+def audience_rows(js: dict) -> dict[str, float]:
+    """(ageGroup, gender, viewerPercentage) 행 → {'female age25-34': 12.3, ...}. 표본이 적으면 구글이 빈 행을 준다."""
+    out = {}
+    for row in js.get("rows", []) or []:
+        age, gender, pct = row[0], row[1], row[2]
+        out[f"{gender} {age}"] = round(float(pct), 1)
+    return out
 
 
 def rows_to_dict(js: dict) -> dict[str, dict]:
@@ -66,7 +84,7 @@ def fetch(now: dt.datetime | None = None) -> int:
     cid, sec = os.environ.get("YT_CLIENT_ID", ""), os.environ.get("YT_CLIENT_SECRET", "")
     end = now.date()
     start = end - dt.timedelta(days=28)
-    snap = {}
+    snap, aud = {}, {}
     for ch, env in CHANNELS.items():
         rt = os.environ.get(env, "").strip()
         if not (cid and sec and rt):
@@ -78,6 +96,11 @@ def fetch(now: dt.datetime | None = None) -> int:
             step = "분석 조회"
             snap[ch] = rows_to_dict(query(tok, start.isoformat(), end.isoformat()))
             print(f"{ch}: {len(snap[ch])}편")
+            try:  # 나이·성별은 따로: 실패해도 영상별 수치는 남긴다
+                aud[ch] = audience_rows(query_audience(tok, start.isoformat(), end.isoformat()))
+                print(f"{ch}: 나이·성별 {len(aud[ch])}칸")
+            except Exception as e:
+                print(f"{ch}: 나이·성별 읽기 실패 {why(e)}")
         except Exception as e:  # 한 채널 실패가 다른 채널을 막지 않게
             print(f"{ch}: 분석 읽기 실패 [{step}] {why(e)}")
     if not snap:
@@ -85,6 +108,10 @@ def fetch(now: dt.datetime | None = None) -> int:
     data = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     data[end.isoformat()] = snap
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    if aud:
+        a = json.loads(AUD.read_text(encoding="utf-8")) if AUD.exists() else {}
+        a[end.isoformat()] = aud
+        AUD.write_text(json.dumps(a, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return 0
 
 

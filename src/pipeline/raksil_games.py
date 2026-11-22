@@ -568,7 +568,8 @@ def main(argv: list[str]) -> int:
     today = dt.datetime.now(rs.KST).date()
     if len(argv) > 1 and argv[1] == "plan":
         day = dt.date.fromisoformat(argv[2]) if len(argv) > 2 and argv[2] else today
-        what, slug, kind = plan(day, discover(), load_log(), hold_new(), rotation_on())
+        from .shorts_lock import locked  # 11/22 BK 고정안: 고정 기간엔 20시 게임 쇼츠 쉼 (밸런스 하나로)
+        what, slug, kind = plan(day, discover(), load_log(), hold_new() or locked("5raksil", day), rotation_on())
         print(" ".join(x for x in (what, slug, kind) if x))
         return 0
     rec, cmd, slug, kind = pathlib.Path(argv[1]), argv[2], argv[3], argv[4]
