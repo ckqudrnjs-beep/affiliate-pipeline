@@ -1372,7 +1372,10 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
     # 음성용 '에이'·'비' 는 화면 글자로는 A·B (11/21 채점에서 '비!'를 오타로 감점)
     shown = [x.replace("는 에이!", "는 A!").replace("는 비!", "는 B!").replace("가 에이!", "가 A!").replace("가 비!", "가 B!") for x in lines]
     out.append("대사(화면 자막 기준): " + " / ".join(x for x in shown if x))
-    out.append("고정 장치: 공통 엔딩(몽글이 손 흔들기, '매일 새 게임과 새 질문'), 설명란 '댓글로 A / B 남기면 다음 결과편에 같이 센다'")
+    if fmt == "quick" and qs3 and len(qs3) > 1:
+        out.append("질문2·3: 그날 사이트 질문으로 고정(이번 기획에서 못 바꿈) — 감점·지적하지 말 것")
+    out.append("고정 장치(채점·지적 대상 아님): 형식 틀 대사('바로 골라!', '너라면?', '너는 어느 쪽?' 등), "
+               "공통 엔딩(몽글이 손 흔들기, '매일 새 게임과 새 질문'), 설명란 '댓글로 A / B 남기면 다음 결과편에 같이 센다'(실제로 셈)")
     return "\n".join(out)
 
 
@@ -1405,6 +1408,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     # 다시 짜기가 안 될 때(API 실패) 쓸 그날의 다른 질문. 흔한 질문(COMMON_Q)은 어차피 '뻔함'으로 떨어지니 뺀다 (11/21 피자 끝 빵 2번 낭비)
     pool = [] if extra else [x for x in day_qs if x["id"] != q["id"] and not any(w in x["a"] + x["b"] for w in COMMON_Q)]
     qq = q
+    no_quick = False  # 3연속은 다시 짜기가 질문1만 바꿀 수 있어(질문2·3·틀 대사는 그날 고정) 한 번 미달이면 다른 형식으로 (11/22 8번 21점)
     pick, band = mongle_plan(qq)
     for _ in range(GATE_TRIES * 2):  # 구도 탈락(채점 없이 다시 짜기)까지 포함한 안전 상한
         if tries >= GATE_TRIES:
@@ -1413,7 +1417,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         pick = None if res else pick
         band = band or bank_band(day, recent_bands())  # 제목 띠: Claude 후보 중 클릭 점수 1등, 없으면 문구 은행
         # 형식 돌리기 (BK 11/20): 오늘 차례 형식 → 조건(+구도) 안 되면 다음, 직전 3편 형식은 건너뜀
-        ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3,
+        ok = {"classic": True, "split": True, "versus": bool(pick), "quick": len(today3) >= 3 and not no_quick,
               "result": bool(yq and (res or prev))}
         ok = {f: v and layout_ok(f, today3 if f == "quick" else [qq]) for f, v in ok.items()}
         sc = None
@@ -1435,6 +1439,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
             if passed:
                 plan = cand + (sc,)
                 break
+            no_quick = no_quick or fmt == "quick"
         else:  # 어느 형식 칸에도 글자가 안 들어감 → 짧게 다시 짜기
             total = 0
             sc = {"layout": 1, "note": "선택지가 길어 화면 칸에 안 들어간다. 선택지를 각 10자 안팎으로 짧고 또렷하게."}
