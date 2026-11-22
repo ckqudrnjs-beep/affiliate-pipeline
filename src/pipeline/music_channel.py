@@ -258,7 +258,7 @@ def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str =
     channel = cfg.get("channel", "BEEKAY SONGS")
     full = video(audio, cov, title, channel, tag, WORK / f"{stem}.mp4")
     length = float(cfg.get("short_length", 40))
-    start = best_window(an["rms"], an["fps"], length, an["duration"])
+    start = float(ov["short_start"]) if ov.get("short_start") is not None else best_window(an["rms"], an["fps"], length, an["duration"])
     sh = video(audio, cov, title, channel, tag, WORK / f"{stem}-short.mp4", vertical=True, start=start,
                length=length, cta="전체 듣기는 채널에서 ▶")
     lyr = lyrics_of(tags)
@@ -378,7 +378,8 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
         when = "비공개(확인용)" if res["publish_at"] == "private" else f"{res['publish_at'][:16]} 공개 예약"
         link = f"https://studio.youtube.com/video/{res['video_id']}/edit"
-        summary(f"업로드 완료: {meta['title']} → {when}\n{link}")
+        st = int(meta["short_start"])
+        summary(f"업로드 완료: {meta['title']} → {when} (쇼츠 {st // 60}:{st % 60:02d}부터 {int(cfg.get('short_length', 40))}초)\n{link}")
         notify(f"🎵 BEEKAY SONGS 새 곡 업로드: {meta['title']} ({when})\n{link}")
         done += 1
     return 0
