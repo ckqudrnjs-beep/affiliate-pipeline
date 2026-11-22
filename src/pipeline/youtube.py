@@ -314,6 +314,10 @@ QUALITY_GATE_FROM = "2026-11-23"
 def quality_ok(spec: dict, meta: dict) -> bool:
     if meta.get("quality_ok") is False:  # 사람이 '이 편은 쉬자'로 막은 편은 날짜와 상관없이 안 올림 (11/20 밤 찌개 편)
         return False
+    if spec.get("format") == "toon-sok" and spec.get("date"):  # 번외 속마음은 삼촌 고정 기간(config/shorts_lock.json)엔 안 올림 (BK 11/22)
+        from .shorts_lock import locked
+        if locked("uncle", spec["date"]):
+            return False
     if (spec.get("date") or "") < QUALITY_GATE_FROM or spec.get("kind", "short") != "short":
         return True
     if "quality_ok" in meta:

@@ -53,6 +53,24 @@ class PlanTest(unittest.TestCase):
         self.assertNotIn("s3", (p1["situ"]["id"], p2["situ"]["id"]))
         self.assertEqual(p2["no"], 2)
 
+    def test_hook_clip_rotates_and_optional(self):
+        k = {**KLING, "react_hook": [{"id": "h1", "file": "h1.mp4"}, {"id": "h2", "file": "h2.mp4", "off": True}, {"id": "h3", "file": "h3.mp4"}]}
+        day = dt.date(2026, 11, 28)
+        p1 = lf.plan(day, [dict(g) for g in GAMES], {}, k, CFG)
+        log = {day.isoformat(): {"games": [], "situ": p1["situ"]["id"], "react": p1["react"]["id"], "hook": p1["hook"]["id"]}}
+        p2 = lf.plan(day + dt.timedelta(days=7), [dict(g) for g in GAMES], log, k, CFG)
+        self.assertNotEqual(p1["hook"]["id"], p2["hook"]["id"])
+        self.assertNotIn("h2", (p1["hook"]["id"], p2["hook"]["id"]))
+        self.assertIsNone(lf.plan(day, [dict(g) for g in GAMES], {}, KLING, CFG)["hook"])
+
+    def test_real_bus_clip_back_in_pool(self):
+        kling = json.loads(pathlib.Path("config/raksil_kling.json").read_text(encoding="utf-8"))
+        situ, _ = lf.clip_pool(kling)
+        bus = [c for c in situ if c["id"] == "s-bus"]
+        self.assertEqual(bus[0]["file"], "media/kling/situ-bus-clean.mp4")
+        self.assertTrue(pathlib.Path(bus[0]["file"]).exists())
+        self.assertGreaterEqual(len(lf.hook_pool(kling)), 4)
+
     def test_no_plan_without_clips_or_games(self):
         self.assertIsNone(lf.plan(dt.date(2026, 11, 28), GAMES[:3], {}, KLING, CFG))
         self.assertIsNone(lf.plan(dt.date(2026, 11, 28), GAMES, {}, {"situ": [], "react_pay": []}, CFG))

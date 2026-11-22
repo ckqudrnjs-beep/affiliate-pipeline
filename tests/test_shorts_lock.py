@@ -43,5 +43,19 @@ class LegacyEndTest(unittest.TestCase):
             self.assertEqual(L.pick(dt.date(2026, 11, d)), "new")  # 11/22 BK '새 형식으로 고정' → 옛 형식 날 없음
         self.assertEqual(L.pick(dt.date(2026, 11, 23), "legacy"), "legacy")  # 손 스위치는 그대로
 
+class SokAfterLockTest(unittest.TestCase):
+    def test_sok_waits_for_uncle_lock(self):
+        from pipeline import youtube
+        meta = {"style": "toon"}
+        self.assertFalse(youtube.quality_ok({"date": "2026-12-13", "format": "toon-sok"}, meta))
+        self.assertTrue(youtube.quality_ok({"date": "2026-12-19", "format": "toon-sok"}, meta))
+        self.assertTrue(youtube.quality_ok({"date": "2026-12-12", "format": "toon"}, meta))
+
+    def test_sok_rescheduled_after_lock(self):
+        spec = json.loads(pathlib.Path("data/episodes/2026-12-19-sok.json").read_text(encoding="utf-8"))
+        self.assertEqual(spec["format"], "toon-sok")
+        self.assertFalse(shorts_lock.locked("uncle", spec["date"]))
+
+
 if __name__ == "__main__":
     unittest.main()

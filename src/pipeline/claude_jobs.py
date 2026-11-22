@@ -288,6 +288,22 @@ POLICY = ("규칙: 상품·구매·할인·제휴 링크·[광고] 없음(쇼츠
           "한국어, 친근한 ~해요체.")
 
 
+def toon_reuse() -> list[dict]:
+    """아직 안 쓴 재사용 클립 (BK 11/22 '크레딧 써서 만든 건 활용')."""
+    p = ROOT / "config/toon_reuse.json"
+    if not p.exists():
+        return []
+    return [c for c in json.loads(p.read_text(encoding="utf-8")).get("clips", []) if not c.get("used")]
+
+
+def reuse_rule(clips: list[dict]) -> str:
+    if not clips:
+        return "모든 컷의 reuse 는 빈 문자열로 둔다.\n"
+    return ("[이미 만든 클립 재사용 — BK 11/22 '크레딧 써서 만든 건 활용'] 아래 클립 중 이야기에 자연스럽게 맞는 게 있으면 컷 하나를 "
+            "그 클립으로 잡고 그 컷의 reuse 에 id 를 적는다(한 편에 최대 1개, screen 은 클립 내용 그대로). 억지로 끼우지 말고, "
+            "안 맞으면 모든 reuse 는 빈 문자열.\n" + json.dumps([{k: c[k] for k in ("id", "screen", "place", "secs")} for c in clips], ensure_ascii=False) + "\n")
+
+
 def toon_motifs() -> dict:
     return json.loads((ROOT / "config/toon_motifs.json").read_text(encoding="utf-8"))
 
@@ -363,7 +379,7 @@ def recent_episode_titles(n: int = 14) -> list[str]:
 
 
 # ---------- 1. 동전이 만화 대본 후보 ----------
-CUT = obj({"screen": S, "caption": S, "camera": S})
+CUT = obj({"screen": S, "caption": S, "camera": S, "reuse": S})  # reuse = config/toon_reuse.json id (없으면 "")
 # 반복 양산 막기 (BK 11/20 "비슷한 틀로 찍어낸 영상이 걸러지는 거라면 같은 기획으로 계속 만들면 안 되잖아 → 반영").
 # 캐릭터·주제는 유지, 직전 3편과 장소·첫 3초 훅 유형·이야기 틀·제목 틀·소동 모양이 겹치면 안 된다.
 HOOK_TYPES = ["결과 먼저(끝 장면을 첫 컷에)", "엉뚱한 질문", "상식 뒤집기", "동전이 사고 현장", "대결 선언", "시간 점프", "공감 한숨"]
@@ -489,7 +505,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             "number_box 는 이 편의 결이 '인사이트'이고 꼭 필요할 때만 한 번(아니면 빈 문자열), 돈을 강조하지 않는다.\n"
             "cuts 는 정확히 4개, 각 caption 은 화면 자막(한 줄 14자 이하, 최대 2줄, '/'로 줄 나눔), camera 는 구도 메뉴의 영어 문구 하나.\n"
             "number_source 에는 아래 사이트 근거 경로와 계산을 적어라. 근거에 없는 숫자는 쓰지 마라.\n"
-            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + series_text + early_rules
+            f"최근 편(겹치지 않게):\n" + "\n".join(recent_episode_titles()) + "\n\n" + motif_rule + "\n\n" + reuse_rule(toon_reuse()) + "\n" + series_text + early_rules
             + "(사이트 근거는 system 끝 목록)")
     # 1시간 캐시: 작가 호출(출력 2만+ 토큰)과 채점 뒤의 다듬기 호출 사이가 5분을 넘기 쉽다
     # 생각(effort high)+후보 n개가 32000 을 넘겨 잘린 일(11/22) → 한도 64000, 그래도 잘리면 후보 수를 줄여 한 번 더
@@ -629,7 +645,9 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
                f"- 삼촌 한 마디: {v['tip']} / 재미 포인트: {v['why_fun']}",
                f"- 채점 메모: {s.get('note', '')}", "", "| 컷 | 화면 | 자막 | 구도 |", "|---|---|---|---|"]
         md += [f"| {k} | {c['screen']} | {c['caption']} | {c['camera']} |" for k, c in enumerate(v["cuts"], 1)]
-        md += [""] + [f"{k}. `{p}`" for k, p in enumerate(prompts, 1)] + [""]
+        reuse = {c["id"]: c for c in toon_reuse()}
+        md += [""] + [(f"{k}. ♻️ 재사용 클립 `{reuse[c['reuse']]['file']}` — Flow 로 새로 안 만들어도 돼요" if c.get("reuse") in reuse
+                       else f"{k}. `{p}`") for k, (c, p) in enumerate(zip(v["cuts"], prompts), 1)] + [""]
     md += ["## 나머지 후보", "", "| # | 제목 띠 | 숫자 | 점수 | 메모 |", "|---|---|---|---|---|"]
     for i, v in enumerate(vs):
         if i not in best:

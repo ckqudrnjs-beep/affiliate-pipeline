@@ -4,7 +4,8 @@
 가운데는 **실제 게임 녹화**(scripts/game_rec.js 봇 플레이)만 쓴다. Kling 으로 게임 화면을 만들지 않는다.
 
 - 인물 클립은 게임 쇼츠와 같은 풀(config/raksil_kling.json, media/kling/*.mp4)을 돌려 쓴다 → 크레딧 0.
-  인트로 = 상황극(situ) 앞부분, 중간 = 같은 상황극의 결말(pay), 엔딩 = 리액션(react_pay).
+  인트로 = 상황극(situ) 앞부분, 중간 = 같은 상황극의 결말(pay), 마지막 라운드 앞 = 리액션 훅(react_hook,
+  BK 11/22 '크레딧 써서 만든 건 활용' — 게임 쇼츠가 고정 기간에 쉬는 동안 훅 클립도 롱폼에서 쓴다), 엔딩 = 리액션(react_pay).
 - 반복 콘텐츠 피하기: 매주 게임 4종 조합을 바꾼다(직전 편과 겹치는 게임 최대 1개, 오래 안 나온 게임부터),
   상황극·리액션·미션 문장도 직전 편과 다르게 돌린다. 기록 숫자는 녹화 끝 화면의 실제 값(info.json final)만.
 - 대상 게임 = config/raksil_rec.json 에서 봇 + final(실제 기록 읽기)이 있는 게임.
@@ -70,6 +71,10 @@ def clip_pool(kling: dict) -> tuple[list[dict], list[dict]]:
     return situ, react
 
 
+def hook_pool(kling: dict) -> list[dict]:
+    return [c for c in kling.get("react_hook", []) if not c.get("off")]
+
+
 def _seed(day: dt.date, salt: str) -> int:
     return int(hashlib.sha1(f"{day}-{salt}".encode()).hexdigest()[:8], 16)
 
@@ -110,6 +115,8 @@ def plan(day: dt.date, games: list[dict], log: dict, kling: dict, cfg: dict) -> 
     eps = [log[k] for k in sorted(log) if k < day.isoformat() and not log[k].get("skipped")]
     s = _least_recent(situ, lambda c: c["id"], [e.get("situ", "") for e in eps], day, "s")[0]
     r = _least_recent(react, lambda c: c["id"], [e.get("react", "") for e in eps], day, "r")[0]
+    hooks = hook_pool(kling)
+    h = _least_recent(hooks, lambda c: c["id"], [e.get("hook", "") for e in eps], day, "h")[0] if hooks else None
     no = len(eps) + 1
     missions = cfg.get("missions", {})
     picked = pick_games(games, log, day)
@@ -117,7 +124,7 @@ def plan(day: dt.date, games: list[dict], log: dict, kling: dict, cfg: dict) -> 
         opts = missions.get(g["slug"]) or ["{s}초 동안 최대한 멀리"]
         g["mission"] = opts[(no + i) % len(opts)]
     theme = cfg.get("themes", {}).get(s["id"], s.get("top", ""))
-    return {"date": day.isoformat(), "no": no, "games": picked, "situ": s, "react": r, "theme": theme}
+    return {"date": day.isoformat(), "no": no, "games": picked, "situ": s, "react": r, "hook": h, "theme": theme}
 
 
 # ---------- 녹화 검사 ----------
@@ -345,6 +352,10 @@ def render(p: dict, rec_root: pathlib.Path, out_dir: pathlib.Path = OUT) -> dict
     seg_still(add("title"), card([(f"5락실 주간 챌린지 #{p['no']}", 110, False, YEL),
                                   ("4게임 연속 도전, 끝까지 가 볼까?", 64, True, WHITE)], 0), 3.0)
     for i, g in enumerate(rounds):
+        h = p.get("hook")
+        if h and i == len(rounds) - 1:  # 마지막 라운드 앞: 리액션 훅 ('헉' 컷)
+            seg_clip(add("hook"), pathlib.Path(h["file"]), h.get("ss", 1.0), max(2.0, h.get("t", 2.0)),
+                     side([("마지막 라운드!", YEL)], [("여기서 기록 깨면", 54, True, WHITE), ("이번 주 최고", 54, True, CYAN)]))
         seg_still(add(f"c{i}", f"ROUND {i + 1} {g['name']}"),
                   card([(f"ROUND {i + 1}", 140, False, WHITE), (g["name"], 96, False, YEL),
                         ("미션  " + g["mission_text"], 56, True, CYAN)], i), 2.5)
@@ -379,7 +390,7 @@ def render(p: dict, rec_root: pathlib.Path, out_dir: pathlib.Path = OUT) -> dict
     thumbnail(p, rec_root, thumb, face)
     meta = {"date": p["date"], "no": p["no"], "file": str(final), "thumb": str(thumb), "title": title_of(p),
             "description": description_of(p, chapters), "games": [g["slug"] for g in rounds], "results": results,
-            "situ": s["id"], "react": r["id"], "secs": round(total, 1),
+            "situ": s["id"], "react": r["id"], "hook": (p.get("hook") or {}).get("id", ""), "secs": round(total, 1),
             "realistic": bool(s.get("realistic") or r.get("realistic"))}
     (out_dir / f"{p['date']}-long.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"만듦 {final} ({mmss(total)})")
@@ -440,7 +451,7 @@ def upload_meta(meta: dict, cfg: dict) -> int:
     r = upload(tok, video_body(meta, vis, at), pathlib.Path(meta["file"]))
     thumb_ok = set_thumbnail(tok, r["id"], pathlib.Path(meta["thumb"]))
     log[meta["date"]] = {"id": r["id"], "no": meta["no"], "title": meta["title"], "games": meta["games"],
-                         "results": meta["results"], "situ": meta["situ"], "react": meta["react"], "visibility": vis}
+                         "results": meta["results"], "situ": meta["situ"], "react": meta["react"], "hook": meta.get("hook", ""), "visibility": vis}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%m/%d %H:%M} 공개 예약" if (vis == "schedule" and at) else "비공개(BK 확인용)"
