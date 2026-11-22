@@ -42,6 +42,18 @@ class WebnovelDataTest(unittest.TestCase):
         self.assertEqual(s["publishAt"], "2030-01-01T12:00:00Z")
 
 
+class WebnovelLinksTest(unittest.TestCase):
+    def test_description_links(self):
+        se = w.season(WORK); eps = w.episodes(WORK)
+        log = {w.key(WORK, 1): {"id": "AAA"}, w.key(WORK, 2): {"id": "BBB"}, w.key(WORK, 3): {"id": "CCC"}}
+        d2 = w.description_of(se, eps[1], w.links_of(WORK, 2, log))
+        self.assertIn("▶ 다음 화 3화", d2); self.assertIn("youtu.be/CCC", d2); self.assertIn("◀ 이전 화: https://youtu.be/AAA", d2)
+        self.assertNotIn("1화부터", d2)  # 이전 화가 곧 1화
+        d3 = w.description_of(se, eps[2], w.links_of(WORK, 3, log))
+        self.assertIn("1화부터 보기: https://youtu.be/AAA", d3); self.assertIn("(내일 밤 9시)", d3)
+        self.assertNotIn("이전 화", w.description_of(se, eps[0], w.links_of(WORK, 1, {})))
+
+
 class WebnovelPromoteTest(unittest.TestCase):
     def test_promote_needs_schedule_and_token(self):
         log = {"husband-regress/01": {"id": "x", "visibility": "private"}}
