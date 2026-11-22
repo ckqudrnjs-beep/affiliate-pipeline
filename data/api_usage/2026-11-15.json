@@ -1275,5 +1275,15 @@
   "cache": 0,
   "cache_w": 0,
   "usd": 0.0011
+ },
+ {
+  "date": "2026-11-22",
+  "job": "early",
+  "model": "claude-sonnet-5-5",
+  "in": 5184,
+  "out": 109,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0115
  }
 ]
