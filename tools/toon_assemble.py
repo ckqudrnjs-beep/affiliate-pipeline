@@ -13,7 +13,7 @@ spec = {
   "hold": 1.5,                      # 마지막 컷 끝에서 멈춤 + 어두워짐
   "small": "돈 줍는 삼촌 · AI 생성 영상",
   "outro": true,                    # 끝 멈춤 화면에 다음 편 예고 + 구독·좋아요 (기본 켬, false 로 끔)
-  "ending": {"clip": "toon-ending-01.mp4", "ss": 0, "t": 6, "at": 1.5},  # 고정 엔딩 클립(BK 11/19, 매 편 재사용):
+  "ending": {"clip": "toon-ending-01.mp4", "ss": 0, "t": 6, "at": 1.5},  # 고정 엔딩 클립(BK 11/19, 매 편 재사용). clip "auto" = config/toon_reuse.json endings 에서 공개일로 돌려 고름(BK 11/22):
                                     # 있으면 멈춤 예고 대신 이 클립을 끝에 붙이고 at 초(버튼 누르는 순간)부터 예고·구독 자막
   "date": "2026-11-22",             # 공개일 (BGM 순번). 없으면 slug 의 날짜
   "bgm": "leak-detective",          # (선택) 곡 고정, false 면 BGM 없음. 없으면 config/bgm.json 순번대로
@@ -182,7 +182,21 @@ def on_beat(spec: dict, tr: dict | None) -> dict:
     return spec
 
 
+REUSE = pathlib.Path(__file__).resolve().parent.parent / "config/toon_reuse.json"
+
+
+def pick_ending(day: str, path: pathlib.Path = REUSE) -> dict:
+    """엔딩 클립 돌려쓰기 (BK 11/22 'veo 크레딧 사용 되었던 것은 예외로'): 공개일 기준, 이틀 간격 본편마다 다른 엔딩."""
+    import datetime as _dt
+    ends = json.loads(path.read_text(encoding="utf-8"))["endings"]
+    e = ends[(_dt.date.fromisoformat(day[:10]).toordinal() // 2) % len(ends)]
+    return {k: e[k] for k in ("clip", "ss", "t", "at")} | {"id": e["id"]}
+
+
 def assemble(spec: dict) -> pathlib.Path:
+    if (spec.get("ending") or {}).get("clip") == "auto":
+        spec["ending"] = pick_ending(str(spec.get("date") or spec["slug"][3:13]))
+        print(f"엔딩: {spec['ending']['id']}")
     tr = choose_bgm(spec)
     spec = on_beat(spec, tr)
     if tr:
