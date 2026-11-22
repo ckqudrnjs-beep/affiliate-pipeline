@@ -2705,5 +2705,165 @@
   "cache": 0,
   "cache_w": 0,
   "usd": 0.0061
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 2286,
+  "out": 182,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0064
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1815,
+  "out": 248,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0061
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-opus-5-5",
+  "in": 3141,
+  "out": 1786,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0483
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1776,
+  "out": 200,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0056
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1772,
+  "out": 250,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.006
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1775,
+  "out": 229,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0058
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-opus-5-5",
+  "in": 4048,
+  "out": 2678,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0698
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1770,
+  "out": 277,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0063
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1777,
+  "out": 276,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0063
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1778,
+  "out": 276,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0063
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-opus-5-5",
+  "in": 4568,
+  "out": 3148,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0812
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1782,
+  "out": 306,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0066
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1787,
+  "out": 290,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0065
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-opus-5-5",
+  "in": 4689,
+  "out": 3564,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.09
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1782,
+  "out": 263,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0062
+ },
+ {
+  "date": "2026-11-22",
+  "job": "raksil",
+  "model": "claude-sonnet-5-5",
+  "in": 1778,
+  "out": 232,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0059
  }
 ]
