@@ -34,12 +34,13 @@
 - `schedule` 로 바뀐 첫 실행에서 비공개로 올렸던 화는 그날 `promote_hour`(20:00 KST) 공개 예약으로 자동 전환(토큰에 youtube 권한 필요, 실패하면 텔레그램으로 링크 → 스튜디오에서 공개).
 - 기록 `data/youtube/webnovel.json`. 멈추기: 저장소 변수 `WEBNOVEL_YT_ENABLED` 를 `false`.
 - **화끼리 연결(11/22)**: 새 화 설명란에 '◀ 이전 화'·'⏮ 1화부터 보기' 링크, 올린 뒤 이전 화 설명란에 '▶ 다음 화' 링크를 자동으로 넣는다(videos.update, 기록 linked=true). 영상 끝 카드엔 다음 화 제목이 이미 있음. 쇼츠 '관련 동영상' 칸과 고정 댓글 고정은 API가 없어 자동 불가.
+- **구독 장치(11/23, BK "네")**: ① 끝 카드에 '내일 밤 9시 / 구독해야 알림이 와요' ② 매 실행 때 어제까지 공개된 화에 예고 댓글 자동 작성("▶ 다음 화 N화 「제목」… 매일 밤 9시 연재", commentThreads.insert, 기록 commented=true, config `comments: false` 로 끄기). 고정은 BK가 스튜디오에서 '고정'만 누름. 토큰에 `youtube.force-ssl` 권한이 없으면 실패 알림이 오고, 4장 2번 범위에 추가해 토큰을 다시 받는다. ③ 설명란 맨 위 '⏮ 1화부터 정주행: 재생목록 링크'.
 - **롱폼 몰아보기(일요일)**: 쇼츠 5화(1~5, 6~10, 11~15)가 모두 공개되면 그 주 일요일에 가로 1920x1080 영상(약 3분)을 만들어 **22:00 KST 공개 예약**. 구성: 표지 → 화마다 챕터 카드 + 본문 → **번외(롱폼 전용)** → 다음 몰아보기 예고. 설명란에 챕터 시간 자동. 번외 대본 `data/webnovel/works/<작품>/extra/NN.json`(`after` = 묶음 마지막 화)이 없으면 만들지 않는다(쇼츠 이어 붙이기만 하면 재사용 콘텐츠로 볼 수 있음). 끄기: config `long: false`. 손으로: Run workflow 에서 `long` 체크.
 
 ## 4. BK 1회 설정 (약 10분)
 돈삼촌 업로드에 쓰는 Google Cloud OAuth 앱을 그대로 쓰고, **'한 화만 더' 채널용 갱신 토큰만** 새로 받는다.
 1. https://developers.google.com/oauthplayground → 오른쪽 위 톱니 → "Use your own OAuth credentials" 체크 → 클라이언트 ID·비밀 입력 (https://console.cloud.google.com/apis/credentials 에서 확인)
-2. 왼쪽 입력칸에 `https://www.googleapis.com/auth/youtube` 입력 → **Authorize APIs** (업로드 + 재생목록 자동 추가. 업로드만 원하면 `.../auth/youtube.upload`)
+2. 왼쪽 입력칸에 `https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl` 입력 (force-ssl = 예고 댓글) → **Authorize APIs** (업로드 + 재생목록 자동 추가. 업로드만 원하면 `.../auth/youtube.upload`)
 3. 구글 계정 선택 → **채널 선택 화면에서 '한 화만 더'(옛 OOF FRENZY)** 선택 → "확인되지 않은 앱" 경고 → 고급 → 이동 → 허용
 4. **Exchange authorization code for tokens** → `Refresh token` 복사 (채팅·파일에 붙이지 말 것)
 5. https://github.com/ckqudrnjs-beep/affiliate-pipeline/settings/secrets/actions → New repository secret → 이름 `WEBNOVEL_YT_REFRESH_TOKEN`, 값 = 4번 토큰
