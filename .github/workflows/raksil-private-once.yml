@@ -1,0 +1,24 @@
+name: raksil-private-once
+on: push
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          import os
+          from pipeline import youtube as Y
+          t = Y.access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
+          vid = "iy1cNnUDnp0"
+          st = Y.get_video(t, vid)["status"]
+          keep = {k: st[k] for k in ("embeddable","license","publicStatsViewable","selfDeclaredMadeForKids","containsSyntheticMedia") if k in st}
+          Y.api(t, "PUT", f"{Y.VIDEOS_URL}?part=status", {"id": vid, "status": {**keep, "privacyStatus": "private"}})
+          print("now:", Y.get_video(t, vid)["status"].get("privacyStatus"), Y.get_video(t, vid)["status"].get("publishAt"))
+          PY
