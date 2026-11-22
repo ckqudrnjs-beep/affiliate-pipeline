@@ -84,5 +84,29 @@ class TestReleases(unittest.TestCase):
         self.assertIn("youtu.be/x", d.split("\n")[2])
 
 
+class TestExtrasLyrics(unittest.TestCase):
+    def test_extra_windows_no_overlap(self):
+        import numpy as np
+        from pipeline.music_channel import extra_windows
+        fps = 10.0
+        rms = np.ones(2000) * 0.1
+        rms[1100:1500] = 0.5
+        rms[400:800] = 0.4
+        got = extra_windows(rms, fps, 40, 200, [110.0], 2)
+        self.assertEqual(len(got), 2)
+        for t in got:
+            self.assertGreaterEqual(abs(t - 110.0), 40)
+        self.assertGreaterEqual(abs(got[0] - got[1]), 40)
+
+    def test_align_uses_official_lines(self):
+        from pipeline.music_lyrics import align, lyric_lines
+        lines = lyric_lines("[Chorus]\nAcross the dream 너에게 닿을 때까지\n다른 차원 끝에서 (oh)\n")
+        self.assertEqual(lines[1], "다른 차원 끝에서")
+        subs = align([(0.0, 2.0, "어크로스 더 드림 너에게 닿을때까지"), (2.0, 4.0, "다른 차원 끝에서"),
+                      (4.0, 5.0, "음")], lines)
+        self.assertEqual([t for _, _, t in subs][-1], "다른 차원 끝에서")
+        self.assertTrue(all(t in lines for _, _, t in subs))
+
+
 if __name__ == "__main__":
     unittest.main()

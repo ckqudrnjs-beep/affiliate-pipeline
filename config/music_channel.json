@@ -15,7 +15,16 @@
       "title": "다른 차원 끝 (Female ver.)",
       "cover": "config/music/covers/다른차원끝-female.jpg",
       "publish_at": "2026-11-22T19:00:00+09:00",
-      "short_publish_at": "2026-11-23T19:00:00+09:00"
+      "short_publish_at": "2026-11-23T19:00:00+09:00",
+      "short_start": 109.88,
+      "extra_shorts": [
+        {
+          "publish_at": "2026-11-24T19:00:00+09:00"
+        },
+        {
+          "publish_at": "2026-11-27T19:00:00+09:00"
+        }
+      ]
     },
     "1BDs9czCgljX116WZEdQzTVG-1c0t2z8M": {
       "title": "다른 차원 끝 (Male ver. Feat. Female)",
@@ -23,8 +32,17 @@
       "publish_at": "2026-11-25T19:00:00+09:00",
       "short_publish_at": "2026-11-26T19:00:00+09:00",
       "pair_of": "1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW",
-      "ask": "여성 버전과 남성 버전, 어느 쪽이 더 좋아요? 댓글로 알려 주세요 💬"
+      "ask": "여성 버전과 남성 버전, 어느 쪽이 더 좋아요? 댓글로 알려 주세요 💬",
+      "extra_shorts": [
+        {
+          "publish_at": "2026-11-28T19:00:00+09:00"
+        },
+        {
+          "publish_at": "2026-11-30T19:00:00+09:00"
+        }
+      ]
     }
   },
-  "require_cover": true
+  "require_cover": true,
+  "short_lyrics": true
 }

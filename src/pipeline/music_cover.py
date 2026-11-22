@@ -86,8 +86,26 @@ def _vf_common(W, H, total, wave_w, wave_x, wave_y):
             f"color=c=0xFFFFFF@0.85:s={W}x6:r={FPS}[bar];[c3][bar]overlay=x='-W+W*t/{total:.3f}':y=H-6:shortest=1[v]")
 
 
+def _sub_png(text: str, W: int, out: pathlib.Path, size: int = 54):
+    im = Image.new("RGBA", (W, 130), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    s = size
+    while s > 34 and d.textlength(text, font=font(fsel(text, True), s)) > W - 160:
+        s -= 2
+    f = font(fsel(text, True), s)
+    tw = d.textlength(text, font=f)
+    b = d.textbbox((0, 0), text, font=f)
+    h = b[3] - b[1]
+    x0 = (W - tw) / 2
+    d.rounded_rectangle((x0 - 34, 65 - h / 2 - 22, x0 + tw + 34, 65 + h / 2 + 22), radius=30, fill=(10, 6, 24, 165))
+    d.text((x0, 65 - h / 2 - b[1]), text, font=f, fill=(255, 255, 255, 255))
+    im.save(out)
+
+
 def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str, tag: str, out: pathlib.Path,
-          vertical: bool = False, start: float = 0.0, length: float | None = None, cta: str = "") -> dict:
+          vertical: bool = False, start: float = 0.0, length: float | None = None, cta: str = "",
+          subs: list | None = None) -> dict:
+    """subs: [(시작초, 끝초, 가사 줄)] — 클립 기준 시각. 세로 영상에서 그림 아래쪽에 가사 자막."""
     cover = Image.open(cover_path)
     W, H = (1080, 1920) if vertical else (1920, 1080)
     total = (length or dur(track) - start)
@@ -140,12 +158,22 @@ def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str
         fg.save(td / "fg.png")
         _sparkles(W, H, td / "sp.mp4")
         fc = _vf_common(W, H, total, *wave)
+        sub_in = []
+        if subs:
+            fc = fc[: -len("[v]")] + "[s0]"
+            sy = 1060 if vertical else H - 210
+            for k, (a, b, text) in enumerate(subs):
+                png = td / f"sub{k}.png"
+                _sub_png(text, W, png)
+                sub_in += ["-loop", "1", "-i", str(png)]
+                fc += (f";[s{k}][{4 + k}:v]overlay=0:{sy}:enable='between(t,{a:.2f},{b:.2f})'"
+                       + ("[v]" if k == len(subs) - 1 else f"[s{k + 1}]"))
         a_in = ["-ss", str(start)] + (["-t", str(length)] if length else []) + ["-i", str(track)]
         af = "loudnorm=I=-14:TP=-1.5"
         if length:
             af = f"afade=t=in:d=1.5,afade=t=out:st={length - 2.5}:d=2.5," + af
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-r", str(FPS), "-i", str(td / "bg.png"),
-                        "-loop", "1", "-i", str(td / "fg.png"), "-stream_loop", "-1", "-i", str(td / "sp.mp4")] + a_in +
+                        "-loop", "1", "-i", str(td / "fg.png"), "-stream_loop", "-1", "-i", str(td / "sp.mp4")] + a_in + sub_in +
                        ["-filter_complex", fc + f";[3:a]{af}[a]", "-map", "[v]", "-map", "[a]", "-t", f"{total:.3f}",
                         "-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
                         "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart", str(out)], check=True)

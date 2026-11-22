@@ -140,6 +140,36 @@ def best_window(rms, fps: float, length: float, duration: float) -> float:
     return round(i / fps, 2)
 
 
+def extra_windows(rms, fps: float, length: float, duration: float, used: list[float], n: int) -> list[float]:
+    """이미 쓴 구간과 겹치지 않는 다음으로 꽉 찬 구간 n개 (같은 곡에서 쇼츠 더 만들기)."""
+    import numpy as np
+    w = int(length * fps)
+    if len(rms) <= w:
+        return []
+    cs = np.concatenate([[0], np.cumsum(rms)])
+    means = (cs[w:] - cs[:-w]) / w
+    lo = int(min(duration * 0.08, duration - length) * fps)
+    taken = [u for u in used]
+    out = []
+    order = np.argsort(-means)
+    for i in order:
+        if i < lo:
+            continue
+        t = i / fps
+        if t + length > duration - 3:
+            continue
+        if all(abs(t - u) >= length for u in taken):
+            out.append(round(float(t), 2))
+            taken.append(t)
+            if len(out) >= n:
+                break
+    return out
+
+
+def first_line(subs: list) -> str:
+    return subs[0][2] if subs else ""
+
+
 def genre_tag(bpm: float) -> str:
     """느린 곡 = 발라드. (자동 추정이라 틀릴 수 있음 → 파일 이름에 '발라드'가 있으면 그걸 따름)"""
     return "BALLAD · 발라드" if 0 < bpm < 88 else "K-POP · IDOL"
@@ -259,11 +289,13 @@ def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str =
     full = video(audio, cov, title, channel, tag, WORK / f"{stem}.mp4")
     length = float(cfg.get("short_length", 40))
     start = float(ov["short_start"]) if ov.get("short_start") is not None else best_window(an["rms"], an["fps"], length, an["duration"])
-    sh = video(audio, cov, title, channel, tag, WORK / f"{stem}-short.mp4", vertical=True, start=start,
-               length=length, cta="전체 듣기는 채널에서 ▶")
     lyr = lyrics_of(tags)
+    from .music_lyrics import subtitles
+    subs = subtitles(audio, lyr, start, length) if cfg.get("short_lyrics", True) else []
+    sh = video(audio, cov, title, channel, tag, WORK / f"{stem}-short.mp4", vertical=True, start=start,
+               length=length, cta="전체 듣기는 채널에서 ▶", subs=subs)
     return {"title": title, "tag": tag, "bpm": an["bpm"], "short_start": start, "video": full["video"],
-            "short": sh["video"], "cover": str(cov), "lyrics": bool(lyr),
+            "short": sh["video"], "cover": str(cov), "lyrics": bool(lyr), "subs": len(subs),
             "desc": description(title, lyr, channel, extra=ov.get("_extra", "")),
             "short_desc": description(title, lyr, channel, short=True)}
 
@@ -328,6 +360,10 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         folder = cfg.get("inbox_folder", "BEEKAY SONGS")
         files = drive_inbox(dtoken, folder, cfg.get("inbox_folder_id", ""))
         jobs = pending(files, log)
+        try:
+            run_extras(dtoken, cfg, log, now, enabled)
+        except (urllib.error.HTTPError, subprocess.CalledProcessError, KeyError) as e:
+            summary(f"::warning::추가 쇼츠 실패: {e}")
         if not jobs:
             summary(f"새 곡 없음 (드라이브 '{folder}' 폴더 파일 {len(files)}개, 아직 안 올린 곡 0개"
                     + (" — 폴더를 못 찾았거나 비어 있음)" if not files else ")")
@@ -383,6 +419,61 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         notify(f"🎵 BEEKAY SONGS 새 곡 업로드: {meta['title']} ({when})\n{link}")
         done += 1
     return 0
+
+
+def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: bool) -> int:
+    """releases[id].extra_shorts = [{"publish_at": ...}, ...] → 같은 곡의 다른 구간 쇼츠를 예약 업로드."""
+    from .music_cover import video
+    from .music_lyrics import subtitles
+    done = 0
+    for fid, ov in cfg.get("releases", {}).items():
+        plan = ov.get("extra_shorts") or []
+        ent = log.get(fid)
+        if not plan or not ent or not ent.get("video_id"):
+            continue
+        have = ent.setdefault("extras", [])
+        todo = [(k, p) for k, p in enumerate(plan) if k >= len(have)]
+        todo = [(k, p) for k, p in todo if dt.datetime.fromisoformat(p["publish_at"]) > now + dt.timedelta(minutes=30)]
+        if not todo:
+            continue
+        audio = download(dtoken, fid, WORK / "in" / ent["name"])
+        an = analyse(audio)
+        length = float(cfg.get("short_length", 40))
+        main_start = float(ov["short_start"]) if ov.get("short_start") is not None else \
+            best_window(an["rms"], an["fps"], length, an["duration"])
+        used = [main_start] + [e["start"] for e in have]
+        starts = extra_windows(an["rms"], an["fps"], length, an["duration"], used, len(todo))
+        tags = tags_of(audio)
+        lyr = lyrics_of(tags)
+        title = ent["title"]
+        cov = ROOT / ov["cover"] if ov.get("cover") else None
+        if not cov or not cov.exists():
+            continue
+        channel = cfg.get("channel", "BEEKAY SONGS")
+        for (k, p), st in zip(todo, starts):
+            subs = subtitles(audio, lyr, st, length) if cfg.get("short_lyrics", True) else []
+            stem = re.sub(r"[^0-9A-Za-z가-힣]+", "-", title).strip("-")[:40]
+            out = video(audio, cov, title, channel, ent.get("tag", ""), WORK / f"{stem}-extra{k + 1}.mp4", vertical=True,
+                        start=st, length=length, cta="전체 듣기는 채널에서 ▶", subs=subs)
+            line = first_line(subs)
+            yt_title = (f"“{line}” | {title} 🎧 #shorts" if line else f"{title} 🎧 Part {k + 2} #shorts")[:100]
+            mm = f"{int(st) // 60}:{int(st) % 60:02d}"
+            if not enabled:
+                summary(f"[만들기만] 추가 쇼츠 {title} {mm}부터, 자막 {len(subs)}줄")
+                continue
+            from .youtube import access_token, upload
+            token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
+                                 os.environ["MUSIC_YT_REFRESH_TOKEN"])
+            desc = (f"{title} — {channel}\n\n🎧 전체 듣기: https://youtu.be/{ent['video_id']}\n\n{AI_NOTE}\n\n"
+                    "#KPOP #AImusic #Suno #신곡 #shorts")
+            at = dt.datetime.fromisoformat(p["publish_at"])
+            r = upload(token, video_body(yt_title, desc, at, short=True), pathlib.Path(out["video"]))
+            have.append({"short_id": r["id"], "start": st, "publish_at": at.isoformat(), "subs": len(subs)})
+            LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+            summary(f"추가 쇼츠 예약: {yt_title} → {at.isoformat()[:16]} ({mm}부터 40초, 자막 {len(subs)}줄)\n"
+                    f"https://studio.youtube.com/video/{r['id']}/edit")
+            done += 1
+    return done
 
 
 def main(argv=None) -> int:
