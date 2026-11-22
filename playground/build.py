@@ -1375,6 +1375,9 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
         if any(d["g"] == g["slug"] for d in GAME_ITEMS) or g["slug"] in GSHOP_SHARED or g["slug"] in DESIGN_GAMES or any(t["g"] == g["slug"] for t in THEMES):  # 게임별 미니 상점(그 게임 아이템만). DESIGNS·THEMES 만 있는 새 게임도 자동
             gs = f'<details id="gshop" class="gshop" data-g="{g["slug"]}"><summary>🛒 이 게임 상점 <small>· 보유 🪙 <b>0</b> · 눌러서 열기</small></summary><div class="gsb"></div></details>'
             body = body.replace("<!--RANK-->", gs + "<!--RANK-->") if "<!--RANK-->" in body else body + gs
+        about = HERE / "games" / g["slug"] / "about.html"
+        if about.exists():  # 게임 소개 글(2026-11-22 애드센스: 캔버스 위주 게임 페이지에 읽을 글 보강)
+            body += about.read_text(encoding="utf-8")
         if g["slug"] in gguide:  # 공략 글로 이어지는 카드(규칙 아래)
             gd = gguide[g["slug"]]
             body += f'<a class="gcard" href="/guide/{gd["slug"]}">📖 <b>{esc(gd["title"])}</b><br><small class="muted">{esc(gd["description"])}</small></a>'

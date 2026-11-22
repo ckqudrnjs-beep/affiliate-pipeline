@@ -177,6 +177,13 @@ def josa(word: str, pair: str) -> str:
     return word + (pair[0] if has else pair[1])
 
 
+def nice_name(name: str) -> str:
+    """KAMIS '품목/품종' 라벨을 사람이 읽는 꼴로: '열무/열무' → '열무', '사과/시나노골드' → '사과(시나노골드)'."""
+    a, _, b = (name or "").partition("/")
+    a, b = a.strip(), b.strip()
+    return a if not b or a == b else f"{a}({b})"
+
+
 def grocery_line(items: list[dict]) -> str:
     m = [i for i in items if i.get("m") is not None]
     if len(m) < 2:
@@ -184,9 +191,9 @@ def grocery_line(items: list[dict]) -> str:
     up, down = max(m, key=lambda i: i["m"]), min(m, key=lambda i: i["m"])
     parts = []
     if up["m"] >= 3:
-        parts.append(f"한 달 새 {josa(up['name'], '이가')} {up['m']:.0f}% 올랐어요")
+        parts.append(f"한 달 새 {josa(nice_name(up['name']), '이가')} {up['m']:.0f}% 올랐어요")
     if down["m"] <= -3:
-        parts.append(f"{josa(down['name'], '은는')} {-down['m']:.0f}% 내렸어요")
+        parts.append(f"{josa(nice_name(down['name']), '은는')} {-down['m']:.0f}% 내렸어요")
     return ". ".join(parts) + "." if parts else "장바구니 물가는 한 달 전과 비슷해요."
 
 
@@ -444,6 +451,22 @@ if(v&&D.sido[v])sel.value=v;show();sel.onchange=function(){try{localStorage.setI
 })();"""
 
 
+def static_quiz(latest: dict | None, today: dt.date | None = None) -> str:
+    """JS 가 돌기 전에도(검색·심사 화면) 오늘 문제가 보이게 미리 그려 둔다. 스크립트가 같은 상자를 덮어쓴다."""
+    today = today or dt.datetime.now(KST).date()
+    try:
+        q = schedule(today, 1, latest).get(today.isoformat())
+    except Exception:
+        q = None
+    if not q:
+        return ('<p class="qq">하루 한 문제, 생활 속 숫자를 맞혀 보는 \'오늘의 얼마게\'예요. '
+                '레시피 재료비, 가전 전기요금, 직구 면세 한도처럼 삼촌이 계산해 둔 숫자로만 내요.</p>')
+    opts = "".join(f'<button type="button">{html.escape(o)}</button>' for o in q["o"])
+    return (f'<div class="qh"><span>오늘의 얼마게 · {today.month}월 {today.day}일</span><span></span></div>'
+            f'<p class="qq">{html.escape(q["q"])}</p><div class="opts">{opts}</div>'
+            '<p class="small">보기를 누르면 정답과 삼촌의 계산 과정을 보여 드려요.</p>')
+
+
 def today_block(latest: dict | None, root: str = "") -> str:
     """홈 맨 위. 시세가 없으면 퀴즈만."""
     e = html.escape
@@ -473,13 +496,13 @@ def today_block(latest: dict | None, root: str = "") -> str:
             lines.append(grocery_line(gr))
             asof = latest.get("groceryAsOf")
             basket = f'<p class="basket">장바구니{f"({date_label(asof)} 기준)" if asof else ""}: ' + " · ".join(
-                f'{e(i["name"])} {i["price"]:,}원{("(" + e(i["unit"]) + ")") if i["unit"] else ""}' for i in gr[:6]) + "</p>"
+                f'{e(nice_name(i["name"]))} {i["price"]:,}원{("(" + e(i["unit"]) + ")") if i["unit"] else ""}' for i in gr[:6]) + "</p>"
         if len(tiles) % 2:
             tiles.append('<div class="tile"><span class="k">매일 아침 6시쯤</span><span class="v" style="font-size:16px">새 숫자로 바뀌어요</span></div>')
         src = " · ".join(n for k, n in R.SOURCES.items() if latest.get(k))
         left = (f'<div><div class="tiles">{"".join(tiles)}</div><ul class="lines">{"".join(f"<li>{e(l)}</li>" for l in lines if l)}</ul>{basket}'
                 f'<p class="small">{date_label(latest["date"])} 기준 · 출처 {e(src)} · <a href="{root}report.html">주간 물가 리포트</a></p></div>')
-    quiz = f'<div class="quiz" id="quizbox"><p class="qq">오늘의 얼마게를 불러오는 중이에요.</p></div>'
+    quiz = f'<div class="quiz" id="quizbox">{static_quiz(latest)}</div>'
     when = date_label(latest["date"]) if latest else ""
     return (f'<section id="today"><div class="sechead"><h2>오늘의 생활 시세</h2><span>{e(when)}</span></div>'
             f'<div class="twocol2">{left or "<div><p class=lede>기름값·환율·장바구니 시세를 매일 아침 정리해요.</p></div>"}{quiz}</div></section>')
@@ -496,7 +519,7 @@ def quiz_body(latest: dict | None) -> str:
     return f"""<h1>오늘의 얼마게</h1>
 <p class="lede">하루 한 문제, 생활 속 숫자를 맞혀 보세요. 레시피 1인분 재료비, 가전 전기요금, 직구 면세 한도, 그날의 기름값·환율처럼
 삼촌이 계산해 둔 숫자로만 내요. 풀면 출석 도장이 찍히고, 연속으로 오면 배지가 생겨요. 기록은 이 기기에만 저장되고 서버로 보내지 않아요.</p>
-<div style="max-width:620px;margin-top:24px"><div class="quiz" id="quizbox"><p class="qq">문제를 불러오는 중이에요.</p></div></div>
+<div style="max-width:620px;margin-top:24px"><div class="quiz" id="quizbox">{static_quiz(latest)}</div></div>
 <h2 style="margin-top:40px">이렇게 놀아요</h2>
 <ul class="lines"><li>문제는 매일 0시(한국 시간)에 바뀌어요. 하루 한 번만 고를 수 있어요.</li>
 <li>틀려도 출석 도장은 찍혀요. 3·7·14·30·100일 연속이면 배지가 생겨요.</li>
