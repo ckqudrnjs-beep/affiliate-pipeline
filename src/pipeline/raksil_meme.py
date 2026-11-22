@@ -87,6 +87,9 @@ def plan(day: dt.date, log: dict) -> str | None:
     """그날 밈 쇼츠를 올릴지 → 틀 id 또는 None. 가장 오래 안 쓴 틀부터."""
     if day.weekday() not in DAYS:
         return None
+    from .shorts_lock import locked  # 11/22 BK 고정안: 고정 기간엔 밈 쇼츠 쉼 (밸런스 하나로)
+    if locked("5raksil", day):
+        return None
     if any(k.startswith(day.isoformat() + "-meme-") for k in log):
         return None
     last = history(log)

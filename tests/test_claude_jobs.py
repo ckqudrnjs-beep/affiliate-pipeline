@@ -131,7 +131,7 @@ class ToonJobTest(unittest.TestCase):
             for sub in ("data/episodes", "data/articles", "data/toon/lab"):
                 (root / sub).mkdir(parents=True)
             (root / "data/calc_questions.json").write_text("[]", encoding="utf-8")
-            info = {"date": "2026-12-05", "concept": {"id": "x"}}  # 토요일 = 실사 특별편(시즌 밖)
+            info = {"date": "2026-12-19", "concept": {"id": "x"}}  # 토요일 = 실사 특별편(시즌 밖, 고정 기간 12/13 뒤)
             with mock.patch.object(C, "ROOT", root), mock.patch("pipeline.episodes.info_short", return_value=info), \
                     mock.patch.object(C, "REFINE_ROUNDS", 0), mock.patch.object(C, "REPLAN_ROUNDS", 1), \
                     mock.patch.object(C, "ask", side_effect=replies), \
@@ -140,7 +140,7 @@ class ToonJobTest(unittest.TestCase):
                 self.assertEqual(C.toon(dt.date(2026, 11, 21)), 0)
                 merge.assert_called_once_with("u")  # BK 11/21: 1안 자동 진행
                 note.assert_not_called()  # 알림 생략
-                md = (root / "data/toon/lab/2026-12-05.md").read_text(encoding="utf-8")
+                md = (root / "data/toon/lab/2026-12-19.md").read_text(encoding="utf-8")
                 self.assertIn("[새 기획 1차", C.ask.call_args_list[2].args[2])
                 self.assertIn("약점7", C.ask.call_args_list[2].args[2])  # 떨어진 안의 지적이 새 기획에 들어감
                 self.assertIn("1안: 새안1  (점수 50/60)", md)

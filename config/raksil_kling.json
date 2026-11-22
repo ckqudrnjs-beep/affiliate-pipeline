@@ -1,6 +1,6 @@
 {
  "_": "5락실 게임 쇼츠 Kling 클립 목록 (BK 2026-11-21 '1 리액션 컷 + 2 상황극'). on=false 면 꺼짐, 클립에 off=true 면 그 클립만 안 씀(예전 규칙). react_games·situ 게임은 자동 플레이 봇이 있는 게임만(config/raksil_rec.json). 클립은 media/kling/ (720x1280 무음, 휴대폰·모니터 화면이 안 보이는 컷만). ss=시작 초, t=쓸 길이(초). realistic=true 면 유튜브 합성 콘텐츠 표시. 코드 pipeline.raksil_kling, 기준 docs/DIRECTION.md 2-2.",
- "on": true,
+ "on": false,
  "react_games": [
   "dodge",
   "tower",
@@ -106,16 +106,15 @@
    "id": "s-bus",
    "game": "tower",
    "top": "버스 3분 남았을 때 하는 것",
-   "file": "media/kling/situ-bus.mp4",
+   "file": "media/kling/situ-bus-clean.mp4",
    "ss": 0.0,
    "t": 2.0,
    "pay": {
-    "file": "media/kling/situ-bus.mp4",
+    "file": "media/kling/situ-bus-clean.mp4",
     "ss": 3.5,
     "t": 1.5
    },
-   "off": true,
-   "why_off": "버스 옆면에 AI가 만든 깨진 한글 글자가 보임 (AI 영상 글자 금지 규칙) — 다시 뽑기 전까지 안 씀"
+   "note": "11/22 깨진 AI 글자 띠(세로 580~810px)를 흐림 처리한 판(situ-bus-clean.mp4)으로 다시 씀 (BK '크레딧 써서 만든 건 활용'). 원본 media/kling/situ-bus.mp4 는 쓰지 않음"
   },
   {
    "id": "s-laundry",

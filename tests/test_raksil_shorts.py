@@ -126,6 +126,27 @@ class RaksilShortsTest(unittest.TestCase):
         finally:
             r.LOG = old
 
+    def test_skipped_record_does_not_block_same_qid(self):
+        """쉰 기록(skipped)은 같은 질문으로 다시 만든 편을 막지 않고, 올린 기록만 막는다."""
+        import json, os, pathlib, tempfile
+        from unittest import mock
+        from pipeline import youtube
+        d = pathlib.Path(tempfile.mkdtemp())
+        old = r.LOG
+        r.LOG = d / "log.json"
+        said = []
+        try:
+            os.environ.pop("RAKSIL_YT_ENABLED", None)
+            with mock.patch.object(youtube, "summary", side_effect=said.append):
+                r.LOG.write_text(json.dumps({"2026-11-22-skip3": {"skipped": True, "qid": "20261122-1", "format": "skip"}}))
+                r.upload_meta({"date": "2026-11-22", "qid": "20261122-1", "title": "t"})
+                r.LOG.write_text(json.dumps({"2026-11-22-hidden": {"id": "x", "qid": "20261122-1"}}))
+                r.upload_meta({"date": "2026-11-22", "qid": "20261122-1", "title": "t"})
+        finally:
+            r.LOG = old
+        self.assertIn("dry-run", said[0])
+        self.assertIn("이미 올림", said[1])
+
     @NEED_RENDER
     def test_balance_frames_keep_shorts_ui_free(self):
         """오른쪽 버튼 자리(x≥900, y 1000~1540)와 아래 제목 자리(y≥1560 위 격자 제외)에 몽글이·글자가 없다."""
@@ -312,6 +333,31 @@ class RaksilShortsTest(unittest.TestCase):
             self.assertEqual([c[1] for c in calls["replan"]], ["질문이 뻔함"] * 3)  # 지적이 다시 짜기에 들어감
             self.assertEqual([c[3] for c in calls["replan"]], [False, True, False])  # 같은 소재 2번 미달 → 새 소재
             self.assertIn("새 질문 3", calls["briefs"][-1])  # 고친 질문으로 채점
+        finally:
+            self._gate_restore(saved)
+
+    @NEED_RENDER
+    def test_gate_judges_every_plan_of_a_batch(self):
+        """BK 11/22 '짜는 방식 바꾸기': 다시 짜기가 낸 여러 안을 모두 채점한 뒤에야 다시 짜고, 묶음 최고안을 바탕으로."""
+        def sc(t, note):
+            return {"fresh": t, "insight": t, "afterglow": t, "joy": t, "addictive": t, "copy": t, "layout": t, "note": note}
+        scores = {1: sc(5, "첫 안"), 2: sc(5, "묶음1"), 3: sc(6, "묶음2 최고"), 4: sc(5, "묶음3"), 5: sc(9, "")}
+        n = {"i": 0}
+
+        def replan(q, sc_, hist, fresh):
+            n["i"] += 1
+            return [({**q, "a": f"안{n['i']}-{k}", "b": f"반대{n['i']}-{k}", "rewritten": True},
+                     {"pick": "a", "why": "손잡이잖아"}, {"top": "비 오는 날", "accent": f"우산 {k}"}) for k in range(3)]
+        d, saved, calls = self._gate_env(lambda k: scores.get(k, sc(5, "x")), replan)
+        try:
+            import unittest.mock as um
+            with um.patch.object(r, "tts", side_effect=RuntimeError("stop")):
+                with self.assertRaises(RuntimeError):
+                    r.render(dt.date(2026, 12, 5), d)
+            self.assertEqual(calls["judge"], 5)
+            self.assertEqual(len(calls["replan"]), 2)  # 1번째 미달 → 3안, 3안 모두 채점 뒤 한 번 더
+            self.assertEqual(calls["replan"][1][1], "묶음2 최고")  # 묶음 최고안의 지적으로
+            self.assertEqual(calls["replan"][1][0], "안1-1")
         finally:
             self._gate_restore(saved)
 

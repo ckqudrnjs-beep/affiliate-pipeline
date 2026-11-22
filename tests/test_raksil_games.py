@@ -149,5 +149,23 @@ class T(unittest.TestCase):
         finally:
             rs.judge, rg.replan_hook = old
 
+    def test_quality_gate_hooks_batch(self):
+        """다시 짜기가 낸 여러 안을 차례로 모두 채점하고, 묶음이 끝나야 다시 짠다."""
+        from pipeline import raksil_games as rg, raksil_shorts as rs
+        g = {"slug": "x", "name": "동전탑", "short": "동전 밀기"}
+        good = {"fresh": 9, "insight": 3, "afterglow": 3, "joy": 8, "addictive": 8, "copy": 8, "layout": 8, "note": ""}
+        low = {**good, "copy": 4, "note": "막연"}
+        old = (rs.judge, rg.replan_hook)
+        try:
+            seen, asked = [], []
+            rs.judge = lambda kind, brief: (seen.append(brief), good if len(seen) == 4 else low)[1]
+            rg.replan_hook = lambda g, kind, sc, hist, fresh: (asked.append(1), [(f"후킹{k}", f"동전탑 대사{k}") for k in range(3)])[1]
+            hook, say, why, sc = rg.gate(g, "new", dt.date(2026, 11, 22), "처음", ["a", "b"])
+            self.assertEqual((hook, why), ("후킹2", ""))
+            self.assertEqual(len(asked), 1)
+        finally:
+            rs.judge, rg.replan_hook = old
+
+
 if __name__ == "__main__":
     unittest.main()
