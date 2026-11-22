@@ -146,7 +146,7 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 ("한국인 99%" "상위 10%" 같은 말 금지), 지능·외모 비하 금지, 광고 말 금지. 오늘 질문에 맞춰 구체적으로.
 예) top "고민 없이 고르면" accent "찐 어른 인정" / top "친구랑 꼭 갈리는" accent "라면 vs 치킨".
 제목 패턴(BK 11/21 결정): ① 지시어로 숨기기 환영 — 답을 다 말하지 않고 '이거' '이 질문'으로 궁금증 남기기
-(예: top "이건 그냥" accent "밸런스게임 아님" / top "비 오는 날" accent "우산 없이 vs 우산 둘"). ② 숫자는 실제 시간만(예: "3초 안에 고르면"),
+(예: top "비 오는 날" accent "우산 없이 vs 우산 둘" / top "수업 중 소리 나면" accent "꽥 vs 야옹"). ② 숫자는 실제 시간만(예: "3초 안에 고르면"),
 통계·%·순위·남의 조회수·돈 금액은 금지. ③ "~하지 마세요" "몰랐으면 손해" 같은 손실 회피·금기 경고는 쓰지 않는다.
 ④ (11/21·11/22 편집장이 두 번 다 '막연함'으로 문구 3점 → 그날 쉼) "성격 나옴" "성격 드러남" "어느 쪽 인간" "너의 유형" 같은
 성격 판정 말은 쓰지 않는다. 노란 줄에는 오늘 질문의 구체적인 낱말·장면(우산, 알람, 라면 국물 처럼)이 꼭 하나 들어간다.
@@ -354,7 +354,7 @@ JUA = pathlib.Path(__file__).resolve().parents[2] / "config/fonts/Jua-Regular.tt
 BAND_BANK = [("3초 안에 고르면", "결단력 인정"), ("친구랑 꼭 갈리는", "밸런스게임"), ("의외로 정답이", "둘로 나뉜다"),
              ("고민 없이 고르면", "찐 어른 인정"), ("댓글 싸움 나는", "밸런스게임"),
              ("1초 만에 고르면", "눈치 백단"), ("둘 다 싫으면", "댓글로 항의"),
-             ("이건 그냥", "밸런스게임 아님"), ("이거 고르는 사람", "따로 있다")]
+             ("이거 고르는 사람", "따로 있다")]
 # 11/21 BK 결정: 지시어로 숨기기 채택, 숫자는 실제 시간·게임 기록만, 손실 회피·금기 경고는 안 씀.
 BANNED_BAND = BANNED_WHY + ("상위", "천재", "지능", "아이큐", "IQ", "한국인", "99", "1등",
                              "하지 마세요", "하지마세요", "몰랐으면", "손해", "날릴 뻔", "만원", "억",
@@ -1334,6 +1334,9 @@ def judge(kind: str, brief: str) -> dict | None:
         r = cj.ask("raksil", GATE_SYS, f"[{kind}]\n{brief}", model=cj.SONNET, effort="medium", max_tokens=3000, need=0.02,
                    schema=cj.obj(props))
     except Exception as e:
+        if type(e).__name__ == "BudgetError":  # 11/22: 예산 소진인데 채점 없이 올라감 → 채점 못 하면 안 올린다
+            print(f"품질 채점 막힘(예산): {e}", file=sys.stderr)
+            return {"blocked": str(e)}
         print(f"품질 채점 실패(코드 검사만): {e}", file=sys.stderr)
         return None
     return r if isinstance(r, dict) else None
@@ -1414,6 +1417,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     qq = q
     no_quick = False  # 3연속은 다시 짜기가 질문1만 바꿀 수 있어(질문2·3·틀 대사는 그날 고정) 한 번 미달이면 다른 형식으로 (11/22 8번 21점)
     pick, band = mongle_plan(qq)
+    blocked = ""
     for _ in range(GATE_TRIES * 2):  # 구도 탈락(채점 없이 다시 짜기)까지 포함한 안전 상한
         if tries >= GATE_TRIES:
             break
@@ -1432,6 +1436,9 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
             lines = fmt_script(fmt, qq, res, pick, prev)
             cand = (qq, today3, pick, band, fmt, lines)
             sc = judge("5락실 밸런스 쇼츠", brief_of(fmt, qq, band, pick, lines, today3))
+            if sc and sc.get("blocked"):
+                blocked = sc["blocked"]
+                break
             if sc is None:  # 채점 불가 → 구도 검사 통과한 것으로 진행
                 plan = cand
                 break
@@ -1464,8 +1471,10 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     if not plan and best and gate_soft(best[1]):  # 최후: 통과선 아래지만 올릴 만한 최고안 → 올리고 알림
         plan = best[2] + ({**best[1], "soft": True},)
         print(f"통과선 아래 최고안으로 진행: {best[0]}/40")
+    if not plan and blocked:
+        why = f"채점 예산이 막혀 채점 없이 올리지 않음 — {blocked}"
     if not plan:
-        why = (f"{tries}번 다시 짜도 최고 {best[0]}/40점 < 최후 기준 {GATE_SOFT} — {best[1].get('note', '')}" if best
+        why = why if blocked else (f"{tries}번 다시 짜도 최고 {best[0]}/40점 < 최후 기준 {GATE_SOFT} — {best[1].get('note', '')}" if best
                else "어느 기획안도 형식 칸에 글자가 들어가지 않음(구도)")
         stem_key = q["id"] if extra else day.isoformat()
         meta = {"date": day.isoformat(), "qid": q["id"], "key": stem_key, "skip": why,

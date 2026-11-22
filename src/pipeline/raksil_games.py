@@ -229,6 +229,10 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
                       "화면은 자동 플레이 녹화라 특정 순간에 맞춘 몽글이 반응·벌칙·내일 예고는 넣을 수 없고, 노란 줄은 게임 이름 고정, "
                       "둘째 대사(사이트 안내)와 몽글이 엔딩도 고정이다. 이것들로 감점하지 말고, 바꿀 수 있는 것은 흰 줄 후킹과 첫 대사뿐 — "
                       "note 도 그 둘만 지시", brief)
+        if sc and sc.get("blocked"):  # 예산 소진 → 채점 없이 올리지 않음 (11/22)
+            if best and rs.gate_soft(best[3]):
+                return best[1], best[2], "", {**best[3], "soft": True}
+            return hook, say, f"채점 예산이 막혀 채점 없이 올리지 않음 — {sc['blocked']}", None
         if sc is None:
             return hook, say, "", None  # 채점 불가 → 화면 검사(check)만
         total, ok = rs.gate_total(sc)
