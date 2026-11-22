@@ -36,13 +36,12 @@ class ShortsLockTest(unittest.TestCase):
 
 
 
-class FallbackTest(unittest.TestCase):
-    def test_no_fallback_cases(self):
-        from pipeline import raksil_shorts as rs
-        self.assertIsNone(rs.fallback_legacy({"title": "x"}, dt.date(2026, 11, 24), upload=False))  # 통과한 편
-        self.assertIsNone(rs.fallback_legacy({"skip": "미달", "kind": "게임"}, dt.date(2026, 11, 24), upload=False))
-        self.assertIsNone(rs.fallback_legacy({"skip": "미달"}, dt.date(2027, 1, 5), upload=False))  # 고정 기간 밖
-
+class LegacyEndTest(unittest.TestCase):
+    def test_new_format_only_in_lock(self):
+        from pipeline import raksil_shorts_legacy as L
+        for d in (23, 25, 27, 29):
+            self.assertEqual(L.pick(dt.date(2026, 11, d)), "new")  # 11/22 BK '새 형식으로 고정' → 옛 형식 날 없음
+        self.assertEqual(L.pick(dt.date(2026, 11, 23), "legacy"), "legacy")  # 손 스위치는 그대로
 
 if __name__ == "__main__":
     unittest.main()

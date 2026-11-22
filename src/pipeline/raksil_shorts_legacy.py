@@ -472,7 +472,7 @@ def upload_meta(meta: dict) -> int:
     sched = meta.get("schedule", meta.get("key", meta["date"]) == meta["date"])
     at = publish_time(meta, dt.datetime.now(KST)) if sched else None
     r = upload(tok, video_body(meta, at), pathlib.Path(meta["file"]))
-    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"], "format": meta.get("format", "legacy")}
+    log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"], "format": "legacy"}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
@@ -492,6 +492,9 @@ def pick(day: dt.date, force: str = "") -> str:
     if force == "legacy":
         return "legacy"
     if force:
+        return "new"
+    from .shorts_lock import locked  # 11/22 BK 카드 '새 형식으로 고정': 고정 기간엔 격일 비교 끝, 새 형식만
+    if locked("5raksil", day):
         return "new"
     if AB_START <= day <= AB_END and (day - AB_START).days % 2 == 1:
         return "legacy"
