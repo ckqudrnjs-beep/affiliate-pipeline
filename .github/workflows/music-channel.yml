@@ -30,7 +30,7 @@ jobs:
       - name: 준비
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q ffmpeg fonts-inter
-          pip install -q pillow numpy
+          pip install -q pillow numpy faster-whisper
       - name: 검사
         run: PYTHONPATH=src python -m unittest tests.test_music_channel
       - name: 만들기 + 올리기
@@ -64,7 +64,7 @@ jobs:
           for i in 1 2 3; do
             git fetch -q origin main && git reset -q --hard FETCH_HEAD
             mkdir -p "$(dirname "$F")"
-            python -c "import json,os,sys;f=sys.argv[1];a=json.load(open(f)) if os.path.exists(f) else {};b=json.load(open('/tmp/mine.json'));[a.setdefault(k,v) for k,v in b.items()];json.dump(a,open(f,'w'),ensure_ascii=False,indent=1)" "$F"
+            python -c "import json,os,sys;f=sys.argv[1];a=json.load(open(f)) if os.path.exists(f) else {};b=json.load(open('/tmp/mine.json'));n=lambda v:len(v.get('extras',[])) if isinstance(v,dict) else 0;[a.__setitem__(k,v) for k,v in b.items() if k not in a or n(v)>n(a[k])];json.dump(a,open(f,'w'),ensure_ascii=False,indent=1)" "$F"
             git add "$F"
             git commit -q -m "BEEKAY SONGS 업로드 기록 $(TZ=Asia/Seoul date '+%F')" || exit 0
             git push -q origin HEAD:main && exit 0
