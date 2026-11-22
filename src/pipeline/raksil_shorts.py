@@ -146,8 +146,10 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 ("한국인 99%" "상위 10%" 같은 말 금지), 지능·외모 비하 금지, 광고 말 금지. 오늘 질문에 맞춰 구체적으로.
 예) top "고민 없이 고르면" accent "찐 어른 인정" / top "친구랑 꼭 갈리는" accent "라면 vs 치킨".
 제목 패턴(BK 11/21 결정): ① 지시어로 숨기기 환영 — 답을 다 말하지 않고 '이거' '이 질문'으로 궁금증 남기기
-(예: top "이 질문 하나로" accent "성격 다 나옴" / top "이건 그냥" accent "밸런스게임 아님"). ② 숫자는 실제 시간만(예: "3초 안에 고르면"),
+(예: top "이건 그냥" accent "밸런스게임 아님" / top "비 오는 날" accent "우산 없이 vs 우산 둘"). ② 숫자는 실제 시간만(예: "3초 안에 고르면"),
 통계·%·순위·남의 조회수·돈 금액은 금지. ③ "~하지 마세요" "몰랐으면 손해" 같은 손실 회피·금기 경고는 쓰지 않는다.
+④ (11/21·11/22 편집장이 두 번 다 '막연함'으로 문구 3점 → 그날 쉼) "성격 나옴" "성격 드러남" "어느 쪽 인간" "너의 유형" 같은
+성격 판정 말은 쓰지 않는다. 노란 줄에는 오늘 질문의 구체적인 낱말·장면(우산, 알람, 라면 국물 처럼)이 꼭 하나 들어간다.
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
@@ -187,7 +189,7 @@ def mongle_plan(q: dict, feedback: str = "") -> tuple[dict | None, dict | None]:
         if feedback:  # 품질 게이트에서 떨어진 이유 → 다시 짜기 (BK 11/20 '안 하느니 못해')
             rules += "[편집장 지적 — 이번엔 이것을 고쳐서]\n" + feedback + "\n\n"
         r = cj.ask("raksil", MONGLE_SYS + TAIL_SYS + BAND_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
-                   effort="low", max_tokens=800, need=0.03,
+                   effort="low", max_tokens=3000, need=0.03,
                    schema=cj.obj({"pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "tail": cj.S, "bands": bands}))
     except Exception as e:  # 예산·네트워크·거절 → 반전 없이 '정답은 없다'
         print(f"몽글이의 선택 실패: {e}", file=sys.stderr)
@@ -350,12 +352,13 @@ def glow_text(img, xy_center, lines: list[str], f, size: int, color, glow: int =
 BAND_H, BAND_SIZE, BAND_MAX = 330, 100, 12
 JUA = pathlib.Path(__file__).resolve().parents[2] / "config/fonts/Jua-Regular.ttf"  # 삼촌 띠와 같은 주아체
 BAND_BANK = [("3초 안에 고르면", "결단력 인정"), ("친구랑 꼭 갈리는", "밸런스게임"), ("의외로 정답이", "둘로 나뉜다"),
-             ("고민 없이 고르면", "찐 어른 인정"), ("이거 바로 고르면", "직진형 인간"), ("댓글 싸움 나는", "밸런스게임"),
+             ("고민 없이 고르면", "찐 어른 인정"), ("댓글 싸움 나는", "밸런스게임"),
              ("1초 만에 고르면", "눈치 백단"), ("둘 다 싫으면", "댓글로 항의"),
-             ("이 질문 하나로", "성격 다 나옴"), ("이건 그냥", "밸런스게임 아님"), ("이거 고르는 사람", "따로 있다")]
+             ("이건 그냥", "밸런스게임 아님"), ("이거 고르는 사람", "따로 있다")]
 # 11/21 BK 결정: 지시어로 숨기기 채택, 숫자는 실제 시간·게임 기록만, 손실 회피·금기 경고는 안 씀.
 BANNED_BAND = BANNED_WHY + ("상위", "천재", "지능", "아이큐", "IQ", "한국인", "99", "1등",
-                             "하지 마세요", "하지마세요", "몰랐으면", "손해", "날릴 뻔", "만원", "억")
+                             "하지 마세요", "하지마세요", "몰랐으면", "손해", "날릴 뻔", "만원", "억",
+                             "성격", "인간 유형", "어느 쪽 인간", "유형 나옴")  # 11/22 막연한 성격 판정 띠 → 문구 3점·쉼
 
 
 def band_font(size: int):
@@ -1304,8 +1307,9 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> tuple[dict, d
                 + (f"직전 3편 제목 띠(같은 말·같은 틀 금지): {' / '.join(recent)}\n" if recent else "")
                 + mongle_memory())
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
-        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.SONNET, effort="medium", max_tokens=1600,
-                   need=0.03, schema=cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
+        # 11/22: Sonnet·1600 토큰으로 8번 고쳐도 최고 21~25/40 → 다시 짜기는 Opus, 생각할 자리도 넉넉히(잘리면 다시 짜기 실패)
+        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=8000,
+                   need=0.1, schema=cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
                                              "tail": cj.S, "bands": bands}))
     except Exception as e:
         print(f"기획안 다시 짜기 실패: {e}", file=sys.stderr)
@@ -1327,7 +1331,7 @@ def judge(kind: str, brief: str) -> dict | None:
         from . import claude_jobs as cj
         props = {k: cj.I for k in GATE_SCHEMA_PROPS}
         props["note"] = cj.S
-        r = cj.ask("raksil", GATE_SYS, f"[{kind}]\n{brief}", model=cj.SONNET, effort="medium", max_tokens=900, need=0.02,
+        r = cj.ask("raksil", GATE_SYS, f"[{kind}]\n{brief}", model=cj.SONNET, effort="medium", max_tokens=3000, need=0.02,
                    schema=cj.obj(props))
     except Exception as e:
         print(f"품질 채점 실패(코드 검사만): {e}", file=sys.stderr)

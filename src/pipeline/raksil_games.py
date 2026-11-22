@@ -199,7 +199,8 @@ def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) 
                 + f"게임 설명: {g.get('description', '')}\n편집장 점수: "
                 + json.dumps({k: sc.get(k) for k in rs.GATE_SCHEMA_PROPS}, ensure_ascii=False)
                 + f"\n편집장 지적: {sc.get('note', '')}\n\n지난 시도(되풀이 금지):\n{past}")
-        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.SONNET, effort="medium", max_tokens=800, need=0.02,
+        # 11/22: Sonnet·800 토큰은 생각에 잘려 다시 짜기가 자주 실패 → 문구 은행 후킹만 돌다 22/40 쉼. Opus·넉넉한 한도로
+        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.OPUS, effort="medium", max_tokens=8000, need=0.1,
                    schema=cj.obj({"hook": cj.S, "line": cj.S}))
     except Exception as e:
         print(f"게임 기획안 다시 짜기 실패: {e}", file=sys.stderr)
