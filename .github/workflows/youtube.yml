@@ -16,6 +16,10 @@ on:
         description: "true 면 예약 없이 바로 공개"
         required: false
         default: "false"
+      force:
+        description: "true 면 품질 게이트·돈 강조 점검을 넘김 (BK 가 직접 보고 올리기로 한 편만)"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -40,6 +44,7 @@ jobs:
           YT_INTERVAL_DAYS: ${{ vars.YT_INTERVAL_DAYS }}
           YT_SLUG: ${{ inputs.slug }}
           YT_NOW: ${{ inputs.now }}
+          YT_FORCE: ${{ inputs.force }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}

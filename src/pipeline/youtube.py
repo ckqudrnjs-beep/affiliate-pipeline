@@ -21,6 +21,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import json
+import re
 import os
 import pathlib
 import sys
@@ -310,6 +311,39 @@ def summary(text: str) -> None:
 # 예전처럼 클립이 안 오면 실사판이 대신 나가는 안전망은 없앤다 — 그날은 그냥 쉰다.
 QUALITY_GATE_FROM = "2026-11-23"
 
+# 삼촌 쇼츠 돈 강조 금지 (BK 11/20 밤 "동전 날아가는 것·돈이 샌다 표현은 하지 말고 돈돈돈 강조할 필요 없어", 11/21 제목 돈 액수 훅 금지).
+# 11/22 김치찌개 편이 옛 조립본(자막 '돈이 돌아온다!', 제목 '한 그릇 차이 얼마?') 그대로 수동 실행으로 나간 일 뒤에 넣음 (11/23).
+# 'Veo 크레딧 쓴 클립은 예외'(11/22)는 그림(클립)만 해당 — 제목·설명·자막 글자는 예외 아님.
+TONE_FROM = "2026-11-21"
+MONEY_RE = re.compile(r"금화|저금통|꿀꿀이|돈이|새는\s*돈|돈\s*새|얼마(?!나)|\d[\d,]*\s*(?:만\s*)?원|만\s*원|돈\s*(?:아끼|번다|벌|줍|모으)")
+
+
+def money_hits(text: str) -> list[str]:
+    """돈 강조 말(금화·저금통·'돈이 …'·'얼마'·금액). '얼마나'·'동전이'(이름)는 걸리지 않는다."""
+    return sorted({m.group(0) for m in MONEY_RE.finditer(text or "")})
+
+
+def toon_captions(note: str) -> str:
+    """meta note 에 적힌 조립 spec(data/toon/<날짜>.json)의 화면 글자를 모은다. 없으면 빈 문자열."""
+    m = re.search(r"data/toon/\d{4}-\d\d-\d\d\.json", note or "")
+    path = pathlib.Path(m.group(0)) if m else None
+    if not path or not path.exists():
+        return ""
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    band = spec.get("band") if isinstance(spec.get("band"), dict) else {}
+    out = [band.get("top", ""), band.get("accent", "")]
+    for c in spec.get("cuts", []):
+        out += list(c.get("lines", [])) + list(c.get("after", [])) + [c.get("big", ""), c.get("sub", "")]
+    return "\n".join(x for x in out if isinstance(x, str))
+
+
+def tone_issues(spec: dict, meta: dict) -> list[str]:
+    """삼촌 쇼츠(11/21 공개분부터)의 제목·설명·화면 자막에 돈 강조 말이 있으면 그 말들. meta tone_ok: true 면 BK 가 본 것으로 통과."""
+    if meta.get("tone_ok") is True or (spec.get("date") or "") < TONE_FROM or spec.get("kind", "short") != "short":
+        return []
+    text = "\n".join([spec.get("title", ""), toon_captions(meta.get("note", ""))])
+    return money_hits(text)
+
 
 def quality_ok(spec: dict, meta: dict) -> bool:
     if meta.get("quality_ok") is False:  # 사람이 '이 편은 쉬자'로 막은 편은 날짜와 상관없이 안 올림 (11/20 밤 찌개 편)
@@ -318,6 +352,8 @@ def quality_ok(spec: dict, meta: dict) -> bool:
         from .shorts_lock import locked
         if locked("uncle", spec["date"]):
             return False
+    if tone_issues(spec, meta):  # 돈 강조 말이 제목·자막에 있으면 안 올림 (11/23)
+        return False
     if (spec.get("date") or "") < QUALITY_GATE_FROM or spec.get("kind", "short") != "short":
         return True
     if "quality_ok" in meta:
@@ -407,6 +443,10 @@ def main(now: dt.datetime | None = None) -> int:
         if row is None:
             summary(f"유튜브: 대기열에 올릴 영상 없음 {want}")
             return 0
+        if row.get("quality_ok") is False and os.environ.get("YT_FORCE", "").lower() != "true":
+            # 수동 실행도 품질 게이트·돈 강조 점검을 지난다 (11/22 찌개 편이 이 길로 그대로 나감). 일부러 올릴 땐 force=true.
+            summary(f"유튜브: {want} 품질 게이트·돈 강조 점검 미통과 → 안 올림. 제목·자막을 고치거나, BK 가 보고 올리기로 했으면 force=true 로 다시 실행")
+            return 1
         if publish_now:
             jobs = [(row, now)]
         elif (row.get("date") or "").strip():
