@@ -53,7 +53,8 @@ def check_workflows(now: dt.datetime) -> list[str]:
     for w in wfs.get("workflows", []):
         if w.get("state") != "active":
             continue
-        runs = gh(f"actions/workflows/{w['id']}/runs?per_page=1&status=completed") or {}
+        runs = gh(f"actions/workflows/{w['id']}/runs?per_page=1&status=completed&branch=main") or {}
+        # main 실행만 본다: 작업 브랜치의 일회용·시험 워크플로 실패는 운영 작업이 아님 (11/23)
         r = (runs.get("workflow_runs") or [None])[0]
         if not r or r.get("conclusion") not in BAD:
             continue
