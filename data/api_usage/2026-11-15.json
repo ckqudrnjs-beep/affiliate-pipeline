@@ -3076,5 +3076,16 @@
   "cache_w": 0,
   "batch": true,
   "usd": 0.0793
+ },
+ {
+  "date": "2026-11-23",
+  "job": "titles",
+  "model": "claude-sonnet-5-5",
+  "in": 6547,
+  "out": 499,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.009
  }
 ]
