@@ -8,7 +8,8 @@
   AI 그림을 쓴 화(ep "ai": true)는 설명란 표기 + containsSyntheticMedia.
   config visibility=private 이면 첫 화만 비공개로 올리고 멈춤(BK 확인), schedule 이면 매일 hour 시 공개 예약.
 - 롱폼 몰아보기(BK 2026-11-21): 일요일마다 쇼츠 5화 묶음 + 롱폼 전용 번외(extra/NN.json)를 가로 영상으로, long_hour 시 공개 예약.
-사용: python -m pipeline.webnovel next | render [화] | long [묶음] | run [YYYY-MM-DD]
+- 먼저 보기(BK 2026-11-23): 공개 예약한 화의 앞 카드 2장 글 + 정사각 그림을 텔레그램으로 → BK가 커뮤니티 게시물에 붙여넣기(게시물 API 없음).
+사용: python -m pipeline.webnovel next | render [화] | preview [화] | long [묶음] | run [YYYY-MM-DD]
 """
 from __future__ import annotations
 
@@ -544,6 +545,61 @@ def post_comments(tok: str, work: str, day: dt.date, log: dict) -> tuple[list[in
     return done, err
 
 
+PREVIEW_CARDS = 2   # '먼저 보기'에 쓰는 앞 카드 수(끝 반전은 안 보여 줌)
+
+
+def preview_text(se: dict, ep: dict, hour: int = 21) -> str:
+    """커뮤니티 '게시물' 붙여넣기용 '먼저 보기' 글 (BK 11/23 '1번'). 게시물 API가 없어 BK가 붙여넣는다.
+    오늘 밤 공개될 화의 앞 장면만 보여 주고 끊는다. 구독 대가(보상)는 약속하지 않는다(YouTube 가짜 참여 정책)."""
+    lines = [" ".join(t for t, _ in c["lines"]) for c in ep["cards"][:PREVIEW_CARDS]]
+    body = "\n".join(x if x.startswith("「") else f"“{x}”" for x in lines)
+    h = f"밤 {hour - 12 if hour > 12 else hour}시"
+    return (f"👀 오늘 {h} 공개, {ep['no']}화 「{ep['title']}」 먼저 보기\n\n{body}\n\n"
+            f"…그다음 장면은 오늘 {h} 쇼츠에서.\n"
+            f"《{se['title']}》 매일 {h} 연재 · 구독하면 새 화 알림이 가요")
+
+
+def preview_image(work: str, ep: dict, hour: int = 21, out_dir: pathlib.Path = OUT) -> pathlib.Path:
+    """게시물에 붙일 정사각 1080x1080 그림: 첫 카드 글 + '오늘 밤 N시 · N화' 띠."""
+    from PIL import ImageDraw
+    se = season(work); pal = palette(se); S = 1080
+    im = background(pal["bg"], S, S); d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, S, 170], fill=(0, 0, 0))
+    d.text((S / 2, 62), f"오늘 밤 {hour - 12 if hour > 12 else hour}시 · {ep['no']}화 먼저 보기", font=_font("R", 42), fill=pal["gray"], anchor="mm")
+    d.text((S / 2, 125), se["title"], font=fit(se["title"], "B", 54, 980)[0], fill=pal["gold"], anchor="mm")
+    lines = ep["cards"][0]["lines"]
+    fonts = [fit(t, STY[s_][0], STY[s_][1], 960) for t, s_ in lines]
+    gap = 34; total = sum(sz for _, sz in fonts) + gap * (len(lines) - 1)
+    cy = 170 + (S - 170 - 110) / 2 - total / 2
+    for (t, s_), (f, sz) in zip(lines, fonts):
+        d.text((S / 2, cy + sz / 2), t, font=f, fill=pal[STY[s_][2]], anchor="mm"); cy += sz + gap
+    d.text((S / 2, S - 70), f"「{ep['title']}」", font=fit(f"「{ep['title']}」", "B", 48, 960)[0], fill=pal["accent"], anchor="mm")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{work}-{ep['no']:02d}-preview.png"
+    im.save(path)
+    return path
+
+
+def send_preview(work: str, se: dict, ep: dict, hour: int) -> bool:
+    """텔레그램으로 그림 + 글을 보낸다. BK: 유튜브 앱 → 만들기 → 게시물 → 글 붙여넣기 + 그림 추가."""
+    try:
+        from .api_check import send_photo
+        cap = preview_text(se, ep, hour)
+        ok = send_photo(preview_image(work, ep, hour), "📣 '먼저 보기' 게시물용 (아래 글 복사 → 유튜브 앱 만들기 → 게시물, 이 그림 첨부)\n\n" + cap)
+        return ok or _notify_ok("📣 '먼저 보기' 게시물용 글 (그림 전송 실패)\n\n" + cap)
+    except Exception as e:  # noqa: BLE001  미리보기는 부가 기능: 실패해도 업로드는 그대로
+        print(f"먼저 보기 실패: {e}", file=sys.stderr)
+        return False
+
+
+def _notify_ok(msg: str) -> bool:
+    try:
+        from .claude_jobs import notify
+        return bool(notify(msg))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def add_to_playlist(tok: str, playlist: str, vid: str) -> bool:
     import urllib.request
     body = {"snippet": {"playlistId": playlist, "resourceId": {"kind": "youtube#video", "videoId": vid}}}
@@ -691,6 +747,8 @@ def run_short(day: dt.date) -> int:
            + (f"\n💬 예고 댓글: {', '.join(map(str, cm))}화 (스튜디오에서 '고정'만 눌러 주세요)" if cm else "")
            + (f"\n(예고 댓글 실패: 토큰에 youtube.force-ssl 권한이 필요할 수 있음, docs/WEBNOVEL.md 4장)" if cerr else ""))
     summary(msg); _notify(msg)
+    if vis == "schedule" and at and cfg.get("preview", True):
+        summary("📣 먼저 보기 게시물 글 " + ("텔레그램 전송" if send_preview(work, se, ep, int(cfg.get("hour", 21))) else "전송 실패"))
     return 0
 
 
@@ -705,6 +763,11 @@ def main(argv: list[str]) -> int:
         work = cfg["work"]; no = int(argv[1]) if len(argv) > 1 else 1
         ep = next(e for e in episodes(work) if e["no"] == no)
         print(render(work, ep))
+        return 0
+    if cmd == "preview":
+        work = cfg["work"]; no = int(argv[1]) if len(argv) > 1 else 1
+        ep = next(e for e in episodes(work) if e["no"] == no)
+        print(preview_image(work, ep)); print(preview_text(season(work), ep))
         return 0
     if cmd == "long":
         work = cfg["work"]; k = int(argv[1]) if len(argv) > 1 else 1

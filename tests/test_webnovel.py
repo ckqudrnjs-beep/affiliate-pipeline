@@ -145,5 +145,28 @@ class WebnovelSubscribeHooksTest(unittest.TestCase):
         self.assertEqual(done, [1]); self.assertIsNone(err); self.assertEqual(u.call_count, 1)
         self.assertTrue(log[w.key(WORK, 1)]["commented"]); self.assertNotIn("commented", log[w.key(WORK, 3)])
 
+    def test_preview_text_shows_only_opening(self):
+        se = w.season(WORK); ep = w.episodes(WORK)[3]
+        t = w.preview_text(se, ep)
+        self.assertIn("밤 9시", t); self.assertIn(ep["title"], t); self.assertIn("구독하면", t)
+        last = " ".join(x for x, _ in ep["cards"][-1]["lines"])
+        self.assertNotIn(last, t)
+        for bad in ("구독하면 드려요", "구독자만", "보상"):
+            self.assertNotIn(bad, t)
+
+    @NEED_RENDER
+    def test_preview_image_square(self):
+        import tempfile
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as d:
+            p = w.preview_image(WORK, w.episodes(WORK)[0], out_dir=w.pathlib.Path(d))
+            self.assertEqual(Image.open(p).size, (1080, 1080))
+
+    def test_send_photo_needs_env(self):
+        from unittest import mock
+        from pipeline import api_check
+        with mock.patch.dict(w.os.environ, {"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_ADMIN_CHAT_ID": ""}):
+            self.assertFalse(api_check.send_photo(__file__, "x"))
+
 if __name__ == "__main__":
     unittest.main()
