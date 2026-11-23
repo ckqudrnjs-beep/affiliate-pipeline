@@ -289,6 +289,26 @@ def send(text: str) -> bool:
     return st == 200
 
 
+def send_photo(path: str | pathlib.Path, caption: str) -> bool:
+    """BK 개인 대화로 사진 + 글(캡션, 1024자까지). 웹소설 '먼저 보기' 게시물 붙여넣기용."""
+    tok, chat = env("TELEGRAM_BOT_TOKEN"), env("TELEGRAM_ADMIN_CHAT_ID")
+    if not (tok and chat):
+        return False
+    b = "----wnpreview7d1"
+    parts = []
+    for k, v in (("chat_id", chat), ("caption", caption[:1024]), ("disable_notification", "true" if quiet_now() else "false")):
+        parts.append(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
+    img = pathlib.Path(path).read_bytes()
+    parts.append(f'--{b}\r\nContent-Disposition: form-data; name="photo"; filename="preview.png"\r\nContent-Type: image/png\r\n\r\n'.encode()
+                 + img + f"\r\n--{b}--\r\n".encode())
+    try:
+        st, _ = fetch(f"https://api.telegram.org/bot{tok}/sendPhoto", data=b"".join(parts),
+                      headers={"content-type": f"multipart/form-data; boundary={b}"}, timeout=40)
+    except Problem:
+        return False
+    return st == 200
+
+
 def main() -> int:
     now = dt.datetime.now(dt.timezone.utc)
     items = checks((now + dt.timedelta(hours=9)).date())
