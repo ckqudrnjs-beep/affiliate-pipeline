@@ -3399,5 +3399,15 @@
   "batch": true,
   "usd": 0.0132,
   "note": "11/23 장부 저장 충돌로 빠진 줄, 실행 로그에서 복구"
+ },
+ {
+  "date": "2026-11-23",
+  "job": "check",
+  "model": "claude-haiku-5-5",
+  "in": 4969,
+  "out": 584,
+  "cache": 0,
+  "cache_w": 0,
+  "usd": 0.0008
  }
 ]
