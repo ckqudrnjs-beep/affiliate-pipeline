@@ -662,6 +662,13 @@ GAME_ITEMS = [
     {"g": "reaction", "k": "pad", "kn": "신호 색", "id": "ocean", "name": "바다 신호", "icon": "🌊", "p": 4},
     {"g": "reaction", "k": "pad", "kn": "신호 색", "id": "candy", "name": "사탕 신호", "icon": "🍭", "p": 6},
     {"g": "reaction", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
+    # 2026-11-23 격주 새 아이템(별똥별·딱 멈춰·반응속도)
+    {"g": "dodge", "k": "ch", "kn": "내 캐릭터", "id": "bee", "name": "네온 꿀벌", "icon": "🐝", "p": 10},
+    {"g": "dodge", "k": "rk", "kn": "별똥별 모양", "id": "ring", "name": "고리 행성", "icon": "🪐", "p": 8},
+    {"g": "stop", "k": "bar", "kn": "막대", "id": "ice", "name": "얼음 막대", "icon": "🧊", "p": 5},
+    {"g": "stop", "k": "fx", "kn": "성공 효과", "id": "spark", "name": "불꽃 팡팡", "icon": "🎆", "p": 6},
+    {"g": "reaction", "k": "pad", "kn": "신호 색", "id": "sunset", "name": "노을 신호", "icon": "🌅", "p": 5},
+    {"g": "reaction", "k": "cheer", "kn": "끝났을 때 축하", "id": "stars", "name": "별 비", "icon": "🌟", "p": 6},
     {"g": "spot", "k": "cheer", "kn": "다 찾았을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},
     {"g": "spot", "k": "cheer", "kn": "다 찾았을 때 축하", "id": "hearts", "name": "하트 비", "icon": "💗", "p": 6},
     {"g": "chosung", "k": "cheer", "kn": "끝났을 때 축하", "id": "confetti", "name": "꽃가루", "icon": "🎉", "p": 4},

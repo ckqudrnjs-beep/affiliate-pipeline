@@ -68,6 +68,7 @@ const RKS = {
   '': { tail: ['#fff4c0', '#ffb347', '#ff5a1f', 'rgba(255,40,80,0)'], glow: '#ff7a2f', ember: ['#ffd27a', '#ff8a3d', '#ff5a3d'] },
   ice: { tail: ['#ffffff', '#bff0ff', '#4fb8ff', 'rgba(60,120,255,0)'], glow: '#7fd8ff', ember: ['#ffffff', '#bff0ff', '#7fd8ff'] },
   candy: { tail: ['#ffffff', '#ffb3e6', '#ff5fc8', 'rgba(176,107,255,0)'], glow: '#ff7ad9', ember: ['#ffd23f', '#7fffd4', '#ff9ee8', '#b06bff'] },
+  ring: { tail: ['#ffffff', '#d9c8ff', '#8a6bff', 'rgba(60,40,200,0)'], glow: '#9b7bff', ember: ['#ffffff', '#ffd23f', '#b9a4ff'] },
 };
 const R0 = 24; // 스프라이트 기준 반지름
 function lumpy(c, r, seed, n, amp) {
@@ -92,6 +93,14 @@ function rockSprite(kind, v) {
     for (let k = 0; k < 3; k++) { c.beginPath(); for (let a = 0; a < 9; a += .2) { const rr = a / 9 * r * 1.05; c.lineTo(Math.cos(a + k * 2.094 + v) * rr, Math.sin(a + k * 2.094 + v) * rr); } c.stroke(); }
     c.restore(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r - 1, 0, 7); c.stroke();
     c.fillStyle = '#ffffffcc'; c.beginPath(); c.ellipse(-r * .38, -r * .42, r * .25, r * .12, -.7, 0, 7); c.fill();
+  } else if (kind === 'ring') {
+    // 고리 행성: 줄무늬 공 + 비스듬한 고리(뒤쪽은 공 뒤로 숨음)
+    const ring = (back) => { c.save(); c.rotate(-.45 + v * .1); c.strokeStyle = back ? '#b9a4ff88' : '#ffe9a8'; c.lineWidth = r * .16; c.beginPath(); c.ellipse(0, 0, r * 1.02, r * .3, 0, back ? Math.PI : 0, back ? Math.PI * 2 : Math.PI); c.stroke(); c.restore(); };
+    ring(true);
+    c.beginPath(); c.arc(0, 0, r * .74, 0, 7); const g = c.createRadialGradient(-r * .25, -r * .3, r * .08, 0, 0, r * .8); g.addColorStop(0, '#f1e9ff'); g.addColorStop(.5, '#9b7bff'); g.addColorStop(1, '#3a2390'); c.fillStyle = g; c.fill();
+    c.save(); c.clip(); c.fillStyle = '#ffffff30'; for (let i = -2; i <= 2; i++) { c.fillRect(-r, i * r * .26 - r * .05 + v, r * 2, r * .1); } c.restore();
+    ring(false);
+    c.fillStyle = '#ffffffcc'; c.beginPath(); c.ellipse(-r * .3, -r * .38, r * .18, r * .08, -.7, 0, 7); c.fill();
   } else {
     // 불타는 운석: 울퉁불퉁한 바위 + 앞쪽(아래)이 달아오름
     lumpy(c, r, v + 1, 14, .22);
@@ -388,7 +397,7 @@ function drawHero() {
   // 바닥 빛
   x.globalCompositeOperation = 'lighter'; const eh = SP.eng.h * S * 1.4; x.globalAlpha = .35; x.drawImage(SP.eng.cv, X - eh, Y + 20 * S - eh * .5, eh * 2, eh); x.globalAlpha = 1;
   // 엔진 불꽃(우주선·우주인)
-  if (CH !== 'ufo') { const fl = 1 + Math.sin(T * 40) * .15 + Math.abs(G.vx) / 1200, fh = SP.engF.h * S; x.globalAlpha = .9; x.drawImage(SP.engF.cv, X - fh * .45, Y + 6 * S, fh * .9, fh * 1.6 * fl); x.drawImage(SP.eng.cv, X - fh * .3, Y + 6 * S, fh * .6, fh * 1.1 * fl); x.globalAlpha = 1; }
+  if (CH !== 'ufo' && CH !== 'bee') { const fl = 1 + Math.sin(T * 40) * .15 + Math.abs(G.vx) / 1200, fh = SP.engF.h * S; x.globalAlpha = .9; x.drawImage(SP.engF.cv, X - fh * .45, Y + 6 * S, fh * .9, fh * 1.6 * fl); x.drawImage(SP.eng.cv, X - fh * .3, Y + 6 * S, fh * .6, fh * 1.1 * fl); x.globalAlpha = 1; }
   x.globalCompositeOperation = 'source-over';
   x.save(); x.translate(X, Y); x.rotate(G.tilt); x.scale(1.25, 1.25);
   if (CH === 'ufo') {
@@ -399,6 +408,19 @@ function drawHero() {
     x.shadowColor = '#b06bff'; x.shadowBlur = 12 * u; x.fillStyle = g; x.beginPath(); x.ellipse(0, 1 * u, 17 * u, 5.5 * u, 0, 0, 7); x.fill(); x.shadowBlur = 0;
     x.fillStyle = '#2a1b5c'; x.beginPath(); x.ellipse(0, 3 * u, 11 * u, 2.4 * u, 0, 0, 7); x.fill();
     for (let i = 0; i < 5; i++) { x.fillStyle = `hsl(${(i * 72 + T * 240) % 360},100%,65%)`; x.beginPath(); x.arc((i - 2) * 6.5 * u, 1.2 * u, 1.5 * u, 0, 7); x.fill(); }
+  } else if (CH === 'bee') {
+    // 네온 꿀벌: 줄무늬 몸통 + 파닥이는 날개(겉모습만, 판정 크기는 같음)
+    const fl = .6 + .4 * Math.abs(Math.sin(T * 30));
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = 'rgba(190,240,255,.5)';
+    for (const sd of [-1, 1]) { x.beginPath(); x.ellipse(sd * 9 * u, -6 * u, 8 * u, 4.5 * u * fl, sd * .5, 0, 7); x.fill(); }
+    x.globalCompositeOperation = 'source-over';
+    x.shadowColor = '#ffd23f'; x.shadowBlur = 12 * u;
+    const g = x.createLinearGradient(0, -12 * u, 0, 12 * u); g.addColorStop(0, '#fff3a8'); g.addColorStop(1, '#ffb000'); x.fillStyle = g; x.beginPath(); x.ellipse(0, 1 * u, 8.5 * u, 11 * u, 0, 0, 7); x.fill(); x.shadowBlur = 0;
+    x.save(); x.beginPath(); x.ellipse(0, 1 * u, 8.5 * u, 11 * u, 0, 0, 7); x.clip(); x.fillStyle = '#1a1030'; for (const yy of [0, 5.5]) x.fillRect(-9 * u, yy * u, 18 * u, 2.6 * u); x.restore();
+    x.fillStyle = '#1a1030'; x.beginPath(); x.moveTo(-2 * u, 11 * u); x.lineTo(2 * u, 11 * u); x.lineTo(0, 15 * u); x.fill();
+    x.fillStyle = '#1a1030'; for (const sd of [-1, 1]) { x.beginPath(); x.arc(sd * 3.2 * u, -6 * u, 1.6 * u, 0, 7); x.fill(); }
+    x.fillStyle = '#ffffff'; for (const sd of [-1, 1]) { x.beginPath(); x.arc(sd * 3.6 * u, -6.5 * u, .6 * u, 0, 7); x.fill(); }
+    x.strokeStyle = '#1a1030'; x.lineWidth = 1 * u; for (const sd of [-1, 1]) { x.beginPath(); x.moveTo(sd * 2 * u, -10 * u); x.quadraticCurveTo(sd * 4 * u, -15 * u, sd * 6 * u, -15 * u); x.stroke(); x.fillStyle = '#ff3d9a'; x.beginPath(); x.arc(sd * 6 * u, -15 * u, 1.4 * u, 0, 7); x.fill(); }
   } else if (CH === 'cat' || CH === 'astro') {
     // 작은 몸통 + 등에 제트팩
     x.fillStyle = '#c9c4e8'; x.fillRect(-5 * u, 4 * u, 10 * u, 8 * u); x.fillStyle = '#7d74b0'; x.fillRect(-7.5 * u, 3 * u, 3 * u, 7 * u); x.fillRect(4.5 * u, 3 * u, 3 * u, 7 * u);
