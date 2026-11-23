@@ -34,6 +34,16 @@ jobs:
           PYTHONPATH=src python -m pipeline.yt_stats fetch
           PYTHONPATH=src python -m pipeline.yt_analytics
           PYTHONPATH=src python -m pipeline.yt_stats weekly >> "$GITHUB_STEP_SUMMARY"
+      - name: 첫 댓글 (11/23 BK '채널 모두 구독 좋아요 등 유도'. 토큰에 youtube.force-ssl 없으면 그 채널만 건너뜀)
+        continue-on-error: true
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          MUSIC_YT_REFRESH_TOKEN: ${{ secrets.MUSIC_YT_REFRESH_TOKEN }}
+          FIRST_COMMENT_ENABLED: ${{ vars.FIRST_COMMENT_ENABLED }}
+        run: PYTHONPATH=src python -m pipeline.first_comment
       - name: 저장
         run: |
           git config user.name "yt-stats-bot"
@@ -42,6 +52,7 @@ jobs:
           git add data/youtube/analytics.json 2>/dev/null || true
           git add data/youtube/audience.json 2>/dev/null || true
           git add data/youtube/channels.json 2>/dev/null || true
+          git add data/youtube/first_comments.json 2>/dev/null || true
           git commit -m "쇼츠 조회수 $(TZ=Asia/Seoul date +%F)" || exit 0
           git pull --rebase -q origin main
           git push origin HEAD:main

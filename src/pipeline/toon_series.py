@@ -118,7 +118,11 @@ def fetch_comments(video_id: str, n: int = 100) -> list[str]:
             return []
     out = []
     for it in (js or {}).get("items", []):
-        t = it.get("snippet", {}).get("topLevelComment", {}).get("snippet", {}).get("textDisplay", "")
+        sn = it.get("snippet", {})
+        c = sn.get("topLevelComment", {}).get("snippet", {})
+        if sn.get("channelId") and (c.get("authorChannelId") or {}).get("value") == sn["channelId"]:
+            continue  # 채널 자신의 댓글(첫 댓글 자동, 11/23)은 표가 아니다
+        t = c.get("textDisplay", "")
         if t:
             out.append(" ".join(t.split())[:200])
     return out
