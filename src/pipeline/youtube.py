@@ -422,6 +422,11 @@ def upload_one(row: dict, slot: dt.datetime, now: dt.datetime, publish_now: bool
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if ok:
         summary(f"업로드 완료: {row['title']}\n- {slot:%m/%d %H:%M} KST 공개")
+        if not publish_now:  # 게시물 예고 글 (BK 11/23 '구독할 이유'): 만화 편만, 텔레그램으로 → BK 붙여넣기
+            from . import community_posts
+            sent = community_posts.uncle(row, video, slot)
+            if sent is not None:
+                summary("📣 게시물 예고 글 " + ("텔레그램 전송" if sent else "전송 실패"))
     else:
         summary(f"::warning::업로드는 했지만 유료 프로모션을 자동으로 켜지 못해 **비공개**로 둠: {row['title']}\n"
                 f"- BK가 Studio에서 유료 프로모션 체크 후 {slot:%m/%d %H:%M} KST 예약 공개: https://studio.youtube.com/video/{vid}/edit")

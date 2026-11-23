@@ -1,0 +1,6 @@
+{
+ "_doc": "채널 '게시물' 예고 글을 영상 공개 예약 직후 텔레그램으로 보낼지 (BK 11/23 '구독할 이유'). pipeline.community_posts. 웹소설은 config/webnovel.json preview.",
+ "uncle": true,
+ "raksil": true,
+ "music": true
+}

@@ -1674,6 +1674,11 @@ def upload_meta(meta: dict) -> int:
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
     summary(f"5락실 쇼츠 업로드 ({when}): https://youtu.be/{r['id']} ({meta['title']})")
+    if at:  # 게시물 '먼저 보기' 글 + 투표 보기 (BK 11/23 '구독할 이유'): 텔레그램으로 → BK 붙여넣기
+        from . import community_posts
+        sent = community_posts.raksil(meta, at)
+        if sent is not None:
+            summary("📣 게시물 먼저 보기 글 " + ("텔레그램 전송" if sent else "전송 실패"))
     if isinstance(meta.get("gate"), dict) and meta["gate"].get("soft"):  # 최후 기준으로 올린 편 → BK 가 알 수 있게
         try:
             from .claude_jobs import notify
