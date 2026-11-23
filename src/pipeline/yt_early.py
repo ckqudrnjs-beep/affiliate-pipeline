@@ -41,6 +41,10 @@ BREAKOUT = 3.0                 # 평소 2시간 중간값의 이 배 이상 = '�
 
 # ---------- 어떤 편인지 ----------
 def kind_of(slug: str) -> str:
+    if slug.startswith("webnovel-"):  # 11/23 통계에 웹소설·음악 채널도 들어감 → 삼촌 기준값에 섞이지 않게
+        return "웹소설"
+    if slug.startswith("music-"):
+        return "음악"
     if not slug.startswith("5raksil-"):
         return "삼촌"
     if "-game-" in slug:
