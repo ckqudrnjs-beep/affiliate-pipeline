@@ -491,11 +491,31 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
     return done
 
 
+def lyrics_dump(fid: str) -> int:
+    """뮤직비디오용 (BK 11/23): 곡 전체 가사 자막 시간을 로그에 JSON 으로 찍는다. 업로드·기록 없음."""
+    from .youtube import access_token
+    from .music_lyrics import align, lyric_lines, transcribe
+    dtoken = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
+                          os.environ["MUSIC_DRIVE_REFRESH_TOKEN"])
+    audio = download(dtoken, fid, WORK / "in" / f"{fid}.mp3")
+    lyr = lyrics_of(tags_of(audio))
+    dur = analyse(audio)["duration"]
+    subs = align(transcribe(audio, 0, dur), lyric_lines(lyr))
+    print("LYRICS_JSON_BEGIN")
+    print(json.dumps({"duration": dur, "lines": lyric_lines(lyr),
+                      "subs": [(round(a, 2), round(b, 2), t) for a, b, t in subs]}, ensure_ascii=False))
+    print("LYRICS_JSON_END")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["run"])
+    ap.add_argument("cmd", choices=["run", "lyrics"])
     ap.add_argument("--local")
+    ap.add_argument("--fid", default="")
     a = ap.parse_args(argv)
+    if a.cmd == "lyrics":
+        return lyrics_dump(a.fid)
     return run(a.local)
 
 
