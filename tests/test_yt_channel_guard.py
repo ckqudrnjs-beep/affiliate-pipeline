@@ -28,8 +28,15 @@ class Guard(unittest.TestCase):
         with self.assertRaises(y.WrongChannel):
             self.run_with("RAKSIL_YT_REFRESH_TOKEN", [{"id": "UCJP54ReVRA9V2J1sWBNrdKA", "snippet": {"title": "돈 줍는 삼촌"}}])
 
-    def test_music_ok_by_name(self):
-        self.assertEqual(self.run_with("MUSIC_YT_REFRESH_TOKEN", [{"id": "UCX", "snippet": {"title": "BEEKAY SONGS"}}]), "AT")
+    def test_music_ok_by_id(self):
+        self.assertEqual(self.run_with("MUSIC_YT_REFRESH_TOKEN", [{"id": "UC9QfcJmskQ2QJETKejujFyQ", "snippet": {"title": "BEEKAY SONGS"}}]), "AT")
+
+    def test_music_same_name_other_id_blocked(self):
+        with self.assertRaises(y.WrongChannel):
+            self.run_with("MUSIC_YT_REFRESH_TOKEN", [{"id": "UCX", "snippet": {"title": "BEEKAY SONGS"}}])
+
+    def test_webnovel_ok_by_name(self):
+        self.assertEqual(self.run_with("WEBNOVEL_YT_REFRESH_TOKEN", [{"id": "UCW", "snippet": {"title": "한 화만 더"}}]), "AT")
 
     def test_unverifiable_blocked(self):
         with self.assertRaises(y.WrongChannel):
