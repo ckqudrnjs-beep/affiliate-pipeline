@@ -84,8 +84,22 @@ def policy_problems(ep: dict) -> list[str]:
     return bad
 
 
+def hook_of(ep: dict) -> str:
+    """제목 앞에 둘 훅: ep['hook'] 이 있으면 그것, 없으면 첫 카드 글(길면 첫 줄). 끝 마침표는 뗀다."""
+    if ep.get("hook"):
+        return ep["hook"]
+    lines = [l[0] for l in (ep.get("cards") or [{"lines": []}])[0]["lines"]]
+    h = " ".join(lines).strip()
+    if len(h) > 40 and lines:
+        h = lines[0].strip()
+    return h.rstrip(".")
+
+
 def title_of(se: dict, ep: dict) -> str:
-    return f"{se['title']} {ep['no']}화 | {ep['title']} #웹소설 #shorts"[:100]
+    """BK 11/24 (3화 조회수 하락): 피드에서 눌리도록 훅을 먼저, 작품명·화수는 뒤로."""
+    tail = f" | {se['title']} {ep['no']}화 #웹소설 #shorts"
+    h = hook_of(ep) or ep["title"]
+    return (h[:100 - len(tail)] + tail)[:100]
 
 
 def links_of(work: str, no: int, log: dict) -> dict:
@@ -246,6 +260,7 @@ def card_secs(card: dict) -> float:
 
 ART_BAND = (290, 590)   # 그림 모드 제목 띠: 홈 피드 미리보기에서도 안 잘리는 자리
 ART_TEXT_Y = 1430       # 그림 모드 자막 중심
+RECAP_SECS = 3.0        # 2화부터 제목 띠 아래 한 줄 줄거리를 보여 주는 시간
 
 
 def art_path(work: str, no: int) -> pathlib.Path | None:
@@ -334,6 +349,7 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
     cache: dict = {}
     ap = art_path(work, ep["no"])
     base = art_base(ap) if ap else None
+    recap = f"지난 이야기: {se['logline']}" if se.get("logline") and ep["no"] > 1 else ""
     for k in range(int(total * FPS)) if base is not None else ():
         from PIL import ImageDraw
         t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
@@ -350,7 +366,12 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
             tl = tl.copy(); tl.putalpha(tl.getchannel("A").point(lambda v, f=max(0.0, fade): int(v * f)))
         frame = art_frame(base, t / total).convert("RGBA")
         frame.alpha_composite(tl)
-        frame = frame.convert("RGB"); art_band(ImageDraw.Draw(frame), se, ep, pal)
+        frame = frame.convert("RGB"); d = ImageDraw.Draw(frame); art_band(d, se, ep, pal)
+        if recap and t < RECAP_SECS:  # 중간에 들어온 시청자용 한 줄 줄거리 (첫 3초)
+            v = min(1.0, (RECAP_SECS - t) / 0.4)
+            d.rectangle([0, ART_BAND[1], W, ART_BAND[1] + 74], fill=(0, 0, 0))
+            d.text((W / 2, ART_BAND[1] + 37), recap, font=fit(recap, "R", 40)[0],
+                   fill=tuple(int(c * v) for c in (210, 210, 210)), anchor="mm")
         ff.stdin.write(frame.tobytes())
     for k in range(int(total * FPS)) if base is None else ():
         t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
@@ -674,7 +695,7 @@ def link_prev(tok: str, se: dict, work: str, ep: dict, new_id: str, log: dict) -
                                      headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
         try:
             urllib.request.urlopen(req, timeout=30).read()
-            row["linked"] = True
+            row["linked"] = True; row["title"] = snip["title"]
         except Exception as e:  # noqa: BLE001
             print(f"{prev['no']}화 링크 실패: {e}", file=sys.stderr)
             ok = False
