@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import pathlib
 import tempfile
@@ -19,6 +20,7 @@ class YtExtras(unittest.TestCase):
             self.assertEqual(yt_extras.latest(p), ("2", "b"))
             self.assertEqual(yt_extras.latest(pathlib.Path(d) / "none.json"), (None, None))
 
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow 없음 (가벼운 워크플로)")
     def test_wide_thumb_and_jpeg(self):
         from PIL import Image
         with tempfile.TemporaryDirectory() as d:

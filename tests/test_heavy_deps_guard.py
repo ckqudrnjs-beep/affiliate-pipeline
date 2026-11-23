@@ -5,7 +5,7 @@ import ast
 import pathlib
 import unittest
 
-HEAVY = {"numpy"}
+HEAVY = {"numpy", "PIL"}  # 2026-11-23: PIL 도 (test_yt_extras 사례)
 
 
 def _imports_heavy(fn):
@@ -32,7 +32,7 @@ class HeavyDepsGuardTest(unittest.TestCase):
                 for fn in cls.body:
                     if isinstance(fn, ast.FunctionDef) and _imports_heavy(fn) and not _guarded(fn.decorator_list):
                         bad.append(f"{f.name}::{cls.name}.{fn.name}")
-        self.assertEqual(bad, [], "numpy 를 쓰는 테스트에 @NEED_RENDER 또는 @unittest.skipUnless(...) 를 붙이세요")
+        self.assertEqual(bad, [], "numpy·PIL 을 쓰는 테스트에 @NEED_RENDER 또는 @unittest.skipUnless(...) 를 붙이세요")
 
 
 if __name__ == "__main__":
