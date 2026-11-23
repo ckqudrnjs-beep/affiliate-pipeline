@@ -1674,6 +1674,14 @@ def upload_meta(meta: dict) -> int:
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
     summary(f"5락실 쇼츠 업로드 ({when}): https://youtu.be/{r['id']} ({meta['title']})")
+    try:  # 쇼츠 '관련 동영상' = 최근 토요일 주간 롱폼 (API 로 못 정함 → BK 가 스튜디오에서, BK 11/23)
+        from .yt_extras import latest, related_line
+        rel = related_line(*latest(pathlib.Path("data/youtube/raksil_longform.json")))
+        if rel:
+            from .claude_jobs import notify
+            notify(f"🎮 5락실 쇼츠 {key} 업로드: https://youtu.be/{r['id']}{rel}")
+    except Exception as e:  # noqa: BLE001
+        print(f"관련 동영상 알림 실패: {e}", file=sys.stderr)
     if at:  # 게시물 '먼저 보기' 글 + 투표 보기 (BK 11/23 '구독할 이유'): 텔레그램으로 → BK 붙여넣기
         from . import community_posts
         sent = community_posts.raksil(meta, at)

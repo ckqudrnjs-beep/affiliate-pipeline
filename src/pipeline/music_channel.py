@@ -335,7 +335,10 @@ def upload_pair(meta: dict, cfg: dict, now: dt.datetime, ov: dict | None = None)
     r1 = upload(token, video_body(f"{meta['title']} | {channel}", meta["desc"], at_main), pathlib.Path(meta["video"]))
     r2 = upload(token, video_body(f"{meta['title']} 🎧 #shorts", meta["short_desc"], at_short, short=True),
                 pathlib.Path(meta["short"]))
-    return {"video_id": r1["id"], "short_id": r2["id"],
+    from .yt_extras import set_thumbnail, wide_from_square  # 전곡 영상 맞춤 썸네일 (BK 11/23 고급 기능)
+    cov = meta.get("cover")
+    thumb = cov and set_thumbnail(token, r1["id"], wide_from_square(cov, pathlib.Path(cov).with_suffix(".wide.jpg")))
+    return {"video_id": r1["id"], "short_id": r2["id"], "thumb": bool(thumb),
             "publish_at": at_main.isoformat() if at_main else "private",
             "short_publish_at": at_short.isoformat() if at_short else "private"}
 
@@ -547,6 +550,10 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
         return 0
     token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
     r = upload(token, video_body(f"{title} | {channel}", desc, at), out)
+    from .yt_extras import set_thumbnail, wide_from_square  # 뮤비 맞춤 썸네일 = 첫 장면 그림 (BK 11/23)
+    imgs = mv.get("images") or []
+    if imgs and not set_thumbnail(token, r["id"], wide_from_square(imgs[0], WORK / "mv" / f"{fid}.thumb.jpg")):
+        summary("뮤비 썸네일 설정 실패: 스튜디오에서 손으로")
     log[key] = {"video_id": r["id"], "title": title, "publish_at": at.isoformat() if at else "private",
                 "date": now.strftime("%Y-%m-%d")}
     LOG.parent.mkdir(parents=True, exist_ok=True)
