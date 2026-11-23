@@ -66,3 +66,6 @@
 3. Secrets 값 교체: 돈 줍는 삼촌 `YT_REFRESH_TOKEN`, 5락실 `RAKSIL_YT_REFRESH_TOKEN`, BEEKAY SONGS `MUSIC_YT_REFRESH_TOKEN`
 - 권한이 없는 채널은 건너뛰고 나머지만 단다(실패해도 통계 작업은 계속). 고정(핀)은 API가 없어 스튜디오에서 직접.
 - 채널 자신의 댓글은 댓글 투표 집계에서 뺀다. 끄기: 저장소 변수 `FIRST_COMMENT_ENABLED` = `false`.
+- **11/24 사고**: MUSIC 토큰을 받을 때 채널 선택에서 돈삼촌이 골라져, 노래 영상 3개에 '돈 줍는 삼촌' 이름 댓글이 달림 → 지움(yt-comment-cleanup).
+  이제 댓글 전에 '토큰 채널 == 영상 채널'을 확인하고, 노래 채널 첫 댓글은 BK 재확인 전까지 꺼 둠(first_comment.ENABLED).
+  노래 업로드도 토큰 채널 이름이 'BEEKAY SONGS' 가 아니면 멈춤(music_channel.music_token). 다시 받을 땐 2장 3번 채널 선택에서 꼭 **BEEKAY SONGS** 선택.

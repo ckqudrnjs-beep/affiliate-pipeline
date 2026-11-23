@@ -37,5 +37,34 @@ class T(unittest.TestCase):
                 self.assertNotIn(w, t)
 
 
+class Guard(unittest.TestCase):
+    def test_skips_when_token_channel_differs(self):
+        from unittest import mock
+        posted = []
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(fc, "LOG", pathlib.Path(d) / "log.json"), \
+                mock.patch.object(fc, "targets", return_value=[("uncle", "V1", "t"), ("music", "V2", "t")]), \
+                mock.patch.object(fc, "my_channel", return_value=("UC_UNCLE", "돈 줍는 삼촌")), \
+                mock.patch.object(fc, "video_channel", return_value="UC_OTHER"), \
+                mock.patch.object(fc, "post", side_effect=lambda *a: posted.append(a)), \
+                mock.patch("pipeline.youtube.access_token", return_value="tok"), \
+                mock.patch.dict("os.environ", {"YT_CLIENT_ID": "x", "YT_CLIENT_SECRET": "y", "YT_REFRESH_TOKEN": "r",
+                                               "MUSIC_YT_REFRESH_TOKEN": "m"}):
+            fc.run(dt.datetime(2026, 11, 25, tzinfo=KST))
+        self.assertEqual(posted, [])  # 채널 다름 → 안 닮, 노래 채널은 꺼짐
+
+    def test_music_token_blocks_wrong_channel(self):
+        from unittest import mock
+        from pipeline import music_channel as mc
+        with mock.patch("pipeline.youtube.access_token", return_value="tok"), \
+                mock.patch.object(fc, "my_channel", return_value=("UC_UNCLE", "돈 줍는 삼촌")), \
+                mock.patch.dict("os.environ", {"YT_CLIENT_ID": "x", "YT_CLIENT_SECRET": "y", "MUSIC_YT_REFRESH_TOKEN": "m"}):
+            with self.assertRaises(RuntimeError):
+                mc.music_token({"channel": "BEEKAY SONGS"})
+        with mock.patch("pipeline.youtube.access_token", return_value="tok"), \
+                mock.patch.object(fc, "my_channel", return_value=("UC_B", "BEEKAY SONGS")), \
+                mock.patch.dict("os.environ", {"YT_CLIENT_ID": "x", "YT_CLIENT_SECRET": "y", "MUSIC_YT_REFRESH_TOKEN": "m"}):
+            self.assertEqual(mc.music_token({"channel": "BEEKAY SONGS"}), "tok")
+
+
 if __name__ == "__main__":
     unittest.main()
