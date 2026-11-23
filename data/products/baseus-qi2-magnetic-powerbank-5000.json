@@ -16,5 +16,6 @@
  "check": "Qi2·맥세이프 지원 기종, 용량(휴대폰 약 1회 충전)",
  "commission": 9.0,
  "status": "active",
- "addedDate": "2026-11-10"
+ "addedDate": "2026-11-10",
+ "missingDays": 1
 }
