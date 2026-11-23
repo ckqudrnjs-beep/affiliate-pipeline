@@ -147,11 +147,16 @@ def episode_links(row: dict) -> list[str]:
     return out
 
 
+# 2026-11-23 BK '채널 모두 구독 좋아요 등 유도합시다': 쇼츠 설명란 부드러운 구독 한 줄 (돈 강조·보상 약속 없음)
+SUB_LINE = "🔔 동전이 이야기는 이틀에 한 번 저녁 7시에 올라와요. 구독해 두면 알림이 가요."
+
+
 def build_description(row: dict) -> str:
     if not is_ad(row):
         return "\n".join(([row["takeaway"].strip()] if row.get("takeaway", "").strip() else []) + [
             row["intro"].strip(),
             f"자세한 계산·정리: https://don3chon.com/{row.get('site', '').strip()}".rstrip("/"),
+        ] + ([] if is_long(row) else [SUB_LINE]) + [
             "",
             ai_line(row),
         ] + ([f"배경 영상(무료 스톡): {row['credits']}"] if row.get("credits") else []) + (  # 2026-11-18 실사 배경 출처

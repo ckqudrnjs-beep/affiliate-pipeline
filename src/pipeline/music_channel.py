@@ -177,8 +177,13 @@ def genre_tag(bpm: float) -> str:
     return "BALLAD · 발라드" if 0 < bpm < 88 else "K-POP · IDOL"
 
 
+SUB_LINE = "🔔 새 노래가 나오면 알림 받기: https://www.youtube.com/@beekaysongs?sub_confirmation=1"
+LIKE_LINE = "🎧 마음에 들었다면 좋아요로 알려 주세요. 다음 곡 방향을 정할 때 참고해요."
+
+
 def description(title: str, lyrics: str, channel: str, short: bool = False, extra: str = "") -> str:
-    parts = [f"{title} — {channel}"] + (["", extra] if extra else []) + ["", AI_NOTE]
+    # 2026-11-23 BK '채널 모두 구독 좋아요 등 유도합시다': 부드러운 한 줄씩 (보상 약속·강요 문구 없음)
+    parts = [f"{title} — {channel}"] + (["", extra] if extra else []) + ["", SUB_LINE, LIKE_LINE, "", AI_NOTE]
     if not short and lyrics:
         parts += ["", "🎤 가사 Lyrics", "", lyrics]
     parts += ["", "#KPOP #AImusic #Suno #신곡" + (" #shorts" if short else "")]
