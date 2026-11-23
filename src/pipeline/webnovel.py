@@ -244,6 +244,79 @@ def card_secs(card: dict) -> float:
     return round(1.4 + sum(len(t) for t, _ in card["lines"]) * 0.085, 2)
 
 
+ART_BAND = (290, 590)   # 그림 모드 제목 띠: 홈 피드 미리보기에서도 안 잘리는 자리
+ART_TEXT_Y = 1430       # 그림 모드 자막 중심
+
+
+def art_path(work: str, no: int) -> pathlib.Path | None:
+    """화별 그림 data/webnovel/works/<작품>/art/NN.jpg|png (있으면 그림 모드)."""
+    for ext in ("jpg", "png", "webp"):
+        p = WORKS / work / "art" / f"{no:02d}.{ext}"
+        if p.exists():
+            return p
+    return None
+
+
+def art_base(path: pathlib.Path, zoom: float = 1.12):
+    """그림을 세로 화면보다 zoom 배 크게 채우고 어둡게 + 아래쪽 그라데이션."""
+    import numpy as np
+    from PIL import Image
+    im = Image.open(path).convert("RGB")
+    bw, bh = int(W * zoom), int(H * zoom)
+    sc = max(bw / im.width, bh / im.height)
+    im = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
+    l, t = (im.width - bw) // 2, (im.height - bh) // 2
+    a = np.asarray(im.crop((l, t, l + bw, t + bh)), float)
+    y = np.linspace(0, 1, bh)[:, None, None]
+    dark = 0.78 - 0.5 * np.clip((y - 0.55) / 0.35, 0, 1)   # 아래 자막 자리는 더 어둡게
+    return Image.fromarray(np.clip(a * dark, 0, 255).astype(np.uint8))
+
+
+def art_frame(base, p: float):
+    """p 0→1 동안 천천히 확대(켄 번스)."""
+    from PIL import Image
+    z = 1.0 + 0.1 * p
+    cw, ch = base.width / z, base.height / z
+    l, t = (base.width - cw) / 2, (base.height - ch) * 0.45
+    return base.resize((W, H), Image.BILINEAR, box=(l, t, l + cw, t + ch))
+
+
+def art_text(card: dict, pal: dict, upto: int, alpha: float):
+    """그림 위 자막 층(투명 RGBA): 아래쪽 반투명 판 + 글."""
+    from PIL import Image, ImageDraw
+    lines = card["lines"]
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    fonts = [fit(t, STY[st][0], int(STY[st][1] * 0.92)) for t, st in lines]
+    gap = 26; total = sum(sz for _, sz in fonts) + gap * (len(lines) - 1)
+    top = ART_TEXT_Y - total / 2
+    d.rounded_rectangle([40, top - 50, W - 40, top + total + 50], 28, fill=(0, 0, 0, 150))
+    cy = top
+    for i, ((t, st), (f, sz)) in enumerate(zip(lines, fonts)):
+        if i < upto:
+            a = alpha if i == upto - 1 else 1.0
+            col = pal[STY[st][2]]
+            d.text((W / 2, cy + sz / 2), t, font=f, fill=(*col, int(255 * a)), anchor="mm",
+                   stroke_width=3, stroke_fill=(0, 0, 0, int(255 * a)))
+        cy += sz + gap
+    return im
+
+
+def art_band(d, se: dict, ep: dict, pal: dict) -> None:
+    """트렌드식 제목 띠(검정 + 흰·노랑 큰 글씨). 홈 피드 안전 영역 y 290~590."""
+    y0, y1 = ART_BAND
+    d.rectangle([0, y0, W, y1], fill=(0, 0, 0))
+    hf = fit(f"{se['title']} {ep['no']}화", "B", 54)[0]
+    d.text((W / 2, y0 + 70), f"{se['title']} {ep['no']}화", font=hf, fill=(245, 245, 245), anchor="mm")
+    try:
+        from PIL import ImageFont
+        tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), 112)
+        while tf.getlength(ep["title"]) > W - 80 and tf.size > 60:
+            tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), tf.size - 6)
+    except OSError:
+        tf = fit(ep["title"], "B", 104)[0]
+    d.text((W / 2, y0 + 195), ep["title"], font=tf, fill=(255, 214, 0), anchor="mm")
+
+
 def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
     import numpy as np
     from PIL import Image, ImageDraw
@@ -259,7 +332,27 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
                            f"{stem}.v.mp4"], stdin=subprocess.PIPE)
     head = f"{se['title']}"
     cache: dict = {}
-    for k in range(int(total * FPS)):
+    ap = art_path(work, ep["no"])
+    base = art_base(ap) if ap else None
+    for k in range(int(total * FPS)) if base is not None else ():
+        from PIL import ImageDraw
+        t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
+        nl = len(cards[j]["lines"]); per = min(0.55, max(0.2, (durs[j] - 0.8) / nl))
+        upto = min(nl, int(lt / per) + 1); a = min(1.0, (lt - (upto - 1) * per) / 0.35)
+        ck = (j, upto, round(a, 2))
+        if ck not in cache:
+            if len(cache) > 300:
+                cache.clear()
+            cache[ck] = art_text(cards[j], pal, upto, a)
+        tl = cache[ck]
+        fade = min(1.0, lt / 0.2, (durs[j] - lt) / 0.2)
+        if fade < 1:
+            tl = tl.copy(); tl.putalpha(tl.getchannel("A").point(lambda v, f=max(0.0, fade): int(v * f)))
+        frame = art_frame(base, t / total).convert("RGBA")
+        frame.alpha_composite(tl)
+        frame = frame.convert("RGB"); art_band(ImageDraw.Draw(frame), se, ep, pal)
+        ff.stdin.write(frame.tobytes())
+    for k in range(int(total * FPS)) if base is None else ():
         t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
         nl = len(cards[j]["lines"]); per = min(0.55, max(0.2, (durs[j] - 0.8) / nl))
         upto = min(nl, int(lt / per) + 1); a = min(1.0, (lt - (upto - 1) * per) / 0.35)
@@ -279,7 +372,7 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
         frame = Image.blend(Image.new("RGB", (W, H)), im, max(0.0, fade)) if fade < 1 else im
         ff.stdin.write(frame.tobytes())
     ff.stdin.close(); ff.wait()
-    wav = sound(starts, durs, last_story, total, f"{stem}.wav")
+    wav = sound(starts, durs, last_story, total, f"{stem}.wav", cues=[card_cue(c) for c in cards[:-1]] + [None], seed=ep["no"])
     cfg = load(CFG, {})
     bgm = [ROOT / b for b in cfg.get("bgm", []) if (ROOT / b).exists()]
     final = pathlib.Path(f"{stem}.mp4")
@@ -298,10 +391,35 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
     return final
 
 
-def sound(starts, durs, last_story, total: float, path: str) -> str:
-    """효과음만 합성: 낮은 울림 + 장 넘김 + 끝 두 장 앞 심장 소리 + 반전 직전 정적 + 반전 타격음.
-    last_story 는 반전 카드 번호 하나 또는 목록(롱폼은 화마다 하나)."""
+# 장면 효과음 (BK 11/24 "중간 중간 효과음을 바꿔야"): 카드 글에 맞는 소리를 고르고, 없으면 넘김 소리를 돌려 쓴다.
+CUES = [  # (이름, 글에 들어 있으면 그 소리)
+    ("clock", ("11시 17분", "시각", "밤 11시", "아침 9시", "30분 전")),
+    ("glass", ("와인", "주스", "잔", "따랐다")),
+    ("phone", ("휴대폰", "문자", "전화", "스피커", "통화", "호출", "녹음")),
+    ("ding", ("엘리베이터",)),
+    ("crash", ("가드레일", "들이받")),
+    ("click", ("로그인", "OTP", "전송", "눌렀다", "창을 열", "검색", "조회", "로그")),
+    ("paper", ("서류", "서명", "사인", "결재", "증권", "파일", "열일곱 장", "이혼")),
+    ("heart", ("숨이", "멎", "죽었", "심장")),
+]
+
+
+def card_cue(card: dict) -> str | None:
+    text = " ".join(l[0] for l in card.get("lines", []))
+    if card.get("motif") == "paper":
+        return "paper"
+    for name, keys in CUES:
+        if any(k in text for k in keys):
+            return name
+    return None
+
+
+def sound(starts, durs, last_story, total: float, path: str, cues=None, seed: int = 0) -> str:
+    """효과음만 합성: 낮은 울림 + 카드마다 장면 소리(시계·잔·휴대폰·종이 등, 없으면 넘김 소리 3종 돌려 쓰기)
+    + 끝 두 장 앞 심장 소리 + 반전 직전 정적 + 반전 타격음(화마다 음 높이 다름).
+    last_story 는 반전 카드 번호 하나 또는 목록(롱폼은 화마다 하나). cues 는 카드별 card_cue 결과."""
     import numpy as np
+    rng = np.random.default_rng(seed)
     sr = 44100; n = int(sr * (total + 0.5)); x = np.arange(n) / sr
     buf = 0.10 * np.sin(2 * np.pi * 55 * x) * (0.6 + 0.4 * np.sin(2 * np.pi * 0.15 * x)) + 0.05 * np.sin(2 * np.pi * 82.4 * x)
 
@@ -309,18 +427,65 @@ def sound(starts, durs, last_story, total: float, path: str) -> str:
         xx = np.arange(int(sr * du)) / sr
         return v * np.sin(2 * np.pi * fr * xx) * np.exp(-xx * dc)
 
+    def noise(du, v, lo, hi, att=0.01, dc=8.0):
+        k = int(sr * du); f = np.fft.rfft(rng.standard_normal(k)); fq = np.fft.rfftfreq(k, 1 / sr)
+        f[(fq < lo) | (fq > hi)] = 0; w = np.fft.irfft(f, k); w /= (np.abs(w).max() or 1)
+        xx = np.arange(k) / sr
+        return v * w * np.minimum(1, xx / att) * np.exp(-xx * dc)
+
     def add(at, w):
         i0 = int(at * sr); m = max(0, min(len(w), n - i0)); buf[i0:i0 + m] += w[:m]
 
+    def fx(name, at):
+        if name == "clock":
+            for i in range(3):
+                add(at + i * 0.5, noise(0.05, 0.22, 2500, 6000, 0.001, 60) + tone(1800, 0.05, 0.05, 80))
+            add(at + 1.5, sum(tone(fr, 2.0, 0.07, 1.8) for fr in (392, 784.5)))
+        elif name == "glass":
+            add(at + 0.1, sum(tone(fr, 1.2, 0.10, 4) for fr in (2093, 2637, 3322)))
+        elif name == "phone":
+            for i in range(2):
+                xx = np.arange(int(sr * 0.35)) / sr
+                add(at + 0.1 + i * 0.5, 0.05 * np.tanh(3 * np.sin(2 * np.pi * 150 * xx)) * np.sin(np.pi * xx / 0.35) ** 2)  # BK 11/24: 진동이 너무 커서 낮춤
+        elif name == "ding":
+            add(at, tone(1318.5, 1.5, 0.12, 2.5)); add(at + 0.35, tone(1046.5, 1.8, 0.12, 2.2))
+        elif name == "crash":
+            add(at, noise(0.9, 0.45, 40, 3000, 0.002, 4) + tone(45, 0.6, 0.5, 6))
+        elif name == "click":
+            for i in range(4):
+                add(at + 0.08 + i * 0.13 + rng.uniform(0, 0.04), noise(0.03, 0.18, 1500, 7000, 0.001, 120))
+        elif name == "paper":
+            add(at, noise(0.45, 0.16, 1200, 8000, 0.08, 6))
+        elif name == "heart":
+            for i in range(2):
+                add(at + 0.2 + i * 0.75, tone(50, 0.25, 0.5, 18)); add(at + 0.42 + i * 0.75, tone(45, 0.2, 0.35, 20))
+        else:  # 넘김 소리 3종: 낮은 현, 바람, 맑은 종
+            v = int(name)
+            if v == 0:
+                add(at, tone(220, 0.8, 0.08, 4))
+            elif v == 1:
+                add(at, noise(0.6, 0.10, 300, 2500, 0.25, 5))
+            else:
+                add(at, tone(659.3, 1.0, 0.05, 3) + tone(987.8, 1.0, 0.03, 3))
+
+    finals = [last_story] if isinstance(last_story, int) else list(last_story)
+    prev = None
     for j in range(1, len(starts)):
-        add(starts[j], tone(220, 0.8, 0.08, 4))
+        c = cues[j] if cues and j < len(cues) else None
+        if c == prev:  # 같은 소리가 연달아 나오면 넘김 소리로 바꿔 반복감을 줄인다
+            c = None
+        prev = c
+        if j in finals:
+            continue
+        fx(c if c else str(j % 3), starts[j])
     for ls in ([last_story] if isinstance(last_story, int) else last_story):
         beat0 = starts[max(0, ls - 2)]
         for j in range(int((starts[ls] - beat0) / 0.75)):
             add(beat0 + 0.4 + j * 0.75, tone(50, 0.25, 0.5, 18))
         s = int(starts[ls] * sr)
         buf[max(0, s - int(0.35 * sr)):s] *= 0.05
-        add(starts[ls], sum(tone(fr, 2.5, 0.25, 1.5) for fr in (110, 116.5, 233, 466)))
+        r = 1.0 + 0.06 * (seed % 5 - 2)
+        add(starts[ls], sum(tone(fr * r, 2.5, 0.25, 1.5) for fr in (110, 116.5, 233, 466)))
     fade = np.ones(n); m = int(sr * 1.5); fade[-m:] = np.linspace(1, 0, m); buf *= fade
     buf = np.clip(buf, -1, 1)
     with wave.open(path, "wb") as wv:
@@ -435,7 +600,7 @@ def render_long(work: str, k: int, out_dir: pathlib.Path = OUT) -> tuple[pathlib
             fade = 0.0
         ff.stdin.write((Image.blend(Image.new("RGB", (LW, LH)), im, max(0.0, fade)) if fade < 1 else im).tobytes())
     ff.stdin.close(); ff.wait()
-    wav = sound(starts, durs, finals, total, f"{stem}.wav")
+    wav = sound(starts, durs, finals, total, f"{stem}.wav", cues=[card_cue(x["card"]) for x in seq], seed=k)
     final = pathlib.Path(f"{stem}.mp4")
     bgm = [ROOT / b for b in load(CFG, {}).get("bgm", []) if (ROOT / b).exists()]
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", f"{stem}.v.mp4", "-i", wav]
