@@ -1,7 +1,7 @@
 name: yt-stats
 
 # 쇼츠 조회수 기록 (2026-11-15). 매일 22:41 KST 올린 영상 공개 통계를 data/youtube/stats.json 에 쌓고,
-# 월요일엔 주간 점검표 docs/SHORTS_WEEKLY.md 를 만든다. 읽기만 하고 영상은 바꾸지 않는다.
+# 4채널(삼촌·5락실·웹소설·음악) 영상 + 채널 구독자 수(data/youtube/channels.json, 11/23). 월요일엔 주간 점검표 docs/SHORTS_WEEKLY.md 를 만든다. 읽기만 하고 영상은 바꾸지 않는다.
 on:
   schedule:
     - cron: "41 13 * * *"   # 22:41 KST
@@ -41,6 +41,7 @@ jobs:
           git add data/youtube/stats.json docs/SHORTS_WEEKLY.md
           git add data/youtube/analytics.json 2>/dev/null || true
           git add data/youtube/audience.json 2>/dev/null || true
+          git add data/youtube/channels.json 2>/dev/null || true
           git commit -m "쇼츠 조회수 $(TZ=Asia/Seoul date +%F)" || exit 0
           git pull --rebase -q origin main
           git push origin HEAD:main
