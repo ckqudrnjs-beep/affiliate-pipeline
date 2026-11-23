@@ -155,11 +155,20 @@ def cleanup() -> int:
     from .youtube import access_token
     log = _load(LOG)
     firsts = {t.splitlines()[0] for t in TEXT.values()}
+    from .youtube import check_channel, WrongChannel
+    import urllib.parse
     for ch, env in TOKENS.items():
         rt = os.environ.get(env, "").strip()
         if not (cid and sec and rt):
             continue
-        tok = access_token(cid, sec, rt)
+        data = urllib.parse.urlencode({"client_id": cid, "client_secret": sec, "refresh_token": rt,
+                                       "grant_type": "refresh_token"}).encode()
+        with urllib.request.urlopen(urllib.request.Request("https://oauth2.googleapis.com/token", data=data), timeout=30) as r:
+            tok = json.load(r)["access_token"]  # 정리용: 채널이 틀려도 그 토큰이 단 댓글을 지워야 하므로 확인 없이
+        try:
+            check_channel(tok, rt)
+        except WrongChannel as e:
+            print(f"⚠ {e}")
         mine, title = my_channel(tok)
         print(f"{env} → 채널 '{title}' ({mine})")
         for vid, row in list(log.items()):
