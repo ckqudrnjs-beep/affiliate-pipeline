@@ -421,6 +421,9 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         st = int(meta["short_start"])
         summary(f"업로드 완료: {meta['title']} → {when} (쇼츠 {st // 60}:{st % 60:02d}부터 {int(cfg.get('short_length', 40))}초)\n{link}")
         notify(f"🎵 BEEKAY SONGS 새 곡 업로드: {meta['title']} ({when})\n{link}")
+        if res["publish_at"] != "private":  # 게시물 예고 글 (BK 11/23 '구독할 이유'): 커버 + 공개 시각 → BK 붙여넣기
+            from . import community_posts
+            community_posts.music(meta["title"], meta.get("cover"), dt.datetime.fromisoformat(res["publish_at"]), (ov or {}).get("ask", ""))
         done += 1
     return 0
 
