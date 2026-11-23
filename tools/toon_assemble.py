@@ -200,7 +200,24 @@ def pick_ending(day: str, path: pathlib.Path = REUSE) -> dict:
     return {k: e[k] for k in ("clip", "ss", "t", "at")} | {"id": e["id"]}
 
 
+def money_check(spec: dict) -> None:
+    """조립 전에 띠·자막의 돈 강조 말을 막는다 (BK 11/20 밤 금화·저금통·'돈이 …' 금지, 11/23 찌개 편 일 뒤).
+    BK 가 보고 괜찮다고 한 편만 spec "tone_ok": true."""
+    if spec.get("tone_ok") is True:
+        return
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
+    from pipeline.youtube import money_hits
+    band = spec.get("band") or {}
+    text = [band.get("top", ""), band.get("accent", "")]
+    for c in spec.get("cuts", []):
+        text += list(c.get("lines", [])) + list(c.get("after", [])) + [c.get("big", "") or "", c.get("sub", "") or ""]
+    hits = money_hits("\n".join(x for x in text if isinstance(x, str)))
+    if hits:
+        raise SystemExit(f"돈 강조 말이 띠·자막에 있음: {hits} → 동전이 상황 말로 고치기 (DIRECTION 2-3)")
+
+
 def assemble(spec: dict) -> pathlib.Path:
+    money_check(spec)
     if (spec.get("ending") or {}).get("clip") == "auto":
         spec["ending"] = pick_ending(str(spec.get("date") or spec["slug"][3:13]))
         print(f"엔딩: {spec['ending']['id']}")
