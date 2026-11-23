@@ -443,7 +443,7 @@ def sound(starts, durs, last_story, total: float, path: str, cues=None, seed: in
         elif name == "phone":
             for i in range(2):
                 xx = np.arange(int(sr * 0.35)) / sr
-                add(at + 0.1 + i * 0.5, 0.18 * np.sign(np.sin(2 * np.pi * 140 * xx)) * np.sin(2 * np.pi * 7 * xx) ** 2)
+                add(at + 0.1 + i * 0.5, 0.05 * np.tanh(3 * np.sin(2 * np.pi * 150 * xx)) * np.sin(np.pi * xx / 0.35) ** 2)  # BK 11/24: 진동이 너무 커서 낮춤
         elif name == "ding":
             add(at, tone(1318.5, 1.5, 0.12, 2.5)); add(at + 0.35, tone(1046.5, 1.8, 0.12, 2.2))
         elif name == "crash":
