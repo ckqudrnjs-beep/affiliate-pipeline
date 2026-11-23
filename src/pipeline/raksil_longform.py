@@ -456,6 +456,8 @@ def upload_meta(meta: dict, cfg: dict) -> int:
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%m/%d %H:%M} 공개 예약" if (vis == "schedule" and at) else "비공개(BK 확인용)"
     msg = f"🎮 5락실 주간 롱폼 #{meta['no']} 업로드 ({when}, {mmss(meta['secs'])}): https://youtu.be/{r['id']}" + ("" if thumb_ok else "\n(썸네일 설정 실패: 채널 인증 필요할 수 있음)")
+    from .yt_extras import pin_line
+    msg += pin_line("이번 주 4게임, 너는 몇 점까지 가능? 기록 댓글로 남겨 줘요 🏆\n설치 없이 바로 플레이: https://5raksil.com/?ref=yt-long")
     summary(msg)
     try:
         from .claude_jobs import notify
