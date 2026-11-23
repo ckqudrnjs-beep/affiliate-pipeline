@@ -31,8 +31,8 @@ TEXT = {
 }
 TOKENS = {"uncle": "YT_REFRESH_TOKEN", "5raksil": "RAKSIL_YT_REFRESH_TOKEN", "music": "MUSIC_YT_REFRESH_TOKEN"}
 # 11/24 00:23 BK '비케이요 돈삼촌이 댓글을 달았어 안돼': MUSIC 토큰이 돈삼촌 채널로 발급돼 노래 영상에 돈삼촌 이름으로 달림
-# → 노래 채널은 BK 재확인 전까지 끔, 모든 채널은 댓글 전에 '토큰 채널 == 영상 채널' 확인.
-ENABLED = ("uncle", "5raksil")
+# → 모든 채널은 댓글 전에 '토큰 채널 == 영상 채널' 확인. 11/24 00:48 토큰 재발급 확인(BEEKAY SONGS) 후 BK '켜' → 노래 다시 켬.
+ENABLED = ("uncle", "5raksil", "music")
 API_BASE = "https://www.googleapis.com/youtube/v3/"
 
 

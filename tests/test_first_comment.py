@@ -50,7 +50,7 @@ class Guard(unittest.TestCase):
                 mock.patch.dict("os.environ", {"YT_CLIENT_ID": "x", "YT_CLIENT_SECRET": "y", "YT_REFRESH_TOKEN": "r",
                                                "MUSIC_YT_REFRESH_TOKEN": "m"}):
             fc.run(dt.datetime(2026, 11, 25, tzinfo=KST))
-        self.assertEqual(posted, [])  # 채널 다름 → 안 닮, 노래 채널은 꺼짐
+        self.assertEqual(posted, [])  # 채널 다름 → 삼촌·노래 모두 안 닮
 
     def test_music_token_blocks_wrong_channel(self):
         from unittest import mock
