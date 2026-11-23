@@ -327,6 +327,15 @@ def fixed_slots(ov: dict, now: dt.datetime) -> tuple[dt.datetime | None, dt.date
     return (a, b) if a > now + dt.timedelta(minutes=30) else None
 
 
+def related(log: dict, fid: str, title: str, full_id: str | None) -> str:
+    """쇼츠 '관련 동영상' 안내 (API 불가 → BK 가 스튜디오에서): Official MV 가 있으면 MV, 없으면 전곡 영상."""
+    from .yt_extras import related_line
+    mv = log.get(f"mv:{fid}", {})
+    if mv.get("video_id"):
+        return related_line(mv.get("title"), mv["video_id"])
+    return related_line(f"{title} (전곡)", full_id)
+
+
 def upload_pair(meta: dict, cfg: dict, now: dt.datetime, ov: dict | None = None) -> dict:
     from .youtube import access_token, upload
     token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
@@ -423,7 +432,8 @@ def run(local: str | None = None, now: dt.datetime | None = None) -> int:
         link = f"https://studio.youtube.com/video/{res['video_id']}/edit"
         st = int(meta["short_start"])
         summary(f"업로드 완료: {meta['title']} → {when} (쇼츠 {st // 60}:{st % 60:02d}부터 {int(cfg.get('short_length', 40))}초)\n{link}")
-        notify(f"🎵 BEEKAY SONGS 새 곡 업로드: {meta['title']} ({when})\n{link}")
+        notify(f"🎵 BEEKAY SONGS 새 곡 업로드: {meta['title']} ({when})\n{link}"
+               + (related(log, job["id"], meta["title"], res["video_id"]) if res.get("short_id") else ""))
         if res["publish_at"] != "private":  # 게시물 예고 글 (BK 11/23 '구독할 이유'): 커버 + 공개 시각 → BK 붙여넣기
             from . import community_posts
             community_posts.music(meta["title"], meta.get("cover"), dt.datetime.fromisoformat(res["publish_at"]), (ov or {}).get("ask", ""))
@@ -490,6 +500,8 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
             LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
             summary(f"추가 쇼츠 예약: {yt_title} → {at.isoformat()[:16]} ({mm}부터 {int(length)}초, 자막 {len(subs)}줄)\n"
                     f"https://studio.youtube.com/video/{r['id']}/edit")
+            notify(f"🎧 BEEKAY SONGS 추가 쇼츠 예약: {yt_title} ({at.isoformat()[:16]})\nhttps://youtu.be/{r['id']}"
+                   + related(log, fid, title, ent.get("video_id")))
             done += 1
     return done
 

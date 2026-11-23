@@ -1676,10 +1676,12 @@ def upload_meta(meta: dict) -> int:
     summary(f"5락실 쇼츠 업로드 ({when}): https://youtu.be/{r['id']} ({meta['title']})")
     try:  # 쇼츠 '관련 동영상' = 최근 토요일 주간 롱폼 (API 로 못 정함 → BK 가 스튜디오에서, BK 11/23)
         from .yt_extras import latest, related_line
+        from .yt_extras import pin_line
+        from .claude_jobs import notify
         rel = related_line(*latest(pathlib.Path("data/youtube/raksil_longform.json")))
-        if rel:
-            from .claude_jobs import notify
-            notify(f"🎮 5락실 쇼츠 {key} 업로드: https://youtu.be/{r['id']}{rel}")
+        pin = ("A / B 중 너는? 댓글로 남기면 내일 쇼츠 결과에 같이 세요 🙌" if meta.get("a") else "직접 해 보면 더 재밌어요 🎮") \
+            + f"\n설치 없이 바로: {SITE}"
+        notify(f"🎮 5락실 쇼츠 {key} 업로드: https://youtu.be/{r['id']}{rel}{pin_line(pin)}")
     except Exception as e:  # noqa: BLE001
         print(f"관련 동영상 알림 실패: {e}", file=sys.stderr)
     if at:  # 게시물 '먼저 보기' 글 + 투표 보기 (BK 11/23 '구독할 이유'): 텔레그램으로 → BK 붙여넣기

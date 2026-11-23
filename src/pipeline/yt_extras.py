@@ -79,6 +79,11 @@ def related_line(title: str | None, vid: str | None) -> str:
     return f"\n🔗 관련 동영상(스튜디오에서 이 쇼츠에 연결): {title or '롱폼'} https://youtu.be/{vid}"
 
 
+def pin_line(text: str) -> str:
+    """BK 가 손으로 달고 '고정'할 댓글 문구 (API 로 고정 불가). 제휴 링크 금지."""
+    return f"\n📌 고정 댓글(복사 → 댓글 달기 → 고정):\n{text}"
+
+
 def latest(log_path: pathlib.Path, prefix: str = "", key_filter=None) -> tuple[str | None, str | None]:
     """업로드 기록에서 가장 최근 롱폼 (제목, id)."""
     try:
