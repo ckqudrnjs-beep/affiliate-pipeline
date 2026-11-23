@@ -541,14 +541,14 @@
       "_doc": "BK 11/23 다음 곡. 커버 A(Kling, BK 선택), 따뜻한 아침빛·사계절 같은 거리. 24크레딧 BK 승인",
       "title": "매일 처음처럼",
       "cover": "config/music/covers/매일처음처럼.jpg",
-      "publish_at": "2026-11-29T19:00:00+09:00",
-      "short_publish_at": "2026-12-01T19:00:00+09:00",
+      "publish_at": "2026-11-24T19:00:00+09:00",
+      "short_publish_at": "2026-11-27T19:00:00+09:00",
       "short_start": 47.5,
       "mv": {
         "_doc": "그림 0 커버A 1 커버B 2 봄 3 여름 4 가을 5 겨울. 6.4초마다 장면, 가사 시점에 맞춤",
         "title": "매일 처음처럼 (Official MV)",
         "song": "매일 처음처럼",
-        "publish_at": "2026-12-03T21:00:00+09:00",
+        "publish_at": "2026-11-28T21:00:00+09:00",
         "images": [
           "config/music/covers/매일처음처럼.jpg",
           "config/music/mv/매일처음처럼-커버B.jpg",
