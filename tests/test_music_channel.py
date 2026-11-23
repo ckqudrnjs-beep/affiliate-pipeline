@@ -130,5 +130,21 @@ class MusicMvTest(unittest.TestCase):
                 self.assertTrue(pathlib.Path(p).exists(), p)
 
 
+class LyricsGapTest(unittest.TestCase):
+    def test_fill_gaps_inserts_missing_lines(self):
+        from pipeline.music_lyrics import fill_gaps
+        lines = ["가", "나", "다", "라", "outro"]
+        subs = [(0.0, 4.0, "가"), (9.0, 12.0, "라")]
+        out = fill_gaps(subs, lines)
+        self.assertEqual([t for _, _, t in out], ["가", "나", "다", "라"])
+        self.assertAlmostEqual(out[1][0], 3.0)
+
+    def test_fill_gaps_ignores_far_jumps(self):
+        from pipeline.music_lyrics import fill_gaps
+        lines = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "a"]
+        subs = [(0.0, 2.0, "a"), (2.0, 4.0, "b"), (10.0, 12.0, "k")]
+        self.assertEqual(len(fill_gaps(subs, lines)), 3)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -83,6 +83,42 @@ def subtitles(audio: pathlib.Path, lyrics: str, start: float, length: float) -> 
     lines = lyric_lines(lyrics)
     if not lines:
         return []
-    subs = align(transcribe(audio, start, length), lines)
+    subs = fill_gaps(align(transcribe(audio, start, length), lines), lines)
     # 화면에 너무 짧게 깜빡이지 않게 최소 1.2초
     return [(a, max(b, a + 1.2), t) for a, b, t in subs if a < length]
+
+
+def fill_gaps(subs: list, lines: list[str], max_missing: int = 6) -> list:
+    """받아쓰기가 놓친 가사 줄 채우기 (BK 11/23 '중간에 가사 자막이 안 나와').
+
+    맞춘 두 줄 사이에 공식 가사 줄이 빠져 있으면, 앞 줄 시작~뒤 줄 시작 구간을
+    (앞 줄 + 빠진 줄들) 개수로 똑같이 나눠 순서대로 넣는다. 후렴 반복처럼 가사 순서가
+    뒤로 돌아가는 곳은 건드리지 않는다.
+    """
+    if not subs or not lines:
+        return subs
+    idx, last = [], -1
+    for _, _, t in subs:
+        cands = [i for i, l in enumerate(lines) if l == t]
+        near = [i for i in cands if last < i <= last + 8]
+        i = near[0] if near else -1  # 멀리 건너뛴 줄(아웃트로 등)은 순서 기준으로 쓰지 않음
+        idx.append(i)
+        if i >= 0:
+            last = i
+        elif cands and last < 0:
+            last = cands[0]
+    out = []
+    for k, (a, b, t) in enumerate(subs):
+        i = idx[k]
+        if k + 1 < len(subs) and i >= 0 and idx[k + 1] > i + 1 and idx[k + 1] - i - 1 <= max_missing:
+            j = idx[k + 1]
+            s2 = subs[k + 1][0]
+            n = j - i
+            step = (s2 - a) / n
+            if step >= 1.0:
+                out.append((a, a + step, t))
+                for m in range(1, n):
+                    out.append((a + m * step, a + (m + 1) * step, lines[i + m]))
+                continue
+        out.append((a, b, t))
+    return out

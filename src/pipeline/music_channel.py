@@ -509,13 +509,13 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
 def lyrics_dump(fid: str) -> int:
     """뮤직비디오용 (BK 11/23): 곡 전체 가사 자막 시간을 로그에 JSON 으로 찍는다. 업로드·기록 없음."""
     from .youtube import access_token
-    from .music_lyrics import align, lyric_lines, transcribe
+    from .music_lyrics import align, fill_gaps, lyric_lines, transcribe
     dtoken = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
                           os.environ["MUSIC_DRIVE_REFRESH_TOKEN"])
     audio = download(dtoken, fid, WORK / "in" / f"{fid}.mp3")
     lyr = lyrics_of(tags_of(audio))
     dur = analyse(audio)["duration"]
-    subs = align(transcribe(audio, 0, dur), lyric_lines(lyr))
+    subs = fill_gaps(align(transcribe(audio, 0, dur), lyric_lines(lyr)), lyric_lines(lyr))
     print("LYRICS_JSON_BEGIN")
     print(json.dumps({"duration": dur, "lines": lyric_lines(lyr),
                       "subs": [(round(a, 2), round(b, 2), t) for a, b, t in subs]}, ensure_ascii=False))
@@ -526,7 +526,7 @@ def lyrics_dump(fid: str) -> int:
 def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     """뮤직비디오 1편 (BK 11/23 '1번': 기존 풀 버전은 두고 'Official MV' 로 따로). config releases[fid].mv"""
     from .youtube import access_token, upload
-    from .music_lyrics import align, lyric_lines, transcribe
+    from .music_lyrics import align, fill_gaps, lyric_lines, transcribe
     from .music_mv import render
     now = now or dt.datetime.now(KST)
     cfg = load(CFG, {})
@@ -544,7 +544,7 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     audio = download(dtoken, fid, WORK / "in" / f"{fid}.mp3")
     lyr = lyrics_of(tags_of(audio))
     dur = analyse(audio)["duration"]
-    subs = align(transcribe(audio, 0, dur), lyric_lines(lyr)) if lyr else []
+    subs = fill_gaps(align(transcribe(audio, 0, dur), lyric_lines(lyr)), lyric_lines(lyr)) if lyr else []
     title = mv.get("title") or f"{rel.get('title', 'BEEKAY SONGS')} (Official MV)"
     song = mv.get("song", title.split(" (")[0])
     channel = cfg.get("channel", "BEEKAY SONGS")
