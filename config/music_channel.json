@@ -17,6 +17,15 @@
       "publish_at": "2026-11-22T19:00:00+09:00",
       "short_publish_at": "2026-11-23T19:00:00+09:00",
       "short_start": 109.88,
+      "mv": {
+        "_doc": "BK 11/23 '1번': 풀 버전은 두고 Official MV 따로. 그림 순서: 0 여성커버 1 남성커버 2 여자정면 3 남자정면1 4 남자정면2 (정면 그림 Kling 16크레딧 BK 승인)",
+        "title": "다른 차원 끝 (Official MV)",
+        "song": "다른 차원 끝",
+        "publish_at": "2026-11-23T19:00:00+09:00",
+        "images": ["config/music/covers/다른차원끝-female.jpg", "config/music/covers/다른차원끝-male.jpg",
+                   "config/music/mv/다른차원끝-여자정면.jpg", "config/music/mv/다른차원끝-남자정면1.jpg",
+                   "config/music/mv/다른차원끝-남자정면2.jpg"]
+      },
       "extra_shorts": [
         {
           "publish_at": "2026-11-24T19:00:00+09:00"

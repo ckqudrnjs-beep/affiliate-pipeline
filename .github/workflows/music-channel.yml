@@ -7,6 +7,15 @@ on:
   schedule:
     - cron: "13 1 * * 2,5"   # 화·금 10:13 KST (19:00 공개 예약 전에 끝나게)
   workflow_dispatch:
+    inputs:
+      lyrics_fid:
+        description: "뮤비용 가사 시간만 뽑기 (드라이브 파일 id). 비우면 평소처럼 만들기+올리기"
+        required: false
+        default: ""
+      mv_fid:
+        description: "뮤직비디오 만들어 올리기 (드라이브 파일 id, config releases[id].mv)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -33,7 +42,26 @@ jobs:
           pip install -q pillow numpy faster-whisper
       - name: 검사
         run: PYTHONPATH=src python -m unittest tests.test_music_channel
+      - name: 뮤비용 가사 시간 (업로드 없음)
+        if: inputs.lyrics_fid != ''
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          MUSIC_DRIVE_REFRESH_TOKEN: ${{ secrets.MUSIC_DRIVE_REFRESH_TOKEN }}
+        run: PYTHONPATH=src python -m pipeline.music_channel lyrics --fid "${{ inputs.lyrics_fid }}"
+      - name: 뮤직비디오 만들기 + 올리기
+        if: inputs.mv_fid != '' && inputs.mv_fid != null
+        env:
+          MUSIC_YT_ENABLED: ${{ vars.MUSIC_YT_ENABLED }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          MUSIC_YT_REFRESH_TOKEN: ${{ secrets.MUSIC_YT_REFRESH_TOKEN }}
+          MUSIC_DRIVE_REFRESH_TOKEN: ${{ secrets.MUSIC_DRIVE_REFRESH_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: PYTHONPATH=src python -m pipeline.music_channel mv --fid "${{ inputs.mv_fid }}"
       - name: 만들기 + 올리기
+        if: (inputs.lyrics_fid == '' || inputs.lyrics_fid == null) && (inputs.mv_fid == '' || inputs.mv_fid == null)
         env:
           MUSIC_YT_ENABLED: ${{ vars.MUSIC_YT_ENABLED }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
@@ -44,7 +72,7 @@ jobs:
           TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
         run: PYTHONPATH=src python -m pipeline.music_channel run
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && !inputs.lyrics_fid && !inputs.mv_fid
         with:
           name: music-channel
           path: |
@@ -54,7 +82,7 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
       - name: 업로드 기록 저장
-        if: always()
+        if: always() && !inputs.lyrics_fid
         run: |
           F=data/music/uploaded.json
           [ -f "$F" ] || exit 0
