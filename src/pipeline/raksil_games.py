@@ -223,7 +223,7 @@ def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) 
 def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[str, list[str], str, dict | None]:
     """품질 게이트 (BK 11/20 밤 '안 하느니 못해' + 11/21 '기획안을 바꿔야지 스킵하면 안돼'): 띠 흰 줄(도전 후킹)·제목·대사를 편집장이 채점.
     미달이면 지적대로 후킹·첫 대사를 다시 짜고(연속 rs.GATE_FRESH_AFTER 번 미달이면 새 각도), 채점 최대 rs.GATE_TRIES 번.
-    다시 짜기가 안 되면(키·API 실패) 문구 은행의 다른 후킹. 끝까지 미달이면 최고안이 rs.GATE_SOFT 이상일 때 그 안, 아니면 쉼.
+    다시 짜기가 안 되면(키·API 실패) 문구 은행의 다른 후킹. 끝까지 미달이면 최고안이 rs.GATE_SOFT_GAME 이상일 때 그 안, 아니면 쉼.
     → (쓸 후킹, 쓸 대사, 쉬는 이유 — 진행이면 '', 채점 결과)."""
     hist, best, streak = [], None, 0
     queue, batch = [], []  # 다시 짜기가 한 번에 낸 안들(채점 대기), 이번 묶음 채점 결과
@@ -237,7 +237,7 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
                       "둘째 대사(사이트 안내)와 몽글이 엔딩도 고정이다. 이것들로 감점하지 말고, 바꿀 수 있는 것은 흰 줄 후킹과 첫 대사뿐 — "
                       "note 도 그 둘만 지시", brief)
         if sc and sc.get("blocked"):  # 예산 소진 → 채점 없이 올리지 않음 (11/22)
-            if best and rs.gate_soft(best[3]):
+            if best and rs.gate_soft(best[3], rs.GATE_SOFT_GAME):
                 return best[1], best[2], "", {**best[3], "soft": True}
             return hook, say, f"채점 예산이 막혀 채점 없이 올리지 않음 — {sc['blocked']}", None
         if sc is None:
@@ -268,9 +268,9 @@ def gate(g: dict, kind: str, day: dt.date, hook: str, say: list[str]) -> tuple[s
             hook = bank.pop(0)
         else:
             break
-    if best and rs.gate_soft(best[3]):
+    if best and rs.gate_soft(best[3], rs.GATE_SOFT_GAME):
         return best[1], best[2], "", {**best[3], "soft": True}
-    return hook, say, f"{len(hist)}번 다시 짜도 최고 '{best[1]}' {best[0]}/40점 < 최후 기준 {rs.GATE_SOFT} — {best[3].get('note', '')}", None
+    return hook, say, f"{len(hist)}번 다시 짜도 최고 '{best[1]}' {best[0]}/40점 < 최후 기준 {rs.GATE_SOFT_GAME} — {best[3].get('note', '')}", None
 
 
 def game_band(g: dict, hook: str) -> dict:

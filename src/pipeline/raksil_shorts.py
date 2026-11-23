@@ -1256,7 +1256,9 @@ GATE_FLOOR, GATE_MIN = 32, 6    # 4칸 × 10점 중 32점(평균 8), 한 칸이�
 # 같은 소재로 고친 안이 GATE_FRESH_AFTER 번 연속 미달이면 소재를 통째로 바꾼 새 기획. 채점은 최대 GATE_TRIES 번.
 GATE_TRIES, GATE_FRESH_AFTER = 12, 2  # 11/22: 다시 짜기 1번 = 안 REPLAN_N 개 → 채점 12번 ≈ 묶음 4개
 # 최후: 다 미달이어도 최고안이 GATE_SOFT 점 이상·한 칸도 GATE_SOFT_MIN 미만이 없으면 그 안으로 올리고 알림. 그 아래면 그날만 쉼.
-GATE_SOFT, GATE_SOFT_MIN = 28, 5
+# BK 11/24 07:08 KST 카드 '25점 이상이면 올리기': 밸런스는 25점(11/23·24 이틀 연속 25~27점으로 쉬어 매일 흐름이 끊김). 게임 쇼츠는 28 그대로.
+GATE_SOFT, GATE_SOFT_MIN = 25, 5
+GATE_SOFT_GAME = 28
 BIG_MIN_TEXT = 80                              # classic·split 은 칸이 커진 만큼 이보다 작으면 다른 형식으로
 MIN_TEXT = 56                                  # 선택지 글자가 이보다 작아지면 그 형식에는 질문이 너무 길다(구도 탈락)
 GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 10초짜리 밸런스게임 쇼츠(마스코트 몽글이) 한 편의 기획을 냉정하게 1~10점 채점한다.
@@ -1296,10 +1298,10 @@ def gate_total(sc: dict) -> tuple[int, bool]:
     return sum(parts), sum(parts) >= GATE_FLOOR and min(parts) >= GATE_MIN
 
 
-def gate_soft(sc: dict) -> bool:
-    """최후 기준: 통과선은 못 넘었지만 올려도 되는 최고안인지 (GATE_SOFT, 한 칸도 GATE_SOFT_MIN 미만 없음)."""
+def gate_soft(sc: dict, floor: int | None = None) -> bool:
+    """최후 기준: 통과선은 못 넘었지만 올려도 되는 최고안인지 (floor 기본 GATE_SOFT, 한 칸도 GATE_SOFT_MIN 미만 없음)."""
     parts = gate_parts(sc)
-    return sum(parts) >= GATE_SOFT and min(parts) >= GATE_SOFT_MIN
+    return sum(parts) >= (GATE_SOFT if floor is None else floor) and min(parts) >= GATE_SOFT_MIN
 
 
 Q_MAX = 16  # 다시 짠 질문의 선택지 글자 수 상한 (공백 포함) — 화면 칸 검사(layout_ok)도 따로 거친다
