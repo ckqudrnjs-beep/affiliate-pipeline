@@ -170,3 +170,29 @@ class WebnovelSubscribeHooksTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WebnovelSoundCueTest(unittest.TestCase):
+    def test_card_cue_picks_scene_sound(self):
+        self.assertEqual(w.card_cue({"lines": [["밤 11시 17분.", "n"]]}), "clock")
+        self.assertEqual(w.card_cue({"lines": [["채아가 와인 대신 주스를", "n"]]}), "glass")
+        self.assertEqual(w.card_cue({"lines": [["엘리베이터가 섰다.", "n"]]}), "ding")
+        self.assertEqual(w.card_cue({"lines": [["아무 일 없었다", "n"]], "motif": "paper"}), "paper")
+        self.assertIsNone(w.card_cue({"lines": [["우리는 손을 잡기로 했다.", "n"]]}))
+
+    def test_season_uses_several_sounds(self):
+        import json
+        seen = set()
+        for n in range(1, 16):
+            p = w.ROOT / f"data/webnovel/works/{WORK}/ep/{n:02d}.json"
+            seen |= {w.card_cue(c) for c in json.loads(p.read_text())["cards"]}
+        self.assertGreaterEqual(len(seen - {None}), 6)
+
+    @NEED_RENDER
+    def test_sound_with_cues_writes_wav(self):
+        import tempfile, wave, os
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "a.wav")
+            w.sound([0, 2, 4, 6], [2, 2, 2, 2], 2, 8.0, p, cues=[None, "clock", "glass", None], seed=3)
+            with wave.open(p) as wv:
+                self.assertGreater(wv.getnframes(), 44100 * 8)
