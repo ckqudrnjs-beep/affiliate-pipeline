@@ -508,14 +508,64 @@ def lyrics_dump(fid: str) -> int:
     return 0
 
 
+def mv_run(fid: str, now: dt.datetime | None = None) -> int:
+    """뮤직비디오 1편 (BK 11/23 '1번': 기존 풀 버전은 두고 'Official MV' 로 따로). config releases[fid].mv"""
+    from .youtube import access_token, upload
+    from .music_lyrics import align, lyric_lines, transcribe
+    from .music_mv import render
+    now = now or dt.datetime.now(KST)
+    cfg = load(CFG, {})
+    rel = cfg.get("releases", {}).get(fid, {})
+    mv = rel.get("mv") or {}
+    key = f"mv:{fid}"
+    log = load(LOG, {})
+    if not mv:
+        summary(f"뮤비 설정 없음: releases[{fid}].mv")
+        return 1
+    if log.get(key):
+        summary(f"뮤비 이미 올림: https://youtu.be/{log[key]['video_id']}")
+        return 0
+    dtoken = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_DRIVE_REFRESH_TOKEN"])
+    audio = download(dtoken, fid, WORK / "in" / f"{fid}.mp3")
+    lyr = lyrics_of(tags_of(audio))
+    dur = analyse(audio)["duration"]
+    subs = align(transcribe(audio, 0, dur), lyric_lines(lyr)) if lyr else []
+    title = mv.get("title") or f"{rel.get('title', 'BEEKAY SONGS')} (Official MV)"
+    song = mv.get("song", title.split(" (")[0])
+    channel = cfg.get("channel", "BEEKAY SONGS")
+    out = render(audio, [pathlib.Path(p) for p in mv["images"]], subs, song, channel,
+                 WORK / "mv" / f"{fid}.mp4", dur)
+    full = log.get(fid, {}).get("video_id")
+    extra = f"🎧 가사 영상(풀 버전): https://youtu.be/{full}" if full else ""
+    desc = description(title, lyr, channel, extra=extra)
+    at = dt.datetime.fromisoformat(mv["publish_at"]) if mv.get("publish_at") else None
+    if at and at <= now + dt.timedelta(minutes=30):
+        at = None  # 지난 시각이면 비공개로 올려 두고 BK 가 공개
+    summary(f"뮤비 완성: {out} ({dur:.0f}초, 가사 {len(subs)}줄)")
+    if os.environ.get("MUSIC_YT_ENABLED", "").lower() != "true":
+        summary("MUSIC_YT_ENABLED 아님 → 업로드 안 함")
+        return 0
+    token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
+    r = upload(token, video_body(f"{title} | {channel}", desc, at), out)
+    log[key] = {"video_id": r["id"], "title": title, "publish_at": at.isoformat() if at else "private",
+                "date": now.strftime("%Y-%m-%d")}
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1))
+    summary(f"뮤비 업로드: https://youtu.be/{r['id']} 공개 {log[key]['publish_at']}")
+    notify(f"🎬 BEEKAY SONGS 뮤비 업로드: {title}\nhttps://youtu.be/{r['id']}\n공개: {log[key]['publish_at']}")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["run", "lyrics"])
+    ap.add_argument("cmd", choices=["run", "lyrics", "mv"])
     ap.add_argument("--local")
     ap.add_argument("--fid", default="")
     a = ap.parse_args(argv)
     if a.cmd == "lyrics":
         return lyrics_dump(a.fid)
+    if a.cmd == "mv":
+        return mv_run(a.fid)
     return run(a.local)
 
 

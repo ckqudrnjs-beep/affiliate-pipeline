@@ -54,3 +54,11 @@
 - 커버 없는 곡은 올리지 않고 텔레그램 알림 (`require_cover: true`).
 - 같은 곡 여러 버전(여성/남성 Feat.)은 따로, 3~4일 간격 공개. 뒤 버전 설명에 앞 버전 링크 + "어느 쪽이 더 좋아요?" 댓글 질문 (`releases.pair_of`, `ask`).
 - 공개 방식 `schedule`(저녁 7시, 쇼츠 다음 날). 첫 곡: 다른 차원 끝 Female 11/22, Male 11/25.
+
+## 뮤직비디오 (BK 2026-11-23)
+- BK "1번": 이미 올라간 풀 버전(가사 영상)은 그대로 두고 **Official MV** 를 따로 올린다.
+- 만드는 법: 기존 Kling 그림(커버 2장 + 정면 그림 3장, config/music/mv/)을 천천히 확대·이동 + 1초 겹침 전환, 곡 전체 가사(받아쓰기로 시간만 잡고 글자는 공식 가사) 자막. 새 그림 생성 없음. 코드 `pipeline.music_mv`.
+- 설정: `config/music_channel.json` releases[드라이브 id].mv (title, song, publish_at, images).
+- 실행: Actions music-channel → Run workflow → `mv_fid` 에 드라이브 파일 id. 기록은 uploaded.json `mv:<id>` (두 번 안 올림).
+- `lyrics_fid` 는 가사 시간만 로그로 뽑는다(업로드 없음).
+- 새 Kling 그림은 BK 승인 후에만 (정면 그림 4장 16크레딧은 11/23 BK 승인).

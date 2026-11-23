@@ -109,5 +109,26 @@ class TestExtrasLyrics(unittest.TestCase):
         self.assertTrue(all(t in lines for _, _, t in subs))
 
 
+class MusicMvTest(unittest.TestCase):
+    def test_shot_box_stays_inside_and_moves(self):
+        from pipeline import music_mv as mv
+        a0 = mv.shot_box((0, 0, 900), (0, 330, 900), 0, 2048, 2048)
+        a1 = mv.shot_box((0, 0, 900), (0, 330, 900), mv.SH, 2048, 2048)
+        self.assertLess(a0[1], a1[1])
+        self.assertLessEqual(a1[3], 2048)
+
+    def test_plan_covers_song(self):
+        from pipeline import music_mv as mv
+        n = mv.plan(214.8, 16)
+        self.assertGreaterEqual(n * (mv.SH - mv.XF) + mv.XF, 214.8)
+
+    def test_config_mv_images_exist(self):
+        import json, pathlib
+        cfg = json.loads(pathlib.Path("config/music_channel.json").read_text())
+        for rel in cfg["releases"].values():
+            for p in (rel.get("mv") or {}).get("images", []):
+                self.assertTrue(pathlib.Path(p).exists(), p)
+
+
 if __name__ == "__main__":
     unittest.main()
