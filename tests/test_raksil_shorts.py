@@ -330,10 +330,14 @@ class RaksilShortsTest(unittest.TestCase):
         r.LOG, r.mongle_plan, r.judge, r.fetch_votes, r.replan = saved[:5]
 
     def test_gate_soft(self):
-        """최후 기준: 28/40 이상·한 칸도 5 미만 없음."""
+        """최후 기준: 밸런스 25/40 이상(BK 11/24), 게임 28/40 이상·한 칸도 5 미만 없음."""
         self.assertTrue(r.gate_soft({"fresh": 7, "addictive": 7, "copy": 7, "layout": 7}))
+        self.assertTrue(r.gate_soft({"fresh": 7, "addictive": 6, "copy": 6, "layout": 6}))      # 25
+        self.assertFalse(r.gate_soft({"fresh": 6, "addictive": 6, "copy": 6, "layout": 6}))     # 24
+        self.assertFalse(r.gate_soft({"fresh": 7, "addictive": 6, "copy": 6, "layout": 6}, r.GATE_SOFT_GAME))
         self.assertFalse(r.gate_soft({"fresh": 9, "addictive": 4, "copy": 8, "layout": 8}))
-        self.assertFalse(r.gate_soft({"fresh": 6, "addictive": 7, "copy": 7, "layout": 7}))
+        self.assertTrue(r.gate_soft({"fresh": 6, "addictive": 7, "copy": 7, "layout": 7}))      # 27 ≥ 25
+        self.assertFalse(r.gate_soft({"fresh": 6, "addictive": 7, "copy": 7, "layout": 7}, r.GATE_SOFT_GAME))
 
     def test_clean_q(self):
         self.assertEqual(r.clean_q(" 식은 피자 첫 조각 ", "치즈 없는 끝 빵?"), ("식은 피자 첫 조각", "치즈 없는 끝 빵"))
