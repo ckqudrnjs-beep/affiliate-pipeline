@@ -549,7 +549,8 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     song = mv.get("song", title.split(" (")[0])
     channel = cfg.get("channel", "BEEKAY SONGS")
     out = render(audio, [pathlib.Path(p) for p in mv["images"]], subs, song, channel,
-                 WORK / "mv" / f"{fid}.mp4", dur)
+                 WORK / "mv" / f"{fid}.mp4", dur,
+                 shots=[(k, tuple(a), tuple(b)) for k, a, b in mv["shots"]] if mv.get("shots") else None)
     full = log.get(fid, {}).get("video_id")
     extra = f"🎧 가사 영상(풀 버전): https://youtu.be/{full}" if full else ""
     desc = description(title, lyr, channel, extra=extra)
