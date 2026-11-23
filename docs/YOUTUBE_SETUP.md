@@ -69,3 +69,17 @@
 - **11/24 사고**: MUSIC 토큰을 받을 때 채널 선택에서 돈삼촌이 골라져, 노래 영상 3개에 '돈 줍는 삼촌' 이름 댓글이 달림 → 지움(yt-comment-cleanup).
   이제 댓글 전에 '토큰 채널 == 영상 채널'을 확인하고, 노래 채널 첫 댓글은 BK 재확인 전까지 꺼 둠(first_comment.ENABLED).
   노래 업로드도 토큰 채널 이름이 'BEEKAY SONGS' 가 아니면 멈춤(music_channel.music_token). 다시 받을 땐 2장 3번 채널 선택에서 꼭 **BEEKAY SONGS** 선택.
+
+## 채널 확인 (11/24, BK '메일 하나당 채널이 2개씩이라 조심해야돼')
+채널 4개가 구글 계정 2개에 2개씩 나뉘어 있어, 토큰을 받을 때 엉뚱한 채널이 골라지기 쉽다 (11/24 RAKSIL·MUSIC 토큰이 둘 다 돈삼촌 채널로 발급됨).
+- 이제 `youtube.access_token` 이 `config/yt_channels.json` 의 토큰(YT / RAKSIL / WEBNOVEL / MUSIC)으로 접근할 때마다 토큰의 채널을 읽어 확인한다.
+  다르거나 확인이 안 되면 그 작업(업로드·댓글·수정)을 멈추고 실패로 끝난다. 엉뚱한 채널에는 아무것도 올라가지 않는다.
+- 토큰 다시 받기: oauthplayground 2장 순서 그대로, **로그인할 때 그 채널이 있는 구글 계정**으로 → 채널 선택 화면에서 **그 채널 이름**을 확인하고 고른다.
+  채널 선택 화면이 안 나오고 바로 넘어가면, 시크릿 창에서 다시 하거나 로그인 화면에서 '다른 계정 사용'.
+  | Secret | 골라야 할 채널 |
+  |---|---|
+  | YT_REFRESH_TOKEN | 돈 줍는 삼촌 |
+  | RAKSIL_YT_REFRESH_TOKEN | 5락실 |
+  | WEBNOVEL_YT_REFRESH_TOKEN | 한 화만 더 |
+  | MUSIC_YT_REFRESH_TOKEN | BEEKAY SONGS |
+- 받은 뒤 확인: Actions → yt-comment-cleanup → Run workflow → 요약 첫 줄들에 '토큰 → 채널' 이 나온다.
