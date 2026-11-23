@@ -177,8 +177,13 @@ def genre_tag(bpm: float) -> str:
     return "BALLAD · 발라드" if 0 < bpm < 88 else "K-POP · IDOL"
 
 
+SUB_LINE = "🔔 새 노래가 나오면 알림 받기: https://www.youtube.com/@beekaysongs?sub_confirmation=1"
+LIKE_LINE = "🎧 마음에 들었다면 좋아요로 알려 주세요. 다음 곡 방향을 정할 때 참고해요."
+
+
 def description(title: str, lyrics: str, channel: str, short: bool = False, extra: str = "") -> str:
-    parts = [f"{title} — {channel}"] + (["", extra] if extra else []) + ["", AI_NOTE]
+    # 2026-11-23 BK '채널 모두 구독 좋아요 등 유도합시다': 부드러운 한 줄씩 (보상 약속·강요 문구 없음)
+    parts = [f"{title} — {channel}"] + (["", extra] if extra else []) + ["", SUB_LINE, LIKE_LINE, "", AI_NOTE]
     if not short and lyrics:
         parts += ["", "🎤 가사 Lyrics", "", lyrics]
     parts += ["", "#KPOP #AImusic #Suno #신곡" + (" #shorts" if short else "")]
@@ -336,9 +341,23 @@ def related(log: dict, fid: str, title: str, full_id: str | None) -> str:
     return related_line(f"{title} (전곡)", full_id)
 
 
+def music_token(cfg: dict) -> str:
+    """MUSIC_YT_REFRESH_TOKEN 의 access token. 11/24: 토큰이 돈삼촌 채널로 발급된 일이 있어,
+    토큰 채널 이름이 config channel(BEEKAY SONGS)과 다르거나 확인이 안 되면 올리지 않고 멈춘다."""
+    from .youtube import access_token
+    from .first_comment import my_channel
+    tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
+    want = cfg.get("channel", "BEEKAY SONGS")
+    cid, title = my_channel(tok)
+    if not cid or title.strip().lower() != want.strip().lower():
+        raise RuntimeError(f"MUSIC 토큰 채널이 '{title or '확인 불가'}' — '{want}' 가 아니라 업로드 중단. "
+                           "oauthplayground 채널 선택에서 BEEKAY SONGS 로 다시 받기 (docs/MUSIC_CHANNEL.md)")
+    return tok
+
+
 def upload_pair(meta: dict, cfg: dict, now: dt.datetime, ov: dict | None = None) -> dict:
-    from .youtube import access_token, upload
-    token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
+    from .youtube import upload
+    token = music_token(cfg)
     at_main, at_short = fixed_slots(ov or {}, now) or slots(now, cfg)
     channel = cfg.get("channel", "BEEKAY SONGS")
     r1 = upload(token, video_body(f"{meta['title']} | {channel}", meta["desc"], at_main), pathlib.Path(meta["video"]))
@@ -489,9 +508,8 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
             if not enabled:
                 summary(f"[만들기만] 추가 쇼츠 {title} {mm}부터, 자막 {len(subs)}줄")
                 continue
-            from .youtube import access_token, upload
-            token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
-                                 os.environ["MUSIC_YT_REFRESH_TOKEN"])
+            from .youtube import upload
+            token = music_token(cfg)
             desc = (f"{title} — {channel}\n\n🎧 전체 듣기: https://youtu.be/{ent['video_id']}\n\n{AI_NOTE}\n\n"
                     "#KPOP #AImusic #Suno #신곡 #shorts")
             at = dt.datetime.fromisoformat(p["publish_at"])
@@ -561,7 +579,7 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     if os.environ.get("MUSIC_YT_ENABLED", "").lower() != "true":
         summary("MUSIC_YT_ENABLED 아님 → 업로드 안 함")
         return 0
-    token = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_YT_REFRESH_TOKEN"])
+    token = music_token({"channel": channel})
     r = upload(token, video_body(f"{title} | {channel}", desc, at), out)
     from .yt_extras import set_thumbnail, wide_from_square  # 뮤비 맞춤 썸네일 = 첫 장면 그림 (BK 11/23)
     imgs = mv.get("images") or []

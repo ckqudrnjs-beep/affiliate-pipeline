@@ -147,11 +147,16 @@ def episode_links(row: dict) -> list[str]:
     return out
 
 
+# 2026-11-23 BK '채널 모두 구독 좋아요 등 유도합시다': 쇼츠 설명란 부드러운 구독 한 줄 (돈 강조·보상 약속 없음)
+SUB_LINE = "🔔 동전이 이야기는 이틀에 한 번 저녁 7시에 올라와요. 구독해 두면 알림이 가요."
+
+
 def build_description(row: dict) -> str:
     if not is_ad(row):
         return "\n".join(([row["takeaway"].strip()] if row.get("takeaway", "").strip() else []) + [
             row["intro"].strip(),
             f"자세한 계산·정리: https://don3chon.com/{row.get('site', '').strip()}".rstrip("/"),
+        ] + ([] if is_long(row) else [SUB_LINE]) + [
             "",
             ai_line(row),
         ] + ([f"배경 영상(무료 스톡): {row['credits']}"] if row.get("credits") else []) + (  # 2026-11-18 실사 배경 출처
@@ -210,7 +215,48 @@ def access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
         "refresh_token": refresh_token, "grant_type": "refresh_token",
     }).encode()
     with urllib.request.urlopen(urllib.request.Request(TOKEN_URL, data=data), timeout=30) as r:
-        return json.load(r)["access_token"]
+        tok = json.load(r)["access_token"]
+    check_channel(tok, refresh_token)
+    return tok
+
+
+CHANNELS_CFG = pathlib.Path(__file__).resolve().parents[2] / "config/yt_channels.json"
+
+
+class WrongChannel(RuntimeError):
+    pass
+
+
+def check_channel(tok: str, refresh_token: str) -> None:
+    """채널 확인 (BK 11/24 '비케이요 돈삼촌이 댓글을 달았어 안돼' + '메일 하나당 채널이 2개씩이라 조심해야돼').
+    config/yt_channels.json 에 있는 토큰(환경 변수 값이 같은 것)이면 토큰의 채널을 읽어 맞는지 본다.
+    다르거나 확인이 안 되면 WrongChannel 로 멈춘다 → 그 뒤 업로드·댓글·수정이 엉뚱한 채널에 가지 않는다.
+    표에 없는 토큰(분석 전용 등)은 그냥 통과."""
+    try:
+        cfg = json.loads(CHANNELS_CFG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    env = next((k for k, v in cfg.items() if isinstance(v, dict) and refresh_token.strip()
+                and os.environ.get(k, "").strip() == refresh_token.strip()), None)
+    if not env:
+        return
+    want = cfg[env]
+    try:
+        req = urllib.request.Request("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+                                     headers={"Authorization": f"Bearer {tok}"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            it = (json.load(r).get("items") or [{}])[0]
+    except Exception as e:  # noqa: BLE001
+        raise WrongChannel(f"{env}: 토큰 채널 확인 실패({getattr(e, 'code', type(e).__name__)}) → 안전하게 멈춤. "
+                           "토큰을 youtube.upload + youtube.force-ssl 로 다시 받기 (docs/YOUTUBE_SETUP.md)") from None
+    cid, title = it.get("id", ""), it.get("snippet", {}).get("title", "")
+    others = {v.get("id") for k, v in cfg.items() if isinstance(v, dict) and k != env and v.get("id")}
+    ok = (cid == want["id"]) if want.get("id") else (
+        cid and cid not in others and any(m.lower().replace(" ", "") in title.lower().replace(" ", "") for m in want.get("match", [])))
+    if not ok:
+        raise WrongChannel(f"{env}: 토큰 채널이 '{title or '?'}'({cid}) — '{want['name']}' 가 아니라 멈춤. "
+                           f"oauthplayground 채널 선택에서 '{want['name']}' 를 골라 다시 받기 (docs/YOUTUBE_SETUP.md '채널 확인')")
+    print(f"{env}: 채널 확인 '{title}'")
 
 
 def video_body(row: dict, description: str, publish_at: dt.datetime | None, private: bool = False) -> dict:

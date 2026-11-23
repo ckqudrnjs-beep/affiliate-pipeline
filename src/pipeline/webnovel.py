@@ -109,7 +109,10 @@ def description_of(se: dict, ep: dict, links: dict | None = None, playlist: str 
     if nav:
         tail += "\n" + "\n".join(nav)
     ai = "\nAI로 만든 그림이 포함되어 있습니다." if ep.get("ai") else ""
-    return (f"{top}{se['title']} {ep['no']}화 — {ep['title']}\n\n{body}\n\n{tail}\n\n"
+    # 2026-11-23 BK '채널 모두 구독 좋아요 등 유도합시다': 설명란에도 연재 시각 + 구독·좋아요 한 줄 (보상 약속 없음)
+    sub = ("🔔 매일 밤 9시 연재 · 구독해 두면 다음 화 알림이 가요 · 재밌었다면 좋아요"
+           if nxt.get("title") else "🔔 구독해 두면 새 시즌 알림이 가요 · 재밌었다면 좋아요")
+    return (f"{top}{se['title']} {ep['no']}화 — {ep['title']}\n\n{body}\n\n{tail}\n{sub}\n\n"
             f"이 채널이 직접 쓴 오리지널 창작 웹소설입니다. 등장인물·단체는 실제와 관계없습니다.{ai}\n"
             f"#웹소설 #{se.get('genre', '').split(' ')[0]} #복수극 #한화만더")
 

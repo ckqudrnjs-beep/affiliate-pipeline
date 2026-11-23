@@ -57,3 +57,29 @@
 4. Exchange authorization code for tokens → Refresh token 복사 → GitHub Secrets `YT_ANALYTICS_REFRESH_TOKEN`
 5. 2~4를 한 번 더, 채널은 **5락실** → Secrets `RAKSIL_YT_ANALYTICS_REFRESH_TOKEN`
 6. 확인: Actions → yt-stats → Run workflow → 로그에 "uncle: N편", "5raksil: N편"
+
+## 첫 댓글 자동 (11/23, BK '채널 모두 구독 좋아요 등 유도합시다')
+`pipeline.first_comment` 가 매일 22:41(yt-stats) 공개된 지 3일 안 된 영상에 채널 이름으로 질문 댓글 하나를 단다.
+토큰에 `youtube.force-ssl` 권한이 있어야 한다. 채널마다 한 번, 2장 순서대로 다시 받는다:
+1. 2장 2번 입력칸에 `https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.force-ssl` (두 개, 띄어쓰기로)
+2. 채널 선택 화면에서 그 채널을 고른다 → Refresh token 복사
+3. Secrets 값 교체: 돈 줍는 삼촌 `YT_REFRESH_TOKEN`, 5락실 `RAKSIL_YT_REFRESH_TOKEN`, BEEKAY SONGS `MUSIC_YT_REFRESH_TOKEN`
+- 권한이 없는 채널은 건너뛰고 나머지만 단다(실패해도 통계 작업은 계속). 고정(핀)은 API가 없어 스튜디오에서 직접.
+- 채널 자신의 댓글은 댓글 투표 집계에서 뺀다. 끄기: 저장소 변수 `FIRST_COMMENT_ENABLED` = `false`.
+- **11/24 사고**: MUSIC 토큰을 받을 때 채널 선택에서 돈삼촌이 골라져, 노래 영상 3개에 '돈 줍는 삼촌' 이름 댓글이 달림 → 지움(yt-comment-cleanup).
+  이제 댓글 전에 '토큰 채널 == 영상 채널'을 확인하고, 노래 채널 첫 댓글은 BK 재확인 전까지 꺼 둠(first_comment.ENABLED).
+  노래 업로드도 토큰 채널 이름이 'BEEKAY SONGS' 가 아니면 멈춤(music_channel.music_token). 다시 받을 땐 2장 3번 채널 선택에서 꼭 **BEEKAY SONGS** 선택.
+
+## 채널 확인 (11/24, BK '메일 하나당 채널이 2개씩이라 조심해야돼')
+채널 4개가 구글 계정 2개에 2개씩 나뉘어 있어, 토큰을 받을 때 엉뚱한 채널이 골라지기 쉽다 (11/24 RAKSIL·MUSIC 토큰이 둘 다 돈삼촌 채널로 발급됨).
+- 이제 `youtube.access_token` 이 `config/yt_channels.json` 의 토큰(YT / RAKSIL / WEBNOVEL / MUSIC)으로 접근할 때마다 토큰의 채널을 읽어 확인한다.
+  다르거나 확인이 안 되면 그 작업(업로드·댓글·수정)을 멈추고 실패로 끝난다. 엉뚱한 채널에는 아무것도 올라가지 않는다.
+- 토큰 다시 받기: oauthplayground 2장 순서 그대로, **로그인할 때 그 채널이 있는 구글 계정**으로 → 채널 선택 화면에서 **그 채널 이름**을 확인하고 고른다.
+  채널 선택 화면이 안 나오고 바로 넘어가면, 시크릿 창에서 다시 하거나 로그인 화면에서 '다른 계정 사용'.
+  | Secret | 골라야 할 채널 |
+  |---|---|
+  | YT_REFRESH_TOKEN | 돈 줍는 삼촌 |
+  | RAKSIL_YT_REFRESH_TOKEN | 5락실 |
+  | WEBNOVEL_YT_REFRESH_TOKEN | 한 화만 더 |
+  | MUSIC_YT_REFRESH_TOKEN | BEEKAY SONGS |
+- 받은 뒤 확인: Actions → yt-comment-cleanup → Run workflow → 요약 첫 줄들에 '토큰 → 채널' 이 나온다.

@@ -1,0 +1,7 @@
+{
+ "_": "토큰 → 채널 확인 (BK 11/24 '메일 하나당 채널이 2개씩이라 조심해야돼'). youtube.access_token 이 이 표의 토큰으로 접근할 때마다 channels mine 을 읽어 맞는지 보고, 다르거나 확인이 안 되면 멈춘다(업로드·댓글·수정 전부). id 가 있으면 id 로, 없으면 이름에 match 글자가 있는지로. 다른 채널의 id 이면 항상 막는다.",
+ "YT_REFRESH_TOKEN": {"name": "돈 줍는 삼촌", "id": "UCJP54ReVRA9V2J1sWBNrdKA", "match": ["돈 줍는 삼촌"]},
+ "RAKSIL_YT_REFRESH_TOKEN": {"name": "5락실", "id": "", "match": ["5락실", "5raksil"]},
+ "WEBNOVEL_YT_REFRESH_TOKEN": {"name": "한 화만 더", "id": "", "match": ["한 화만 더", "한화만더", "OOF"]},
+ "MUSIC_YT_REFRESH_TOKEN": {"name": "BEEKAY SONGS", "id": "", "match": ["BEEKAY"]}
+}
