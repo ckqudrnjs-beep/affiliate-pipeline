@@ -71,10 +71,7 @@ jobs:
           python -m pipeline.claude_jobs "${{ steps.pick.outputs.job }}"
       - name: 사용 금액 장부 저장
         if: always()
-        run: |
-          git checkout -q main 2>/dev/null || true
-          git add data/api_usage || true
-          git diff --cached --quiet && exit 0
-          git commit -q -m "API 사용 장부 (${{ steps.pick.outputs.job }})"
-          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
-          exit 1
+        # 같은 장부 파일에 여러 실행이 줄을 붙여 rebase 충돌로 실패하던 문제(11/23) → 새 줄만 최신 main 뒤에 다시 붙인다
+        env:
+          PYTHONPATH: src
+        run: python -m pipeline.ledger_push "API 사용 장부 (${{ steps.pick.outputs.job }})"
