@@ -241,6 +241,79 @@ def card_secs(card: dict) -> float:
     return round(1.4 + sum(len(t) for t, _ in card["lines"]) * 0.085, 2)
 
 
+ART_BAND = (290, 590)   # 그림 모드 제목 띠: 홈 피드 미리보기에서도 안 잘리는 자리
+ART_TEXT_Y = 1430       # 그림 모드 자막 중심
+
+
+def art_path(work: str, no: int) -> pathlib.Path | None:
+    """화별 그림 data/webnovel/works/<작품>/art/NN.jpg|png (있으면 그림 모드)."""
+    for ext in ("jpg", "png", "webp"):
+        p = WORKS / work / "art" / f"{no:02d}.{ext}"
+        if p.exists():
+            return p
+    return None
+
+
+def art_base(path: pathlib.Path, zoom: float = 1.12):
+    """그림을 세로 화면보다 zoom 배 크게 채우고 어둡게 + 아래쪽 그라데이션."""
+    import numpy as np
+    from PIL import Image
+    im = Image.open(path).convert("RGB")
+    bw, bh = int(W * zoom), int(H * zoom)
+    sc = max(bw / im.width, bh / im.height)
+    im = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
+    l, t = (im.width - bw) // 2, (im.height - bh) // 2
+    a = np.asarray(im.crop((l, t, l + bw, t + bh)), float)
+    y = np.linspace(0, 1, bh)[:, None, None]
+    dark = 0.78 - 0.5 * np.clip((y - 0.55) / 0.35, 0, 1)   # 아래 자막 자리는 더 어둡게
+    return Image.fromarray(np.clip(a * dark, 0, 255).astype(np.uint8))
+
+
+def art_frame(base, p: float):
+    """p 0→1 동안 천천히 확대(켄 번스)."""
+    from PIL import Image
+    z = 1.0 + 0.1 * p
+    cw, ch = base.width / z, base.height / z
+    l, t = (base.width - cw) / 2, (base.height - ch) * 0.45
+    return base.resize((W, H), Image.BILINEAR, box=(l, t, l + cw, t + ch))
+
+
+def art_text(card: dict, pal: dict, upto: int, alpha: float):
+    """그림 위 자막 층(투명 RGBA): 아래쪽 반투명 판 + 글."""
+    from PIL import Image, ImageDraw
+    lines = card["lines"]
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    fonts = [fit(t, STY[st][0], int(STY[st][1] * 0.92)) for t, st in lines]
+    gap = 26; total = sum(sz for _, sz in fonts) + gap * (len(lines) - 1)
+    top = ART_TEXT_Y - total / 2
+    d.rounded_rectangle([40, top - 50, W - 40, top + total + 50], 28, fill=(0, 0, 0, 150))
+    cy = top
+    for i, ((t, st), (f, sz)) in enumerate(zip(lines, fonts)):
+        if i < upto:
+            a = alpha if i == upto - 1 else 1.0
+            col = pal[STY[st][2]]
+            d.text((W / 2, cy + sz / 2), t, font=f, fill=(*col, int(255 * a)), anchor="mm",
+                   stroke_width=3, stroke_fill=(0, 0, 0, int(255 * a)))
+        cy += sz + gap
+    return im
+
+
+def art_band(d, se: dict, ep: dict, pal: dict) -> None:
+    """트렌드식 제목 띠(검정 + 흰·노랑 큰 글씨). 홈 피드 안전 영역 y 290~590."""
+    y0, y1 = ART_BAND
+    d.rectangle([0, y0, W, y1], fill=(0, 0, 0))
+    hf = fit(f"{se['title']} {ep['no']}화", "B", 54)[0]
+    d.text((W / 2, y0 + 70), f"{se['title']} {ep['no']}화", font=hf, fill=(245, 245, 245), anchor="mm")
+    try:
+        from PIL import ImageFont
+        tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), 112)
+        while tf.getlength(ep["title"]) > W - 80 and tf.size > 60:
+            tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), tf.size - 6)
+    except OSError:
+        tf = fit(ep["title"], "B", 104)[0]
+    d.text((W / 2, y0 + 195), ep["title"], font=tf, fill=(255, 214, 0), anchor="mm")
+
+
 def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
     import numpy as np
     from PIL import Image, ImageDraw
@@ -256,7 +329,27 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
                            f"{stem}.v.mp4"], stdin=subprocess.PIPE)
     head = f"{se['title']}"
     cache: dict = {}
-    for k in range(int(total * FPS)):
+    ap = art_path(work, ep["no"])
+    base = art_base(ap) if ap else None
+    for k in range(int(total * FPS)) if base is not None else ():
+        from PIL import ImageDraw
+        t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
+        nl = len(cards[j]["lines"]); per = min(0.55, max(0.2, (durs[j] - 0.8) / nl))
+        upto = min(nl, int(lt / per) + 1); a = min(1.0, (lt - (upto - 1) * per) / 0.35)
+        ck = (j, upto, round(a, 2))
+        if ck not in cache:
+            if len(cache) > 300:
+                cache.clear()
+            cache[ck] = art_text(cards[j], pal, upto, a)
+        tl = cache[ck]
+        fade = min(1.0, lt / 0.2, (durs[j] - lt) / 0.2)
+        if fade < 1:
+            tl = tl.copy(); tl.putalpha(tl.getchannel("A").point(lambda v, f=max(0.0, fade): int(v * f)))
+        frame = art_frame(base, t / total).convert("RGBA")
+        frame.alpha_composite(tl)
+        frame = frame.convert("RGB"); art_band(ImageDraw.Draw(frame), se, ep, pal)
+        ff.stdin.write(frame.tobytes())
+    for k in range(int(total * FPS)) if base is None else ():
         t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
         nl = len(cards[j]["lines"]); per = min(0.55, max(0.2, (durs[j] - 0.8) / nl))
         upto = min(nl, int(lt / per) + 1); a = min(1.0, (lt - (upto - 1) * per) / 0.35)
