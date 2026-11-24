@@ -123,11 +123,11 @@ def list_body(arts: list[dict]) -> str:
     return f'<h1>삼촌의 글</h1><p class="lede">사기 전에, 쓰기 전에 궁금한 것을 계산으로 답합니다.</p><ul class="alist" style="margin-top:20px">{items}</ul>'
 
 
-def home_block(arts: list[dict]) -> str:
+def home_block(arts: list[dict], n: int = 3) -> str:
     if not arts:
         return ""
     e = html.escape
-    items = "".join(f'<li><a href="guide/{a["slug"]}.html"><b>{e(a["title"])}</b><span>{e(a["desc"])}</span></a></li>' for a in arts[:3])
+    items = "".join(f'<li><a href="guide/{a["slug"]}.html"><b>{e(a["title"])}</b><span>{e(a["desc"])}</span></a></li>' for a in arts[:n])
     return (f'<section id="guide"><div class="sechead"><h2>삼촌의 글</h2><a href="guide.html" class="small">전체 보기<span class="sr"> (삼촌의 글)</span></a></div>'
             f'<ul class="alist">{items}</ul></section>')
 

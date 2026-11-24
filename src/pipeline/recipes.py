@@ -125,7 +125,8 @@ def desc(r: dict) -> str:
 
 def shop_box(rows: list[dict]) -> str:
     """쿠팡 재료 링크 칸. BK님이 만든 링크가 있는 재료만, 하나도 없으면 칸 자체를 숨긴다. 가격은 판매처에서 확인."""
-    linked = [x for x in rows if x["pantry"]["coupangUrl"]]
+    # 2026-11-24 애드센스 거절 후: 페이지당 링크 5~8개가 제휴 페이지처럼 보여 재료비가 가장 큰 재료 1개만 남긴다.
+    linked = sorted((x for x in rows if x["pantry"]["coupangUrl"]), key=lambda x: -x.get("won", 0))[:1]
     if not linked:
         return ""
     e = html.escape
@@ -133,7 +134,7 @@ def shop_box(rows: list[dict]) -> str:
     # 2026-11-16 BK: 본문 중간이 아니라 페이지 맨 아래, 접힌 버튼 하나로. 대가성 문구는 접힌 칸 밖(버튼 바로 위)에 항상 보이게.
     # 링크는 HTML 에 그대로 있고 펼치기만 하는 것(사람·검색엔진에 같은 내용).
     return (f'<section class="shopbox"><p class="ad">[광고] {COUPANG_DISCLOSURE}</p>'
-            f'<details><summary>🛒 재료 한눈에 보기 (쿠팡 {len(linked)}개)</summary>'
+            f'<details><summary>🛒 주재료 쿠팡에서 보기</summary>'
             f'<p class="small">큰 봉지로 사 두면 여러 레시피에 나눠 써서 1인분 원가가 내려가요. 실제 가격과 배송일은 판매 페이지에서 확인하세요.</p>'
             f'<ul>{li}</ul></details></section>')
 
