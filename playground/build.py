@@ -367,6 +367,19 @@ def trial_box(hidden: list[dict]) -> str:
             'var s=document.createElement(\'script\');s.src=\'/js/tester.js\';s.onload=function(){nrTester().then(function(ok){if(ok)document.getElementById(\'trialbox\').hidden=false})};document.head.appendChild(s)})()</script>')
 
 
+def _guide_list(games: list[dict], gguide: dict) -> str:
+    """게임 목록 아래 '게임별 공략' 안내(2026-11-24 애드센스 점검: 게임 목록 페이지가 카드뿐이라 읽을 글을 보탠다)."""
+    li = "".join(f'<li><b>{esc(g["name"])}</b>: {esc(g["short"])} <a href="/guide/{gguide[g["slug"]]["slug"]}">공략 읽기 →</a></li>'
+                 for g in games if g["slug"] in gguide)
+    if not li:
+        return ""
+    return ('<section class="gabout"><h2>어떤 게임부터 해 볼까요?</h2>'
+            '<p>짧게 머리를 식히고 싶다면 반응속도나 딱 멈춰!처럼 1분이면 끝나는 게임이, 출퇴근길처럼 조금 긴 시간이 있다면 틀린그림찾기나 초성 퀴즈가 잘 맞아요. '
+            '🏆 표시가 있는 게임은 그날 모두 같은 판이 나오니 가족·친구와 같은 날 해 보고 기록을 비교해 보세요. 느긋하게 매일 조금씩 하는 게임을 찾는다면 몽글숲 아지트처럼 돌보는 게임도 있어요.</p>'
+            '<p>게임마다 규칙, 점수 계산, 잘하는 요령을 정리한 공략 글이 있어요. 처음 하는 게임이라면 한 번 읽고 시작하면 훨씬 덜 헤매요.</p>'
+            f'<ul class="list">{li}</ul></section>')
+
+
 def _grid(games: list[dict]) -> str:
     colors = ["#ff3d7f", "#22d3ee", "#ffd23f", "#3ddc84", "#b06bff", "#ff8a3d"]
     cards = "".join(f'<a href="/games/{g["slug"]}" style="--c:{colors[i % len(colors)]}">{"<span class=rk>RANK</span>" if g.get("ranked") else "<span class=rk style=background:#ffd23f;color:#000>BETA</span>" if g.get("beta") else ""}<span class="scr"><span class="ic">{g.get("icon", "🎮")}</span></span><b>{esc(g["name"])}</b><small>{esc(g["short"])}</small><span class="play"><span>PLAY</span><span>▶</span></span></a>' for i, g in enumerate(games))
@@ -1380,7 +1393,7 @@ def build(out: Path, upto: date | None = None, stats: dict | None = None, cfg: d
           f"<h1>밸런스게임 모음</h1><p class=\"lead\">하나만 고르면 사람들의 선택 비율이 보여요. 총 {len(qs)}개.</p>{'<p><a href="/report">📊 밸런스게임 결과 리포트 보기 →</a></p>' if has_report else ''}<ul class=\"list\">{rows}</ul><!--AD-->", noindex=True)  # 질문 목록뿐이고 각 질문 페이지도 noindex(2026-11-16)
 
     write("games", f"무료 미니게임 | {cfg['siteName']}", "5락실의 무료 미니게임. 틀린그림찾기, 별똥별 피하기, 딱 멈춰, 초성 퀴즈, 반응속도. 가입 없이 바로 하고 매일 도전 순위에 이름을 올려 보세요.",
-          f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{trial}{grid}")
+          f"<h1>오락실 게임</h1><p class=\"lead\">가입 없이 바로. 🏆 표시가 있는 게임은 매일 모두 같은 판으로 도전 순위를 겨뤄요.</p>{trial}{grid}{_guide_list(games, gguide)}")
 
     inject = {
         "WORDS": json.loads((HERE / "data" / "chosung_words.json").read_text(encoding="utf-8")),
