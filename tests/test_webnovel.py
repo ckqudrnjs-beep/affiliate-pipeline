@@ -1,3 +1,4 @@
+import datetime as dt
 import importlib.util
 import shutil
 import unittest
@@ -196,6 +197,15 @@ class WebnovelSoundCueTest(unittest.TestCase):
             w.sound([0, 2, 4, 6], [2, 2, 2, 2], 2, 8.0, p, cues=[None, "clock", "glass", None], seed=3)
             with wave.open(p) as wv:
                 self.assertGreater(wv.getnframes(), 44100 * 8)
+
+
+class WebnovelSameDayTest(unittest.TestCase):
+    def test_posted_on(self):
+        cfg = {"work": "w"}
+        log = {"w/03": {"date": "2026-11-23"}, "w/trailer-01": {"date": "2026-11-24"}}
+        self.assertTrue(w.posted_on(cfg, log, dt.date(2026, 11, 23)))
+        self.assertFalse(w.posted_on(cfg, log, dt.date(2026, 11, 24)))
+        self.assertFalse(w.posted_on({"work": "x"}, log, dt.date(2026, 11, 23)))
 
 
 class WebnovelTrailerTest(unittest.TestCase):
