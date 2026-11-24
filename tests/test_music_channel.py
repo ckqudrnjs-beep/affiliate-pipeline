@@ -139,6 +139,11 @@ class MusicMvTest(unittest.TestCase):
 
 
 class LyricsGapTest(unittest.TestCase):
+    def test_lyric_lines_drop_plain_section_names(self):
+        from pipeline.music_lyrics import lyric_lines
+        raw = "Verse 1\n문득 네 이름이\nPre-Chorus\n---\nChorus (Hook) 🔥\n“Still like that”\nFinal Chorus (Drop) 💥\nBreak my heart\nOutro\nutro\n[Bridge]\n아직"
+        self.assertEqual(lyric_lines(raw), ["문득 네 이름이", "Still like that", "Break my heart", "아직"])
+
     def test_fill_gaps_inserts_missing_lines(self):
         from pipeline.music_lyrics import fill_gaps
         lines = ["가", "나", "다", "라", "outro"]

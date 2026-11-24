@@ -13,12 +13,19 @@ import subprocess
 import tempfile
 
 
+# 괄호 없이 적힌 구간 이름 (Verse 1, Pre-Chorus, Chorus 🔥, Final Chorus, Outro, '---' 등) — 자막으로 내보내지 않음
+SECTION = re.compile(r"(?i)(?:final |last )?(?:verse|pre-?chorus|post-?chorus|chorus|hook|bridge|drop|intro|outro|utro|interlude|break|refrain)"
+                     r"(?:\s*\d+)?\W*")
+
+
 def lyric_lines(lyrics: str) -> list[str]:
     out = []
     for l in lyrics.split("\n"):
         l = re.sub(r"\([^)]*\)", "", l).strip()  # (oh-oh) 같은 추임새 괄호 제거
-        if l and not re.fullmatch(r"\[[^\]]*\]", l):
-            out.append(l)
+        l = l.strip("\"“”'‘’ ").strip()
+        if not l or re.fullmatch(r"\[[^\]]*\]", l) or re.fullmatch(r"[-—=_*~·.\s]+", l) or SECTION.fullmatch(l):
+            continue
+        out.append(l)
     return out
 
 
