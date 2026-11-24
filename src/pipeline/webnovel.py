@@ -658,6 +658,118 @@ def long_body(se: dict, work: str, k: int, chapters: list[str], visibility: str,
 
 
 # ---------- 업로드 ----------
+# ---------- 주 1회 예고편 쇼츠 (BK 11/24: 연재 중간 화는 새 유입이 줄어 → 작품 전체 훅으로 1화에 보내는 입구) ----------
+# data/.../trailers.json 의 k번째를 trailer_weekday(기본 수=2)에 trailer_hour(기본 18시) 공개. 그림은 이미 만든 art/NN 재사용(크레딧 0).
+def trailers(work: str) -> list[dict]:
+    return load(WORKS / work / "trailers.json", [])
+
+
+def trailer_key(work: str, k: int) -> str:
+    return f"{work}/trailer-{k:02d}"
+
+
+def next_trailer(cfg: dict, log: dict, day: dt.date) -> int | None:
+    work = cfg.get("work", "")
+    if not cfg.get("trailer", True) or day.weekday() != int(cfg.get("trailer_weekday", 2)):
+        return None
+    if not (log.get(key(work, 1)) or {}).get("id"):
+        return None  # 1화가 있어야 보낼 곳이 있다
+    if any(v.get("date") == day.isoformat() for k, v in log.items() if k.startswith(f"{work}/trailer-")):
+        return None
+    k = sum(1 for x in log if x.startswith(f"{work}/trailer-")) + 1
+    tr = trailers(work)
+    if k > len(tr) or not all(art_path(work, sc["art"]) for sc in tr[k - 1]["scenes"]):
+        return None
+    return k
+
+
+def trailer_title(se: dict, tr: dict) -> str:
+    tail = f" | {se['title']} 예고편 #웹소설 #shorts"
+    return (tr["hook"][:100 - len(tail)] + tail)[:100]
+
+
+def trailer_desc(se: dict, work: str, log: dict, playlist: str | None) -> str:
+    first = (log.get(key(work, 1)) or {}).get("id")
+    out = []
+    if first:
+        out.append(f"▶ 1화부터 보기: https://youtu.be/{first}")
+    if playlist:
+        out.append(f"⏮ 전체 정주행: https://www.youtube.com/playlist?list={playlist}")
+    out += ["", f"{se['title']}: 매일 밤 9시 한 화씩 올라오는 오리지널 웹소설 쇼츠예요.", "구독하면 새 화 알림이 가요.", "",
+            f"#웹소설 #{se.get('genre', '').split(' ')[0]} #복수극 #한화만더"]
+    return "\n".join(out)
+
+
+def render_trailer(work: str, k: int, out_dir: pathlib.Path = OUT) -> pathlib.Path:
+    """장면 3개(그림 + 자막, 장마다 3.6초) + 끝 카드(작품명·1화부터·매일 밤 9시). 소리는 sound() 재사용."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    se = season(work); pal = palette(se); tr = trailers(work)[k - 1]
+    scenes = tr["scenes"]
+    endc = {"lines": [["1화부터", "big"], ["정주행", "bigr"], [se["title"], "g"], ["매일 밤 9시 연재", "s"]], "motif": None}
+    durs = [3.6] * len(scenes) + [4.0]
+    starts = np.cumsum([0] + durs[:-1]); total = float(sum(durs))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = out_dir / f"{work}-trailer-{k:02d}"
+    ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
+                           "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "19",
+                           f"{stem}.v.mp4"], stdin=subprocess.PIPE)
+    bases = [art_base(art_path(work, sc["art"])) for sc in scenes]
+    end_im = draw_card(endc, pal)[0]
+    band = {"no": 0, "title": "예고편"}
+    cache: dict = {}
+    for f in range(int(total * FPS)):
+        t = f / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
+        fade = min(1.0, lt / 0.25, (durs[j] - lt) / 0.25) if j else min(1.0, (durs[j] - lt) / 0.25)
+        if j == len(scenes):
+            frame = end_im
+        else:
+            card = {"lines": scenes[j]["lines"]}; nl = len(card["lines"]); per = 0.45
+            upto = min(nl, int(lt / per) + 1); a = min(1.0, (lt - (upto - 1) * per) / 0.35)
+            ck = (j, upto, round(a, 2))
+            if ck not in cache:
+                cache[ck] = art_text(card, pal, upto, a)
+            frame = art_frame(bases[j], lt / durs[j]).convert("RGBA"); frame.alpha_composite(cache[ck])
+            frame = frame.convert("RGB"); d = ImageDraw.Draw(frame)
+            y0, y1 = ART_BAND
+            d.rectangle([0, y0, W, y1], fill=(0, 0, 0))
+            d.text((W / 2, y0 + 70), "오리지널 웹소설 예고편", font=fit("오리지널 웹소설 예고편", "B", 54)[0], fill=(245, 245, 245), anchor="mm")
+            d.text((W / 2, y0 + 195), se["title"], font=fit(se["title"], "B", 92)[0], fill=(255, 214, 0), anchor="mm")
+        if fade < 1:
+            frame = Image.blend(Image.new("RGB", (W, H)), frame, max(0.0, fade))
+        ff.stdin.write(frame.tobytes())
+    ff.stdin.close(); ff.wait()
+    cues = [card_cue({"lines": sc["lines"]}) for sc in scenes] + [None]
+    wav = sound(starts, durs, len(scenes) - 1, total, f"{stem}.wav", cues=cues, seed=k + 7)
+    final = pathlib.Path(f"{stem}.mp4")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", f"{stem}.v.mp4", "-i", wav, "-map", "0:v", "-map", "1:a",
+                    "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", f"{total:.2f}", str(final)], check=True)
+    for q in (f"{stem}.v.mp4", wav):
+        pathlib.Path(q).unlink(missing_ok=True)
+    return final
+
+
+def run_trailer(tok: str, cfg: dict, log: dict, day: dt.date) -> str:
+    """예고편 차례면 만들어 예약 업로드하고 알림 한 줄을 돌려준다. 아니면 ''."""
+    from .youtube import upload
+    work = cfg.get("work", ""); k = next_trailer(cfg, log, day)
+    if not k:
+        return ""
+    se = season(work); tr = trailers(work)[k - 1]
+    video = render_trailer(work, k)
+    at = publish_at(day, int(cfg.get("trailer_hour", 18)))
+    if at <= dt.datetime.now(KST) + dt.timedelta(minutes=10):
+        at = None
+    status = ({"privacyStatus": "private", "publishAt": at.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+              if at else {"privacyStatus": "public"})
+    body = {"snippet": {"title": trailer_title(se, tr), "description": trailer_desc(se, work, log, cfg.get("playlist_id")),
+                        "tags": ["웹소설", "예고편", "회귀", "복수극"], "categoryId": "24", "defaultLanguage": "ko"},
+            "status": {**status, "selfDeclaredMadeForKids": False, "containsSyntheticMedia": False, "embeddable": True}}
+    r = upload(tok, body, video)
+    log[trailer_key(work, k)] = {"id": r["id"], "date": day.isoformat(), "title": body["snippet"]["title"]}
+    return f"\n🎬 예고편 {k}: https://youtu.be/{r['id']} ({f'{at:%m/%d %H:%M} 공개 예약' if at else '바로 공개'})"
+
+
 def publish_at(day: dt.date, hour: int) -> dt.datetime:
     return dt.datetime.combine(day, dt.time(hour), KST)
 
@@ -901,6 +1013,19 @@ def related(work: str, log: dict) -> str:
     return related_line(longs[-1][1].get("title"), longs[-1][1]["id"]) if longs else ""
 
 
+def trailer_only(cfg: dict, log: dict, day: dt.date) -> None:
+    """본편이 없는 날(시즌 끝 등)에도 예고편 차례면 올린다."""
+    from .youtube import access_token, summary
+    need = ("YT_CLIENT_ID", "YT_CLIENT_SECRET", "WEBNOVEL_YT_REFRESH_TOKEN")
+    if not next_trailer(cfg, log, day) or os.environ.get("WEBNOVEL_YT_ENABLED", "").lower() != "true" \
+            or not cfg.get("on") or not all(os.environ.get(k) for k in need):
+        return
+    msg = run_trailer(access_token(*(os.environ[k] for k in need)), cfg, log, day)
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+    summary(msg.strip()); _notify(msg.strip())
+
+
 def run_short(day: dt.date) -> int:
     from .youtube import access_token, summary, upload
     cfg = load(CFG, {}); log = load(LOG, {})
@@ -912,6 +1037,7 @@ def run_short(day: dt.date) -> int:
     ep = next_episode(cfg, log)
     if not ep:
         summary("웹소설: 올릴 화 없음 (비공개 첫 화 BK 확인 대기이거나 시즌 끝)")
+        trailer_only(cfg, log, day)
         return 0
     bad = policy_problems(ep)
     if bad:
@@ -937,6 +1063,10 @@ def run_short(day: dt.date) -> int:
     linked = link_prev(tok, se, work, ep, r["id"], log)
     log[key(work, ep["no"])] = {"id": r["id"], "date": day.isoformat(), "title": title_of(se, ep), "visibility": vis}
     cm, cerr = post_comments(tok, work, day, log) if cfg.get("comments", True) else ([], None)
+    try:
+        trl = run_trailer(tok, cfg, log, day)
+    except Exception as e:  # noqa: BLE001  예고편 실패가 본편 기록을 막지 않게
+        trl = f"\n(예고편 실패: {e})"
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = (f"{at:%m/%d %H:%M} 공개 예약" if at else "바로 공개") if vis == "schedule" else "비공개(BK 확인용)"
@@ -945,7 +1075,7 @@ def run_short(day: dt.date) -> int:
            + ("" if linked is not False else "\n(이전 화 설명란 '다음 화' 링크 추가 실패)")
            + (f"\n💬 예고 댓글: {', '.join(map(str, cm))}화 (스튜디오에서 '고정'만 눌러 주세요)" if cm else "")
            + (f"\n(예고 댓글 실패: 토큰에 youtube.force-ssl 권한이 필요할 수 있음, docs/WEBNOVEL.md 4장)" if cerr else "")
-           + related(work, log))
+           + related(work, log) + trl)
     summary(msg); _notify(msg)
     if vis == "schedule" and at and cfg.get("preview", True):
         summary("📣 먼저 보기 게시물 글 " + ("텔레그램 전송" if send_preview(work, se, ep, int(cfg.get("hour", 21))) else "전송 실패"))
@@ -973,6 +1103,9 @@ def main(argv: list[str]) -> int:
         work = cfg["work"]; k = int(argv[1]) if len(argv) > 1 else 1
         v, ch = render_long(work, k)
         print(v); print("\n".join(ch))
+        return 0
+    if cmd == "trailer":
+        print(render_trailer(cfg["work"], int(argv[1]) if len(argv) > 1 else 1))
         return 0
     if cmd == "run":
         day = dt.date.fromisoformat(argv[1]) if len(argv) > 1 and argv[1] else dt.datetime.now(KST).date()
