@@ -142,8 +142,9 @@
  },
  {
   "q": "겨울 국내 여행 짐 싸기: 충전기 하나로 끝내는 법",
-  "done": false,
-  "format": "여행"
+  "done": true,
+  "format": "여행",
+  "slug": "winter-trip-packing-one-charger"
  },
  {
   "q": "로봇청소기 전기요금과 소모품 비용",
