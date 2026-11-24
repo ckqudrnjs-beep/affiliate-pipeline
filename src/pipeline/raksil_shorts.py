@@ -32,6 +32,9 @@ W, H, FPS, SR = 1080, 1920, 30, 44100
 QUESTIONS = pathlib.Path("playground/data/questions.json")
 OUT = pathlib.Path("media/raksil")
 LOG = pathlib.Path("data/youtube/raksil_uploaded.json")
+# 그날 편을 BK 가 정한 문구로 고쳐 다시 만들 때 (11/25 BK '쇼츠를 바꿔야되자나'): 날짜별 질문·상황·띠·몽글이 선택·형식 고정, 채점 없이.
+# replace 에 예약돼 있던 옛 편 id 가 있으면 새 편을 올린 뒤 옛 편을 비공개로 돌린다(예약 취소, 지우지는 않음).
+FIX = pathlib.Path("config/raksil_fix.json")
 SITE = "https://5raksil.com"
 MIN_VOTES = 20
 VOICE = os.environ.get("RAKSIL_VOICE", "F1")
@@ -151,6 +154,10 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 통계·%·순위·남의 조회수·돈 금액은 금지. ③ "~하지 마세요" "몰랐으면 손해" 같은 손실 회피·금기 경고는 쓰지 않는다.
 ④ (11/21·11/22 편집장이 두 번 다 '막연함'으로 문구 3점 → 그날 쉼) "성격 나옴" "성격 드러남" "어느 쪽 인간" "너의 유형" 같은
 성격 판정 말은 쓰지 않는다. 노란 줄에는 오늘 질문의 구체적인 낱말·장면(우산, 알람, 라면 국물 처럼)이 꼭 하나 들어간다.
+⑤ (11/25 BK '미용실 거울 앞에서 괜찮아요 vs 다시요 — 문장이 명확하지 않아') 선택지만 봐서는 무슨 상황인지 모른다.
+선택지에 상황이 다 들어 있지 않으면 흰 줄(top, 14자 이하)이 '무슨 일이 생겼는지'를 한 번에 알 수 있는 한 문장으로 말한다.
+장소·순간만 말하면 안 된다(✗ '미용실 거울 앞에서' → ○ '미용실 머리가 망했을 때', ✗ '단톡방에서' → ○ '단톡에 내 눈 감은 사진').
+노란 줄을 선택지 줄임말로 채울 때(예 '괜찮아요 vs 다시요')는 더더욱 흰 줄이 상황을 말해야 한다.
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
@@ -256,8 +263,16 @@ def title_of(q: dict, band: dict | None = None, fmt: str = "classic") -> str:
     return t[:100]
 
 
+def ask_line(situation: str) -> str:
+    """상황 한 문장 + '너라면?' (11/25). '~때' 로 끝나면 쉼표, 아니면 마침표."""
+    s = situation.strip().rstrip(".!?")
+    return f"{s}, 너라면?" if s.endswith("때") else f"{s}. 너라면?"
+
+
 def description_of(q: dict, res: dict | None, ai_voice: bool, pick: dict | None = None, more: list | None = None) -> str:
     head = [f"{i + 1}. {x['a']} vs {x['b']}" for i, x in enumerate(more)] if more else [f"오늘의 밸런스게임: {q['a']} vs {q['b']}"]
+    if q.get("situation") and not more:  # 11/25: 무슨 상황인지 먼저
+        head = [f"{ask_line(q['situation'])}"] + head
     lines = head + ["",
              (f"▶ 매일 새 밸런스게임 투표: {SITE}" if q.get("rewritten") else f"▶ 투표하고 실제 결과 보기: {SITE}/q/{q['id']}"),
              f"▶ 매일 새 질문·틀린그림찾기·초성퀴즈: {SITE}",
@@ -351,6 +366,7 @@ def glow_text(img, xy_center, lines: list[str], f, size: int, color, glow: int =
 # 위쪽 검은 띠 + 두 줄 제목(흰 줄 = 보는 사람에게 거는 도전, 노란 줄 = 무엇인지). 처음부터 반응 컷까지 깔고 엔딩엔 없다.
 # 가짜 통계 금지: "한국인 99%는" 같은 숫자는 실제 투표(20표 이상)가 없으면 쓰지 않는다 → 숫자·% 없는 도전형만.
 BAND_H, BAND_SIZE, BAND_MAX = 330, 100, 12
+BAND_TOP_MAX = 14  # 11/25: 흰 줄이 상황 한 문장을 맡는다 → 2자 여유 (draw_band 가 폭에 맞춰 글자를 줄임)
 JUA = pathlib.Path(__file__).resolve().parents[2] / "config/fonts/Jua-Regular.ttf"  # 삼촌 띠와 같은 주아체
 BAND_BANK = [("3초 안에 고르면", "결단력 인정"), ("친구랑 꼭 갈리는", "밸런스게임"), ("의외로 정답이", "둘로 나뉜다"),
              ("고민 없이 고르면", "찐 어른 인정"), ("댓글 싸움 나는", "밸런스게임"),
@@ -378,8 +394,8 @@ def clean_band(b) -> dict | None:
     if not isinstance(b, dict):
         return None
     top, acc = (" ".join(str(b.get(k, "")).split()).strip(" .") for k in ("top", "accent"))
-    for t in (top, acc):
-        if not t or len(t) > BAND_MAX or any(w in t for w in BANNED_BAND) or not real_numbers_only(t):
+    for t, mx in ((top, BAND_TOP_MAX), (acc, BAND_MAX)):
+        if not t or len(t) > mx or any(w in t for w in BANNED_BAND) or not real_numbers_only(t):
             return None
     return {"top": top, "accent": acc}
 
@@ -1271,6 +1287,7 @@ GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 
 - addictive(중독성): 댓글을 달고 싶고, 다음 편·다시 보기를 부르는 장치(시리즈·반복 개그·내일 발표·루프)가 산다.
 - copy(문구): 제목 띠 두 줄·몽글이 대사가 가볍지 않고 자연스러운 한국어. 낚시·가짜 통계·말장난 남발·막연한 말이면 3점 이하.
   선택지 A·B 는 처음 보는 사람이 설명 없이 한 번에 뜻을 알아야 한다. 줄여 쓰다 뜻이 흐려진 말·어색한 조합(예: '흩어진 다들 다시 부르기', 11/24 BK '뭔 말이야?')이 하나라도 있으면 copy 3점 이하.
+  제목 띠 흰 줄과 선택지만 보고 '무슨 일이 생긴 상황인지'를 한 번에 알 수 없으면(장소만 있고 사건이 없음, 예: 11/25 '미용실 거울 앞에서 / 괜찮아요 vs 다시요' — 머리가 망했다는 말이 없음, BK '문장이 명확하지 않아') copy 3점 이하.
 - layout(구도): 이 형식의 화면에 질문 길이·내용이 어울리고 첫 1초에 다 읽힌다.
 점수 눈금(모든 칸 같은 기준, 11/21 — 눈금이 없어 매번 16~23점에 몰리고 지적이 회차마다 뒤집혔다):
 3 이하 = 올리면 채널에 손해(어색·낚시·틀린 말), 5 = 흠은 없지만 밋밋, 7 = 이 채널 평균보다 볼 만함,
@@ -1313,6 +1330,10 @@ REPLAN_SYS = """너는 5락실 유튜브 쇼츠 '밸런스게임'의 기획자�
 좋은 밸런스 질문: 둘 다 끌리거나 둘 다 괴로워서 진짜 고민된다, 구체적인 장면이 떠오른다(조건·상황을 붙인다), 고르는 순간 '나 이런 사람이네'가 보인다,
 친구·가족에게 물어보고 싶어진다.
 모든 안에 반드시 (BK 11/22 '넣어'): ① 상황 조건 하나(예: 출근길, 회의 중, 첫 데이트, 단체사진 찍을 때)를 질문 안에 넣고,
+   그 상황을 situation 에 '무슨 일이 생겼는지' 처음 보는 사람이 한 번에 아는 평범한 한 문장(8~30자)으로 쓴다
+   (11/25 BK: '미용실 거울 앞에서 괜찮아요 vs 다시요'는 머리가 망했다는 말이 없어 무슨 질문인지 모름 →
+   ○ '미용실에서 머리를 잘랐는데 마음에 안 들어요'). 선택지 A·B 는 situation 과 같이 읽어 자연스러워야 하고,
+   제목 띠 흰 줄은 이 상황을 14자 이하로 줄인 말이어야 한다(장소만 ✗),
 ② 고르는 기준이 사람마다 갈리게 한다 — A와 B가 잃는 것이 서로 달라야 한다(예: 시간 vs 체면, 편함 vs 남 눈치, 지금 vs 나중). 둘 다 그냥 불편한 비교는 안 된다. 흔한 질문(부먹찍먹·민초·짜장짬뽕·물복딱복·깻잎 논쟁·피자 끝 빵 류) 금지.
 규칙: 선택지 A·B 는 처음 보는 사람이 한 번에 뜻을 아는 평범한 말로(짧게 줄이려다 뜻이 흐려지면 안 됨, 예: '흩어진 다들 다시 부르기' ✗ → '다 같이 다시 찍자고 부르기'). 각각 공백 포함 4~16자 한국어, 길이감 비슷하게, 'A'·'B'·물음표 없이 명사구나 짧은 동사구. 숫자는 일상 단위(5분·3층)만, 통계·퍼센트 금지.
 특정 사람·브랜드·게임 이름, 비하·혐오·선정·위험한 행동, 돈 자랑 금지. 초등학생부터 어른까지 볼 수 있게.
@@ -1330,6 +1351,15 @@ def clean_q(a, b) -> tuple[str, str] | None:
 
 
 REPLAN_N = 3
+SITUATION_MAX = 30
+
+
+def clean_situation(t) -> str:
+    """상황 한 문장 (11/25): 비었거나 너무 길거나 금지어면 빈 문자열."""
+    t = " ".join(str(t or "").split()).strip(" ")
+    if len(t) < 4 or len(t) > SITUATION_MAX or any(w in t for w in BANNED_WHY):
+        return ""
+    return t
 
 
 def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> list[tuple[dict, dict | None, dict | None]] | None:
@@ -1355,7 +1385,7 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> list[tuple[di
         # 11/22 (BK '짜는 방식 바꾸기'): 하나씩 고치면 편집장이 매번 다른 데를 지적해 25~26점에서 맴돈다
         # → 한 번에 서로 다른 안 REPLAN_N 개를 내고 모두 채점해 가장 나은 안을 다음 바탕으로
         user += f"\n\n서로 확실히 다른 안 {REPLAN_N}개를 plans 에 낸다(질문 소재·각도가 서로 달라야 한다)."
-        plan_schema = cj.obj({"a": cj.S, "b": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
+        plan_schema = cj.obj({"a": cj.S, "b": cj.S, "situation": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
                               "tail": cj.S, "bands": bands})
         r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=16000,
                    need=0.2, schema=cj.obj({"plans": cj.arr(plan_schema)}))
@@ -1368,7 +1398,9 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> list[tuple[di
         if not ab or ab in seen or (fresh and any(w in ab[0] + ab[1] for w in COMMON_Q)):
             continue
         seen.add(ab)
-        out.append(({**q, "a": ab[0], "b": ab[1], "rewritten": True}, clean_pick(p), best_band(p.get("bands"), recent_bands())))
+        sit = clean_situation(p.get("situation"))
+        out.append(({**q, "a": ab[0], "b": ab[1], "rewritten": True, **({"situation": sit} if sit else {})}, clean_pick(p),
+                    best_band(p.get("bands"), recent_bands())))
     return out or None
 
 
@@ -1418,6 +1450,8 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
             "classic": "위아래 A/B 칸 + 몽글이 고민 → 3·2·1 → 반전(몽글이 선택·이유) → 'B를 고른 나:' 반응 컷"}[fmt]
     out = [f"형식: {FORMAT_NAMES[fmt]} — {desc}",
            f"제목 띠: 흰 줄 '{(band or {}).get('top', '')}' / 노란 줄 '{(band or {}).get('accent', '')}'"]
+    if q.get("situation"):
+        out.append(f"상황(게시물 글·설명란에 쓰임): '{q['situation']}'")
     for i, x in enumerate(qs3 if fmt == "quick" and qs3 else [q]):
         out.append(f"질문{i + 1 if fmt == 'quick' else ''}: A '{x['a']}' vs B '{x['b']}'")
     if pick:
@@ -1433,6 +1467,16 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
     out.append("고정 장치(채점·지적 대상 아님): 형식 틀 대사('바로 골라!', '너라면?', '너는 어느 쪽?' 등), "
                "공통 엔딩(몽글이 손 흔들기, '매일 새 게임과 새 질문'), 설명란 '댓글로 A / B 남기면 다음 결과편에 같이 센다'(실제로 셈)")
     return "\n".join(out)
+
+
+def day_fix(day: dt.date, path: pathlib.Path | None = None) -> dict | None:
+    try:
+        f = json.loads((path or FIX).read_text(encoding="utf-8")).get(day.isoformat())
+    except (OSError, ValueError):
+        return None
+    if not isinstance(f, dict) or not clean_q(f.get("a"), f.get("b")) or f.get("format") not in FORMAT_NAMES:
+        return None
+    return f
 
 
 # ---------- 만들기 ----------
@@ -1465,11 +1509,20 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     pool = [] if extra else [x for x in day_qs if x["id"] != q["id"] and not any(w in x["a"] + x["b"] for w in COMMON_Q)]
     qq = q
     no_quick = False  # 3연속은 다시 짜기가 질문1만 바꿀 수 있어(질문2·3·틀 대사는 그날 고정) 한 번 미달이면 다른 형식으로 (11/22 8번 21점)
-    pick, band = mongle_plan(qq)
+    fix = None if extra else day_fix(day)
+    if fix:  # BK 가 정한 문구로 고친 편: 질문·상황·띠·선택·형식 그대로, 채점·다시 짜기 없이
+        a, b = clean_q(fix["a"], fix["b"])
+        qq = {**q, "a": a, "b": b, "rewritten": True, **({"situation": clean_situation(fix.get("situation"))} if fix.get("situation") else {})}
+        pick, band, fmt = (None if res else clean_pick(fix.get("pick"))), clean_band(fix.get("band")), fix["format"]
+        today3 = [qq] + [x for x in day_qs if x["id"] != q["id"]][:2]
+        plan = (qq, today3, pick, band, fmt, fmt_script(fmt, qq, res, pick, prev), {"fixed": fix.get("why", "BK 문구 고침")})
+        print(f"BK 고친 편: {qq.get('situation', '')} / {a} vs {b} ({fmt})")
+    else:
+        pick, band = mongle_plan(qq)
     blocked = ""
     queue, batch = [], []  # 다시 짜기가 한 번에 낸 안들(채점 대기), 이번 묶음 채점 결과
     for _ in range(GATE_TRIES * 2):  # 구도 탈락(채점 없이 다시 짜기)까지 포함한 안전 상한
-        if tries >= GATE_TRIES:
+        if tries >= GATE_TRIES or plan:
             break
         today3 = [qq] + [x for x in day_qs if x["id"] != qq["id"]][:2]
         pick = None if res else pick
@@ -1616,7 +1669,8 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     total += add_ending(mp4, day, REASON_BALANCE)  # 11/22: 이유 = 올라오는 시각
     bgm.mix(mp4, tr)
     meta = {"date": day.isoformat(), "qid": q["id"], "a": q["a"], "b": q["b"], "bgm": tr["slug"] if tr else None, "file": str(mp4), "title": title_of(q, band, fmt), "band": band,
-            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "gate": gate, "rewritten": bool(q.get("rewritten")), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1)}
+            "description": description_of(q, res, voiced, pick, today3 if fmt == "quick" else None), "pick": pick, "format": fmt, "gate": gate, "rewritten": bool(q.get("rewritten")), "situation": q.get("situation", ""), "voiced": voiced, "result": res, "key": q["id"] if extra else day.isoformat(), "seconds": round(total, 1),
+            **({"replace": fix["replace"]} if fix and fix.get("replace") else {})}
     (out_dir / f"{stem}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
@@ -1683,6 +1737,8 @@ def upload_meta(meta: dict) -> int:
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     when = f"{at:%H:%M} 공개 예약" if at else "바로 공개"
+    if meta.get("replace"):  # 11/25 BK 고친 편: 예약돼 있던 옛 편은 비공개로(예약 취소)
+        hide_old(tok, meta["replace"], log, key)
     summary(f"5락실 쇼츠 업로드 ({when}): https://youtu.be/{r['id']} ({meta['title']})")
     try:  # 쇼츠 '관련 동영상' = 최근 토요일 주간 롱폼 (API 로 못 정함 → BK 가 스튜디오에서, BK 11/23)
         from .yt_extras import latest, related_line
@@ -1707,6 +1763,34 @@ def upload_meta(meta: dict) -> int:
         except Exception as e:
             print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
     return 0
+
+
+def hide_old(tok: str, vid: str, log: dict, key: str) -> bool:
+    """옛 편을 비공개로 돌린다(예약 공개 취소). 지우지 않는다 — 되돌리려면 스튜디오에서 공개로."""
+    from .youtube import VIDEOS_URL, api, get_video, summary
+    try:
+        st = get_video(tok, vid)["status"]
+        keep = {k: st[k] for k in ("embeddable", "license", "publicStatsViewable", "selfDeclaredMadeForKids",
+                                   "containsSyntheticMedia") if k in st}
+        api(tok, "PUT", f"{VIDEOS_URL}?part=status", {"id": vid, "status": {**keep, "privacyStatus": "private"}})
+        ok = get_video(tok, vid)["status"].get("privacyStatus") == "private" and not get_video(tok, vid)["status"].get("publishAt")
+    except Exception as e:  # noqa: BLE001
+        detail = e.read().decode("utf-8", "replace")[:300] if hasattr(e, "read") else str(e)
+        print(f"옛 편 비공개 실패: {detail}", file=sys.stderr)
+        ok = False
+    msg = (f"옛 편 https://youtu.be/{vid} 비공개로 돌림(예약 취소)" if ok
+           else f"⚠️ 옛 편 https://youtu.be/{vid} 비공개 실패 → 스튜디오에서 삭제/비공개 필요: https://studio.youtube.com/video/{vid}/edit")
+    summary(msg)
+    for v in log.values():
+        if isinstance(v, dict) and v.get("id") == vid:
+            v["hidden"] = (v.get("hidden", "") + " / " if v.get("hidden") else "") + ("API 로 비공개" if ok else "비공개 실패")
+    if not ok:
+        try:
+            from .claude_jobs import notify
+            notify(msg)
+        except Exception as e:  # noqa: BLE001
+            print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
+    return ok
 
 
 def main(argv: list[str]) -> int:

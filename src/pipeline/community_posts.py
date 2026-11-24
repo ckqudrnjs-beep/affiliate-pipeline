@@ -62,11 +62,14 @@ def uncle_text(title: str, at: dt.datetime, now: dt.datetime | None = None) -> s
             "구독하면 새 편 알림이 가요")
 
 
-def raksil_text(a: str, b: str, at: dt.datetime, pick: bool = False, now: dt.datetime | None = None) -> str:
+def raksil_text(a: str, b: str, at: dt.datetime, pick: bool = False, now: dt.datetime | None = None, situation: str = "") -> str:
+    """situation(11/25 BK '문장이 명확하지 않아'): 무슨 상황인지 한 문장을 선택지 위에 먼저."""
     w = when_ko(at, now)
     tail = f"몽글이는 뭘 골랐을까? {w} 쇼츠에서 공개!" if pick else f"{w} 쇼츠에서 같이 골라요!"
-    return (f"🎮 {w} 몽글이 밸런스게임 먼저 보기\n\nA. {a}\nB. {b}\n\n"
-            f"너라면? 아래 투표로 먼저 골라 줘 👇\n{tail}\n"
+    s = situation.strip().rstrip(".!?")
+    ask = (f"{s}, 너라면?" if s.endswith("때") else f"{s}. 너라면?") if s else ""
+    return (f"🎮 {w} 몽글이 밸런스게임 먼저 보기\n\n" + (f"{ask}\n\n" if ask else "") + f"A. {a}\nB. {b}\n\n"
+            + ("아래 투표로 먼저 골라 줘 👇" if ask else "너라면? 아래 투표로 먼저 골라 줘 👇") + f"\n{tail}\n"
             "구독하면 매일 새 질문 알림이 가요")
 
 
@@ -114,7 +117,8 @@ def raksil(meta: dict, at: dt.datetime) -> bool | None:
     if not on("raksil") or meta.get("kind") == "게임" or not meta.get("a") or not meta.get("b"):
         return None
     img = frame_png(meta["file"], 0.8, ROOT / "media" / "community" / f"raksil-{meta.get('key', meta['date'])}.png")
-    return send(img, raksil_text(meta["a"], meta["b"], at, bool(meta.get("pick"))), raksil_howto(meta["a"], meta["b"]))
+    return send(img, raksil_text(meta["a"], meta["b"], at, bool(meta.get("pick")), situation=meta.get("situation", "")),
+                raksil_howto(meta["a"], meta["b"]))
 
 
 def music(title: str, cover: str | pathlib.Path | None, at: dt.datetime, ask: str = "") -> bool | None:

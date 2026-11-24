@@ -1,4 +1,5 @@
 import datetime as dt
+import pathlib
 import importlib.util
 import shutil
 import unittest
@@ -60,7 +61,8 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertIsNone(r.clean_band({"top": "한국인 99%는", "accent": "B를 고름"}))
         self.assertIsNone(r.clean_band({"top": "고지능자만", "accent": "고를 수 있다"}))
         self.assertIsNone(r.clean_band({"top": "눈썰미 상위", "accent": "인정"}))
-        self.assertIsNone(r.clean_band({"top": "가" * 13, "accent": "나"}))
+        self.assertIsNone(r.clean_band({"top": "가" * 15, "accent": "나"}))  # 흰 줄 = 상황 한 문장, 14자까지 (11/25)
+        self.assertIsNone(r.clean_band({"top": "가", "accent": "나" * 13}))
         self.assertIsNone(r.clean_band({"top": "좋아요 누르면", "accent": "알려줌"}))
         self.assertIsNone(r.clean_band({"top": "둘 중 하나", "accent": ""}))
         best = r.best_band([{"top": "한국인 99%는", "accent": "B", "click": 10},
@@ -455,6 +457,30 @@ class RaksilShortsTest(unittest.TestCase):
         q = {"id": "20261121-1", "a": "식은 첫 조각", "b": "치즈 없는 끝 빵", "rewritten": True}
         self.assertNotIn("/q/20261121-1", r.description_of(q, None, False))
         self.assertIn("/q/20261121-1", r.description_of({**q, "rewritten": False}, None, False))
+
+    def test_situation_and_day_fix(self):
+        """11/25 BK '미용실 거울 앞에서 괜찮아요 vs 다시요 — 문장이 명확하지 않아': 상황 한 문장 + 그날 편 고치기."""
+        self.assertEqual(r.clean_situation(" 미용실에서 머리를 잘랐는데  마음에 안 들어요 "), "미용실에서 머리를 잘랐는데 마음에 안 들어요")
+        self.assertEqual(r.clean_situation("가" * 31), "")
+        self.assertEqual(r.clean_situation("구독하면 알려줄게"), "")
+        self.assertEqual(r.ask_line("미용실 머리가 망했을 때"), "미용실 머리가 망했을 때, 너라면?")
+        self.assertEqual(r.ask_line("머리가 마음에 안 들어요."), "머리가 마음에 안 들어요. 너라면?")
+        q = {"id": "20261125-1", "a": "괜찮다고 웃고 나오기", "b": "다시 해 달라고 하기", "rewritten": True,
+             "situation": "미용실에서 머리를 잘랐는데 마음에 안 들어요"}
+        self.assertTrue(r.description_of(q, None, False).startswith("미용실에서 머리를 잘랐는데 마음에 안 들어요. 너라면?"))
+        self.assertIn("상황", r.brief_of("split", q, None, None, ["x"]))
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            f = pathlib.Path(d) / "fix.json"
+            f.write_text(json.dumps({"2026-11-25": {**{k: q[k] for k in ("a", "b", "situation")}, "format": "split"},
+                                     "2026-11-26": {"a": "x", "b": "y", "format": "nope"}}), encoding="utf-8")
+            self.assertEqual(r.day_fix(dt.date(2026, 11, 25), f)["b"], "다시 해 달라고 하기")
+            self.assertIsNone(r.day_fix(dt.date(2026, 11, 26), f))  # 형식이 틀리면 무시
+            self.assertIsNone(r.day_fix(dt.date(2026, 11, 27), f))
+        self.assertIn("situation", r.REPLAN_SYS)
+        self.assertIn("미용실 거울 앞에서", r.GATE_SYS)  # 장소만 있는 띠는 문구 3점 이하
+
 
 if __name__ == "__main__":
     unittest.main()
