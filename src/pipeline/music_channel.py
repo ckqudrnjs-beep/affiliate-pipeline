@@ -140,6 +140,23 @@ def best_window(rms, fps: float, length: float, duration: float) -> float:
     return round(i / fps, 2)
 
 
+def snap_chorus(rms, fps: float, start: float, length: float, duration: float, look: float = 10.0) -> float:
+    """BK 11/24 '추천 방향으로': 쇼츠 첫 1초가 후렴의 센 부분이게. 고른 구간 시작에서 look 초 안에
+    소리가 확 커지는 지점(1초 평균이 그 구간 최고의 85% 이상인 첫 지점)으로 시작을 당긴다.
+    전주·브리지 끝부분으로 열리면 첫 1초에 넘겨지므로."""
+    import numpy as np
+    k = max(1, int(fps))
+    a, b = int(start * fps), int(min(start + look + 1, duration) * fps)
+    seg = np.asarray(rms[a:b], dtype=float)
+    if len(seg) <= k:
+        return start
+    sm = np.convolve(seg, np.ones(k) / k, "valid")  # sm[j] = j~j+1초 평균
+    hit = np.nonzero(sm >= 0.85 * sm.max())[0]
+    t = start + (int(hit[0]) / fps if len(hit) else 0.0)
+    t = min(t, max(0.0, duration - length - 1))  # 40초가 곡 안에 들어가게
+    return round(max(start, t), 2)
+
+
 def extra_windows(rms, fps: float, length: float, duration: float, used: list[float], n: int,
                   gap: float | None = None) -> list[float]:
     """이미 쓴 구간 시작점과 gap 초 이상 떨어진 다음으로 꽉 찬 구간 n개 (같은 곡에서 쇼츠 더 만들기)."""
@@ -295,7 +312,8 @@ def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str =
     channel = cfg.get("channel", "BEEKAY SONGS")
     full = video(audio, cov, title, channel, tag, WORK / f"{stem}.mp4")
     length = float(cfg.get("short_length", 40))
-    start = float(ov["short_start"]) if ov.get("short_start") is not None else best_window(an["rms"], an["fps"], length, an["duration"])
+    start = float(ov["short_start"]) if ov.get("short_start") is not None else \
+        snap_chorus(an["rms"], an["fps"], best_window(an["rms"], an["fps"], length, an["duration"]), length, an["duration"])
     lyr = lyrics_of(tags)
     from .music_lyrics import subtitles
     subs = subtitles(audio, lyr, start, length) if cfg.get("short_lyrics", True) else []
@@ -488,6 +506,7 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
             ln = float(p.get("length", base_len))
             got = extra_windows(an["rms"], an["fps"], ln, an["duration"], used, 1, float(p.get("gap", ln)))
             if got:
+                got = [snap_chorus(an["rms"], an["fps"], got[0], ln, an["duration"])]
                 used.append(got[0])
                 picks.append((k, p, got[0], ln))
         tags = tags_of(audio)

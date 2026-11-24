@@ -67,6 +67,14 @@ class MusicChannelTest(unittest.TestCase):
         s = mc.best_window(rms, 10.0, 10.0, 100.0)
         self.assertTrue(55 <= s <= 61, s)
 
+    @NEED_RENDER
+    def test_snap_chorus_starts_loud(self):
+        import numpy as np
+        rms = np.ones(2000) * 0.2  # fps 10, 200초
+        rms[1050:1500] = 1.0       # 후렴이 105초에 터짐
+        self.assertAlmostEqual(mc.snap_chorus(rms, 10.0, 100.0, 40.0, 200.0), 105.0, delta=0.2)
+        self.assertEqual(mc.snap_chorus(rms, 10.0, 110.0, 40.0, 200.0), 110.0)  # 이미 센 곳이면 그대로
+
 
 class TestReleases(unittest.TestCase):
     def test_fixed_slots(self):
