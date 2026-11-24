@@ -49,7 +49,25 @@
   "video_id": "Av6rFQjLBe8",
   "short_id": "3c9hcvH06tU",
   "publish_at": "2026-11-22T19:00:00+09:00",
-  "short_publish_at": "2026-11-23T19:00:00+09:00"
+  "short_publish_at": "2026-11-23T19:00:00+09:00",
+  "extras": [
+   {
+    "k": 0,
+    "short_id": "BnU2ZtU7w8w",
+    "start": 159.01,
+    "length": 40.0,
+    "publish_at": "2026-11-24T19:00:00+09:00",
+    "subs": 11
+   },
+   {
+    "k": 1,
+    "short_id": "Snt9quz63w4",
+    "start": 48.55,
+    "length": 40.0,
+    "publish_at": "2026-11-27T19:00:00+09:00",
+    "subs": 11
+   }
+  ]
  },
  "1BDs9czCgljX116WZEdQzTVG-1c0t2z8M": {
   "name": "Across the dream (1).mp3",
@@ -59,7 +77,17 @@
   "video_id": "5938OZs5xsU",
   "short_id": "r7YIyLU6YbM",
   "publish_at": "2026-11-25T19:00:00+09:00",
-  "short_publish_at": "2026-11-26T19:00:00+09:00"
+  "short_publish_at": "2026-11-26T19:00:00+09:00",
+  "extras": [
+   {
+    "k": 0,
+    "short_id": "amV5MOfbz5A",
+    "start": 100.01,
+    "length": 40.0,
+    "publish_at": "2026-11-28T19:00:00+09:00",
+    "subs": 10
+   }
+  ]
  },
  "mv:1VGeryCZKPHjABoyiYe-f5Eznr_lrBDoW": {
   "video_id": "-u6FUfVeBGo",
@@ -78,5 +106,16 @@
   "title": "매일 처음처럼 (Official MV)",
   "publish_at": "2026-12-03T21:00:00+09:00",
   "date": "2026-11-23"
+ },
+ "1ipZ-3GTl7O-xfVqzi_IAdeagn-hSrEOX": {
+  "name": "매일 처음처럼 (1).mp3",
+  "title": "매일 처음처럼",
+  "tag": "K-POP · IDOL",
+  "date": "2026-11-24",
+  "video_id": "T1sXpDMPZgQ",
+  "short_id": "RyXdoq_KRbM",
+  "thumb": true,
+  "publish_at": "2026-11-24T19:00:00+09:00",
+  "short_publish_at": "2026-11-27T19:00:00+09:00"
  }
 }
