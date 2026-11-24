@@ -767,7 +767,8 @@ def run_trailer(tok: str, cfg: dict, log: dict, day: dt.date) -> str:
             "status": {**status, "selfDeclaredMadeForKids": False, "containsSyntheticMedia": False, "embeddable": True}}
     r = upload(tok, body, video)
     log[trailer_key(work, k)] = {"id": r["id"], "date": day.isoformat(), "title": body["snippet"]["title"]}
-    return f"\n🎬 예고편 {k}: https://youtu.be/{r['id']} ({f'{at:%m/%d %H:%M} 공개 예약' if at else '바로 공개'})"
+    return (f"\n🎬 예고편 {k}: https://youtu.be/{r['id']} ({f'{at:%m/%d %H:%M} 공개 예약' if at else '바로 공개'})"
+            + related(work, log, r["id"]))
 
 
 def publish_at(day: dt.date, hour: int) -> dt.datetime:
@@ -1006,11 +1007,14 @@ def promote_private(cfg: dict, log: dict, day: dt.date) -> list[str]:
     return out
 
 
-def related(work: str, log: dict) -> str:
-    """쇼츠 '관련 동영상' 안내: 가장 최근 몰아보기 (API 로는 못 정함 → BK 가 스튜디오에서)."""
-    from .yt_extras import related_line
-    longs = sorted((k, v) for k, v in log.items() if k.startswith(work + "/long-") and isinstance(v, dict) and v.get("id"))
-    return related_line(longs[-1][1].get("title"), longs[-1][1]["id"]) if longs else ""
+def related(work: str, log: dict, vid: str | None = None) -> str:
+    """쇼츠 '관련 동영상' 안내 (API 로는 못 정함 → BK 가 스튜디오에서).
+    BK 11/24: 새 화·예고편마다 관련 동영상을 1화로 → 그 영상의 스튜디오 편집 링크와 1화 링크를 알림에 한 줄."""
+    first = (log.get(key(work, 1)) or {}).get("id")
+    if first and vid and vid != first:
+        return (f"\n🔗 관련 동영상을 1화로 지정해 주세요: https://studio.youtube.com/video/{vid}/edit"
+                f" → 세부정보 → 관련 동영상 → 1화 https://youtu.be/{first}")
+    return ""
 
 
 def trailer_only(cfg: dict, log: dict, day: dt.date) -> None:
@@ -1075,7 +1079,7 @@ def run_short(day: dt.date) -> int:
            + ("" if linked is not False else "\n(이전 화 설명란 '다음 화' 링크 추가 실패)")
            + (f"\n💬 예고 댓글: {', '.join(map(str, cm))}화 (스튜디오에서 '고정'만 눌러 주세요)" if cm else "")
            + (f"\n(예고 댓글 실패: 토큰에 youtube.force-ssl 권한이 필요할 수 있음, docs/WEBNOVEL.md 4장)" if cerr else "")
-           + related(work, log) + trl)
+           + related(work, log, r["id"]) + trl)
     summary(msg); _notify(msg)
     if vis == "schedule" and at and cfg.get("preview", True):
         summary("📣 먼저 보기 게시물 글 " + ("텔레그램 전송" if send_preview(work, se, ep, int(cfg.get("hour", 21))) else "전송 실패"))

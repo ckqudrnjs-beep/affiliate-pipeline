@@ -230,3 +230,13 @@ class WebnovelTrailerTest(unittest.TestCase):
         for n in (9, 10, 14):
             ep = json.loads((w.WORKS / WORK / "ep" / f"{n:02d}.json").read_text())
             self.assertEqual(w.policy_problems(ep), [])
+
+
+class WebnovelRelatedTest(unittest.TestCase):
+    def test_related_points_to_first_episode(self):
+        log = {w.key(WORK, 1): {"id": "zCRdhLwxGVA"}}
+        t = w.related(WORK, log, "NEWVID")
+        self.assertIn("https://studio.youtube.com/video/NEWVID/edit", t)
+        self.assertIn("https://youtu.be/zCRdhLwxGVA", t)
+        self.assertEqual(w.related(WORK, log, "zCRdhLwxGVA"), "")
+        self.assertEqual(w.related(WORK, {}, "NEWVID"), "")
