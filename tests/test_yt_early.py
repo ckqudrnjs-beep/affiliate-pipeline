@@ -74,6 +74,21 @@ class EarlyTest(unittest.TestCase):
         early = json.loads((self.tmp / "early.json").read_text(encoding="utf-8"))
         self.assertEqual(ye.baseline(early, "삼촌", "x"), [])
 
+    def test_scheduled_raksil_not_reported_before_public(self):
+        """11/24: 08:34에 올려 17:00 예약된 5락실 편을 업로드 시각 기준 '6시간 조회 1'로 보고 → 공개 전엔 건너뛰고, 나이는 17:00부터."""
+        now = dt.datetime(2026, 11, 20, 5, 57, tzinfo=UTC)  # 14:57 KST
+        stats = {"R1": {"views": 1, "likes": 0, "comments": 0, "published": "2026-11-19T23:34:00Z", "privacy": "private",
+                        "publish_at": "2026-11-20T08:00:00Z"}}
+        with mock.patch.object(ye, "fetch_stats", return_value=stats), mock.patch.object(ye, "ai_hint", return_value=None), \
+             mock.patch("pipeline.api_check.send", return_value=True) as send:
+            ye.run(now=now)
+        send.assert_not_called()
+        self.assertFalse((self.tmp / "early.json").exists() and "R1" in json.loads((self.tmp / "early.json").read_text()))
+        up = dt.datetime(2026, 11, 19, 23, 34, tzinfo=UTC)
+        self.assertEqual(ye.raksil_public_at("5raksil-2026-11-20", up), dt.datetime(2026, 11, 20, 8, 0, tzinfo=UTC))
+        late = dt.datetime(2026, 11, 20, 9, 0, tzinfo=UTC)  # 18:00 KST 업로드 = 바로 공개
+        self.assertEqual(ye.raksil_public_at("5raksil-2026-11-20", late), late)
+
     def test_lessons_keep_latest_and_dedupe(self):
         early, les = {}, {}
         for i in range(7):
