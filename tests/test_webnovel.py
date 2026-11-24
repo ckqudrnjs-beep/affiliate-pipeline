@@ -196,3 +196,37 @@ class WebnovelSoundCueTest(unittest.TestCase):
             w.sound([0, 2, 4, 6], [2, 2, 2, 2], 2, 8.0, p, cues=[None, "clock", "glass", None], seed=3)
             with wave.open(p) as wv:
                 self.assertGreater(wv.getnframes(), 44100 * 8)
+
+
+class WebnovelTrailerTest(unittest.TestCase):
+    def test_trailers_have_art_and_hooks(self):
+        tr = w.trailers(WORK)
+        self.assertGreaterEqual(len(tr), 3)
+        for t in tr:
+            self.assertTrue(t["hook"])
+            for sc in t["scenes"]:
+                self.assertIsNotNone(w.art_path(WORK, sc["art"]), sc)
+            self.assertLessEqual(len(w.trailer_title(w.season(WORK), t)), 100)
+
+    def test_next_trailer_only_wednesday_once(self):
+        import datetime as dt
+        cfg = {"work": WORK}
+        log = {w.key(WORK, 1): {"id": "zCRdhLwxGVA"}}
+        wed = dt.date(2026, 11, 25)
+        self.assertEqual(w.next_trailer(cfg, log, wed), 1)
+        self.assertIsNone(w.next_trailer(cfg, log, wed + dt.timedelta(days=1)))
+        log[w.trailer_key(WORK, 1)] = {"id": "x", "date": wed.isoformat()}
+        self.assertIsNone(w.next_trailer(cfg, log, wed))
+        self.assertEqual(w.next_trailer(cfg, log, wed + dt.timedelta(days=7)), 2)
+        self.assertIsNone(w.next_trailer({**cfg, "trailer": False}, log, wed + dt.timedelta(days=7)))
+
+    def test_trailer_desc_links_first_episode(self):
+        d = w.trailer_desc(w.season(WORK), WORK, {w.key(WORK, 1): {"id": "zCRdhLwxGVA"}}, "PLx")
+        self.assertTrue(d.startswith("▶ 1화부터 보기: https://youtu.be/zCRdhLwxGVA"))
+        self.assertIn("list=PLx", d)
+
+    def test_first_cards_standalone_hooks(self):
+        import json
+        for n in (9, 10, 14):
+            ep = json.loads((w.WORKS / WORK / "ep" / f"{n:02d}.json").read_text())
+            self.assertEqual(w.policy_problems(ep), [])
