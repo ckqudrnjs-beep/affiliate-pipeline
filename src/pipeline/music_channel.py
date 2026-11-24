@@ -581,7 +581,10 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     audio = download(dtoken, fid, WORK / "in" / f"{fid}.mp3")
     lyr = lyrics_of(tags_of(audio))
     dur = analyse(audio)["duration"]
-    subs = fill_gaps(align(transcribe(audio, 0, dur), lyric_lines(lyr)), lyric_lines(lyr)) if lyr else []
+    if mv.get("subs"):  # 손으로 다듬은 가사 타이밍 [[시작, 끝, 줄], ...] (받아쓰기가 첫 소절·빠른 구간을 놓칠 때)
+        subs = [(float(a), float(b), str(t)) for a, b, t in mv["subs"]]
+    else:
+        subs = fill_gaps(align(transcribe(audio, 0, dur), lyric_lines(lyr)), lyric_lines(lyr)) if lyr else []
     title = mv.get("title") or f"{rel.get('title', 'BEEKAY SONGS')} (Official MV)"
     song = mv.get("song", title.split(" (")[0])
     channel = cfg.get("channel", "BEEKAY SONGS")
