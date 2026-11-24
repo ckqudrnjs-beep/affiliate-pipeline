@@ -62,3 +62,8 @@
 - 실행: Actions music-channel → Run workflow → `mv_fid` 에 드라이브 파일 id. 기록은 uploaded.json `mv:<id>` (두 번 안 올림).
 - `lyrics_fid` 는 가사 시간만 로그로 뽑는다(업로드 없음).
 - 새 Kling 그림은 BK 승인 후에만 (정면 그림 4장 16크레딧은 11/23 BK 승인).
+- `mv.subs` 가 있으면 받아쓰기 대신 그 가사 타이밍을 쓴다. `mv.shots` 로 장면(그림 번호, 시작·끝 상자)을 곡마다 지정.
+
+## 드라이브 백업 (BK 2026-11-25 '뮤비도 백업')
+- 매 실행 끝에 만든 mp4(원곡·쇼츠·추가 쇼츠 → `비케이송`, 뮤비 → `비케이송-뮤비`)를 드라이브 "자동 백업 (돈삼촌·5락실)" 폴더에 올린다. `pipeline.drive_backup --only-extra`, 토큰 DRIVE_REFRESH_TOKEN. 실패해도 업로드에는 영향 없음.
+- 이미 올린 뮤비 다시 만들어 백업만: Run workflow → `mv_backup_fids` 에 드라이브 id 를 쉼표로. 유튜브 업로드·기록 없음.

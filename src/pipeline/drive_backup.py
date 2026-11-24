@@ -10,7 +10,8 @@
 권한: drive.file (이 앱이 만든 파일만 보고 쓸 수 있음. BK의 다른 드라이브 파일은 못 봄).
 인증: 유튜브 업로드와 같은 OAuth 앱(YT_CLIENT_ID / YT_CLIENT_SECRET) + DRIVE_REFRESH_TOKEN.
       발급: docs/DRIVE_BACKUP.md. 토큰이 없으면 무엇을 올릴지만 보여 주고 끝난다.
-    python -m pipeline.drive_backup [--extra DIR:종류 ...] [--max-files N] [--dry-run]
+    python -m pipeline.drive_backup [--extra DIR:종류 ...] [--only-extra] [--max-files N] [--dry-run]
+비케이 송: music-channel 작업이 만든 원곡·쇼츠·뮤비 mp4 를 --only-extra 로 바로 올린다 (BK 11/25).
 """
 from __future__ import annotations
 
@@ -214,9 +215,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-files", type=int, default=400)
     ap.add_argument("--max-mb", type=int, default=3000)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--only-extra", action="store_true", help="저장소 기록은 건너뛰고 --extra 폴더만 (작업 중간 백업용)")
     a = ap.parse_args(argv)
 
-    items = git_items()
+    items = [] if a.only_extra else git_items()
     for spec in a.extra:
         folder, cat = spec.rsplit(":", 1)
         if pathlib.Path(folder).is_dir():

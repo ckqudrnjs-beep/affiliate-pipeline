@@ -560,8 +560,14 @@ def lyrics_dump(fid: str) -> int:
     return 0
 
 
-def mv_run(fid: str, now: dt.datetime | None = None) -> int:
-    """뮤직비디오 1편 (BK 11/23 '1번': 기존 풀 버전은 두고 'Official MV' 로 따로). config releases[fid].mv"""
+def safe_name(title: str) -> str:
+    """드라이브 백업에서 알아보기 쉬운 파일 이름 (예: '다른 차원 끝 (Male ver. Official MV)')."""
+    return re.sub(r'[\\/:*?"<>|]+', "", title).strip()[:90] or "mv"
+
+
+def mv_run(fid: str, now: dt.datetime | None = None, render_only: bool = False) -> int:
+    """뮤직비디오 1편 (BK 11/23 '1번': 기존 풀 버전은 두고 'Official MV' 로 따로). config releases[fid].mv
+    render_only: 올리지 않고 만들기만 (BK 11/25 '뮤비도 백업' → 이미 올린 뮤비를 다시 만들어 드라이브 백업)."""
     from .youtube import access_token, upload
     from .music_lyrics import align, fill_gaps, lyric_lines, transcribe
     from .music_mv import render
@@ -574,7 +580,7 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     if not mv:
         summary(f"뮤비 설정 없음: releases[{fid}].mv")
         return 1
-    if log.get(key):
+    if log.get(key) and not render_only:
         summary(f"뮤비 이미 올림: https://youtu.be/{log[key]['video_id']}")
         return 0
     dtoken = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["MUSIC_DRIVE_REFRESH_TOKEN"])
@@ -589,7 +595,7 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     song = mv.get("song", title.split(" (")[0])
     channel = cfg.get("channel", "BEEKAY SONGS")
     out = render(audio, [pathlib.Path(p) for p in mv["images"]], subs, song, channel,
-                 WORK / "mv" / f"{fid}.mp4", dur,
+                 WORK / "mv" / f"{safe_name(title)}.mp4", dur,
                  shots=[(k, tuple(a), tuple(b)) for k, a, b in mv["shots"]] if mv.get("shots") else None)
     full = log.get(fid, {}).get("video_id")
     extra = f"🎧 가사 영상(풀 버전): https://youtu.be/{full}" if full else ""
@@ -598,6 +604,8 @@ def mv_run(fid: str, now: dt.datetime | None = None) -> int:
     if at and at <= now + dt.timedelta(minutes=30):
         at = None  # 지난 시각이면 비공개로 올려 두고 BK 가 공개
     summary(f"뮤비 완성: {out} ({dur:.0f}초, 가사 {len(subs)}줄)")
+    if render_only:
+        return 0
     if os.environ.get("MUSIC_YT_ENABLED", "").lower() != "true":
         summary("MUSIC_YT_ENABLED 아님 → 업로드 안 함")
         return 0
@@ -620,12 +628,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["run", "lyrics", "mv"])
     ap.add_argument("--local")
-    ap.add_argument("--fid", default="")
+    ap.add_argument("--fid", default="", help="mv 는 쉼표로 여러 개")
+    ap.add_argument("--render-only", action="store_true", help="mv: 올리지 않고 만들기만 (백업용)")
     a = ap.parse_args(argv)
     if a.cmd == "lyrics":
         return lyrics_dump(a.fid)
     if a.cmd == "mv":
-        return mv_run(a.fid)
+        fids = [f.strip() for f in a.fid.split(",") if f.strip()]
+        return max([mv_run(f, render_only=a.render_only) for f in fids] or [1])
     return run(a.local)
 
 
