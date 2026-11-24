@@ -1028,6 +1028,25 @@
           ]
         ]
       }
+    },
+    "1-a8qEPH10GEcyKEvJu4oq9imQyuqM-ao": {
+      "_doc": "BK 11/24 다음 곡. 일본 애니풍(BK: 유화 식상), 고등학생 첫사랑이 어른 되어 재회. 커버 A(Kling, BK 선택). 20크레딧",
+      "title": "Still like that",
+      "cover": "config/music/covers/Still-like-that.jpg",
+      "publish_at": "2026-12-01T19:00:00+09:00",
+      "short_publish_at": "2026-12-03T19:00:00+09:00",
+      "mv": {
+        "_doc": "그림 0 커버A 1 교실 2 카페 3 강변",
+        "title": "Still like that (Official MV)",
+        "song": "Still like that",
+        "publish_at": "2026-12-05T21:00:00+09:00",
+        "images": [
+          "config/music/covers/Still-like-that.jpg",
+          "config/music/mv/Still-like-that-교실.jpg",
+          "config/music/mv/Still-like-that-카페.jpg",
+          "config/music/mv/Still-like-that-강변.jpg"
+        ]
+      }
     }
   },
   "require_cover": true,
