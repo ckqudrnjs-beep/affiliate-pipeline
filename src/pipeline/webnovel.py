@@ -68,6 +68,13 @@ def next_episode(cfg: dict, log: dict) -> dict | None:
     return None
 
 
+def posted_on(cfg: dict, log: dict, day: dt.date) -> bool:
+    """그날 날짜로 이미 본편을 올렸나. 예약 실행이 몇 시간씩 밀려 손 실행과 겹쳐도 하루 두 화 안 올린다."""
+    work = cfg.get("work", "")
+    return any(k.startswith(work + "/") and k.rsplit("/", 1)[1].isdigit()
+               and r.get("date") == day.isoformat() for k, r in log.items())
+
+
 def policy_problems(ep: dict) -> list[str]:
     """실격 조건 중 글로 잡을 수 있는 것: 잔혹·자해 표현, 빈 카드, 첫 카드 없음."""
     bad = []
@@ -1039,6 +1046,9 @@ def run_short(day: dt.date) -> int:
         msg = "📖 웹소설 비공개 화 공개 전환: " + " / ".join(done)
         summary(msg); _notify(msg)
     ep = next_episode(cfg, log)
+    if ep and posted_on(cfg, log, day):
+        summary(f"웹소설: {day} 본편은 이미 올림 → 이번 실행은 건너뜀")
+        return 0
     if not ep:
         summary("웹소설: 올릴 화 없음 (비공개 첫 화 BK 확인 대기이거나 시즌 끝)")
         trailer_only(cfg, log, day)
