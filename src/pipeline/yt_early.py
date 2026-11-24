@@ -118,6 +118,15 @@ def recent_uploads(now: dt.datetime) -> dict[str, dict]:
     return out
 
 
+def raksil_public_at(slug: str, uploaded: dt.datetime | None) -> dt.datetime | None:
+    """5락실은 업로드 기록에 공개 시각이 없다. 그날 17:00(게임 20:00) 전에 올렸으면 그 시각 예약 공개(raksil_shorts.publish_time),
+    그 뒤면 바로 공개. publishedAt 은 업로드 시각이라 그대로 쓰면 아침에 미리 올린 편의 나이가 몇 시간 부풀려진다."""
+    d = _slug_date(slug) if slug.startswith("5raksil-") else None
+    if not uploaded or not d:
+        return uploaded
+    at = dt.datetime.combine(d, dt.time(20 if "-game-" in slug else 17), KST)  # 게임 쇼츠 20시(raksil_games.HOUR)
+    return max(uploaded, at)
+
 # ---------- 비교 기준 ----------
 def per2h(row: dict) -> float:
     """나이가 조금씩 달라서 2시간(120분) 기준으로 맞춘 조회수 (직선 환산, 대략값)."""
@@ -356,7 +365,9 @@ def run(now: dt.datetime | None = None, dry: bool = False) -> int:
         m = cands.get(vid)
         if not m:
             continue
-        pub = m.get("public_at") or _parse(st.get("published", ""))
+        if st.get("privacy") and st["privacy"] != "public":
+            continue  # 예약 공개 전(비공개) — 11/24 5락실 편을 업로드 시각 기준으로 '6시간 조회 1'로 잘못 보고함
+        pub = m.get("public_at") or raksil_public_at(m["slug"], _parse(st.get("published", "")))
         if not pub:
             continue
         age = int((now - pub).total_seconds() // 60)

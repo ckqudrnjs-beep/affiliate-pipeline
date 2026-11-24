@@ -46,7 +46,7 @@ def fetch_stats(ids: list[str]) -> dict[str, dict]:
             token = None
     out = {}
     for i in range(0, len(ids), 50):
-        q = {"part": "statistics,snippet", "id": ",".join(ids[i:i + 50])}
+        q = {"part": "statistics,snippet,status", "id": ",".join(ids[i:i + 50])}
         js = None
         if token:
             try:
@@ -62,7 +62,9 @@ def fetch_stats(ids: list[str]) -> dict[str, dict]:
             st = it.get("statistics", {})
             out[it["id"]] = {"views": int(st.get("viewCount", 0)), "likes": int(st.get("likeCount", 0)),
                              "comments": int(st.get("commentCount", 0)), "published": it["snippet"].get("publishedAt", ""),
-                             "channel_id": it["snippet"].get("channelId", "")}
+                             "channel_id": it["snippet"].get("channelId", ""),
+                             "privacy": it.get("status", {}).get("privacyStatus", ""),
+                             "publish_at": it.get("status", {}).get("publishAt", "")}
     return out
 
 
