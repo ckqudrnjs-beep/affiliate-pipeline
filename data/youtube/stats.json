@@ -1469,7 +1469,7 @@
   },
   "ep-2026-11-15-bank": {
    "id": "aut_hrWJJjk",
-   "views": 1148,
+   "views": 1150,
    "likes": 2,
    "comments": 0,
    "published": "2026-11-15T10:00:11Z"
@@ -1483,7 +1483,7 @@
   },
   "ep-2026-11-17-leak": {
    "id": "2GWHShraR6c",
-   "views": 298,
+   "views": 299,
    "likes": 1,
    "comments": 0,
    "published": "2026-11-17T10:00:07Z"
@@ -1497,7 +1497,7 @@
   },
   "ep-2026-11-19-skit-dont": {
    "id": "mGae42viqgg",
-   "views": 12,
+   "views": 13,
    "likes": 2,
    "comments": 0,
    "published": "2026-11-19T10:00:25Z"
@@ -1513,7 +1513,7 @@
    "id": "Yg7O03DxB80",
    "views": 123,
    "likes": 0,
-   "comments": 0,
+   "comments": 1,
    "published": "2026-11-22T11:07:50Z"
   },
   "ep-2026-11-22-guide": {
@@ -1553,7 +1553,7 @@
   },
   "5raksil-2026-11-15": {
    "id": "T84l6Jckycw",
-   "views": 1059,
+   "views": 1060,
    "likes": 3,
    "comments": 0,
    "published": "2026-11-15T08:00:38Z"
@@ -1595,7 +1595,7 @@
   },
   "5raksil-2026-11-18-game-tower-new": {
    "id": "WfFaMIceBv4",
-   "views": 429,
+   "views": 430,
    "likes": 2,
    "comments": 1,
    "published": "2026-11-18T11:00:39Z"
@@ -1630,43 +1630,43 @@
   },
   "5raksil-2026-11-21-kling-v12": {
    "id": "3w-oaqDtBlE",
-   "views": 8,
+   "views": 9,
    "likes": 1,
    "comments": 0,
    "published": "2026-11-21T09:28:15Z"
   },
-  "5raksil-2026-11-22-hidden": {
-   "id": "iy1cNnUDnp0",
-   "views": 0,
-   "likes": 0,
-   "comments": 0,
-   "published": "2026-11-22T07:36:12Z"
-  },
   "5raksil-2026-11-22": {
    "id": "2qMqaTXlCmQ",
-   "views": 524,
+   "views": 522,
    "likes": 3,
    "comments": 0,
    "published": "2026-11-22T11:40:32Z"
   },
+  "5raksil-2026-11-24": {
+   "id": "x4aHrY9DhOg",
+   "views": 1,
+   "likes": 0,
+   "comments": 0,
+   "published": "2026-11-23T23:34:51Z"
+  },
   "webnovel-husband-regress/01": {
    "id": "zCRdhLwxGVA",
-   "views": 1263,
+   "views": 1257,
    "likes": 4,
    "comments": 0,
    "published": "2026-11-22T11:01:02Z"
   },
   "webnovel-husband-regress/02": {
    "id": "sAi1NJRRwwQ",
-   "views": 1389,
+   "views": 1382,
    "likes": 1,
    "comments": 0,
    "published": "2026-11-22T12:00:19Z"
   },
   "webnovel-husband-regress/03": {
    "id": "Ty_kI_6zwGY",
-   "views": 139,
-   "likes": 0,
+   "views": 310,
+   "likes": 1,
    "comments": 0,
    "published": "2026-11-23T12:00:26Z"
   },
@@ -1686,8 +1686,8 @@
   },
   "music-다른 차원 끝 (Official MV)": {
    "id": "-u6FUfVeBGo",
-   "views": 0,
-   "likes": 0,
+   "views": 10,
+   "likes": 1,
    "comments": 0,
    "published": "2026-11-23T10:00:35Z"
   }
