@@ -388,7 +388,7 @@ def page(title: str, desc: str, body: str, root: str = "", path: str = "", ld: d
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="alternate" type="application/rss+xml" title="{BRAND}" href="/feed.xml">{FONTS}<style>{CSS}{CALC_CSS}{SEO_CSS}{N.NEWS_CSS}{N.ARCHIVE_CSS}{A.CSS}{PR.CSS}{R.CSS}{RC.CSS}{DY.CSS}{SH.CSS}</style></head><body>
 {adbar}
 <header class="top"><div class="wrap"><a class="logo" href="{root}index.html">돈 줍는 삼촌<small>DON3CHON</small></a>
-<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}shopping.html">장보기 리스트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}index.html#picks">삼촌의 선택</a></nav></div></header>
+<nav class="menu"><a href="{root}index.html#calcs">계산기</a><a href="{root}guide.html">글</a><a href="{root}quiz.html">오늘의 얼마게</a><a href="{root}report.html">물가 리포트</a><a href="{root}shopping.html">장보기 리스트</a><a href="{root}recipe.html">레시피</a><a href="{root}news.html">소식</a><a href="{root}faq.html">질문</a><a href="{root}prices.html">가격 기록</a><a href="{root}items.html">삼촌의 선택</a></nav></div></header>
 {hero}<main class="wrap">{body.replace('<!--ADFIT-->', adfit_slot(ads)) if '<!--ADFIT-->' in body else body + adfit_slot(ads)}</main>
 <footer><div class="wrap"><nav class="foot"><a href="{root}about.html">소개</a> · <a href="{root}contact.html">문의</a> · <a href="{root}terms.html">이용약관</a> · <a href="{root}privacy.html">개인정보처리방침</a> · <a href="{YOUTUBE_URL}" target="_blank" rel="noopener">유튜브</a> · <a href="https://5raksil.com/">5락실 (무료 미니게임·공략)</a></nav>{foot_note}</div></footer>
 <script>{VIDEO_JS};{VISIT_JS}</script>
@@ -585,11 +585,6 @@ def items_page(products: list[dict]) -> str:
 
 def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     e = html.escape
-    ranked = sorted(products, key=lambda p: (not p.get("videoUrl"), -p["diff"]))
-    picks = "".join(pick(p, i == 0) for i, p in enumerate(ranked[:4]))
-    # 2026-11-20 애드센스 점검: 전체 상품 목록이 홈 글자의 70%라 홈이 쇼핑 목록처럼 보였다 → items.html(색인 제외)로 옮기고 홈엔 링크만.
-    all_link = f"""<section id="all"><div class="sechead"><h2>모든 물건</h2><span>{len(products)}개 · 분야별</span></div>
-<p class="small">[광고] 지금까지 계산해 본 물건 {len(products)}개를 분야별로 모아 두었어요. <a href="items.html">모든 물건 보기 →</a></p></section>""" if products else ""
     qrow = "".join(f'<li><a href="q/{q["slug"]}.html">{e(q["h1"])}</a></li>' for q in Q.load())
     qrow = f'<h3 class="qhead">많이 묻는 계산</h3><ul class="qlist">{qrow}</ul>' if qrow else ""
     tools = "".join(f'<a href="calc/{c["slug"]}.html"><b>{e(c["h1"])}</b><span>{e(c["title"])}</span></a>' for c in CALCS)
@@ -598,13 +593,10 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     hero = """<section class="hero slim"><div class="wrap"><p class="eyebrow">매일 아침 새 숫자로</p>
 <h1>오늘 아낄 돈,<br>삼촌이 먼저 계산해 뒀어요.</h1>
 <p>기름값·환율·장바구니 시세를 매일 아침 정리하고, 하루 한 문제로 생활 물가 감각을 키워요. 물건은 직접 계산해 보고 정말 괜찮을 때만 소개해요.</p></div></section>"""
-    picks_sec = f"""<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2><span>가격은 표시한 날짜 기준</span></div>
-<p class="small">[광고] 상품을 누르면 쿠팡 파트너스·알리익스프레스 제휴 링크가 있는 페이지로 이동하며, 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다.</p>
-<div class="picks">{picks}</div></section>""" if products else """<section id="picks"><div class="sechead"><h2>이번 주 삼촌의 선택</h2></div>
-<p class="lede">가격을 계산해 본 첫 상품들을 준비하고 있어요. 찜해 둘 만한 물건이 올라오면 소식에서 알려 드릴게요.</p></section>"""
-    fresh = sorted((p for p in products if is_new(p)), key=lambda p: p["addedDate"], reverse=True)[:8]
-    new_sec = f"""<section id="new"><div class="sechead"><h2>새로 들어온 물건</h2><span>최근 {NEW_DAYS}일 · {len(fresh)}개</span></div>
-<div class="picks compact">{"".join(pick(p) for p in fresh)}</div></section>""" if fresh else ""
+    # 2026-11-24 애드센스 거절('가치가 별로 없는 콘텐츠') 후: 홈에서 상품 카드(제휴 링크 최대 16개)를 빼고 물건 모음 링크 한 줄만.
+    # 홈은 계산기·글·레시피 같은 정보가 중심이 되게 한다. 상품 카드는 items.html(색인 제외)에 그대로 있다.
+    picks_sec = f"""<section id="picks"><div class="sechead"><h2>삼촌의 선택</h2><span>{len(products)}개 · 분야별</span></div>
+<p class="small">[광고] 알리와 쿠팡 가격을 나란히 계산해 본 물건을 분야별로 모아 두었어요. 상품 페이지에는 쿠팡 파트너스·알리익스프레스 제휴 링크가 있으며, 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다. <a href="items.html">물건 모아 보기 →</a></p></section>""" if products else ""
     news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     days = days if days is not None else DY.load_all()
@@ -612,7 +604,7 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     body = f"""{DY.today_block(latest)}
 <section id="calcs"><div class="sechead"><h2>사기 전에 계산해 보세요</h2><span>무료 · 회원가입 없음</span></div>
 <div class="toolrow">{tools}</div>{qrow}</section>
-{A.home_block(A.load())}
+{A.home_block(A.load(), 6)}
 {RC.home_block(RC.load())}
 {N.home_block(news, sales)}
 <section id="how"><div class="sechead"><h2>삼촌이 고르는 기준</h2></div>
@@ -621,8 +613,6 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
 <div><b>쓰는 비용까지 봅니다</b><p>전기요금과 소모품처럼 사고 나서 드는 돈을 함께 계산해 1년 기준으로 판단합니다.</p></div></div></section>
 <!--ADFIT-->
 {picks_sec}
-{new_sec}
-{all_link}
 <script>window.PRICES={prices};{N.HOME_JS}</script>
 {DY.data_script(latest, days, BASE)}
 <script>{FOLD_JS}</script>"""
@@ -744,7 +734,7 @@ ABOUT = """<h1>돈 줍는 삼촌 소개</h1>
 <li><a href="report.html">물가 리포트</a>: 기름값·환율·장바구니 시세를 공공 자료로 정리</li>
 <li><a href="prices.html">알리 가격 기록</a>: 소개한 물건의 가격을 매일 기록하고, 지금이 싼 편인지 판정</li>
 <li><a href="news.html">삼촌 소식</a>: 날짜별 살림 소식</li>
-<li><a href="index.html#picks">삼촌의 선택</a>: 가격을 계산해 보고 고른 물건</li>
+<li><a href="items.html">삼촌의 선택</a>: 가격을 계산해 보고 고른 물건</li>
 </ul>
 <h2>글을 쓰는 원칙</h2>
 <ul class="note">
@@ -839,7 +829,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     (o / "index.html").write_text(index_page(products, days), encoding="utf-8")
     (o / "items.html").write_text(items_page(products), encoding="utf-8")
     (o / "quiz.html").write_text(page(f"오늘의 얼마게 | {BRAND}", "하루 한 문제, 생활 속 숫자 맞히기. 레시피 원가·전기요금·기름값·환율로 물가 감각을 키우고 출석 도장을 모아요.",
-        DY.quiz_body(days[0] if days else None) + DY.data_script(days[0] if days else None, days, BASE), path="quiz.html"), encoding="utf-8")
+        DY.quiz_body(days[0] if days else None) + DY.data_script(days[0] if days else None, days, BASE), path="quiz.html", ads=False, noindex=True), encoding="utf-8")  # 2026-11-24: 퀴즈는 글이 짧아 색인 제외
     for p in products:
         (o / "p" / f"{p['slug']}.html").write_text(product_page(p), encoding="utf-8")
     live = {p["slug"] for p in products}
@@ -880,10 +870,11 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     reps = R.load_all()
     (o / "report").mkdir(exist_ok=True)
     (o / "report.html").write_text(page(f"주간 생활물가 리포트 | {BRAND}", "휘발유·경유 가격, 장바구니 농산물 물가, 달러 환율을 공공 데이터로 매주 월요일 정리하고 지난주와 비교합니다.",
-        R.list_body(reps), path="report.html", noindex=not reps), encoding="utf-8")  # 첫 리포트 전엔 빈 목록이라 색인 제외
+        R.list_body(reps), path="report.html", ads=False, noindex=True), encoding="utf-8")
+    # 2026-11-24 애드센스 거절 후: 주간 리포트는 공공 데이터 숫자 표 위주(본문 700~900자)라 색인·광고·사이트맵에서 뺀다. 메뉴 링크는 그대로.
     for r in reps:
         (o / "report" / f"{r['date']}.html").write_text(page(f"{R.title(r)} | {BRAND}", " ".join(r["lines"])[:150], R.body(r), root="../",
-            path=f"report/{r['date']}.html", ld={"@context": "https://schema.org", "@type": "Article", "headline": R.title(r),
+            path=f"report/{r['date']}.html", ads=False, noindex=True, ld={"@context": "https://schema.org", "@type": "Article", "headline": R.title(r),
             "datePublished": r["date"], "inLanguage": "ko", "author": {"@type": "Organization", "name": BRAND}},
             crumbs=[("물가 리포트", "report.html"), (R.title(r), f"report/{r['date']}.html")]), encoding="utf-8")
     faq = N.load_json("data/faq.json")
@@ -921,10 +912,9 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     adate = {a["slug"]: a.get("updated", a["date"]) for a in arts}
     newest_a = max(adate.values(), default=SITE_PAGES)
     newest_n = max((n["date"] for n in news), default=SITE_PAGES)
-    entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES), ("quiz.html", today)]
+    entries = ([("", today), ("guide.html", newest_a), ("news.html", newest_n), ("prices.html", today), ("faq.html", SITE_PAGES)]
                + [(f"guide/{s_}.html", d) for s_, d in adate.items()]
                + [(f"news/{n['id']}.html", n["date"]) for n in news if not thin_news(n)]
-               + ([("report.html", reps[0]["date"])] if reps else []) + [(f"report/{r['date']}.html", r["date"]) for r in reps]
                + ([("shopping.html", shop_r["date"])] if shop_r else [])
                + [(f"calc/{c['slug']}.html", max(SITE_PAGES, newest_a)) for c in CALCS] + [(f"calc/{PS.SLUG}.html", "2026-11-16"), (f"calc/{FC.SLUG}.html", "2026-11-16")]
                + [(f"q/{q['slug']}.html", q.get("updated", SITE_PAGES)) for q in qs]
