@@ -343,6 +343,14 @@ def art_band(d, se: dict, ep: dict, pal: dict) -> None:
         d.text((W / 2, y), t, font=tf, fill=(255, 214, 0), anchor="mm")
 
 
+def recap_of(se: dict, ep: dict) -> str:
+    """'지난 이야기' 한 줄: 화마다 바로 앞 화의 끝(ep['recap']), 없으면 작품 한 줄 줄거리 (BK 11/25)."""
+    if ep["no"] <= 1:
+        return ""
+    t = ep.get("recap") or se.get("logline") or ""
+    return f"지난 이야기: {t}" if t else ""
+
+
 def band_lines(ep: dict) -> list[str]:
     """띠 큰 글씨 = 훅 문장 (BK 11/25: 반전 제목은 0초에 스포일러라 안 씀). 길면 두 줄."""
     if ep.get("band"):
@@ -375,7 +383,7 @@ def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
     cache: dict = {}
     ap = art_path(work, ep["no"])
     base = art_base(ap) if ap else None
-    recap = f"지난 이야기: {se['logline']}" if se.get("logline") and ep["no"] > 1 else ""
+    recap = recap_of(se, ep)
     for k in range(int(total * FPS)) if base is not None else ():
         from PIL import ImageDraw
         t = k / FPS; j = int(np.searchsorted(starts, t, side="right") - 1); lt = t - starts[j]
