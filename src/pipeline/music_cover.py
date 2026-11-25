@@ -76,6 +76,16 @@ def _sparkles(w: int, h: int, out: pathlib.Path, seed: int = 4):
     p.wait()
 
 
+def _loop_clip(src: pathlib.Path, W: int, H: int, out: pathlib.Path, xf: float = 1.0):
+    """배경 영상을 W×H로 채우고, 끝 xf초를 처음 xf초와 섞어 반복해도 튀지 않게. 소리는 버림."""
+    L = dur(src)
+    base = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setsar=1,format=yuv420p"
+    fc = (f"[0:v]{base},split[a][b];[a]trim=0:{xf},setpts=PTS-STARTPTS[head];"
+          f"[b]trim={xf},setpts=PTS-STARTPTS[body];[body][head]xfade=transition=fade:duration={xf}:offset={L - 2 * xf:.3f}[v]")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-filter_complex", fc, "-map", "[v]", "-an",
+                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", str(out)], check=True)
+
+
 def _vf_common(W, H, total, wave_w, wave_x, wave_y):
     return (f"[0:v]crop={W}:{H}:x='(in_w-{W})/2+(in_w-{W})/2*sin(2*PI*t/40)':y='(in_h-{H})/2+(in_h-{H})/2*cos(2*PI*t/55)',"
             f"setsar=1,format=rgba[bg];"
@@ -104,8 +114,9 @@ def _sub_png(text: str, W: int, out: pathlib.Path, size: int = 54):
 
 def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str, tag: str, out: pathlib.Path,
           vertical: bool = False, start: float = 0.0, length: float | None = None, cta: str = "",
-          subs: list | None = None) -> dict:
-    """subs: [(시작초, 끝초, 가사 줄)] — 클립 기준 시각. 세로 영상에서 그림 아래쪽에 가사 자막."""
+          subs: list | None = None, bg_video: pathlib.Path | None = None) -> dict:
+    """subs: [(시작초, 끝초, 가사 줄)] — 클립 기준 시각. 세로 영상에서 그림 아래쪽에 가사 자막.
+    bg_video: 세로 쇼츠 배경 영상(예: Veo 8초). 끝 1초를 처음과 섞어 이음매 없이 반복, 커버 카드 대신 전체 화면."""
     cover = Image.open(cover_path)
     W, H = (1080, 1920) if vertical else (1920, 1080)
     total = (length or dur(track) - start)
@@ -121,10 +132,20 @@ def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str
             while size > 36 and d.textlength(text, font=font(fsel(text, bold), size)) > max_w:
                 size -= 4
             return size
+        clip = vertical and bg_video and pathlib.Path(bg_video).exists()
+        if clip:
+            _loop_clip(pathlib.Path(bg_video), W, H, td / "loop.mp4")
+            shade = Image.new("L", (1, H), 0)
+            for yy in range(H):  # 아래쪽 글씨 읽히게 어둡게
+                shade.putpixel((0, yy), int(200 * max(0.0, (yy - 1150) / (H - 1150)) ** 0.8))
+            fg.paste((0, 0, 0, 255), (0, 0), shade.resize((W, H)))
         if vertical:
-            card = _card(cover, 860)
-            fg.alpha_composite(card, ((W - card.width) // 2, 230))
-            y = 230 + card.height + 10
+            if clip:
+                y = 1250
+            else:
+                card = _card(cover, 860)
+                fg.alpha_composite(card, ((W - card.width) // 2, 230))
+                y = 230 + card.height + 10
             rows = [(main_t, fit(main_t, 84, True, W - 100), (255, 255, 255, 255), True)]
             if ver:
                 rows.append((ver, 40, (255, 225, 245, 240), False))
@@ -161,7 +182,7 @@ def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str
         sub_in = []
         if subs:
             fc = fc[: -len("[v]")] + "[s0]"
-            sy = 1060 if vertical else H - 210
+            sy = (1100 if clip else 1060) if vertical else H - 210
             for k, (a, b, text) in enumerate(subs):
                 png = td / f"sub{k}.png"
                 _sub_png(text, W, png)
@@ -172,7 +193,9 @@ def video(track: pathlib.Path, cover_path: pathlib.Path, title: str, artist: str
         af = "loudnorm=I=-14:TP=-1.5"
         if length:
             af = f"afade=t=in:d=1.5,afade=t=out:st={length - 2.5}:d=2.5," + af
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-r", str(FPS), "-i", str(td / "bg.png"),
+        bg_in = (["-stream_loop", "-1", "-i", str(td / "loop.mp4")] if clip
+                 else ["-loop", "1", "-r", str(FPS), "-i", str(td / "bg.png")])
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error"] + bg_in + [
                         "-loop", "1", "-i", str(td / "fg.png"), "-stream_loop", "-1", "-i", str(td / "sp.mp4")] + a_in + sub_in +
                        ["-filter_complex", fc + f";[3:a]{af}[a]", "-map", "[v]", "-map", "[a]", "-t", f"{total:.3f}",
                         "-r", str(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",

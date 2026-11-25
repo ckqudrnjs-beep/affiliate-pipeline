@@ -296,6 +296,18 @@ def download(token: str, fid: str, dest: pathlib.Path) -> pathlib.Path:
 
 
 # ---------- 만들기 ----------
+def window_subs(hand: list, start: float, length: float) -> list:
+    """곡 기준 [[시작, 끝, 줄]] → 클립(start~start+length) 기준 [(시작, 끝, 줄)]. 반 이상 잘리는 줄은 뺌."""
+    out = []
+    for a, b, t in hand:
+        a, b = float(a) - start, float(b) - start
+        ca, cb = max(a, 0.0), min(b, length)
+        if cb - ca >= max(0.6, (b - a) / 2):
+            out.append((ca, cb, str(t)))
+    return out
+
+
+
 def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str = "", ov: dict | None = None) -> dict:
     """ov = config releases[드라이브 id]: title / cover(저장소 경로) / publish_at / short_publish_at / extra."""
     from .music_cover import extract_cover, video
@@ -322,8 +334,12 @@ def make(audio: pathlib.Path, cover: pathlib.Path | None, cfg: dict, name: str =
     lyr = lyrics_of(tags)
     from .music_lyrics import subtitles
     subs = subtitles(audio, lyr, start, length) if cfg.get("short_lyrics", True) else []
+    hand = (ov.get("mv") or {}).get("subs")
+    if hand and cfg.get("short_lyrics", True):  # 뮤비용으로 손본 타이밍이 있으면 쇼츠도 그걸로 (받아쓰기보다 정확)
+        subs = window_subs(hand, start, length)
     sh = video(audio, cov, title, channel, tag, WORK / f"{stem}-short.mp4", vertical=True, start=start,
-               length=length, cta="전체 듣기는 채널에서 ▶", subs=subs)
+               length=length, cta="전체 듣기는 채널에서 ▶", subs=subs,
+               bg_video=ROOT / ov["short_bg_video"] if ov.get("short_bg_video") else None)
     return {"title": title, "tag": tag, "bpm": an["bpm"], "short_start": start, "video": full["video"],
             "short": sh["video"], "cover": str(cov), "lyrics": bool(lyr), "subs": len(subs),
             "desc": description(title, lyr, channel, extra=ov.get("_extra", "")),
