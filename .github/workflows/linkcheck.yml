@@ -1,0 +1,38 @@
+name: linkcheck
+
+# 깨진 링크 주간 점검 (BK 11/25 오픈소스 검토 1번). 사이트는 고치지 않고 검사만 한다.
+# lychee(MIT/Apache-2.0) 0.24.2 실행 파일을 받아 sha256 으로 확인한 뒤 쓴다. 설명: scripts/link_check.py, docs/AGENT_TOOLS.md
+on:
+  schedule:
+    - cron: "10 2 * * 1"   # 월 11:10 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LYCHEE_VERSION: "0.24.2"
+      LYCHEE_SHA256: "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: lychee 받기
+        run: |
+          curl -sSfL -o /tmp/lychee.tgz "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${LYCHEE_SHA256}  /tmp/lychee.tgz" | sha256sum -c -
+          mkdir -p /tmp/lychee && tar xzf /tmp/lychee.tgz -C /tmp/lychee
+          find /tmp/lychee -type f -name lychee -exec install {} /usr/local/bin/lychee \;
+          lychee --version
+      - name: 돈삼촌 사이트 빌드
+        run: PYTHONPATH=src python -m pipeline.site _site
+      - name: 링크 검사
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+        run: python scripts/link_check.py lychee _site

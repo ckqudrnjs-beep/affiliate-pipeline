@@ -8,7 +8,7 @@ from pipeline.api_check import quiet_now
 
 UTC = dt.timezone.utc
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ADMIN_WORKFLOWS = ["yt-early", "cf-usage", "api-check", "claude-jobs", "consistency", "scoreboard", "health", "raksil-shorts"]
+ADMIN_WORKFLOWS = ["yt-early", "cf-usage", "api-check", "claude-jobs", "consistency", "scoreboard", "health", "raksil-shorts", "linkcheck"]
 
 
 def kst_hours(cron: str) -> list[int]:
