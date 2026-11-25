@@ -1035,6 +1035,7 @@
       "cover": "config/music/covers/Still-like-that.jpg",
       "publish_at": "2026-12-01T19:00:00+09:00",
       "short_publish_at": "2026-12-03T19:00:00+09:00",
+      "short_bg_video": "config/music/shorts/Still-like-that-bg.mp4",
       "mv": {
         "_doc": "그림 0 커버A 1 교실 2 카페 3 강변. subs = 단어별 받아쓰기(medium) 시간에 손으로 맞춤 (BK 11/25 싱크 지적)",
         "title": "Still like that (Official MV)",
