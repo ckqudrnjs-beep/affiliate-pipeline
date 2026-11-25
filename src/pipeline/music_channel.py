@@ -207,6 +207,11 @@ def description(title: str, lyrics: str, channel: str, short: bool = False, extr
     return "\n".join(parts)[:4900]
 
 
+def full_link(video_id: str) -> str:
+    """쇼츠 설명 첫 줄: 원곡 링크 (BK 11/25 '관련 동영상 연결 자동으로 안되나?' — 그 칸은 API 에 없어 대신 설명 첫 줄)."""
+    return f"🎧 전체 노래 듣기 👉 https://youtu.be/{video_id}"
+
+
 def video_body(title: str, desc: str, publish_at: dt.datetime | None, short: bool = False) -> dict:
     status = {"privacyStatus": "private", "selfDeclaredMadeForKids": False, "containsSyntheticMedia": True}
     if publish_at:
@@ -379,7 +384,8 @@ def upload_pair(meta: dict, cfg: dict, now: dt.datetime, ov: dict | None = None)
     at_main, at_short = fixed_slots(ov or {}, now) or slots(now, cfg)
     channel = cfg.get("channel", "BEEKAY SONGS")
     r1 = upload(token, video_body(f"{meta['title']} | {channel}", meta["desc"], at_main), pathlib.Path(meta["video"]))
-    r2 = upload(token, video_body(f"{meta['title']} 🎧 #shorts", meta["short_desc"], at_short, short=True),
+    short_desc = f"{full_link(r1['id'])}\n\n{meta['short_desc']}"  # 쇼츠 → 원곡 연결 (관련 동영상은 API 불가, BK 11/25)
+    r2 = upload(token, video_body(f"{meta['title']} 🎧 #shorts", short_desc, at_short, short=True),
                 pathlib.Path(meta["short"]))
     from .yt_extras import set_thumbnail, wide_from_square  # 전곡 영상 맞춤 썸네일 (BK 11/23 고급 기능)
     cov = meta.get("cover")
@@ -529,7 +535,7 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
                 continue
             from .youtube import upload
             token = music_token(cfg)
-            desc = (f"{title} — {channel}\n\n🎧 전체 듣기: https://youtu.be/{ent['video_id']}\n\n{AI_NOTE}\n\n"
+            desc = (f"{full_link(ent['video_id'])}\n\n{title} — {channel}\n\n{AI_NOTE}\n\n"
                     "#KPOP #AImusic #Suno #신곡 #shorts")
             at = dt.datetime.fromisoformat(p["publish_at"])
             r = upload(token, video_body(yt_title, desc, at, short=True), pathlib.Path(out["video"]))
