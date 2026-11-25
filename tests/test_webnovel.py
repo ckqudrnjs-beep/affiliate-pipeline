@@ -199,6 +199,14 @@ class WebnovelSoundCueTest(unittest.TestCase):
                 self.assertGreater(wv.getnframes(), 44100 * 8)
 
 
+class WebnovelBandTest(unittest.TestCase):
+    def test_band_is_hook_not_twist(self):
+        ep = {"title": "위조가 아니었다", "hook": "새벽 2시. 살인범 집 초인종을 눌렀다", "cards": []}
+        self.assertEqual(w.band_lines(ep), ["새벽 2시", "살인범 집 초인종을 눌렀다"])
+        self.assertEqual(w.band_lines({"band": ["가", "나"], "cards": []}), ["가", "나"])
+        self.assertEqual(w.band_lines({"hook": "짧은 훅", "cards": []}), ["짧은 훅"])
+
+
 class WebnovelSameDayTest(unittest.TestCase):
     def test_posted_on(self):
         cfg = {"work": "w"}

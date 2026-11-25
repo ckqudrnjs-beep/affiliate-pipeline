@@ -329,14 +329,33 @@ def art_band(d, se: dict, ep: dict, pal: dict) -> None:
     d.rectangle([0, y0, W, y1], fill=(0, 0, 0))
     hf = fit(f"{se['title']} {ep['no']}화", "B", 54)[0]
     d.text((W / 2, y0 + 70), f"{se['title']} {ep['no']}화", font=hf, fill=(245, 245, 245), anchor="mm")
-    try:
-        from PIL import ImageFont
-        tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), 112)
-        while tf.getlength(ep["title"]) > W - 80 and tf.size > 60:
-            tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), tf.size - 6)
-    except OSError:
-        tf = fit(ep["title"], "B", 104)[0]
-    d.text((W / 2, y0 + 195), ep["title"], font=tf, fill=(255, 214, 0), anchor="mm")
+    lines = band_lines(ep)
+    size = 112 if len(lines) == 1 else 84
+    ys = [y0 + 195] if len(lines) == 1 else [y0 + 158, y0 + 250]
+    for t, y in zip(lines, ys):
+        try:
+            from PIL import ImageFont
+            tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), size)
+            while tf.getlength(t) > W - 80 and tf.size > 50:
+                tf = ImageFont.truetype(str(ROOT / "config" / "fonts" / "BlackHanSans-Regular.ttf"), tf.size - 6)
+        except OSError:
+            tf = fit(t, "B", size - 8)[0]
+        d.text((W / 2, y), t, font=tf, fill=(255, 214, 0), anchor="mm")
+
+
+def band_lines(ep: dict) -> list[str]:
+    """띠 큰 글씨 = 훅 문장 (BK 11/25: 반전 제목은 0초에 스포일러라 안 씀). 길면 두 줄."""
+    if ep.get("band"):
+        return list(ep["band"])[:2]
+    t = hook_of(ep).strip()
+    if len(t) <= 12:
+        return [t]
+    mid = len(t) / 2
+    cuts = [i + 1 for i, ch in enumerate(t) if ch in ".,"] or [i for i, ch in enumerate(t) if ch == " "]
+    if not cuts:
+        return [t]
+    c = min(cuts, key=lambda i: abs(i - mid))
+    return [t[:c].strip(" .,"), t[c:].strip(" .,")]
 
 
 def render(work: str, ep: dict, out_dir: pathlib.Path = OUT) -> pathlib.Path:
