@@ -46,5 +46,14 @@ class LinkCheckTest(unittest.TestCase):
         self.assertRegex(wf, r'LYCHEE_SHA256: "[0-9a-f]{64}"')
 
 
+
+class HiddenNewsTest(unittest.TestCase):
+    def test_news_to_hidden_product_removed(self):
+        from pipeline import site
+        news = [{"id": "drop-a", "link": "p/a.html"}, {"id": "b", "link": "calc/x.html"}, {"id": "c"}]
+        self.assertEqual([n["id"] for n in site.visible_news(news, {"a"})], ["b", "c"])
+        self.assertIn("mijia-car-cordless-vacuum", site.hidden_slugs())
+
+
 if __name__ == "__main__":
     unittest.main()

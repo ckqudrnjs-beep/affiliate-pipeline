@@ -597,7 +597,7 @@ def index_page(products: list[dict], days: list[dict] | None = None) -> str:
     # 홈은 계산기·글·레시피 같은 정보가 중심이 되게 한다. 상품 카드는 items.html(색인 제외)에 그대로 있다.
     picks_sec = f"""<section id="picks"><div class="sechead"><h2>삼촌의 선택</h2><span>{len(products)}개 · 분야별</span></div>
 <p class="small">[광고] 알리와 쿠팡 가격을 나란히 계산해 본 물건을 분야별로 모아 두었어요. 상품 페이지에는 쿠팡 파트너스·알리익스프레스 제휴 링크가 있으며, 구매 시 돈 줍는 삼촌이 일정액의 수수료를 받습니다. <a href="items.html">물건 모아 보기 →</a></p></section>""" if products else ""
-    news, sales = N.load_json("data/news.json"), N.load_json("data/sales.json")
+    news, sales = visible_news(N.load_json("data/news.json")), N.load_json("data/sales.json")
     prices = json.dumps({p["slug"]: int(p["aliPrice"]) for p in products})
     days = days if days is not None else DY.load_all()
     latest = days[0] if days else None
@@ -775,6 +775,22 @@ def contact_body() -> str:
 <p class="note">이 사이트는 물건을 직접 팔지 않습니다. 주문·배송·환불은 구매하신 쇼핑몰(쿠팡, 알리익스프레스, 네이버) 고객센터로 문의해 주세요.</p>"""
 
 
+def hidden_slugs(data_dir: str = "data") -> set[str]:
+    """브랜드·가품 위험으로 뺀 상품(status hidden). 페이지가 없으니 이 상품을 가리키는 소식도 숨긴다."""
+    out = set()
+    for f in pathlib.Path(data_dir, "products").glob("*.json"):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        if d.get("status") == "hidden":
+            out.add(d.get("slug") or f.stem)
+    return out
+
+
+def visible_news(news: list[dict], hidden: set[str] | None = None) -> list[dict]:
+    """숨긴 상품으로 연결되는 소식은 뺀다 (2026-11-26 주간 링크 점검이 찾은 깨진 링크: 미지아 차량 청소기)."""
+    hidden = hidden_slugs() if hidden is None else hidden
+    return [n for n in news if not any(n.get("link") == f"p/{h}.html" for h in hidden)]
+
+
 def thin_news(n: dict) -> bool:
     """자동 '가격 내림' 알림(drop-…)은 상품 한 줄짜리라 애드센스 심사에서 얇은 제휴 페이지로 보인다 → 색인·사이트맵·광고 제외."""
     return str(n.get("id", "")).startswith("drop-") or len(n.get("body", "")) < 300  # 본문 300자 미만 소식도 얇다(2026-11-16)
@@ -836,7 +852,7 @@ def build(out="site", src="config/site_products.csv", allow_examples: bool = Fal
     for d in retired():
         if d["slug"] not in live:
             (o / "p" / f"{d['slug']}.html").write_text(retired_page(d, products), encoding="utf-8")
-    news = N.load_json("data/news.json")
+    news = visible_news(N.load_json("data/news.json"))
     (o / "news.html").write_text(page(f"삼촌 소식 | {BRAND}", "알리 가격 내림, 새 계산기·글, 공식 세일 일정처럼 계산해서 아끼는 살림 소식을 날짜별·분류별로 모았습니다.",
         N.archive_body(news), path="news.html"), encoding="utf-8")
     (o / "news").mkdir(exist_ok=True)
