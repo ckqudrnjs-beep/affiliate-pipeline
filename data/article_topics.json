@@ -253,8 +253,9 @@
  },
  {
   "q": "12월에 미리 할 겨울 살림 점검 체크리스트",
-  "done": false,
-  "format": "체크리스트"
+  "done": true,
+  "format": "체크리스트",
+  "slug": "december-winter-home-checklist"
  },
  {
   "q": "결로 생기는 습도와 막는 법",
