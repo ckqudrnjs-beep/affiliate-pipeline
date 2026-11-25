@@ -26,6 +26,7 @@ import random
 import subprocess
 import sys
 import urllib.request
+from . import ko_check
 
 KST = dt.timezone(dt.timedelta(hours=9))
 W, H, FPS, SR = 1080, 1920, 30, 44100
@@ -213,7 +214,7 @@ def mongle_pick(q: dict) -> dict | None:
 def clean_pick(r) -> dict | None:
     if not isinstance(r, dict) or r.get("pick") not in ("a", "b"):
         return None
-    why = " ".join(str(r.get("why", "")).split()).strip(" .!")
+    why = ko_check.fix(" ".join(str(r.get("why", "")).split()).strip(" .!"))
     if not why or len(why) > WHY_MAX or any(w in why for w in BANNED_WHY):
         return None
     out = {"pick": r["pick"], "why": why}
@@ -225,7 +226,7 @@ def clean_pick(r) -> dict | None:
 
 def clean_tail(t) -> str:
     """꼬리 한 줄 검사 (TAIL_SYS). 규칙에 안 맞으면 빈 문자열 → 마지막 컷은 원래대로 '댓글로 A? B?'."""
-    t = " ".join(str(t or "").split()).strip(" .")
+    t = ko_check.fix(" ".join(str(t or "").split()).strip(" ."))
     if not t or len(t) > TAIL_MAX or any(w in t for w in BANNED_WHY + ("2탄", "다음 편", "내일은", "안 쓰면", "안 달면")):
         return ""
     return t
@@ -393,7 +394,7 @@ def clean_band(b) -> dict | None:
     """Claude 가 낸 띠 문구 검사: 두 줄 다 있고, 12자 이하, 숫자·통계·광고·지능 비하 없이."""
     if not isinstance(b, dict):
         return None
-    top, acc = (" ".join(str(b.get(k, "")).split()).strip(" .") for k in ("top", "accent"))
+    top, acc = (ko_check.fix(" ".join(str(b.get(k, "")).split()).strip(" .")) for k in ("top", "accent"))
     for t, mx in ((top, BAND_TOP_MAX), (acc, BAND_MAX)):
         if not t or len(t) > mx or any(w in t for w in BANNED_BAND) or not real_numbers_only(t):
             return None
@@ -1342,7 +1343,7 @@ REPLAN_SYS = """너는 5락실 유튜브 쇼츠 '밸런스게임'의 기획자�
 
 
 def clean_q(a, b) -> tuple[str, str] | None:
-    a, b = (" ".join(str(x or "").split()).strip(" .?!") for x in (a, b))
+    a, b = (ko_check.fix(" ".join(str(x or "").split()).strip(" .?!")) for x in (a, b))
     if not a or not b or a == b or max(len(a), len(b)) > Q_MAX or min(len(a), len(b)) < 2:
         return None
     if any(w in a + b for w in BANNED_WHY + ("vs", "VS")):
@@ -1356,7 +1357,7 @@ SITUATION_MAX = 30
 
 def clean_situation(t) -> str:
     """상황 한 문장 (11/25): 비었거나 너무 길거나 금지어면 빈 문자열."""
-    t = " ".join(str(t or "").split()).strip(" ")
+    t = ko_check.fix(" ".join(str(t or "").split()).strip(" "))
     if len(t) < 4 or len(t) > SITUATION_MAX or any(w in t for w in BANNED_WHY):
         return ""
     return t

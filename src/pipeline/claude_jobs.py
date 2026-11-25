@@ -244,6 +244,9 @@ def open_pr(branch: str, title: str, body: str, paths: list[str]) -> str | None:
     return url
 
 
+TOON_TEXT_KEYS = ("title", "band_top", "band_accent", "yt_title", "heart", "vote_a", "vote_b", "summary", "tip", "cuts.caption")
+
+
 def notify(text: str) -> bool:
     from .api_check import send
     return send(text)
@@ -639,6 +642,10 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
           
           f"점수는 {MAX_SCORE}점 만점의 깐깐한 편집장 채점이에요({MAX_SCORE * 8 // 10}점 = 대부분 항목 8점, 제목 띠 문구 포함). "
           "마음에 드는 안을 골라 이 PR에 댓글로 번호만 남기거나, 그냥 병합하면 1안으로 진행해요. 숫자는 근거를 다시 확인한 뒤 자막에 넣어요.", ""]
+    from . import ko_check  # BK 11/25 '문장을 완벽하게': 틀린 게 확실한 맞춤법·띄어쓰기만 화면에 오르기 전에 고친다
+    for v in vs:
+        for ch in ko_check.fix_fields(v, TOON_TEXT_KEYS):
+            print("맞춤법 고침:", ch)
     for rank, i in enumerate(best, 1):
         v, s = vs[i], scores.get(i, {})
         prompts = ask("toon", "너는 Veo 영상 프롬프트 작가다. 바이블의 '프롬프트 조립' 순서와 고정 문장을 글자 그대로 쓴다. "

@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: 준비
-        run: pip install -q "anthropic>=2.11,<3" pillow
+        run: pip install -q "anthropic>=2.11,<3" pillow kiwipiepy==0.25.1
       - name: 어떤 작업인지
         id: pick
         run: |
