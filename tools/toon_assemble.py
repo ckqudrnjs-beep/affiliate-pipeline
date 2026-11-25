@@ -47,12 +47,13 @@ BAND_H, BAND_SIZE, BAND_MAXW = 300, 92, W - 140  # 제목 띠: 높이, 글자 �
 BAND_Y, CAP_Y = 290, 400
 YELLOW = (255, 214, 0)
 # 2026-11-19 BK "2일에 하나씩인데 컨텐츠에 구독 좋아요를 어필해야": 이유형 CTA(보상 약속 금지), 이틀 간격이라 '모레'.
+# 2026-11-25 BK "사이트 홍보를 빼서 방문이 저조" → 끝 화면 작은 줄을 사이트 주소로(검색으론 아직 안 잡혀 주소를 씀).
 # 2026-11-20 밤 BK "돈이 샌다 표현은 하지 말고" → '새는 돈' 문구 뺌.
-OUTRO = {"lines": ["동전이 다음 이야기는", "모레 저녁 7시"], "big": "구독 좋아요 꾹!", "sub": "다음 편 안 놓치게", "big_y": 420, "hold": 2.8}
+OUTRO = {"lines": ["동전이 다음 이야기는", "모레 저녁 7시"], "big": "구독 좋아요 꾹!", "sub": "생활 계산 정보는 don3chon.com", "big_y": 420, "hold": 2.8}
 
 
 # 2026-11-22 BK '구독 좋아요 올릴 방안': 투표 편엔 '구독' 말이 통째로 빠졌다 → 결과 편 시각 + 구독 한마디를 남긴다.
-VOTE_SUB = "결과는 모레 저녁 7시, 구독 꾹!"
+VOTE_SUB = "결과는 모레 7시, 정보는 don3chon.com"  # 2026-11-25 BK 사이트 홍보 복구
 
 
 def outro_of(spec: dict) -> dict:
@@ -111,7 +112,7 @@ def layer(lines=(), big=None, sub=None, small=None, bigy=900, size=92, band=None
     d, sd = ImageDraw.Draw(im), ImageDraw.Draw(sh)
     top = draw_band(d, band)
     y = top + 90 if top else CAP_Y  # 띠가 있으면 자막은 띠 바로 아래 (11/22 둘 다 홈 피드 안전 구역 안)
-    if top:  # 숫자 상자가 자막·띠와 겹치지 않게 아래로
+    if lines:  # 숫자 상자가 자막·띠와 겹치지 않게 아래로 (11/25 띠 없는 엔딩 투표 문구도 겹쳐서 항상 적용)
         bigy = max(bigy, y + len(lines) * (size + 24) + 10)
     for t in lines:
         sd.text((W / 2 + 4, y + 8), t, font=f(size), fill=(0, 0, 0, 150), anchor="mm", stroke_width=10, stroke_fill=(0, 0, 0, 150))
