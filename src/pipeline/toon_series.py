@@ -246,7 +246,8 @@ def allow_repeat(ctx: dict) -> set[str]:
 
 
 def clean_vote(t: str) -> str:
-    t = " ".join((t or "").split())
+    from . import ko_check
+    t = ko_check.fix(" ".join((t or "").split()))
     return t[:VOTE_MAX]
 
 
