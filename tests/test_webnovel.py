@@ -207,6 +207,14 @@ class WebnovelBandTest(unittest.TestCase):
         self.assertEqual(w.band_lines({"hook": "짧은 훅", "cards": []}), ["짧은 훅"])
 
 
+class WebnovelRecapTest(unittest.TestCase):
+    def test_recap_prev_episode(self):
+        se = {"logline": "줄거리"}
+        self.assertEqual(w.recap_of(se, {"no": 1}), "")
+        self.assertEqual(w.recap_of(se, {"no": 3}), "지난 이야기: 줄거리")
+        self.assertEqual(w.recap_of(se, {"no": 6, "recap": "앞 화 끝"}), "지난 이야기: 앞 화 끝")
+
+
 class WebnovelSameDayTest(unittest.TestCase):
     def test_posted_on(self):
         cfg = {"work": "w"}
