@@ -543,6 +543,22 @@ def run_extras(dtoken: str, cfg: dict, log: dict, now: dt.datetime, enabled: boo
     return done
 
 
+def raw_words(audio: pathlib.Path, model: str = "medium") -> list:
+    """받아쓰기 원본: [[구간 시작, 끝, 글, [[단어 시작, 끝, 단어], ...]], ...] (medium 모델, 단어 시간 포함)."""
+    try:
+        import numpy as np
+        from faster_whisper import WhisperModel
+        pcm = np.frombuffer(subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(audio), "-f", "f32le", "-ac", "1",
+                                            "-ar", "16000", "-"], check=True, capture_output=True).stdout, dtype=np.float32)
+        segs, _ = WhisperModel(model, device="cpu", compute_type="int8").transcribe(
+            pcm, language="ko", vad_filter=False, beam_size=5, condition_on_previous_text=False, word_timestamps=True)
+        return [[round(g.start, 2), round(g.end, 2), g.text.strip(),
+                 [[round(w.start, 2), round(w.end, 2), w.word.strip()] for w in (g.words or [])]] for g in segs]
+    except Exception as e:  # noqa: BLE001
+        print("단어 시간 받아쓰기 실패:", e)
+        return []
+
+
 def lyrics_dump(fid: str) -> int:
     """뮤직비디오용 (BK 11/23): 곡 전체 가사 자막 시간을 로그에 JSON 으로 찍는다. 업로드·기록 없음."""
     from .youtube import access_token
@@ -557,6 +573,10 @@ def lyrics_dump(fid: str) -> int:
     print(json.dumps({"duration": dur, "lines": lyric_lines(lyr),
                       "subs": [(round(a, 2), round(b, 2), t) for a, b, t in subs]}, ensure_ascii=False))
     print("LYRICS_JSON_END")
+    words = raw_words(audio)  # 손으로 맞출 때 쓰는 단어별 시간 (BK 11/25 '랩 부분 가사가 없어')
+    print("WORDS_JSON_BEGIN")
+    print(json.dumps(words, ensure_ascii=False))
+    print("WORDS_JSON_END")
     return 0
 
 
