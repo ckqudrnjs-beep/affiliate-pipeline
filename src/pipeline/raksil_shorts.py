@@ -1751,7 +1751,7 @@ def upload_meta(meta: dict) -> int:
         notify(f"🎮 5락실 쇼츠 {key} 업로드: https://youtu.be/{r['id']}{rel}{pin_line(pin)}")
     except Exception as e:  # noqa: BLE001
         print(f"관련 동영상 알림 실패: {e}", file=sys.stderr)
-    if at:  # 게시물 '먼저 보기' 글 + 투표 보기 (BK 11/23 '구독할 이유'): 텔레그램으로 → BK 붙여넣기
+    if at:  # 게시물 '먼저 보기' 글, 댓글로 A/B (BK 11/23 '구독할 이유'): 텔레그램으로 → BK 붙여넣기
         from . import community_posts
         sent = community_posts.raksil(meta, at)
         if sent is not None:

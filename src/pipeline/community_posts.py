@@ -4,7 +4,7 @@ YouTube Data API 에는 게시물을 올리는 기능이 없다. 그래서 영�
 그림 1장 + 붙여넣을 글을 텔레그램(BK 개인 대화)으로 보낸다. BK: 유튜브 앱 → 만들기 → 게시물 → 글 붙여넣기 + 그림.
 
 - 삼촌(동전이 만화): 공개 예약한 편의 첫 장면 한 컷 + 공개 날짜·시각. 돈 강조 말이 있으면 보내지 않는다(11/20 톤 규칙).
-- 5락실(밸런스): 오늘 질문 A/B + '게시물 투표로 먼저 골라 줘'. 투표는 BK 가 게시물에서 붙인다(API 없음).
+- 5락실(밸런스): 오늘 질문 A/B + '댓글로 A나 B를 남겨 줘'. 게시물은 그림과 투표를 같이 못 붙여서 투표 대신 댓글(BK 11/26).
 - BEEKAY SONGS: 새 곡 커버 + 공개 시각 (+ 버전 질문이 있으면 그 질문).
 영상 형식은 바꾸지 않는다(BK 11/23 '형식 바꿔서 알고리즘 꼬일까봐'). 구독 대가·보상 약속 문구 금지(가짜 참여 정책).
 끄기: config/community_posts.json 의 채널별 true/false.
@@ -69,12 +69,8 @@ def raksil_text(a: str, b: str, at: dt.datetime, pick: bool = False, now: dt.dat
     s = situation.strip().rstrip(".!?")
     ask = (f"{s}, 너라면?" if s.endswith("때") else f"{s}. 너라면?") if s else ""
     return (f"🎮 {w} 몽글이 밸런스게임 먼저 보기\n\n" + (f"{ask}\n\n" if ask else "") + f"A. {a}\nB. {b}\n\n"
-            + ("아래 투표로 먼저 골라 줘 👇" if ask else "너라면? 아래 투표로 먼저 골라 줘 👇") + f"\n{tail}\n"
+            + ("댓글로 A나 B를 남겨 줘 👇" if ask else "너라면? 댓글로 A나 B를 남겨 줘 👇") + f"\n{tail}\n"
             "구독하면 매일 새 질문 알림이 가요")
-
-
-def raksil_howto(a: str, b: str) -> str:
-    return f"(게시물에서 '투표' 추가 → 보기 1: {a[:60]} / 보기 2: {b[:60]})"
 
 
 def music_text(title: str, at: dt.datetime, ask: str = "", now: dt.datetime | None = None) -> str:
@@ -117,8 +113,7 @@ def raksil(meta: dict, at: dt.datetime) -> bool | None:
     if not on("raksil") or meta.get("kind") == "게임" or not meta.get("a") or not meta.get("b"):
         return None
     img = frame_png(meta["file"], 0.8, ROOT / "media" / "community" / f"raksil-{meta.get('key', meta['date'])}.png")
-    return send(img, raksil_text(meta["a"], meta["b"], at, bool(meta.get("pick")), situation=meta.get("situation", "")),
-                raksil_howto(meta["a"], meta["b"]))
+    return send(img, raksil_text(meta["a"], meta["b"], at, bool(meta.get("pick")), situation=meta.get("situation", "")))
 
 
 def music(title: str, cover: str | pathlib.Path | None, at: dt.datetime, ask: str = "") -> bool | None:
