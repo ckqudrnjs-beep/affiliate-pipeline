@@ -1832,7 +1832,13 @@ def retitle(vid: str, title: str, log_path: pathlib.Path | None = None) -> int:
     if not vid or not title or len(title) > 100 or "<" in title or ">" in title:
         print(f"제목이 비었거나 100자 넘음/꺾쇠 포함: {title!r}", file=sys.stderr)
         return 1
-    tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
+    # 11/26 삼촌 기름 편도 같은 길로 (BK '제목이 이상하지 않나?'): CHANNEL=삼촌 이면 삼촌 토큰·기록(uploaded.json, video_id 칸)
+    uncle = os.environ.get("CHANNEL", "5락실") == "삼촌"
+    tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"],
+                       os.environ["YT_REFRESH_TOKEN" if uncle else "RAKSIL_YT_REFRESH_TOKEN"])
+    if uncle and log_path is None:
+        from .youtube import LOG as UNCLE_LOG
+        log_path = UNCLE_LOG
     sn = ((api(tok, "GET", f"{VIDEOS_URL}?part=snippet&id={vid}").get("items") or [{}])[0]).get("snippet")
     if not sn:
         print(f"영상 {vid} 를 이 채널에서 못 찾음", file=sys.stderr)
@@ -1844,7 +1850,7 @@ def retitle(vid: str, title: str, log_path: pathlib.Path | None = None) -> int:
     try:
         log = json.loads(p.read_text(encoding="utf-8"))
         for v in log.values():
-            if isinstance(v, dict) and v.get("id") == vid:
+            if isinstance(v, dict) and vid in (v.get("id"), v.get("video_id")):
                 v["title"], v["title_old"] = title, old
         p.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     except (OSError, ValueError):

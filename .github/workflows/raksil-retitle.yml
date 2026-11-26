@@ -1,6 +1,7 @@
 name: raksil-retitle
 
-# 5락실 채널: 이미 올린 쇼츠의 제목만 바꾼다 (BK 11/26 '수정해' — 영상은 지우지 않음). 손으로만 실행.
+# 이미 올린 쇼츠의 제목만 바꾼다 (BK 11/26 '수정해' — 영상은 지우지 않음). 손으로만 실행.
+# 5락실(기본) 또는 삼촌 채널 (11/26 삼촌 기름 편 제목 '~느냐' 고침 때 추가).
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +11,11 @@ on:
       title:
         description: "새 제목 (100자 이하)"
         required: true
+      channel:
+        description: "채널"
+        type: choice
+        options: ["5락실", "삼촌"]
+        default: "5락실"
 
 permissions:
   contents: write
@@ -35,13 +41,16 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           RAKSIL_YT_REFRESH_TOKEN: ${{ secrets.RAKSIL_YT_REFRESH_TOKEN }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          CHANNEL: ${{ inputs.channel }}
           VIDEO: ${{ inputs.video }}
           TITLE: ${{ inputs.title }}
         run: PYTHONPATH=src python -m pipeline.raksil_shorts retitle "$VIDEO" "$TITLE"
       - name: 기록 저장
         run: |
           F=data/youtube/raksil_uploaded.json
+          [ "${{ inputs.channel }}" = "삼촌" ] && F=data/youtube/uploaded.json
           git diff --quiet -- "$F" && exit 0
           git config user.name "raksil-bot"
           git config user.email "raksil-bot@users.noreply.github.com"
-          git add "$F" && git commit -qm "5락실 쇼츠 제목 바꿈 기록" && git push -q origin HEAD:main
+          git add "$F" && git commit -qm "${{ inputs.channel }} 쇼츠 제목 바꿈 기록" && git push -q origin HEAD:main
