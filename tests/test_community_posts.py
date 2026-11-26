@@ -19,7 +19,7 @@ class CommunityPostsTest(unittest.TestCase):
         u = c.uncle_text("보일러 켜자마자 동전이가 숨은 곳", dt.datetime(2026, 11, 24, 19, tzinfo=KST), NOW)
         self.assertEqual(money_hits(u), []); self.assertTrue(c.safe(u)); self.assertIn("구독하면", u)
         r = c.raksil_text("겨울 내내 집", "여름 내내 밖", dt.datetime(2026, 11, 23, 17, tzinfo=KST), True, NOW)
-        self.assertIn("A. 겨울 내내 집", r); self.assertIn("투표", r); self.assertTrue(c.safe(r))
+        self.assertIn("A. 겨울 내내 집", r); self.assertIn("댓글로 A나 B", r); self.assertNotIn("투표", r); self.assertTrue(c.safe(r))
         s = c.raksil_text("괜찮다고 웃고 나오기", "다시 해 달라고 하기", dt.datetime(2026, 11, 23, 17, tzinfo=KST), True, NOW,
                           situation="미용실에서 머리를 잘랐는데 마음에 안 들어요")  # 11/25 상황 먼저
         self.assertLess(s.index("마음에 안 들어요. 너라면?"), s.index("A. 괜찮다고"))
