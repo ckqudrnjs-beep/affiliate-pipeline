@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 import pathlib
 import importlib.util
 import shutil
@@ -220,10 +221,36 @@ class RaksilShortsTest(unittest.TestCase):
         for line in sum((r.fmt_script(f, q, None, pick, prev) for f in ("split", "versus", "result", "quick")), []):
             self.assertNotIn("%", line)
         t = r.title_of(q, {"top": "친구랑 꼭 갈리는", "accent": "밸런스게임"}, "quick")
-        self.assertIn("| 3연속: 평생 라면만", t)
+        self.assertTrue(t.startswith("밸런스게임 3연속 | "), t)
+        self.assertIn("평생 라면만 vs 평생 치킨만", t)
         d = r.description_of(q, None, False, None, [q, QS[0], QS[2]])
         self.assertIn("3. 여름 vs 겨울", d)
         self.assertIn("AAB", d)
+
+    def test_title_readable_1126(self):
+        # BK 11/26 '이게 무슨 말이야?': 띠 노란 줄이 선택지 줄임말이면 제목에 안 쓰고, 선택지는 줄이지 않는다
+        q = {"a": "금요일 밤 '지금 나와!', 잠옷에 패딩만 걸치고", "b": "다음 주로 미루고 서운하게 하기"}
+        t = r.title_of(q, {"top": "3초 안에 고르면", "accent": "잠옷 외출 vs 서운함"}, "quick")
+        self.assertNotIn("잠옷 외출 vs 서운함", t)
+        self.assertIn(f"{q['a']} vs {q['b']}", t)
+        self.assertLessEqual(len(t), 100)
+        # 상황이 있으면 상황이 먼저
+        q2 = {"a": "괜찮다고 웃고 나오기", "b": "다시 해 달라고 하기", "situation": "미용실에서 자른 머리가 마음에 안 들어요"}
+        t2 = r.title_of(q2, {"top": "미용실 거울 앞에서", "accent": "괜찮아요 vs 다시요"})
+        self.assertTrue(t2.startswith("미용실에서 자른 머리가 마음에 안 들어요 | 괜찮다고 웃고 나오기 vs 다시 해 달라고 하기"), t2)
+        # 너무 길면 해시태그부터 빼고, 선택지 글자 중간에서 자르지 않는다
+        q3 = {"a": "가나다 " * 9, "b": "라마바 " * 9}
+        t3 = r.title_of(q3, {"top": "고민 없이 고르면", "accent": "찐 어른 인정"})
+        self.assertLessEqual(len(t3), 100)
+        self.assertNotIn("#shorts", t3)
+
+    def test_recent_bands_reads_band_field(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            log = pathlib.Path(d) / "l.json"
+            log.write_text(json.dumps({"2026-11-26": {"title": "밸런스게임 3연속 | A vs B", "band": {"top": "3초 안에 고르면", "accent": "잠옷 외출"}},
+                                       "2026-11-25": {"title": "친구랑 꼭 갈리는 밸런스게임 | A vs B"}}, ensure_ascii=False))
+            self.assertEqual(r.recent_bands(3, log), ["3초 안에 고르면 잠옷 외출", "친구랑 꼭 갈리는 밸런스게임"])
 
     @NEED_RENDER
     def test_format_frames_keep_shorts_ui_free(self):
