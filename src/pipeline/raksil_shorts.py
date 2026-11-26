@@ -159,6 +159,8 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 선택지에 상황이 다 들어 있지 않으면 흰 줄(top, 14자 이하)이 '무슨 일이 생겼는지'를 한 번에 알 수 있는 한 문장으로 말한다.
 장소·순간만 말하면 안 된다(✗ '미용실 거울 앞에서' → ○ '미용실 머리가 망했을 때', ✗ '단톡방에서' → ○ '단톡에 내 눈 감은 사진').
 노란 줄을 선택지 줄임말로 채울 때(예 '괜찮아요 vs 다시요')는 더더욱 흰 줄이 상황을 말해야 한다.
+(11/26 BK '이게 무슨 말이야?' — ✗ top '3초 안에 고르면' + accent '잠옷 외출 vs 서운함': 도전 말 + 줄임말은 아무 상황도 안 알려 준다.
+줄임말 노란 줄이면 흰 줄은 도전 말 대신 상황 한 문장, 예 ○ '친구가 밤에 지금 나오래' + '잠옷 외출 vs 거절'.)
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
@@ -252,16 +254,37 @@ def script(q: dict, res: dict | None, pick: dict | None = None) -> list[str]:
     return [first, "", mid]
 
 
+def _fit(parts: list[str], tags: list[str], limit: int = 100) -> str:
+    """앞 조각은 그대로 두고, 100자를 넘으면 해시태그부터 뺀다. 글자 중간에서 자르지 않는다."""
+    body = " ".join(p for p in parts if p)
+    for k in range(len(tags), -1, -1):
+        t = " ".join([body] + tags[:k])
+        if len(t) <= limit:
+            return t
+    cut = body[:limit - 1]
+    return (cut[:cut.rfind(" ")] if " " in cut else cut).rstrip(" ,|") + "…"
+
+
 def title_of(q: dict, band: dict | None = None, fmt: str = "classic") -> str:
-    """2026-11-20: 제목도 띠처럼 보는 사람에게 도전 ("고민 없이 고르면 찐 어른 인정 | A vs B").
-    스피드 3연속 편은 '밸런스게임 3연속:' 을 붙인다 (형식 돌리기)."""
-    hook = f"{band['top']} {band['accent']} | " if band else ""
-    if fmt == "quick":
-        hook += "3연속: "
-    t = f"{hook}{q['a']} vs {q['b']} #밸런스게임 #shorts" if hook else f"{q['a']} vs {q['b']} 너라면? #밸런스게임 #shorts"
-    if len(t) > 100:
-        t = f"{hook}{q['a'][:28]} vs {q['b'][:28]} #밸런스게임"
-    return t[:100]
+    """처음 보는 사람이 제목만 읽어도 무슨 상황의 무슨 선택인지 바로 알게 (BK 11/26 '이게 무슨 말이야?' — '3초 안에 고르면 잠옷 외출 vs 서운함').
+    - 상황(situation)이 있으면 '상황 | A vs B' (11/25 결정: 질문엔 상황이 드러나야 함).
+    - 띠 문구는 화면용이라 노란 줄이 선택지 줄임말('잠옷 외출 vs 서운함')이면 제목에 안 쓴다. 도전형 띠('고민 없이 고르면 찐 어른 인정')는 11/20 결정대로 앞에 둔다.
+    - 선택지 A·B 는 줄이지 않고 그대로 쓴다. 100자를 넘으면 해시태그 → 띠 순서로 빼고, 그래도 넘을 때만 낱말 단위로 자른다.
+    - 스피드 3연속 편은 '밸런스게임 3연속' 을 앞에."""
+    ab = f"{q['a']} vs {q['b']}"
+    sit = (q.get("situation") or "").strip().rstrip(".!? ")
+    hook = ""
+    if sit:
+        hook = sit + " |"
+    elif band and band.get("top") and " vs " not in band.get("accent", "") and "vs" not in band.get("top", ""):
+        hook = f"{band['top']} {band.get('accent', '')}".strip() + " |"
+    lead = "밸런스게임 3연속 |" if fmt == "quick" else ""
+    tail = "" if hook else "너라면?"
+    tags = ["#밸런스게임", "#shorts"]
+    t = _fit([lead, hook, ab, tail], tags)
+    if len(" ".join(x for x in [lead, hook, ab, tail] if x)) > 100 and hook and not sit:  # 띠 도전 문구 때문에 선택지가 잘리면 띠를 뺀다
+        t = _fit([lead, ab, "너라면?"], tags)
+    return t
 
 
 def ask_line(situation: str) -> str:
@@ -417,10 +440,16 @@ def recent_bands(n: int = 3, log: pathlib.Path | None = None) -> list[str]:
         return []
     out = []
     for k in sorted(up, reverse=True):
-        t = up[k].get("title", "") if isinstance(up[k], dict) else ""
-        if "-game-" in k or "meme" in k or " | " not in t:
+        v = up[k] if isinstance(up[k], dict) else {}
+        t = v.get("title", "")
+        if "-game-" in k or "meme" in k:
             continue
-        out.append(t.split(" | ")[0].strip())
+        if isinstance(v.get("band"), dict):
+            out.append(f"{v['band'].get('top', '')} {v['band'].get('accent', '')}".strip())
+        elif " | " in t:  # 11/26 전 기록: 제목 앞 띠 ('밸런스게임 3연속 |' 머리는 건너뜀)
+            out.append(t.replace("밸런스게임 3연속 | ", "", 1).split(" | ")[0].strip())
+        else:
+            continue
         if len(out) >= n:
             break
     return out
@@ -1733,6 +1762,8 @@ def upload_meta(meta: dict) -> int:
     log[key] = {"id": r["id"], "qid": meta["qid"], "title": meta["title"],
                 "a": meta.get("a", ""), "b": meta.get("b", ""), "pick": meta.get("pick"),
                 "format": meta.get("format", "classic")}  # 몽글이 기억 (mongle_memory)
+    if isinstance(meta.get("band"), dict):  # 11/26: 제목에 띠가 안 들어가는 편도 있어 띠 겹침 검사는 이 칸을 읽음 (recent_bands)
+        log[key]["band"] = {k: meta["band"].get(k, "") for k in ("top", "accent")}
     if meta.get("kling"):  # Kling 게임 쇼츠: 직전 3편 클립 겹침 금지 (raksil_kling.recent_ids)
         log[key]["kling"] = meta["kling"]
     LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -1794,8 +1825,38 @@ def hide_old(tok: str, vid: str, log: dict, key: str) -> bool:
     return ok
 
 
+def retitle(vid: str, title: str, log_path: pathlib.Path | None = None) -> int:
+    """올린 영상의 제목만 바꾼다 (BK 11/26 '수정해' — 지우지 않고 제목만). 설명·태그·카테고리는 그대로 두고 기록의 제목도 고친다."""
+    from .youtube import VIDEOS_URL, access_token, api, summary
+    title = " ".join(title.split())
+    if not vid or not title or len(title) > 100 or "<" in title or ">" in title:
+        print(f"제목이 비었거나 100자 넘음/꺾쇠 포함: {title!r}", file=sys.stderr)
+        return 1
+    tok = access_token(os.environ["YT_CLIENT_ID"], os.environ["YT_CLIENT_SECRET"], os.environ["RAKSIL_YT_REFRESH_TOKEN"])
+    sn = ((api(tok, "GET", f"{VIDEOS_URL}?part=snippet&id={vid}").get("items") or [{}])[0]).get("snippet")
+    if not sn:
+        print(f"영상 {vid} 를 이 채널에서 못 찾음", file=sys.stderr)
+        return 1
+    old = sn.get("title", "")
+    keep = {k: sn[k] for k in ("description", "tags", "categoryId", "defaultLanguage", "defaultAudioLanguage") if k in sn}
+    api(tok, "PUT", f"{VIDEOS_URL}?part=snippet", {"id": vid, "snippet": {**keep, "title": title}})
+    p = log_path or LOG
+    try:
+        log = json.loads(p.read_text(encoding="utf-8"))
+        for v in log.values():
+            if isinstance(v, dict) and v.get("id") == vid:
+                v["title"], v["title_old"] = title, old
+        p.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+    except (OSError, ValueError):
+        pass
+    summary(f"제목 바꿈 https://youtu.be/{vid}\n전: {old}\n후: {title}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     cmd = argv[1] if len(argv) > 1 else "render"
+    if cmd == "retitle":
+        return retitle(argv[2], argv[3])
     day = dt.date.fromisoformat(argv[2]) if len(argv) > 2 else dt.datetime.now(KST).date()
     if cmd == "upload" and not os.environ.get("RAKSIL_QID", "").strip():
         try:  # 16:47 예비 실행: 이미 올렸거나 품질 게이트로 쉰 날이면 다시 기획·채점하지 않는다
