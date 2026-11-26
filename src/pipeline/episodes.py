@@ -431,7 +431,14 @@ def title_errors(spec: dict) -> list[str]:
         if w in title and not title.endswith("?"):
             e.append(f"제목에 답('{w}') 금지")
     e += band_errors(spec.get("band"), answers - setup)
+    if (spec.get("date") or "") >= COPY_FROM:  # BK 11/26 문장 다듬기 (docs/SHORTS_BANK.md 0장)
+        from .copy_rules import lines_issues
+        band = spec.get("band") if isinstance(spec.get("band"), dict) else {}
+        e += [f"문장: {x}" for x in lines_issues([title, " ".join(x for x in (band.get("top", ""), band.get("accent", "")) if x)])]
     return e
+
+
+COPY_FROM = "2026-11-28"  # 문장 다듬기 자동 점검 시작 편 (11/26 기름 편 제목 일 뒤, 이미 만든 11/30 편 띠 '1년 뭐가 더 들까?'는 화면에 박혀 있어 제외)
 
 
 BAND_FROM = "2026-12-04"  # 제목 띠가 들어간 첫 대본 후보(11/22 07:10 생성) 편

@@ -381,6 +381,8 @@ def recent_episode_titles(n: int = 14) -> list[str]:
     return out
 
 
+from .copy_rules import SENTENCE_RULE, variant_issues  # BK 11/26 문장 다듬기 규칙 (docs/SHORTS_BANK.md 0장)
+
 # ---------- 1. 동전이 만화 대본 후보 ----------
 CUT = obj({"screen": S, "caption": S, "camera": S, "reuse": S})  # reuse = config/toon_reuse.json id (없으면 "")
 # 반복 양산 막기 (BK 11/20 "비슷한 틀로 찍어낸 영상이 걸러지는 거라면 같은 기획으로 계속 만들면 안 되잖아 → 반영").
@@ -388,6 +390,7 @@ CUT = obj({"screen": S, "caption": S, "camera": S, "reuse": S})  # reuse = confi
 HOOK_TYPES = ["결과 먼저(끝 장면을 첫 컷에)", "엉뚱한 질문", "상식 뒤집기", "동전이 사고 현장", "대결 선언", "시간 점프", "공감 한숨"]
 TITLE_PATTERNS = ["목록", "지시", "질문", "상식 뒤집기", "순위"]
 VARIETY_PENALTY = 5   # 직전 3편과 겹치는 칸 하나당 채점 합계에서 뺀다
+COPY_PENALTY = 4      # 문장 다듬기 규칙(copy_rules.copy_issues)에 걸린 줄 하나당 뺀다 (BK 11/26), 지적은 다듬기 메모로
 VARIANT = obj({"title": S, "motif": S, "frame": S, "place": S, "hook": S,
                "hook_type": {"type": "string", "enum": HOOK_TYPES}, "title_pattern": {"type": "string", "enum": TITLE_PATTERNS}, "cuts": arr(CUT), "number_box": S, "number_source": S,
                "gag": S, "tip": S, "why_fun": S, "band_top": S, "band_accent": S, "yt_title": S, "heart": S,
@@ -406,13 +409,14 @@ BAND_RULE = ("[제목 띠·유튜브 제목 — 누르게 만드는 문구가 �
              "지시어로 숨기기(BK 11/21 채택: 대상을 '이거·이걸'로 숨겨 화면에서 답을 보게 — '동전이가 이걸 물고 왔다', '이거 그냥 담요가 아니다'). "
              "동전이의 상황·마음이 궁금하게.\n"
              "- [맞히기 질문 — 필수, BK 11/24 '동전이 유지 + 맞히기 질문'(삼촌 채널 마지막 테스트)] 노란 줄·유튜브 제목은 보는 사람이 답을 "
-             "속으로 찍어 보게 하는 질문: 'A vs B, 뭐가 더 들까?', '한 달 몇 배 차이?', '어디서가 더 클까?'. 잘 된 편(난로 vs 담요 1,221회, "
+             "속으로 찍어 보게 하는 질문: 'A vs B, [기준]은 어느 쪽이 더 ~?' — 기준(전기요금·기름값·시간)을 꼭 넣는다(BK 11/26, 아래 문장 다듬기 3). 예) '가열식 vs 초음파, 한 달 전기요금 몇 배?', '기름값, 넣는 날이 클까 주유소가 클까?'. 잘 된 편(난로 vs 담요 1,221회, "
              "커피 한 잔 1년 뒤 통장 1,150회)이 전부 이 꼴이었다. 답은 띠·제목에 쓰지 않고 4번 컷(마지막 컷) 자막에서 '정답:'으로 한 번 보여 준다.\n"
              "- 금액(원)은 띠·제목에 넣지 않는다(답의 숫자는 마지막 컷 한 번만, 사이트 근거에서). 금화·저금통·'돈이 샌다' 연출 금지는 그대로. 내용과 다른 낚시·과장(무조건·100%·충격) 금지.\n"
              "- 띠·제목의 숫자는 시간·개수만(BK 11/21): '3초', '첫 1분', '세 번째' 처럼. 돈 액수·배수·퍼센트는 금지.\n"
              "- 손실 회피·금기 경고 금지(BK 11/21 불채택): '~하지 마세요', '날릴 뻔', '모르면 손해', '절대 ~ 금지' 같은 겁주기 말은 정보형·과장이라 쓰지 않는다.\n"
              "- 두 줄을 읽으면 '내 얘기네 + 답이 궁금하다'가 동시에 생겨야 한다. 막연한 말('알뜰 꿀팁', '절약 방법') 금지.\n"
-             "- yt_title(유튜브 제목, 40자 이하): 띠와 같은 궁금증을 다른 말로, 답 없이 '?'로 끝. 돈·금액 말 금지. 쇼핑몰·브랜드 이름 금지.\n")
+             "- yt_title(유튜브 제목, 40자 이하): 띠와 같은 질문을 처음 보는 사람도 알게 풀어서, 답 없이 '?'로 끝. 비교 기준 말(전기요금·기름값)은 쓰되 금액 숫자·'돈이 …' 말 금지. 쇼핑몰·브랜드 이름 금지.\n"
+             + SENTENCE_RULE)
 HEART_RULE = ("[이번 편은 공감 한 줄 편] heart 에 살림하는 사람 마음을 건드리는 한 줄(20자 이하)을 쓴다. 이 줄이 4번 컷 자막이 된다. "
               "훈계·명언 인용 금지, 이 편 장면에서 나온 말. 예) '동전이가 먼저 알아챈 겨울', "
               "'아무도 모르는 살림, 동전이는 알아요'.\n")
@@ -541,7 +545,7 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     judge_sys = ("너는 한국 쇼츠 편집장이다. 아래 바이블과 기준으로 대본 후보를 냉정하게 1~10점 채점한다.\n"
                  "hook=첫 1초 멈춤 힘, fun=이 편의 결(뻔하지 않음·인사이트·여운·한없이 즐거움)을 제대로 살렸는지 + 중독성(반복 개그·다시 보게 되는 마지막 컷·끝-처음 루프·귀에 남는 소리), aha=뻔하지 않은 관점·여운이 있고 숫자를 쓴다면 사이트 근거가 맞는지(근거 틀리면 1점), "
                  "bible=세계관·캐릭터·구도 규칙 + 소동 모양·틀·장소·훅 유형·제목 틀의 신선함(직전 3편과 겹치면 1점, 금화·저금통·돈 강조·뻔한 문제→절약 구성이면 1점), "
-                 "clarity=자막만 보고 이해되고 문구가 가볍지 않은지(말장난·느낌표 남발이면 감점), "
+                 "clarity=자막만 보고 이해되고 문구가 가볍지 않은지(말장난·느낌표 남발이면 감점, 문장 다듬기 규칙 1~7 중 하나라도 어기면 5점 이하), "
                  "click=제목 띠 두 줄(band_top·band_accent)과 yt_title 이 피드에서 손가락을 멈추게 하는지 — 내 얘기 같은 장면 + 답이 궁금한 훅, "
                  "12자 이하, 답 금액 없음(숫자는 시간·개수만), 막연하거나 낚시면 3점 이하, '~하지 마세요·날릴 뻔' 같은 손실 회피·금기 경고면 2점 이하, 지시어로 숨기기(이거·이걸)가 화면 장면과 맞으면 가점" + (", heart 한 줄이 억지 명언이면 감점" if heart else "")
                  + ". total=6항목 합계(60점 만점). best=상위 2개 idx(0부터).\n\n" + copy_rule + "\n" + bible
@@ -552,11 +556,20 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
     judged = ask("toon", judge_sys, json.dumps(vs, ensure_ascii=False),
                  schema=JUDGE, effort="medium", need=0.6, cache="5m")
     scores = {s["idx"]: s for s in judged["scores"]}
-    for i, v in enumerate(vs):  # 직전 3편과 겹치는 칸마다 감점 (모델 채점과 별개로 코드가 확실히)
-        hit = overlaps(v, rv, skip)
-        if hit and i in scores:
-            scores[i]["total"] = scores[i].get("total", 0) - VARIETY_PENALTY * len(hit)
-            scores[i]["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + scores[i].get("note", "")
+    def penalize(v: dict, s: dict) -> dict:
+        """모델 채점과 별개로 코드가 확실히: 직전 3편과 겹치는 칸, 문장 다듬기 규칙에 걸린 줄마다 감점하고 메모에 적는다."""
+        s = dict(s)
+        hit, bad = overlaps(v, rv, skip), variant_issues(v)
+        s["total"] = s.get("total", 0) - VARIETY_PENALTY * len(hit) - COPY_PENALTY * len(bad)
+        if bad:
+            s["note"] = f"[문장 -{COPY_PENALTY * len(bad)}: {' / '.join(bad)}] " + s.get("note", "")
+        if hit:
+            s["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + s.get("note", "")
+        return s
+
+    for i, v in enumerate(vs):
+        if i in scores:
+            scores[i] = penalize(v, scores[i])
     best = sorted(scores, key=lambda i: -scores[i]["total"])[:2] or [i for i in judged["best"] if 0 <= i < len(vs)][:2]
     first = {i: scores.get(i, {}).get("total", 0) for i in best}
 
@@ -577,9 +590,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
             rejudged = ask("toon", judge_sys, json.dumps(fixed, ensure_ascii=False),
                            schema=JUDGE, effort="medium", need=0.3, cache="5m")
             for s in rejudged["scores"]:
-                if 0 <= s["idx"] < len(fixed):  # 다듬은 안도 겹침 감점을 똑같이
-                    hit = overlaps(fixed[s["idx"]], rv, skip)
-                    s = dict(s, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
+                if 0 <= s["idx"] < len(fixed):  # 다듬은 안도 겹침·문장 감점을 똑같이
+                    s = penalize(fixed[s["idx"]], s)
                 if 0 <= s["idx"] < len(fixed) and s.get("total", 0) > scores.get(weak[s["idx"]], {}).get("total", 0):
                     i = weak[s["idx"]]
                     vs[i], scores[i] = fixed[s["idx"]], dict(s, idx=i)
@@ -619,11 +631,8 @@ def toon(today: dt.date | None = None, n: int = 8) -> int:
         vs.extend(more)
         for s in judged2["scores"]:
             if 0 <= s["idx"] < len(more):
-                hit = overlaps(more[s["idx"]], rv, skip)
                 i = base + s["idx"]
-                scores[i] = dict(s, idx=i, total=s.get("total", 0) - VARIETY_PENALTY * len(hit))
-                if hit:
-                    scores[i]["note"] = f"[겹침 -{VARIETY_PENALTY * len(hit)}: {','.join(hit)}] " + scores[i].get("note", "")
+                scores[i] = dict(penalize(more[s["idx"]], s), idx=i)
         best = sorted(scores, key=lambda i: -scores[i].get("total", 0))[:2]
         first.update({i: scores[i].get("total", 0) for i in best if i >= base})
         refine(best)
