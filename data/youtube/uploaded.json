@@ -1,123 +1,125 @@
 {
-  "baseus-led-desk-lamp": {
-    "video_id": "n4Nbt63qdbw",
-    "publish_at": "2026-11-10T19:00:00+09:00",
-    "uploaded_at": "2026-11-09T18:29:49+09:00"
-  },
-  "usb-heated-lap-blanket": {
-    "video_id": "zdWa-sz3-s0",
-    "publish_at": "2026-11-11T19:00:00+09:00",
-    "uploaded_at": "2026-11-10T16:50:55+09:00"
-  },
-  "skit-heater-vs-blanket": {
-    "video_id": "v-7qKqvvuHE",
-    "publish_at": "2026-11-10T23:08:21.171536+09:00",
-    "uploaded_at": "2026-11-10T23:08:21+09:00"
-  },
-  "heygen-usb-heated-lap-blanket": {
-    "video_id": "uSDyynuooJc",
-    "publish_at": "2026-11-11T19:47:46.472442+09:00",
-    "uploaded_at": "2026-11-11T19:47:46+09:00"
-  },
-  "heygen-window-cleaning-robot": {
-    "video_id": "z0a-q8LJSw4",
-    "publish_at": "2026-11-12T19:00:00+09:00",
-    "uploaded_at": "2026-11-11T19:48:22+09:00"
-  },
-  "uncle-cordless-stick-vacuum": {
-    "video_id": "Tu44B2Rcg6Y",
-    "publish_at": "2026-11-13T19:00:00+09:00",
-    "uploaded_at": "2026-11-12T16:49:43+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-13-skit-dont": {
-    "video_id": "Qe0-hXYiDAw",
-    "publish_at": "2026-11-13T19:00:00+09:00",
-    "uploaded_at": "2026-11-13T16:26:34+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-14-skit-quiz": {
-    "video_id": "-lvw_Halm8Q",
-    "publish_at": "2026-11-14T19:00:00+09:00",
-    "uploaded_at": "2026-11-13T16:26:34+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-13-skit-dont-a": {
-    "video_id": "VNNJd3B3-04",
-    "publish_at": "2026-11-13T19:00:00+09:00",
-    "uploaded_at": "2026-11-13T17:52:44+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-14-skit-quiz-a": {
-    "video_id": "vpghZadblgA",
-    "publish_at": "2026-11-14T19:00:00+09:00",
-    "uploaded_at": "2026-11-13T17:52:44+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-14-skit-quiz-b": {
-    "video_id": "VgvuiCseBQQ",
-    "publish_at": "2026-11-14T19:00:00+09:00",
-    "uploaded_at": "2026-11-13T19:58:47+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-13-skit-dont-b": {
-    "video_id": "U9kCcVSbWkA",
-    "publish_at": "2026-11-13T19:00:00+09:00",
-    "uploaded_at": "2026-11-13T20:16:04+09:00",
-    "paid_promotion": false
-  },
-  "ep-2026-11-15-bank": {
-    "video_id": "aut_hrWJJjk",
-    "publish_at": "2026-11-15T19:00:00+09:00",
-    "uploaded_at": "2026-11-14T16:07:57+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-16-skit-quiz": {
-    "video_id": "o-MgOaMPONI",
-    "publish_at": "2026-11-16T19:00:00+09:00",
-    "uploaded_at": "2026-11-15T16:41:13+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-17-leak": {
-    "video_id": "2GWHShraR6c",
-    "publish_at": "2026-11-17T19:00:00+09:00",
-    "uploaded_at": "2026-11-16T16:25:44+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-18-teaser": {
-    "video_id": "3m568hM8VkY",
-    "publish_at": "2026-11-18T19:00:00+09:00",
-    "uploaded_at": "2026-11-17T17:38:22+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-19-skit-dont": {
-    "video_id": "mGae42viqgg",
-    "publish_at": "2026-11-19T19:00:00+09:00",
-    "uploaded_at": "2026-11-18T17:00:35+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-20-skit-q": {
-    "video_id": "LrmoXz4T8cA",
-    "publish_at": "2026-11-20T19:00:00+09:00",
-    "uploaded_at": "2026-11-19T22:59:48+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-21-skit-recipe": {
-    "video_id": "Yg7O03DxB80",
-    "publish_at": "2026-11-22T20:07:17.675471+09:00",
-    "uploaded_at": "2026-11-22T20:07:17+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-22-guide": {
-    "video_id": "J48VfmXebhY",
-    "publish_at": "2026-11-24T19:00:00+09:00",
-    "uploaded_at": "2026-11-23T17:56:02+09:00",
-    "paid_promotion": null
-  },
-  "ep-2026-11-23-prices": {
-    "video_id": "52-ys3yAPoE",
-    "publish_at": "2026-11-26T19:00:00+09:00",
-    "uploaded_at": "2026-11-25T18:03:14+09:00",
-    "paid_promotion": null
-  }
+ "baseus-led-desk-lamp": {
+  "video_id": "n4Nbt63qdbw",
+  "publish_at": "2026-11-10T19:00:00+09:00",
+  "uploaded_at": "2026-11-09T18:29:49+09:00"
+ },
+ "usb-heated-lap-blanket": {
+  "video_id": "zdWa-sz3-s0",
+  "publish_at": "2026-11-11T19:00:00+09:00",
+  "uploaded_at": "2026-11-10T16:50:55+09:00"
+ },
+ "skit-heater-vs-blanket": {
+  "video_id": "v-7qKqvvuHE",
+  "publish_at": "2026-11-10T23:08:21.171536+09:00",
+  "uploaded_at": "2026-11-10T23:08:21+09:00"
+ },
+ "heygen-usb-heated-lap-blanket": {
+  "video_id": "uSDyynuooJc",
+  "publish_at": "2026-11-11T19:47:46.472442+09:00",
+  "uploaded_at": "2026-11-11T19:47:46+09:00"
+ },
+ "heygen-window-cleaning-robot": {
+  "video_id": "z0a-q8LJSw4",
+  "publish_at": "2026-11-12T19:00:00+09:00",
+  "uploaded_at": "2026-11-11T19:48:22+09:00"
+ },
+ "uncle-cordless-stick-vacuum": {
+  "video_id": "Tu44B2Rcg6Y",
+  "publish_at": "2026-11-13T19:00:00+09:00",
+  "uploaded_at": "2026-11-12T16:49:43+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-13-skit-dont": {
+  "video_id": "Qe0-hXYiDAw",
+  "publish_at": "2026-11-13T19:00:00+09:00",
+  "uploaded_at": "2026-11-13T16:26:34+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-14-skit-quiz": {
+  "video_id": "-lvw_Halm8Q",
+  "publish_at": "2026-11-14T19:00:00+09:00",
+  "uploaded_at": "2026-11-13T16:26:34+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-13-skit-dont-a": {
+  "video_id": "VNNJd3B3-04",
+  "publish_at": "2026-11-13T19:00:00+09:00",
+  "uploaded_at": "2026-11-13T17:52:44+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-14-skit-quiz-a": {
+  "video_id": "vpghZadblgA",
+  "publish_at": "2026-11-14T19:00:00+09:00",
+  "uploaded_at": "2026-11-13T17:52:44+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-14-skit-quiz-b": {
+  "video_id": "VgvuiCseBQQ",
+  "publish_at": "2026-11-14T19:00:00+09:00",
+  "uploaded_at": "2026-11-13T19:58:47+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-13-skit-dont-b": {
+  "video_id": "U9kCcVSbWkA",
+  "publish_at": "2026-11-13T19:00:00+09:00",
+  "uploaded_at": "2026-11-13T20:16:04+09:00",
+  "paid_promotion": false
+ },
+ "ep-2026-11-15-bank": {
+  "video_id": "aut_hrWJJjk",
+  "publish_at": "2026-11-15T19:00:00+09:00",
+  "uploaded_at": "2026-11-14T16:07:57+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-16-skit-quiz": {
+  "video_id": "o-MgOaMPONI",
+  "publish_at": "2026-11-16T19:00:00+09:00",
+  "uploaded_at": "2026-11-15T16:41:13+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-17-leak": {
+  "video_id": "2GWHShraR6c",
+  "publish_at": "2026-11-17T19:00:00+09:00",
+  "uploaded_at": "2026-11-16T16:25:44+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-18-teaser": {
+  "video_id": "3m568hM8VkY",
+  "publish_at": "2026-11-18T19:00:00+09:00",
+  "uploaded_at": "2026-11-17T17:38:22+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-19-skit-dont": {
+  "video_id": "mGae42viqgg",
+  "publish_at": "2026-11-19T19:00:00+09:00",
+  "uploaded_at": "2026-11-18T17:00:35+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-20-skit-q": {
+  "video_id": "LrmoXz4T8cA",
+  "publish_at": "2026-11-20T19:00:00+09:00",
+  "uploaded_at": "2026-11-19T22:59:48+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-21-skit-recipe": {
+  "video_id": "Yg7O03DxB80",
+  "publish_at": "2026-11-22T20:07:17.675471+09:00",
+  "uploaded_at": "2026-11-22T20:07:17+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-22-guide": {
+  "video_id": "J48VfmXebhY",
+  "publish_at": "2026-11-24T19:00:00+09:00",
+  "uploaded_at": "2026-11-23T17:56:02+09:00",
+  "paid_promotion": null
+ },
+ "ep-2026-11-23-prices": {
+  "video_id": "52-ys3yAPoE",
+  "publish_at": "2026-11-26T19:00:00+09:00",
+  "uploaded_at": "2026-11-25T18:03:14+09:00",
+  "paid_promotion": null,
+  "title": "기름값 차이, 넣는 날이 더 클까 주유소가 더 클까?",
+  "title_old": "기름은 언제 넣느냐, 어디서 넣느냐? 뭐가 더 클까?"
+ }
 }
