@@ -137,8 +137,9 @@
  },
  {
   "q": "공기청정기 전기요금 24시간",
-  "done": false,
-  "format": "정보"
+  "done": true,
+  "format": "정보",
+  "slug": "air-purifier-24-hours-electric-bill"
  },
  {
   "q": "겨울 국내 여행 짐 싸기: 충전기 하나로 끝내는 법",
