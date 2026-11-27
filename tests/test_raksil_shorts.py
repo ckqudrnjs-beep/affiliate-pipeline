@@ -539,6 +539,22 @@ class RaksilShortsTest(unittest.TestCase):
         self.assertIn("situation", r.REPLAN_SYS)
         self.assertIn("미용실 거울 앞에서", r.GATE_SYS)  # 장소만 있는 띠는 문구 3점 이하
 
+    def test_result_yesterday_reason_and_vs_band(self):
+        """11/28 라면 편 27/40: 노란 줄 'A vs B' 를 12자에 맞추다 줄임말, 결과편 전광판에 어제 몽글이 이유가 없음."""
+        self.assertIsNone(r.clean_band({"top": "동생 자는데 라면 하나", "accent": "몰래 끓이기 말고 나눠 먹기 해"}))  # vs 아니면 12자
+        b = r.clean_band({"top": "동생 자는데 라면 하나", "accent": "혼자 끓이기 vs 깨워서 반 나누기"})
+        self.assertEqual(b["accent"], "혼자 끓이기 vs 깨워서 반 나누기")
+        q = {"id": "20261128-1", "a": "마지막 라면 몰래 끓이기", "b": "동생 깨워서 나눠 먹기"}
+        yq = {"a": "열림 버튼 눌러 주기", "b": "못 본 척 문 닫히게 두기"}
+        prev = {"pick": {"pick": "a", "why": "나도 매일 뛰어오는 쪽이야"}}
+        lines = r.fmt_script("result", q, None, None, prev)
+        self.assertEqual(lines[0], "어제 몽글이는 에이! 나도 매일 뛰어오는 쪽이야!")
+        brief = r.brief_of("result", q, b, None, lines, [q], yq, prev)
+        self.assertIn("열림 버튼 눌러 주기", brief)
+        self.assertIn("나도 매일 뛰어오는 쪽이야", brief)
+        r.board_card(yq, None, prev["pick"], b)  # 이유 줄이 들어간 전광판도 그려진다
+        self.assertEqual(r.fmt_script("result", q, None, None, {"pick": {"pick": "b"}})[0], "어제 몽글이는 비! 너희는?")
+
 
 if __name__ == "__main__":
     unittest.main()
