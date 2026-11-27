@@ -30,6 +30,21 @@ SPOKEN_RULE = (
     "숨이 걸리는 곳, 조사가 빠진 곳('기름, 언제 넣을까')이 있으면 그 줄을 다시 쓴다. 글자 수가 넘치면 뜻을 줄이지 말고 말을 바꾼다.\n"
 )
 
+# 13번 (BK 11/28 새벽 '문제는 주제와 전혀 상관없는 자막 흐름이야 정보가 있어야 되는데 동전이 귀여움에만 집중되어 있어').
+# 11/26 기름 편(제목 '기름값 차이, 넣는 날이 더 클까 주유소가 더 클까?') 자막 4줄이 모두 기름과 무관 → 1.5일 10회,
+# 자막 5줄이 모두 주제를 따라간 11/24 빈 집 편 530회. 11/20 '살림 팁은 마지막 한 줄만' 규칙을 대체한다(삼촌 쇼츠만, 5락실 제외).
+INFO_RULE = (
+    "13. [삼촌 쇼츠 자막 = 제목 질문의 이야기 (BK 11/28, 11/20 '팁은 마지막 한 줄만'을 대체)] 모든 컷 자막은 이 편 제목 질문에 대한 정보다. "
+    "순서: 1번 컷 = 질문이 생기는 상황(무엇을 비교·궁금해하는지 보이게) → 2·3번 컷 = 왜 그런지(작동 방식·차이가 생기는 이유, 사이트 근거) "
+    "→ 4번 컷 = '정답: …'(숫자는 사이트 근거에서 한 번) → 마지막 줄 = 오늘 할 수 있는 행동 하나. "
+    "동전이는 그 정보를 몸으로 보여 주는 장면(가습기 김을 무는 동작 = '가열식은 물을 끓여 김을 내요')이고, "
+    "동전이 귀여움·감정만 말하는 자막('동전이가 풍덩', '세상엔 처음 듣는 소리가 많다', '간식 몰래 꺼내는 것도 다 보여요')은 금지. "
+    "자막 하나만 떼어 봐도 이 편 주제(기름·건조기·가습기 …)에 대한 말이어야 한다. 돈을 외치지 않는 것, 금화·'돈이 샌다' 금지는 그대로.\n"
+    "   나쁨) 기름 편: '동전이가 처음으로 차에 탄 날' / '세상엔 처음 듣는 소리가 너무 많다' / '길을 안다고 믿는 건 늘 자신감부터다'\n"
+    "   좋음) 빈 집 편: '다들 출근하면 집에는 동전이만 남아요' / '빈 집은 한 시간이면 식어요' / '식은 집을 다시 데우는 게 더 힘들어요' / "
+    "'나갈 땐 끄지 말고 1~2도만 낮춰요'\n"
+)
+
 SENTENCE_RULE = (
     "[문장 다듬기 — 모든 화면 글자·제목·설명 (BK 11/26 '문장을 다듬어야', 11/25 '문장을 완벽하게')]\n"
     "1. 처음 보는 사람 기준: 앞 장면을 안 봐도 그 한 줄만 읽고 뜻이 통해야 한다. 누가·무엇을이 빠진 문장 금지.\n"
@@ -98,6 +113,34 @@ def caption_issues(text: str) -> list[str]:
     return out
 
 
+TOPIC_STOP = {"동전이", "어디", "언제", "어느", "쪽은", "쪽이", "차이", "정답", "기준", "하루", "시간", "있을", "클까", "들까"}
+PARTICLE = re.compile(r"(?:에서|으로|까지|하고|이랑|은|는|이|가|을|를|에|도|의|로|만|랑)$")
+
+
+def topic_words(text: str) -> set[str]:
+    """제목·띠·정답에서 주제 낱말(앞 두 글자). 조사를 떼고 두 글자 이상만."""
+    out = set()
+    for w in re.findall(r"[가-힣]+", text or ""):
+        w = PARTICLE.sub("", w)
+        if len(w) >= 2 and w not in TOPIC_STOP:
+            out.add(w[:2])
+    return out
+
+
+def off_topic(v: dict) -> list[str]:
+    """13번 코드 점검(확실한 것만): 정답 컷 앞 자막이 하나도 제목·띠·정답의 주제 낱말을 안 쓰면 문제 한 줄.
+    11/26 기름 편이 여기에 걸린다(빈 집 편처럼 주제를 따라간 편은 안 걸림). 세밀한 판단은 편집장 채점."""
+    cuts = [" ".join((c.get("caption") or "").replace("/", " ").split()) for c in v.get("cuts") or []]
+    cuts = [c for c in cuts if c]
+    if len(cuts) < 2:
+        return []
+    keys = topic_words(" ".join([v.get("yt_title", ""), v.get("band_top", ""), v.get("band_accent", ""), cuts[-1]]))
+    mid = cuts[:-1]
+    if keys and not any(k in c for c in mid for k in keys):
+        return [f"자막이 제목 주제와 무관 ({' / '.join(mid)}) — 13번: 자막마다 제목 질문의 정보로"]
+    return []
+
+
 def lines_issues(lines: list[str]) -> list[str]:
     """여러 줄을 각각 검사해 '줄: 문제' 목록으로."""
     return [f"{ln} — {p}" for ln in lines if isinstance(ln, str) for p in copy_issues(ln)]
@@ -109,7 +152,8 @@ def variant_issues(v: dict) -> list[str]:
     caps = [" ".join((c.get("caption") or "").replace("/", " ").split()) for c in v.get("cuts") or []]
     if v.get("heart"):
         caps.append(v["heart"])
-    return lines_issues(lines) + [f"{c} — {p}" for c in caps if c for p in caption_issues(c)]
+    return (lines_issues(lines) + [f"{c} — {p}" for c in caps if c for p in caption_issues(c)]
+            + off_topic(v))
 
 
 def plan_issues(texts: list[str]) -> list[str]:

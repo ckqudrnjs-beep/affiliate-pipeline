@@ -41,7 +41,7 @@ class CopyRulesTest(unittest.TestCase):
     def test_variant(self):
         v = {"yt_title": "기름은 언제 넣느냐?", "band_top": "기름, 언제 넣을까", "band_accent": "어디서가 더 클까?",
              "cuts": [{"caption": "길을 안다고 믿는 건/늘 자신감부터다"}, {"caption": "동전이가 처음으로/차에 탄 날"}]}
-        self.assertEqual(len(variant_issues(v)), 4)
+        self.assertEqual(len(variant_issues(v)), 5)  # 11/28 13번: 자막이 기름 주제와 무관 (+1)
 
 
     def test_captions_spoken(self):
@@ -67,3 +67,22 @@ class CopyRulesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OffTopicTest(unittest.TestCase):
+    """13번 (BK 11/28): 자막이 제목 주제와 무관하면 잡는다."""
+
+    def test_gas_episode_caught(self):
+        from pipeline.copy_rules import off_topic
+        v = {"yt_title": "기름값 차이, 넣는 날이 더 클까 주유소가 더 클까?", "band_top": "기름, 언제 넣을까",
+             "band_accent": "어디서가 더 클까?",
+             "cuts": [{"caption": "동전이가 처음으로/차에 탄 날"}, {"caption": "세상엔 처음 듣는 소리가/너무 많다"},
+                      {"caption": "창밖 공기는 차갑고/조금 설렌다"}, {"caption": "정답: 어디서/주유소마다 값이 다르다"}]}
+        self.assertTrue(off_topic(v))
+
+    def test_on_topic_passes(self):
+        from pipeline.copy_rules import off_topic
+        v = {"band_top": "건조기 매일 vs 모아서", "band_accent": "전기요금 더 드는 쪽은?",
+             "cuts": [{"caption": "양말 한 짝만 넣어도/건조기는 똑같이 돌아요"}, {"caption": "빨래는 바구니에/모았다가 한 번에"},
+                      {"caption": "정답: 매일 돌리는 쪽"}]}
+        self.assertEqual(off_topic(v), [])
