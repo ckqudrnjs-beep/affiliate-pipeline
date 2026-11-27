@@ -1,7 +1,7 @@
 """문장 다듬기 규칙 (BK 11/26 '문장을 다듬어야 될 것 같아 적용할 규칙을 정리해서 반영해줘')."""
 import unittest
 
-from pipeline.copy_rules import copy_issues, variant_issues
+from pipeline.copy_rules import caption_issues, copy_issues, plan_issues, variant_issues
 
 
 class CopyRulesTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class CopyRulesTest(unittest.TestCase):
                   "건조기 매일 돌리기 vs 모아서 돌리기, 전기요금 더 드는 쪽은?",
                   "보조배터리 큰 거 하나, 폰은 몇 번 충전될까?",
                   "동전이는 왜 저기 앉았을까?",
-                  "세상엔 처음 듣는 소리가 너무 많다"):
+                  "동전이가 이걸 숨겼다"):
             self.assertEqual(copy_issues(t), [], t)
 
     def test_old_ending_with_particle(self):
@@ -42,6 +42,27 @@ class CopyRulesTest(unittest.TestCase):
         v = {"yt_title": "기름은 언제 넣느냐?", "band_top": "기름, 언제 넣을까", "band_accent": "어디서가 더 클까?",
              "cuts": [{"caption": "길을 안다고 믿는 건/늘 자신감부터다"}, {"caption": "동전이가 처음으로/차에 탄 날"}]}
         self.assertEqual(len(variant_issues(v)), 4)
+
+
+    def test_captions_spoken(self):
+        # BK 11/27 '전체적으로 쇼츠의 자막이 문장이 자연스럽지 않아' — 실제로 올라간·예정이던 자막
+        for t in ("세상엔 처음 듣는 소리가 너무 많다", "창밖 공기는 차갑고 조금 설렌다",
+                  "갓 나온 수건의 온기는 오래 기억에 남는다", "가까이 가면 꼭 이렇게 된다",
+                  "그래서 이 집은 빨래를 모아 둔다", "외출 10분 전 현관에 정적이 흐른다"):
+            self.assertTrue(caption_issues(t), t)
+        for t in ("가습기 김을 동전이가 덥석 물었어요", "너무 가까이 갔다가 에취!", "찾았다!",
+                  "먼지 필터는 돌릴 때마다 비워요", "정답: 가열식이 약 10배", "조카: 이 큰 거면 열 번은 되지?"):
+            self.assertEqual(caption_issues(t), [], t)
+
+    def test_raksil_plan(self):
+        self.assertTrue(plan_issues(["그 자리서 다시 해 달라기"]))
+        self.assertEqual(plan_issues(["다시 해 달라고 하기", "원래 남의 메뉴가 더 맛있다", "미용실 머리가 망했을 때"]), [])
+
+    def test_variant_heart_and_caption(self):
+        v = {"yt_title": "건조기 매일 vs 모아서, 전기요금 더 드는 쪽은?", "band_top": "건조기 매일 vs 모아서",
+             "band_accent": "전기요금 더 드는 쪽은?", "heart": "갓 나온 수건의 온기는 오래 남는다",
+             "cuts": [{"caption": "양말 한 짝만 넣어도/건조기는 똑같이 돌아요"}, {"caption": "그리고 필터는/매번 비운다"}]}
+        self.assertEqual(len(variant_issues(v)), 3)
 
 
 if __name__ == "__main__":
