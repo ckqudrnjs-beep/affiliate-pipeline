@@ -2,6 +2,7 @@ name: raksil-retitle
 
 # 이미 올린 쇼츠의 제목만 바꾼다 (BK 11/26 '수정해' — 영상은 지우지 않음). 손으로만 실행.
 # 5락실(기본) 또는 삼촌 채널 (11/26 삼촌 기름 편 제목 '~느냐' 고침 때 추가).
+# 11/27 설명란 첫 줄만 바꾸기도 (desc_first, 삼촌 기름 편 설명란 '~느냐가 더 크다' 고침).
 on:
   workflow_dispatch:
     inputs:
@@ -9,8 +10,13 @@ on:
         description: "영상 id (예 JlfFgHekvBs)"
         required: true
       title:
-        description: "새 제목 (100자 이하)"
-        required: true
+        description: "새 제목 (100자 이하, 비우면 제목은 그대로)"
+        required: false
+        default: ""
+      desc_first:
+        description: "설명란 첫 줄 새 문장 (비우면 설명은 그대로)"
+        required: false
+        default: ""
       channel:
         description: "채널"
         type: choice
@@ -45,6 +51,7 @@ jobs:
           CHANNEL: ${{ inputs.channel }}
           VIDEO: ${{ inputs.video }}
           TITLE: ${{ inputs.title }}
+          DESC_FIRST: ${{ inputs.desc_first }}
         run: PYTHONPATH=src python -m pipeline.raksil_shorts retitle "$VIDEO" "$TITLE"
       - name: 기록 저장
         run: |

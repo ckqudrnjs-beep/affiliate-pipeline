@@ -1841,11 +1841,14 @@ def hide_old(tok: str, vid: str, log: dict, key: str) -> bool:
 
 
 def retitle(vid: str, title: str, log_path: pathlib.Path | None = None) -> int:
-    """올린 영상의 제목만 바꾼다 (BK 11/26 '수정해' — 지우지 않고 제목만). 설명·태그·카테고리는 그대로 두고 기록의 제목도 고친다."""
+    """올린 영상의 제목만 바꾼다 (BK 11/26 '수정해' — 지우지 않고 제목만). 설명·태그·카테고리는 그대로 두고 기록의 제목도 고친다.
+    11/27 (BK '네' — 삼촌 기름 편 설명란 첫 줄 '~느냐'): 환경변수 DESC_FIRST 가 있으면 설명란 첫 줄만 그 문장으로 바꾼다.
+    제목을 비우면 제목은 그대로 둔다."""
     from .youtube import VIDEOS_URL, access_token, api, summary
     title = " ".join(title.split())
-    if not vid or not title or len(title) > 100 or "<" in title or ">" in title:
-        print(f"제목이 비었거나 100자 넘음/꺾쇠 포함: {title!r}", file=sys.stderr)
+    first = " ".join(os.environ.get("DESC_FIRST", "").split())
+    if not vid or not (title or first) or len(title) > 100 or any(c in title + first for c in "<>"):
+        print(f"영상 id 없음, 제목·설명 첫 줄 둘 다 비었음, 100자 넘음 또는 꺾쇠 포함: {title!r} {first!r}", file=sys.stderr)
         return 1
     # 11/26 삼촌 기름 편도 같은 길로 (BK '제목이 이상하지 않나?'): CHANNEL=삼촌 이면 삼촌 토큰·기록(uploaded.json, video_id 칸)
     uncle = os.environ.get("CHANNEL", "5락실") == "삼촌"
@@ -1859,25 +1862,33 @@ def retitle(vid: str, title: str, log_path: pathlib.Path | None = None) -> int:
         print(f"영상 {vid} 를 이 채널에서 못 찾음", file=sys.stderr)
         return 1
     old = sn.get("title", "")
+    title = title or old
     keep = {k: sn[k] for k in ("description", "tags", "categoryId", "defaultLanguage", "defaultAudioLanguage") if k in sn}
+    old_first = (keep.get("description") or "").split("\n", 1)[0]
+    if first:
+        keep["description"] = first + ("\n" + keep["description"].split("\n", 1)[1] if "\n" in keep.get("description", "") else "")
     api(tok, "PUT", f"{VIDEOS_URL}?part=snippet", {"id": vid, "snippet": {**keep, "title": title}})
     p = log_path or LOG
     try:
         log = json.loads(p.read_text(encoding="utf-8"))
         for v in log.values():
             if isinstance(v, dict) and vid in (v.get("id"), v.get("video_id")):
-                v["title"], v["title_old"] = title, old
+                if title != old:
+                    v["title"], v["title_old"] = title, old
+                if first:
+                    v["desc_first"], v["desc_first_old"] = first, old_first
         p.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
     except (OSError, ValueError):
         pass
-    summary(f"제목 바꿈 https://youtu.be/{vid}\n전: {old}\n후: {title}")
+    summary(f"제목 바꿈 https://youtu.be/{vid}\n전: {old}\n후: {title}"
+            + (f"\n설명란 첫 줄 전: {old_first}\n후: {first}" if first else ""))
     return 0
 
 
 def main(argv: list[str]) -> int:
     cmd = argv[1] if len(argv) > 1 else "render"
     if cmd == "retitle":
-        return retitle(argv[2], argv[3])
+        return retitle(argv[2], argv[3] if len(argv) > 3 else "")
     day = dt.date.fromisoformat(argv[2]) if len(argv) > 2 else dt.datetime.now(KST).date()
     if cmd == "upload" and not os.environ.get("RAKSIL_QID", "").strip():
         try:  # 16:47 예비 실행: 이미 올렸거나 품질 게이트로 쉰 날이면 다시 기획·채점하지 않는다
