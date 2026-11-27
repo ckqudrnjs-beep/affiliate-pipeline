@@ -21,6 +21,23 @@ class CopyRulesTest(unittest.TestCase):
                   "세상엔 처음 듣는 소리가 너무 많다"):
             self.assertEqual(copy_issues(t), [], t)
 
+    def test_old_ending_with_particle(self):
+        # 11/27: 11/26 기름 편 설명란 첫 줄 — '~느냐' 뒤에 조사가 붙어 검사를 빠져나갔음
+        self.assertTrue(copy_issues("기름은 언제보다 어디서 넣느냐가 더 크다"))
+        self.assertTrue(copy_issues("어디서 넣느냐에 따라 차이가 커요"))
+        for t in ("기름은 넣는 날보다 넣는 곳에 따라 차이가 더 커요.", "주유소가 더 클까?", "물가는 오르고 있어요"):
+            self.assertEqual(copy_issues(t), [], t)
+
+    def test_description_first_line_is_question(self):
+        from pipeline import youtube as yt
+        row = {"title": "기름값 차이, 넣는 날이 더 클까 주유소가 더 클까?", "intro": "설명",
+               "takeaway": "기름은 언제보다 어디서 넣느냐가 더 크다", "ad": "0", "kind": "short", "site": "index.html"}
+        d = yt.build_description(row)
+        self.assertEqual(d.splitlines()[0], row["title"])
+        self.assertNotIn("느냐", d)
+        old = {**row, "title": "보일러 외출 모드 정리"}
+        self.assertEqual(yt.build_description(old).splitlines()[0], row["takeaway"])
+
     def test_variant(self):
         v = {"yt_title": "기름은 언제 넣느냐?", "band_top": "기름, 언제 넣을까", "band_accent": "어디서가 더 클까?",
              "cuts": [{"caption": "길을 안다고 믿는 건/늘 자신감부터다"}, {"caption": "동전이가 처음으로/차에 탄 날"}]}

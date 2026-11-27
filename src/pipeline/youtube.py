@@ -151,9 +151,19 @@ def episode_links(row: dict) -> list[str]:
 SUB_LINE = "🔔 동전이 이야기는 이틀에 한 번 저녁 7시에 올라와요. 구독해 두면 알림이 가요."
 
 
+def first_line(row: dict) -> list[str]:
+    """설명란 첫 줄 (BK 11/26 문장 규칙 8, docs/SHORTS_BANK.md 0장): 질문 제목이면 그 질문 그대로(띠·제목과 같은 질문).
+    답이 든 takeaway('기름은 언제보다 어디서 넣느냐가 더 크다' 11/26)는 첫 줄에 쓰지 않는다 — 답은 영상 안에서만.
+    질문이 아닌 옛 제목만 takeaway 를 첫 줄로 쓴다."""
+    title = " ".join(row.get("title", "").split())
+    if title.endswith("?"):
+        return [title]
+    return [row["takeaway"].strip()] if row.get("takeaway", "").strip() else []
+
+
 def build_description(row: dict) -> str:
     if not is_ad(row):
-        return "\n".join(([row["takeaway"].strip()] if row.get("takeaway", "").strip() else []) + [
+        return "\n".join(first_line(row) + [
             row["intro"].strip(),
             f"자세한 계산·정리: https://don3chon.com/{row.get('site', '').strip()}".rstrip("/"),
         ] + ([] if is_long(row) else [SUB_LINE]) + [
