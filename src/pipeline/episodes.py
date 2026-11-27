@@ -52,7 +52,7 @@ SHORT_EVERY_DAYS = 2
 QUIZ_DAYS: set[int] = set()  # 2026-11-17 얼마게 쇼츠 쉼 (사이트 퀴즈는 그대로). 되살리면 {1, 4}
 # 2026-11-14 밤 BK: "돈 줍는 삼촌을 완벽하게 정보의 장으로". 모든 쇼츠 공통 규칙 (구매 유도 없음).
 INFO_RULE = ("[정보의 장 규칙] 시청자가 이 영상에서 얻는 것(얼마 아끼는지·왜 중요한지)을 먼저 세운다: "
-             "takeaway = 한 줄 정보 가치(40자 이하, 예: \"멀티탭 스위치 하나로 1년 1만 7천 원\") → 설명란 첫 줄. "
+             "takeaway = 한 줄 정보 가치(40자 이하, 예: \"멀티탭 스위치 하나로 1년 1만 7천 원\"), 요즘 말로('~느냐' 금지). 설명란 첫 줄은 제목 질문(11/26 규칙 8)이고 takeaway 는 질문이 아닌 제목일 때만 첫 줄. "
              "영상 안에 오늘 바로 할 수 있는 행동 1개와 숫자의 가정(근거)을 넣는다. "
              "site_path = 더 자세한 계산·표가 있는 사이트 페이지 하나(next 의 site_pages 중, 형식별 종류 고정) → 설명란 링크, "
              "end text 는 사이트에 가면 무엇을 더 얻는지. 상품·구매·할인·링크 유도 금지. "
@@ -434,7 +434,11 @@ def title_errors(spec: dict) -> list[str]:
     if (spec.get("date") or "") >= COPY_FROM:  # BK 11/26 문장 다듬기 (docs/SHORTS_BANK.md 0장)
         from .copy_rules import lines_issues
         band = spec.get("band") if isinstance(spec.get("band"), dict) else {}
-        e += [f"문장: {x}" for x in lines_issues([title, " ".join(x for x in (band.get("top", ""), band.get("accent", "")) if x)])]
+        import re
+        # 11/27 설명란도 (규칙 8 — 11/26 기름 편 설명란 첫 줄 '어디서 넣느냐가 더 크다'가 검사 밖이었음): takeaway·설명 문장마다
+        desc = [x for x in re.split(r"(?<=[.?!])\s+", str(spec.get("description", ""))) if x and not x.startswith("#")]
+        e += [f"문장: {x}" for x in lines_issues([title, " ".join(x for x in (band.get("top", ""), band.get("accent", "")) if x),
+                                                  str(spec.get("takeaway", ""))] + desc)]
     return e
 
 
