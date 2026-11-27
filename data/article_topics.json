@@ -192,8 +192,9 @@
  },
  {
   "q": "장거리 귀성길 운전 전날 준비 메모",
-  "done": false,
-  "format": "여행"
+  "done": true,
+  "format": "여행",
+  "slug": "long-drive-holiday-prep-night-before"
  },
  {
   "q": "자동차 배터리 방전 점프스타터 사용법",
