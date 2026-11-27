@@ -27,6 +27,7 @@ import subprocess
 import sys
 import urllib.request
 from . import ko_check
+from .copy_rules import SPOKEN_RULE, plan_issues
 
 KST = dt.timezone(dt.timedelta(hours=9))
 W, H, FPS, SR = 1080, 1920, 30, 44100
@@ -164,6 +165,13 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
+# BK 11/27 '전체적으로 쇼츠의 자막이 문장이 자연스럽지 않아' (docs/SHORTS_BANK.md 0장 9~12). 5락실 선택지·상황·띠·이유·꼬리 한 줄 전부.
+COPY_SYS = ("\n\n[문장 — 화면 글자 전부: 선택지·상황·제목 띠·몽글이 이유·꼬리 한 줄]\n"
+            "처음 보는 사람이 한 줄만 읽어도 뜻이 통하는 평범한 요즘 말. 몽글이 말은 친구한테 하는 반말 그대로(소설 내레이션 '~다' 금지). "
+            "선택지 A·B 는 같은 꼴('~하기 vs ~하기')로, 줄이다 조사·어미가 빠지지 않게('그 자리서 다시 해 달라기' ✗ → '다시 해 달라고 하기').\n"
+            + SPOKEN_RULE.replace("'~요'·'~네'·'~지' 처럼 말로 끝낸다", "말로 끝낸다(몽글이는 반말)"))
+
+
 def mongle_memory(n: int = 5, log: pathlib.Path | None = None) -> str:
     """몽글이의 지난 선택 n개 (BK 11/20 '빌드업'): 캐릭터 성격이 이어지고 가끔 지난 선택을 받아치게. 업로드 기록에서 읽는다."""
     try:
@@ -199,7 +207,7 @@ def mongle_plan(q: dict, feedback: str = "") -> tuple[dict | None, dict | None]:
         bands = cj.arr(cj.obj({"top": cj.S, "accent": cj.S, "click": {"type": "integer"}}))
         if feedback:  # 품질 게이트에서 떨어진 이유 → 다시 짜기 (BK 11/20 '안 하느니 못해')
             rules += "[편집장 지적 — 이번엔 이것을 고쳐서]\n" + feedback + "\n\n"
-        r = cj.ask("raksil", MONGLE_SYS + TAIL_SYS + BAND_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
+        r = cj.ask("raksil", MONGLE_SYS + TAIL_SYS + BAND_SYS + COPY_SYS, (rules + f"A: {q['a']}\nB: {q['b']}").strip(), model=cj.SONNET,
                    effort="low", max_tokens=3000, need=0.03,
                    schema=cj.obj({"pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S, "tail": cj.S, "bands": bands}))
     except Exception as e:  # 예산·네트워크·거절 → 반전 없이 '정답은 없다'
@@ -1316,6 +1324,7 @@ GATE_SYS = """너는 한국 유튜브 쇼츠 편집장이다. 5락실 채널의 
 - joy(한없이 즐거움): 몽글이 반응·이유가 피식이 아니라 진짜 웃기다.
 - addictive(중독성): 댓글을 달고 싶고, 다음 편·다시 보기를 부르는 장치(시리즈·반복 개그·내일 발표·루프)가 산다.
 - copy(문구): 제목 띠 두 줄·몽글이 대사가 가볍지 않고 자연스러운 한국어. 낚시·가짜 통계·말장난 남발·막연한 말이면 3점 이하.
+  모든 화면 글자를 소리 내어 읽듯 확인한다: 친구한테 실제로 입으로 할 말이 아니면(소설 내레이션 '~다', 비유, 조사·어미 빠짐, 줄여 쓴 말) copy 5점 이하, brief 에 '[코드 문장 점검에 걸림]' 줄이 있으면 copy 3점 이하(BK 11/27 '자막이 문장이 자연스럽지 않아').
   선택지 A·B 는 처음 보는 사람이 설명 없이 한 번에 뜻을 알아야 한다. 줄여 쓰다 뜻이 흐려진 말·어색한 조합(예: '흩어진 다들 다시 부르기', 11/24 BK '뭔 말이야?')이 하나라도 있으면 copy 3점 이하.
   제목 띠 흰 줄과 선택지만 보고 '무슨 일이 생긴 상황인지'를 한 번에 알 수 없으면(장소만 있고 사건이 없음, 예: 11/25 '미용실 거울 앞에서 / 괜찮아요 vs 다시요' — 머리가 망했다는 말이 없음, BK '문장이 명확하지 않아') copy 3점 이하.
 - layout(구도): 이 형식의 화면에 질문 길이·내용이 어울리고 첫 1초에 다 읽힌다.
@@ -1429,7 +1438,7 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> list[tuple[di
                               "tail": cj.S, "bands": bands})
         if not replan_budget_ok():
             raise cj.BudgetError(f"회차 남은 돈이 채점 몫 {JUDGE_RESERVE}달러뿐이라 다시 짜기 안 함")
-        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=16000,
+        r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS + COPY_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=16000,
                    need=REPLAN_NEED, reserve=REPLAN_RESERVE, schema=cj.obj({"plans": cj.arr(plan_schema)}))
     except Exception as e:
         print(f"기획안 다시 짜기 실패: {e}", file=sys.stderr)
@@ -1504,6 +1513,11 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
     # 음성용 '에이'·'비' 는 화면 글자로는 A·B (11/21 채점에서 '비!'를 오타로 감점)
     shown = [x.replace("는 에이!", "는 A!").replace("는 비!", "는 B!").replace("가 에이!", "가 A!").replace("가 비!", "가 B!") for x in lines]
     out.append("대사(화면 자막 기준): " + " / ".join(x for x in shown if x))
+    texts = [(band or {}).get("top", ""), (band or {}).get("accent", ""), q.get("situation", ""), q.get("a", ""), q.get("b", ""),
+             (pick or {}).get("why", ""), (pick or {}).get("tail", "")]
+    bad = plan_issues(texts)
+    if bad:  # BK 11/27 문장 점검: 코드가 확실히 잡은 어색한 줄 → 편집장 copy 3점 이하
+        out.append("[코드 문장 점검에 걸림] " + " / ".join(bad))
     if fmt == "quick" and qs3 and len(qs3) > 1:
         out.append("질문2·3: 그날 사이트 질문으로 고정(이번 기획에서 못 바꿈) — 감점·지적하지 말 것")
     out.append("고정 장치(채점·지적 대상 아님): 형식 틀 대사('바로 골라!', '너라면?', '너는 어느 쪽?' 등), "

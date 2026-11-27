@@ -5,11 +5,30 @@
 11/25 '향후에 문장을 완벽하게'(5락실 미용실 편)와 같은 방향. 사람이 읽을 기준은 docs/SHORTS_BANK.md 0장.
 
 - SENTENCE_RULE: 대본·띠·제목을 쓰는 Claude 프롬프트에 넣는 규칙 글.
-- copy_issues(text): 코드로 확실히 잡을 수 있는 것만 찾는다(옛말투 어미, 기준 없는 비교 질문, 격언체). 맞춤법은 ko_check.
+- copy_issues(text): 코드로 확실히 잡을 수 있는 것만 찾는다(옛말투 어미, 기준 없는 비교 질문, 격언체, 줄여 쓴 어미). 맞춤법은 ko_check.
+- caption_issues(text): 화면 자막(대사)만 더 본다 — 소설 내레이션 '~다' 끝, 접속사로 시작, 가리키는 것 없는 '이렇게 된다'.
+
+11/27 BK '전체적으로 쇼츠의 자막이 문장이 자연스럽지 않아' → 9~12번 추가. 최근 자막을 모아 보니 어색한 줄 대부분이
+소설 내레이션투('세상엔 처음 듣는 소리가 너무 많다', '창밖 공기는 차갑고 조금 설렌다', '갓 나온 수건의 온기는 오래 기억에 남는다')였다.
+원인은 대본 프롬프트의 '담담한 한 문장(지켜보는 목소리)'. 쇼츠 자막은 옆에서 말해 주는 입말로 바꾼다. 웹소설 '한 화만 더'는 소설이라 '~다' 내레이션이 맞다(9번 제외).
 """
 from __future__ import annotations
 
 import re
+
+# 9~12번 (BK 11/27 '전체적으로 쇼츠의 자막이 문장이 자연스럽지 않아'). 5락실 프롬프트에도 이 부분만 따로 넣는다.
+SPOKEN_RULE = (
+    "9. 자막은 옆에서 말해 주는 입말. 소설·수필 내레이션 끝('~했다', '~이다', '~많다', '~남는다', '~설렌다') 금지 → '~요'·'~네'·'~지' 처럼 "
+    "말로 끝낸다. 한 편 안에서 말투를 섞지 않는다(내레이션은 '~요' 하나로, 인물 대사는 그 인물 말투로).\n"
+    "   나쁨) '세상엔 처음 듣는 소리가 너무 많다', '창밖 공기는 차갑고 조금 설렌다', '외출 10분 전, 현관에 정적이 흐른다'\n"
+    "   좋음) '처음 타 본 차, 소리마다 깜짝 놀라요', '양말 한 짝만 넣어도 건조기는 똑같이 돌아요'\n"
+    "10. 비유·번역투·시적 표현 금지: '포트가 노래하면', '정적이 흐른다', '온기는 오래 기억에 남는다', '작은 구름이 생겼다'처럼 "
+    "보이는 것을 꾸민 말 대신 화면에 있는 것을 그대로 말한다('가습기 김을 덥석 물었어요').\n"
+    "11. 앞 줄에 기대지 않는다: '그리고·그래서·그런데'로 시작하는 자막, 가리키는 것이 없는 '이렇게 된다'·'꼭 그렇다', "
+    "끝이 잘린 줄('한 칸만 더 높았으면')·줄여 쓴 어미('해 달라기', '그 자리서') 금지. 한 줄만 봐도 누가 무엇을 했는지 보인다.\n"
+    "12. 소리 내어 읽기 점검: 다 쓴 뒤 줄마다 친구에게 말로 하듯 소리 내어 읽어 본다. 실제 사람이 입으로 하지 않을 말, "
+    "숨이 걸리는 곳, 조사가 빠진 곳('기름, 언제 넣을까')이 있으면 그 줄을 다시 쓴다. 글자 수가 넘치면 뜻을 줄이지 말고 말을 바꾼다.\n"
+)
 
 SENTENCE_RULE = (
     "[문장 다듬기 — 모든 화면 글자·제목·설명 (BK 11/26 '문장을 다듬어야', 11/25 '문장을 완벽하게')]\n"
@@ -26,12 +45,18 @@ SENTENCE_RULE = (
     "('~는 늘 ~부터다', '~하는 법이다', '~기 마련이다') 금지.\n"
     "7. 한 문장에 한 뜻. 같은 말·같은 어미를 한 문장에서 되풀이하지 않는다(대비용 'A vs B' 꼴은 괜찮음).\n"
     "8. 설명란 첫 줄은 이 편 질문을 한 문장으로 그대로(띠·제목과 같은 질문). 맞춤법·띄어쓰기는 올리기 전에 자동으로 고친다.\n"
+    + SPOKEN_RULE
 )
 
 OLD_ENDING = re.compile(r"[가-힣](?:느냐|는가|로다|노라|이니라)(?=[\s,.?!…]|$)")
 VAGUE_Q = re.compile(r"(?:뭐가|무엇이|어디서가|어느\s*쪽이)\s*더\s*(?:클|크|들|나올|셀|많을)까")
 MEASURE = re.compile(r"요금|[값비](?=[\s,.?!]|$|은|는|이|가|을|를|도)|전기|가스|기름값|물값|난방|시간|칼로리|무게|횟수")
 MAXIM = re.compile(r"늘\s*\S+부터다|하는\s*법이다|[가-힣]+기\s*마련이다|인\s*법이다")
+CLIPPED = re.compile(r"달라기(?=[\s,.?!]|$)|(?:그|이|저)\s*자리서")  # 줄여 쓴 말 (5락실 11/25 '그 자리서 다시 해 달라기')
+# 자막만 (11/27): 소설 내레이션 끝 '~다'(느낌표·물음표 없이). '~니다' 존댓말은 뺀다.
+NARRATION = re.compile(r"(?<!니)다[.…]*$")
+LEANS = re.compile(r"^(?:그리고|그래서|그런데|하지만|그러니까)(?=[\s,]|$)")
+NO_REF = re.compile(r"(?:이렇게|그렇게|저렇게)\s*된다|꼭\s*그렇다")
 
 
 def copy_issues(text: str) -> list[str]:
@@ -50,6 +75,25 @@ def copy_issues(text: str) -> list[str]:
     m = MAXIM.search(t)
     if m:
         out.append(f"격언투 '{m.group(0)}' → 이 편 장면·질문과 이어지는 말로")
+    for m in CLIPPED.finditer(t):
+        out.append(f"줄여 쓴 말 '{m.group(0)}' → '달라고 하기'·'그 자리에서' 처럼 다 써서")
+    return out
+
+
+def caption_issues(text: str) -> list[str]:
+    """화면 자막(대사) 한 줄 = 한 문장 (두 줄 자막은 합쳐서 부른다). copy_issues + 입말 점검(9·11번)."""
+    out = copy_issues(text)
+    t = " ".join((text or "").split()).strip()
+    if not t or t.startswith("정답"):
+        return out
+    if NARRATION.search(t) and not MAXIM.search(t):
+        out.append("소설 내레이션 끝 '~다' → 말로 하듯 '~요'·'~네'로")
+    m = LEANS.match(t)
+    if m:
+        out.append(f"'{m.group(0)}'로 시작 → 앞 자막 없이도 통하게")
+    m = NO_REF.search(t)
+    if m:
+        out.append(f"'{m.group(0)}' 무엇이 그런지 없음 → 화면에서 일어난 일을 그대로")
     return out
 
 
@@ -61,5 +105,14 @@ def lines_issues(lines: list[str]) -> list[str]:
 def variant_issues(v: dict) -> list[str]:
     """동전이 대본 후보(claude_jobs.VARIANT)의 띠·제목·자막 문장 문제. 자막 2줄은 합쳐 한 문장으로 본다."""
     lines = [v.get("yt_title", ""), " ".join(x for x in (v.get("band_top", ""), v.get("band_accent", "")) if x)]
-    lines += [(c.get("caption") or "").replace("/", " ") for c in v.get("cuts") or []]
-    return lines_issues(lines)
+    caps = [" ".join((c.get("caption") or "").replace("/", " ").split()) for c in v.get("cuts") or []]
+    if v.get("heart"):
+        caps.append(v["heart"])
+    return lines_issues(lines) + [f"{c} — {p}" for c in caps if c for p in caption_issues(c)]
+
+
+def plan_issues(texts: list[str]) -> list[str]:
+    """5락실 기획안(선택지·상황·띠·몽글이 이유·꼬리 한 줄)의 문장 문제. 채점 brief 에 넣어 편집장이 문구 점수를 깎게 한다.
+    몽글이 반말('남의 메뉴가 더 맛있다')은 말로 하는 '~다'라 내레이션 점검은 하지 않는다."""
+    return [f"{t} — {p}" for t in texts if isinstance(t, str) and t.strip()
+            for p in caption_issues(t) if not p.startswith("소설 내레이션")]
