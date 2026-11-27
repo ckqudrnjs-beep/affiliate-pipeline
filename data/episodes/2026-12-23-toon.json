@@ -19,7 +19,7 @@
    "badge": "뭐가 더 들까?",
    "lines": [
     {"who": "n", "cap": ["끓는 포트 vs", "하루 종일 밥솥 보온"], "say": "포트랑 밥솥 보온, 전기요금 뭐가 더 들까?", "n": "think", "u": "talk", "pet": "curious"},
-    {"who": "n", "cap": ["당연히 포트지", "간식은 몰래 하나만"], "say": "당연히 포트지. 간식 하나만 몰래.", "n": "happy", "u": "think", "pet": "shock", "pet_say": "다 봤어"},
+    {"who": "n", "cap": ["당연히 포트가", "더 들겠지?"], "say": "당연히 포트가 더 들겠지?", "n": "happy", "u": "think", "pet": "shock", "pet_say": "다 봤어"},
     {"who": "u", "cap": ["정답:", "밥솥 보온"], "say": "땡. 포트는 금방 끝나고, 보온은 하루 종일이야.", "u": "point", "n": "shock", "pet": "shock", "pet_say": "에취!", "sfx": "buzz", "big": "보온 하루 0.96kWh", "sub": "포트 1,800W 하루 12분 0.36kWh · 보온 40W 24시간 가정"},
     {"who": "n", "cap": ["센 것보다", "오래 켜진 게 크네"], "say": "센 것보다 오래 켜진 게 더 크네.", "n": "think", "u": "wow", "pet": "happy", "pet_say": "찾았다"},
     {"who": "u", "cap": ["남은 밥은 덜어 냉동,", "보온은 쉬게 해요"], "say": "남은 밥은 덜어 냉동하고, 보온은 쉬게 해.", "u": "thumb", "n": "happy", "pet": "curious"}
