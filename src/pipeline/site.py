@@ -495,8 +495,7 @@ def product_page(p: dict) -> str:
 """
     body = top + PR.product_block(HIST.get(p["slug"])) + f"""<p class="note">{e(p['note'])}</p>
 <p class="small">구매 전 확인: {e(p['check'])}</p>
-<p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
-{AC.box(p.get("aliCode")) if p.get("aliUrl") else ""}
+{(lambda cb: f'<p class="ad">[광고] 아래 할인코드와 버튼은 제휴용입니다. 코드나 버튼으로 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>' + cb if cb else f'<p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>')(AC.box(p.get("aliCode")) if p.get("aliUrl") else "")}
 <div class="btns">{btns}</div>
 {tg_box()}
 <p><button type="button" class="zzim" id="zzimbtn" aria-pressed="false" data-item="{e(json.dumps({"slug": p["slug"], "name": p["name"], "price": int(p["aliPrice"]), "date": p["priceDate"]}, ensure_ascii=False))}">찜하기</button></p>
