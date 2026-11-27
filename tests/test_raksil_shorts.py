@@ -129,6 +129,37 @@ class RaksilShortsTest(unittest.TestCase):
         finally:
             r.LOG = old
 
+    def test_budget_skip_not_recorded(self):
+        """11/27: 예산이 막혀 쉰 날은 기록하지 않고(예비·다음 실행이 다시 시도), 알림은 '점수 때문이 아님'."""
+        import json, os, pathlib, tempfile
+        from unittest import mock
+        from pipeline import claude_jobs as cj
+        d = pathlib.Path(tempfile.mkdtemp())
+        old = r.LOG
+        r.LOG = d / "log.json"
+        sent = []
+        try:
+            os.environ.pop("RAKSIL_YT_ENABLED", None)
+            with mock.patch.object(cj, "notify", side_effect=sent.append):
+                r.upload_meta({"date": "2026-11-27", "qid": "20261127-1", "key": "2026-11-27", "skip": "채점 예산이 막혀", "budget": True})
+                self.assertFalse(r.LOG.exists())
+                r.upload_meta({"date": "2026-11-28", "qid": "20261128-1", "key": "2026-11-28", "skip": "최고 20/40"})
+            self.assertIn("점수 때문이 아님", sent[0])
+            self.assertIn("최후 기준", sent[1])
+            self.assertEqual(list(json.loads(r.LOG.read_text())), ["2026-11-28"])
+        finally:
+            r.LOG = old
+
+    def test_replan_keeps_judge_reserve(self):
+        """회차에 채점 몫(JUDGE_RESERVE)만 남으면 다시 짜기(Opus)는 안 하고 채점만."""
+        from unittest import mock
+        from pipeline import claude_jobs as cj
+        cap = cj.JOB_CAP["raksil"]
+        with mock.patch.object(cj, "spent", return_value=cap - r.JUDGE_RESERVE - r.REPLAN_NEED + 0.01):
+            self.assertFalse(r.replan_budget_ok())
+        with mock.patch.object(cj, "spent", return_value=cap / 2):
+            self.assertTrue(r.replan_budget_ok())
+
     def test_skipped_record_does_not_block_same_qid(self):
         """쉰 기록(skipped)은 같은 질문으로 다시 만든 편을 막지 않고, 올린 기록만 막는다."""
         import json, os, pathlib, tempfile
