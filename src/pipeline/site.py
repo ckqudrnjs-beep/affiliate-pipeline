@@ -15,6 +15,7 @@ import re
 import sys
 
 from .calcs import CALC_CSS, CALCS, COMMON_JS
+from . import ali_codes as AC
 from . import photo_studio as PS
 from . import fixed_cost as FC
 from .compliance import ALLOWED_LINK_HOSTS
@@ -137,7 +138,7 @@ def load(path="config/site_products.csv", allow_examples: bool = False, data_dir
     for f in sorted(pathlib.Path(data_dir, "products").glob("*.json")):
         d = json.loads(f.read_text(encoding="utf-8"))
         if d.get("status", "active") == "active" and in_season(d):
-            rows.append({k: str(v) for k, v in d.items()})
+            rows.append({k: (v if isinstance(v, dict) else str(v)) for k, v in d.items()})  # aliCode 는 dict 그대로
     hist = price_history(data_dir)
     out = []
     for r in rows:
@@ -495,6 +496,7 @@ def product_page(p: dict) -> str:
     body = top + PR.product_block(HIST.get(p["slug"])) + f"""<p class="note">{e(p['note'])}</p>
 <p class="small">구매 전 확인: {e(p['check'])}</p>
 <p class="ad">[광고] 아래 버튼은 제휴 링크입니다. 구매 시 {BRAND}이 일정액의 수수료를 받습니다.</p>
+{AC.box(p.get("aliCode")) if p.get("aliUrl") else ""}
 <div class="btns">{btns}</div>
 {tg_box()}
 <p><button type="button" class="zzim" id="zzimbtn" aria-pressed="false" data-item="{e(json.dumps({"slug": p["slug"], "name": p["name"], "price": int(p["aliPrice"]), "date": p["priceDate"]}, ensure_ascii=False))}">찜하기</button></p>

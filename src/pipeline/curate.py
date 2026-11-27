@@ -14,6 +14,7 @@ import json
 import os
 import pathlib
 
+from . import ali_codes as AC
 from .aliexpress import AliExpressClient
 from .drafts import parse_keywords
 
@@ -161,10 +162,15 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
         return 0
     prev = last_prices(root)
     seen: dict[str, int] = {}
+    codes: dict[str, dict] = {}  # 제휴 전용 할인코드 (pipeline.ali_codes, 2026-11-28)
     for p in prods:
         c = to_candidate(p)
         if str(c["aliProductId"]) in ids and c["aliPrice"]:
             seen[ids[str(c["aliProductId"])]] = int(c["aliPrice"])
+            code = AC.parse(p)
+            if code and AC.active(code):
+                codes[ids[str(c["aliProductId"])]] = code
+    print(f"알리 할인코드가 붙은 상품: {len(codes)}/{len(seen)}")
     path = root / "prices" / f"{today:%Y-%m}.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     new = not path.exists()
@@ -177,6 +183,10 @@ def record_prices(client: AliExpressClient, today: dt.date, root: pathlib.Path =
     news_path = root / "news.json"
     news = json.loads(news_path.read_text(encoding="utf-8")) if news_path.exists() else []
     for slug, (f, d) in files.items():
+        if slug in codes:
+            d["aliCode"] = codes[slug]
+        else:  # 응답에서 빠졌거나 끝난 코드는 지운다
+            d.pop("aliCode", None)
         if slug in seen:
             d.pop("missingDays", None)
             old = prev.get(slug) or int(d.get("aliPrice") or 0)

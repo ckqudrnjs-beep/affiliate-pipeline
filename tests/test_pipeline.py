@@ -394,3 +394,51 @@ class NewArrivalsTest(unittest.TestCase):
         self.assertTrue(site.is_new({"addedDate": "2026-11-10"}, t))
         self.assertFalse(site.is_new({"addedDate": "2026-11-06"}, t))
         self.assertFalse(site.is_new({}, t))
+
+
+class AliCodeTest(unittest.TestCase):
+    """알리 제휴 할인코드: API 응답에서 받고, 끝나면 지우고, 끝난 코드는 페이지에 안 나온다 (2026-11-28)."""
+
+    def info(self, end="2099-12-31 23:59:59", qty="100", code="KRABC123"):
+        return {"promo_code": code, "code_campaigntype": "1", "code_value": "3000", "code_availabletime_start": "2026-11-01 00:00:00",
+                "code_availabletime_end": end, "code_mini_spend": "30000", "code_quantity": qty, "code_promotionurl": "https://s.click.aliexpress.com/x"}
+
+    def test_parse_and_box(self):
+        from pipeline import ali_codes as AC
+        c = AC.parse({"promo_code_info": self.info()})
+        self.assertEqual(c["code"], "KRABC123")
+        self.assertEqual(AC.describe(c), "30,000원 이상 3,000원 할인")
+        b = AC.box(c)
+        self.assertIn("KRABC123", b)
+        self.assertIn("12월 31일까지", b)
+        self.assertIn("기준", b)
+        self.assertNotRegex(b, r"받을\s*수\s*(있|도)")
+
+    def test_expired_or_empty_hidden(self):
+        from pipeline import ali_codes as AC
+        self.assertIsNone(AC.parse({}))
+        self.assertIsNone(AC.parse({"promo_code_info": self.info(code="<script>")}))
+        self.assertEqual(AC.box(AC.parse({"promo_code_info": self.info(end="2020-01-01 00:00:00")})), "")
+        self.assertEqual(AC.box(AC.parse({"promo_code_info": self.info(qty="0")})), "")
+        self.assertEqual(AC.box(None), "")
+
+    def test_record_prices_saves_and_clears(self):
+        import tempfile, json, datetime as dt
+        from pipeline import curate
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d); (root / "products").mkdir()
+            f = root / "products" / "a.json"
+            f.write_text(json.dumps({"slug": "a", "name": "x", "aliProductId": "1", "aliPrice": 10000}), encoding="utf-8")
+            info = self.info()
+            class C:
+                tracking_id = "t"
+                def _call(self, m, product_ids, **k):
+                    p = {"product_id": 1, "target_sale_price": "10000"}
+                    if info:
+                        p["promo_code_info"] = info
+                    return {"r": {"resp_result": {"result": {"products": {"product": [p]}}}}}
+            curate.record_prices(C(), dt.date(2026, 11, 28), root)
+            self.assertEqual(json.loads(f.read_text())["aliCode"]["code"], "KRABC123")
+            info = None
+            curate.record_prices(C(), dt.date(2026, 11, 29), root)
+            self.assertNotIn("aliCode", json.loads(f.read_text()))
