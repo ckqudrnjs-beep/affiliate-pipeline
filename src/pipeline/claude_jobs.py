@@ -44,7 +44,10 @@ OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 CYCLE_DAY = 15          # 크레딧 회차 시작일(이번 회차 12/14 만료 → 15일 시작으로 본다)
 CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
-JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 5.0, "early": 1.0, "polish": 95.0}
+JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 12.0, "early": 1.0, "polish": 95.0}
+# 작업별 하루 상한 (11/27: raksil 회차 5달러가 11/22·11/24 다시 만들기 몇 번에 거의 다 써져 12일 만에 바닥 → 그날 편이 채점 못 해 쉼).
+# 하루에 쓰는 돈을 막아 회차 끝까지 매일 채점할 돈이 남게 한다. 다시 만들기 등 특별한 날만 CLAUDE_DAY_CAP_<JOB> 로 올린다.
+DAY_CAP = {"raksil": 0.5}
 POLISH_DAYS = 7         # 회차 끝 며칠 전부터 polish 가 남은 돈을 쓴다
 # 배치(Message Batches, 입·출력 50% 할인, 대부분 1시간 안) — 급하지 않은 작업만 (BK 11/20 "배치도 진행")
 # raksil·early(공개 시각에 맞춰야 함)·check(하루 몇 센트)·naver(직접 돌림)는 일반 호출.
@@ -113,11 +116,28 @@ def record(d: dt.date, job: str, model: str, usage: dict, batch: bool = False) -
     return usd
 
 
-def check_budget(d: dt.date, job: str, need: float) -> None:
+def spent_on(d: dt.date, job: str) -> float:
+    return round(sum(r["usd"] for r in load_ledger(d) if r["job"] == job and r.get("date") == d.isoformat()), 4)
+
+
+def day_cap(job: str) -> float | None:
+    env = os.environ.get(f"CLAUDE_DAY_CAP_{job.upper()}", "").strip()
+    try:
+        return float(env) if env else DAY_CAP.get(job)
+    except ValueError:
+        return DAY_CAP.get(job)
+
+
+def check_budget(d: dt.date, job: str, need: float, reserve: float = 0.0) -> None:
+    """need 를 쓰고도 각 상한 안이어야 한다. reserve: 이 호출 뒤에도 남겨 둘 돈(다시 짜기가 채점 몫까지 써 버리지 않게)."""
+    need = need + reserve
     if spent(d) + need > CAP_USD:
         raise BudgetError(f"회차 상한 {CAP_USD}달러에 닿아 {job} 건너뜀 (사용 {spent(d)}달러)")
     if spent(d, job) + need > JOB_CAP[job]:
         raise BudgetError(f"{job} 회차 상한 {JOB_CAP[job]}달러에 닿아 건너뜀 (사용 {spent(d, job)}달러)")
+    cap = day_cap(job)
+    if cap is not None and spent_on(d, job) + need > cap:
+        raise BudgetError(f"{job} 하루 상한 {cap}달러에 닿아 건너뜀 (오늘 {spent_on(d, job)}달러)")
 
 
 # ---------- Claude 호출 ----------
@@ -154,7 +174,8 @@ def run_batch(client, kw: dict, job: str):
 
 
 def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "medium",
-        schema: dict | None = None, max_tokens: int = 16000, need: float = 0.5, cache: str | None = None):
+        schema: dict | None = None, max_tokens: int = 16000, need: float = 0.5, cache: str | None = None,
+        reserve: float = 0.0):
     """한 번 호출하고 사용 금액을 장부에 적는다. schema 가 있으면 JSON(dict)을, 없으면 글을 돌려준다.
 
     cache="5m"/"1h": 같은 system 을 몇 분 안에 다시 쓰는 호출만 켠다(쓰기 1.25배/2배, 읽기 0.05배).
@@ -162,7 +183,7 @@ def ask(job: str, system: str, user: str, *, model: str = OPUS, effort: str = "m
     import anthropic
 
     d = today_kst()
-    check_budget(d, job, need)
+    check_budget(d, job, need, reserve)
     client = anthropic.Anthropic()
     batch = use_batch(job)
     if cache and batch:

@@ -202,7 +202,10 @@ def replan_hook(g: dict, kind: str, sc: dict, history: list[dict], fresh: bool) 
         # 11/22: Sonnet·800 토큰은 생각에 잘려 다시 짜기가 자주 실패 → 문구 은행 후킹만 돌다 22/40 쉼. Opus·넉넉한 한도로
         # 11/22 (BK '짜는 방식 바꾸기'): 한 번에 서로 다른 안 rs.REPLAN_N 개 → 모두 채점해 가장 나은 안을 다음 바탕으로
         user += f"\n\n흰 줄과 첫 대사는 한 흐름으로 이어지게(첫 대사가 흰 줄의 목표를 받아 긴장을 올린다). 서로 확실히 다른 안 {rs.REPLAN_N}개를 plans 에 낸다."
-        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.OPUS, effort="medium", max_tokens=12000, need=0.15,
+        if not rs.replan_budget_ok():  # 회차 끝까지 매일 채점할 돈은 남긴다 (11/27)
+            raise cj.BudgetError(f"회차 남은 돈이 채점 몫 {rs.JUDGE_RESERVE}달러뿐이라 다시 짜기 안 함")
+        r = cj.ask("raksil", GAME_REPLAN_SYS, user, model=cj.OPUS, effort="medium", max_tokens=12000, need=rs.REPLAN_NEED,
+                   reserve=rs.REPLAN_RESERVE,
                    schema=cj.obj({"plans": cj.arr(cj.obj({"hook": cj.S, "line": cj.S}))}))
     except Exception as e:
         print(f"게임 기획안 다시 짜기 실패: {e}", file=sys.stderr)

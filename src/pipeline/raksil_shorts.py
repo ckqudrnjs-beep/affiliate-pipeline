@@ -1381,6 +1381,16 @@ def clean_q(a, b) -> tuple[str, str] | None:
 
 
 REPLAN_N = 3
+# 11/27: 다시 짜기(Opus)가 회차·하루 예산을 다 써 채점(Sonnet, 1번 ≈ 1센트)할 돈이 없어 쉬는 일이 없게.
+# 다시 짜기는 이 호출 뒤에도 묶음 채점 몫(REPLAN_RESERVE)이 남을 때만, 회차에 JUDGE_RESERVE 가 남을 때만 한다.
+REPLAN_NEED, REPLAN_RESERVE, JUDGE_RESERVE = 0.12, 0.05, 1.0
+
+
+def replan_budget_ok() -> bool:
+    """회차 끝까지 매일 채점할 돈(JUDGE_RESERVE)을 남기고도 다시 짜기를 할 수 있나."""
+    from . import claude_jobs as cj
+    d = cj.today_kst()
+    return cj.JOB_CAP["raksil"] - cj.spent(d, "raksil") - REPLAN_NEED >= JUDGE_RESERVE
 SITUATION_MAX = 30
 
 
@@ -1417,8 +1427,10 @@ def replan(q: dict, sc: dict, history: list[dict], fresh: bool) -> list[tuple[di
         user += f"\n\n서로 확실히 다른 안 {REPLAN_N}개를 plans 에 낸다(질문 소재·각도가 서로 달라야 한다)."
         plan_schema = cj.obj({"a": cj.S, "b": cj.S, "situation": cj.S, "pick": {"type": "string", "enum": ["a", "b"]}, "why": cj.S,
                               "tail": cj.S, "bands": bands})
+        if not replan_budget_ok():
+            raise cj.BudgetError(f"회차 남은 돈이 채점 몫 {JUDGE_RESERVE}달러뿐이라 다시 짜기 안 함")
         r = cj.ask("raksil", REPLAN_SYS + TAIL_SYS + BAND_SYS, user.strip(), model=cj.OPUS, effort="medium", max_tokens=16000,
-                   need=0.2, schema=cj.obj({"plans": cj.arr(plan_schema)}))
+                   need=REPLAN_NEED, reserve=REPLAN_RESERVE, schema=cj.obj({"plans": cj.arr(plan_schema)}))
     except Exception as e:
         print(f"기획안 다시 짜기 실패: {e}", file=sys.stderr)
         return None
@@ -1618,7 +1630,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
         why = why if blocked else (f"{tries}번 다시 짜도 최고 {best[0]}/40점 < 최후 기준 {GATE_SOFT} — {best[1].get('note', '')}" if best
                else "어느 기획안도 형식 칸에 글자가 들어가지 않음(구도)")
         stem_key = q["id"] if extra else day.isoformat()
-        meta = {"date": day.isoformat(), "qid": q["id"], "key": stem_key, "skip": why,
+        meta = {"date": day.isoformat(), "qid": q["id"], "key": stem_key, "skip": why, **({"budget": True} if blocked else {}),
                 "scores": best[1] if best else None, "title": "", "file": ""}
         print(f"품질 게이트 미통과 → 오늘 밸런스 쇼츠 쉼: {why}")
         return meta
@@ -1736,14 +1748,17 @@ def upload_meta(meta: dict) -> int:
         summary(f"{key} 이미 올림")
         return 0
     if meta.get("skip"):  # 품질 게이트 미통과 → 그날은 쉬고 BK 에게 알림, 예비 실행이 또 만들지 않게 기록
-        msg = f"⏸ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key} 는 기획안을 여러 번 다시 짜도 최후 기준 아래라 쉬었어요.\n{meta['skip']}"
+        msg = (f"⏸ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key} 는 채점할 예산이 없어 쉬었어요(점수 때문이 아님). 예비 실행·다음 실행이 다시 시도해요.\n{meta['skip']}"
+               if meta.get("budget") else
+               f"⏸ 5락실 {meta.get('kind', '밸런스')} 쇼츠 {key} 는 기획안을 여러 번 다시 짜도 최후 기준 아래라 쉬었어요.\n{meta['skip']}")
         summary(msg)
         try:
             from .claude_jobs import notify
             notify(msg)
         except Exception as e:
             print(f"텔레그램 알림 실패: {e}", file=sys.stderr)
-        if meta.get("kind") != "게임":  # 게임은 기록하지 않음 → 다음 차례에 새 문구로 다시 시도
+        # 게임·예산으로 쉰 날은 기록하지 않음 → 예비 실행·다음 차례가 다시 시도 (11/27: 예산 쉼이 기록돼 그날 다시 못 만듦)
+        if meta.get("kind") != "게임" and not meta.get("budget"):
             log[key] = {"skipped": True, "qid": meta["qid"], "format": "skip", "reason": meta["skip"][:300]}
             LOG.parent.mkdir(parents=True, exist_ok=True)
             LOG.write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")

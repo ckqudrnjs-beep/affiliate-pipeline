@@ -39,6 +39,23 @@ class CycleBudgetTest(unittest.TestCase):
             with self.assertRaises(C.BudgetError):
                 C.check_budget(day, "check", 1.5)  # 전체 상한 95
 
+    def test_day_cap_and_reserve(self):
+        """11/27: raksil 하루 상한 — 다시 만들기 몇 번이 회차 예산을 다 쓰지 못하게. reserve 는 뒤 호출 몫을 남긴다."""
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(C, "USAGE_DIR", pathlib.Path(d)), \
+                mock.patch.dict(os.environ, {}, clear=True):
+            day = dt.date(2026, 11, 27)
+            C.record(day - dt.timedelta(days=1), "raksil", C.OPUS, {"output_tokens": 100_000})  # 어제 2달러 → 오늘 하루 상한과 무관
+            C.check_budget(day, "raksil", 0.2)
+            C.record(day, "raksil", C.OPUS, {"output_tokens": 20_000})  # 오늘 0.4달러
+            C.check_budget(day, "raksil", 0.05)
+            with self.assertRaises(C.BudgetError):
+                C.check_budget(day, "raksil", 0.05, reserve=0.1)  # 0.4 + 0.15 > 0.5
+            with self.assertRaises(C.BudgetError):
+                C.check_budget(day, "raksil", 0.12)
+            with mock.patch.dict(os.environ, {"CLAUDE_DAY_CAP_RAKSIL": "2"}):
+                C.check_budget(day, "raksil", 0.12)  # 다시 만드는 날만 올림
+            C.check_budget(day, "toon", 0.5)  # 하루 상한 없는 작업
+
     def test_no_key_skips(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertEqual(C.main(["toon"]), 0)
