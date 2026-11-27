@@ -162,6 +162,8 @@ top(흰 줄) = 보는 사람에게 거는 도전·궁금증, accent(노란 줄) 
 노란 줄을 선택지 줄임말로 채울 때(예 '괜찮아요 vs 다시요')는 더더욱 흰 줄이 상황을 말해야 한다.
 (11/26 BK '이게 무슨 말이야?' — ✗ top '3초 안에 고르면' + accent '잠옷 외출 vs 서운함': 도전 말 + 줄임말은 아무 상황도 안 알려 준다.
 줄임말 노란 줄이면 흰 줄은 도전 말 대신 상황 한 문장, 예 ○ '친구가 밤에 지금 나오래' + '잠옷 외출 vs 거절'.)
+⑥ (11/28) 노란 줄이 'A vs B' 꼴이면 20자까지 써도 된다 — 글자 수를 맞추려고 뜻이 흐린 줄임말을 만들지 말고 무엇을 하는지 풀어 쓴다
+(✗ '몰래 vs 나눠 먹기' → ○ '혼자 끓이기 vs 깨워서 반 나누기').
 각 후보에 click(0~10, 스크롤을 멈추고 누를 확률을 깐깐하게) 점수를 매긴다."""
 
 
@@ -399,6 +401,9 @@ def glow_text(img, xy_center, lines: list[str], f, size: int, color, glow: int =
 # 가짜 통계 금지: "한국인 99%는" 같은 숫자는 실제 투표(20표 이상)가 없으면 쓰지 않는다 → 숫자·% 없는 도전형만.
 BAND_H, BAND_SIZE, BAND_MAX = 330, 100, 12
 BAND_TOP_MAX = 14  # 11/25: 흰 줄이 상황 한 문장을 맡는다 → 2자 여유 (draw_band 가 폭에 맞춰 글자를 줄임)
+# 11/28: 노란 줄 'A vs B' 를 12자에 맞추려다 '몰래 vs 나눠 먹기' 같은 줄임말이 돼 편집장이 문구 감점(11/28 27점).
+# 'vs' 꼴 노란 줄은 풀어 쓸 수 있게 20자까지 (draw_band 가 두 줄을 같은 크기로 줄여 화면 폭에 맞춘다, 20자 ≈ 76px)
+BAND_VS_MAX = 20
 JUA = pathlib.Path(__file__).resolve().parents[2] / "config/fonts/Jua-Regular.ttf"  # 삼촌 띠와 같은 주아체
 BAND_BANK = [("3초 안에 고르면", "결단력 인정"), ("친구랑 꼭 갈리는", "밸런스게임"), ("의외로 정답이", "둘로 나뉜다"),
              ("고민 없이 고르면", "찐 어른 인정"), ("댓글 싸움 나는", "밸런스게임"),
@@ -426,7 +431,7 @@ def clean_band(b) -> dict | None:
     if not isinstance(b, dict):
         return None
     top, acc = (ko_check.fix(" ".join(str(b.get(k, "")).split()).strip(" .")) for k in ("top", "accent"))
-    for t, mx in ((top, BAND_TOP_MAX), (acc, BAND_MAX)):
+    for t, mx in ((top, BAND_TOP_MAX), (acc, BAND_VS_MAX if " vs " in acc else BAND_MAX)):
         if not t or len(t) > mx or any(w in t for w in BANNED_BAND) or not real_numbers_only(t):
             return None
     return {"top": top, "accent": acc}
@@ -915,7 +920,8 @@ def fmt_script(fmt: str, q: dict, res: dict | None, pick: dict | None, prev: dic
             win, pct = winner(res)
             first = f"어제 결과! {pct}퍼센트가 {say['a' if win == res['a'] else 'b']}!"
         else:
-            first = f"어제 몽글이는 {say[prev['pick']['pick']]}! 너희는?"
+            why = str(prev["pick"].get("why") or "").strip(" .!")  # 11/28: 이유 없이 'A!'만 → 편집장 '웃음 비었다'
+            first = f"어제 몽글이는 {say[prev['pick']['pick']]}! {why}!" if why else f"어제 몽글이는 {say[prev['pick']['pick']]}! 너희는?"
         n = len(q["a"]) + len(q["b"])
         third = "그럼 오늘은? 댓글로 골라 줘!" if n > LONG_Q else f"오늘은? {q['a']}? 아니면 {q['b']}?"
         return [first, "", third, ""]
@@ -1133,15 +1139,22 @@ def board_card(yq: dict, res: dict | None, prev_pick: dict | None, band: dict | 
     glow_text(img, (W / 2, y0 + 62), [f"어제 실제 투표 {res['n']}표" if res else "어제의 밸런스게임"], font(64), 64, YEL, glow=10)
     if not res:  # 몽글이 선택만 (통계 아님)
         side = prev_pick["pick"]
+        why = str(prev_pick.get("why") or "").strip(" .!")
+        top, hgt, gap = (120, 165, 185) if why else (130, 190, 215)  # 이유 줄 자리만큼 칸을 조금 줄인다
         for i, s in enumerate(("a", "b")):
             col = PINK if s == "a" else CYAN
-            box = (x0 + 30, y0 + 130 + i * 215, x1 - 30, y0 + 320 + i * 215)
+            box = (x0 + 30, y0 + top + i * gap, x1 - 30, y0 + top + hgt + i * gap)
             _box(img, box, col, 0.22 if s == side else 0.08, 6 if s == side else 3, 30)
             _label(img, box[0] + 70, (box[1] + box[3]) / 2, col, s.upper(), 46)
             _text_in(img, (box[0] + 140, box[1] + 20, box[2] - 30, box[3] - 20), yq[s], col if s == side else MUTED, 76, 8)
             if s != side:
                 _dim(img, box, 120)
-        glow_text(img, (W / 2, y0 + 575), [f"몽글이는 {side.upper()}! 너희는?"], font(68), 68, WHITE, glow=8)
+        if why:  # 11/28: 어제 고른 이유 한 줄 (기록에 남은 실제 이유)
+            glow_text(img, (W / 2, y0 + 510), [f"몽글이는 {side.upper()}!"], font(62), 62, WHITE, glow=8)
+            _, ls, size = fit(ImageDraw.Draw(img), f"“{why}”", x1 - x0 - 80, 76, 62)
+            glow_text(img, (W / 2, y0 + 578), ls[:1], font(size), size, YEL, glow=8)
+        else:
+            glow_text(img, (W / 2, y0 + 575), [f"몽글이는 {side.upper()}! 너희는?"], font(68), 68, WHITE, glow=8)
     return img
 
 
@@ -1493,7 +1506,8 @@ def layout_ok(fmt: str, qs3: list[dict]) -> bool:
     return True
 
 
-def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: list[str], qs3: list[dict] | None = None) -> str:
+def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: list[str], qs3: list[dict] | None = None,
+             yq: dict | None = None, prev: dict | None = None) -> str:
     desc = {"split": "화면 좌우 분할, 몽글이가 양쪽 기웃 → 한쪽으로 뛰어가 이유 한 줄 → '너는 어느 쪽?'",
             "quick": "그날 질문 3개를 2초씩 + 줄어드는 시간 막대 → '몇 개 A야? 댓글로 AAB 처럼'",
             "versus": "몽글이가 먼저 골라 뒤집어 둔 카드 → 3·2·1 → 카드 뒤집기(이유 한 줄) → '같으면 댓글에 찌찌뽕'",
@@ -1507,6 +1521,12 @@ def brief_of(fmt: str, q: dict, band: dict | None, pick: dict | None, lines: lis
         out.append(f"질문{i + 1 if fmt == 'quick' else ''}: A '{x['a']}' vs B '{x['b']}'")
     if pick:
         out.append(f"몽글이의 선택: {pick['pick'].upper()} — 이유 '{pick['why']}'")
+    if fmt == "result" and yq:  # 11/28: 편집장이 어제 질문을 몰라 '어제 A' 이유를 오늘 라면 질문으로 지어냄
+        out.append(f"전광판 어제 질문: A '{yq['a']}' vs B '{yq['b']}'")
+        pp = (prev or {}).get("pick") or {}
+        if pp.get("pick") in ("a", "b"):
+            out.append(f"전광판 어제 몽글이 선택(기록 그대로, 못 바꿈): {pp['pick'].upper()} — 이유 '{pp.get('why', '')}'")
+        out.append("오늘 질문은 '결과는 내일 발표' 형식이라 몽글이 선택·이유를 일부러 안 보여 준다(형식 고정, 감점·지적 대상 아님)")
     if fmt == "split":
         out.append(f"꼬리 한 줄(마지막 컷 글자+음성): '{(pick or {}).get('tail', '')}'" if (pick or {}).get("tail")
                    else "꼬리 한 줄: 없음(마지막 컷은 '댓글로 A? B?')")
@@ -1594,7 +1614,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
                 pick = None  # 화면에 몽글이 선택이 안 나오는 형식 → 기억에도 안 남김
             lines = fmt_script(fmt, qq, res, pick, prev)
             cand = (qq, today3, pick, band, fmt, lines)
-            sc = judge("5락실 밸런스 쇼츠", brief_of(fmt, qq, band, pick, lines, today3))
+            sc = judge("5락실 밸런스 쇼츠", brief_of(fmt, qq, band, pick, lines, today3, yq, prev))
             if sc and sc.get("blocked"):
                 blocked = sc["blocked"]
                 break
@@ -1651,7 +1671,7 @@ def render(day: dt.date, out_dir: pathlib.Path = OUT) -> dict | None:
     q, today3, pick, band, fmt, lines = plan[:6]
     gate = plan[6] if len(plan) > 6 else None
     caps = {"classic": [VOICE_CAP[0], 0, VOICE_CAP[1]], "split": [VOICE_CAP[0], 0, VOICE_CAP[1], TAIL_CAP],
-            "versus": [2.4, 0, VOICE_CAP[1], 0], "result": [2.6, 0, VOICE_CAP[0], 0], "quick": [1.6, 0, 0, 0, 0]}[fmt]
+            "versus": [2.4, 0, VOICE_CAP[1], 0], "result": [3.4, 0, VOICE_CAP[0], 0], "quick": [1.6, 0, 0, 0, 0]}[fmt]  # 11/28 result 첫 줄에 어제 이유
     clips, voiced = tts(lines, caps=caps, speed=1.15)
 
     # 2026-11-20 1안: 엔딩 빼고 약 10초. BGM 이 있으면 장면 전환·3,2,1 을 박자에 맞춘다 (docs/BGM.md)
