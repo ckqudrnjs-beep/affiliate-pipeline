@@ -10,6 +10,10 @@ on:
         description: "all 또는 하나만: boost / drafts / review / thin / raksilq / toon-2026-12-08 …"
         required: true
         default: all
+      reuse_drafts:
+        description: "(선택) drafts 가 이미 돈을 낸 배치 id 들, 쉼표로 (다시 읽기만, 추가 비용 없음)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -49,6 +53,7 @@ jobs:
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           PYTHONPATH: src
           TASK: ${{ matrix.task }}
+          REUSE_DRAFTS: ${{ inputs.reuse_drafts }}
         run: |
           if [ "${{ inputs.only }}" != "all" ] && [ "${{ inputs.only }}" != "$TASK" ]; then echo "건너뜀"; exit 0; fi
           git config user.name "github-actions[bot]"
