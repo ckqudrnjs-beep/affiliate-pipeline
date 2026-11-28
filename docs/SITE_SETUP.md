@@ -28,6 +28,7 @@
 1. searchadvisor.naver.com → **웹마스터 도구** → 사이트 등록 `https://don3chon.com`
 2. 소유 확인 → **HTML 태그** 선택 → `content="..."` 안의 값을 Claude에게 전달 (비밀값 아님) → `config/site.json`의 `naverSiteVerification`에 넣고 배포 → 네이버에서 **소유확인**
 3. **요청** → **사이트맵 제출** → `https://don3chon.com/sitemap.xml`
+4. 자동 색인 알림(2026-11-28, BK '사이트 색인작업'): `.github/workflows/indexnow.yml` 이 매일 06:40 KST 에 새 글·고친 글 주소를 네이버·빙에 IndexNow 로 보낸다(5락실과 같은 워크플로). 키 파일 `static/f40c4c1b22d79084d83b08a7cde6d2f6.txt`(공개용, 비밀 아님). 사이트맵에 있는 주소만 보내니 noindex 페이지는 안 나간다. 구글은 IndexNow 를 안 받으므로 사이트맵 + 서치콘솔 'URL 검사 → 색인 생성 요청'(하루 10개 정도)으로 한다.
 
 ## 4. 제휴사에 사이트 등록
 - 쿠팡 파트너스: 로그인 → 회원 정보(또는 사이트 관리) → 홍보 사이트/채널에 `https://don3chon.com` 추가. 이때 이용약관의 금지행위·사이트 등록 항목을 캡처해 Claude에게 전달
