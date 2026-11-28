@@ -552,8 +552,14 @@ class RaksilShortsTest(unittest.TestCase):
         brief = r.brief_of("result", q, b, None, lines, [q], yq, prev)
         self.assertIn("열림 버튼 눌러 주기", brief)
         self.assertIn("나도 매일 뛰어오는 쪽이야", brief)
-        r.board_card(yq, None, prev["pick"], b)  # 이유 줄이 들어간 전광판도 그려진다
         self.assertEqual(r.fmt_script("result", q, None, None, {"pick": {"pick": "b"}})[0], "어제 몽글이는 비! 너희는?")
+
+    @NEED_RENDER
+    def test_result_board_card_with_reason(self):
+        """이유 줄이 들어간 전광판도 그려진다 (PIL 필요 → CI Test 단계에선 건너뜀)."""
+        b = r.clean_band({"top": "동생 자는데 라면 하나", "accent": "혼자 끓이기 vs 깨워서 반 나누기"})
+        yq = {"a": "열림 버튼 눌러 주기", "b": "못 본 척 문 닫히게 두기"}
+        r.board_card(yq, None, {"pick": "a", "why": "나도 매일 뛰어오는 쪽이야"}, b)
 
 
 if __name__ == "__main__":
