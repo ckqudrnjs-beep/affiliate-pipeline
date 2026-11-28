@@ -277,6 +277,14 @@ class ArticleDataTest(unittest.TestCase):
         for a in arts:
             self.assertEqual(articles.validate(a, prods, {c["slug"] for c in calcs.CALCS}, set(slugs)), [], a["slug"])
 
+    def test_title_money_needs_assumption(self):  # 정책 검사 2026-11-28: 가정 계산 금액을 제목에 실제 결과처럼
+        from pipeline import articles
+        base = {"slug": "x", "date": "2026-11-28", "desc": "d", "body": "## a\n## b\n" + "가" * 700}
+        bad = articles.validate({**base, "title": "운전 전날 점검 (점프스타터 완충 전기값 약 22원)"}, set(), set(), set())
+        self.assertTrue(any("가정 조건" in e for e in bad))
+        for t in ("운전 전날 점검", "강풍 4시간·수면 20시간이면 약 2,160원", "효율 85% 가정 시 약 22원"):
+            self.assertEqual(articles.validate({**base, "title": t}, set(), set(), set()), [], t)
+
     def test_articles_not_too_similar(self):  # 자동 글끼리 비슷해 보이면 올리지 않는다 (2026-11-20)
         import json
         from pipeline import articles
