@@ -7020,5 +7020,126 @@
   "cache_w": 0,
   "batch": true,
   "usd": 0.0239
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 3869,
+  "out": 64000,
+  "cache": 21906,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.6499
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 3869,
+  "out": 26705,
+  "cache": 21906,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.277
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 5841,
+  "out": 3242,
+  "cache": 18288,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0459
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 3958,
+  "out": 12038,
+  "cache": 21906,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1305
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 5537,
+  "out": 2145,
+  "cache": 18288,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0344
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 3958,
+  "out": 11340,
+  "cache": 21906,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1235
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 4536,
+  "out": 2203,
+  "cache": 18288,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0329
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 3958,
+  "out": 11145,
+  "cache": 21906,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1216
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-opus-5-5",
+  "in": 5525,
+  "out": 2021,
+  "cache": 18288,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0331
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-sonnet-5-5",
+  "in": 1553,
+  "out": 1415,
+  "cache": 4064,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0088
+ },
+ {
+  "date": "2026-11-29",
+  "job": "toon",
+  "model": "claude-sonnet-5-5",
+  "in": 1430,
+  "out": 2091,
+  "cache": 4064,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0121
  }
 ]
