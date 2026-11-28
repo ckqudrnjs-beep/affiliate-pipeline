@@ -303,11 +303,11 @@ def thin(today: dt.date | None = None) -> int:
     today = today or cj.today_kst()
     recs = {f.stem: json.loads(f.read_text(encoding="utf-8")) for f in sorted((ROOT / "data/recipes").glob("*.json"))}
     qs = cj.jload("data/calc_questions.json")
-    reqs = [Req(f"r:{k}", THIN_SYS + "[레시피] intro 는 지금 내용을 살려 2~4문장으로 다듬고, mistakes 3개(자주 하는 실수와 바로잡는 법), "
+    reqs = [Req(f"r-{k}", THIN_SYS + "[레시피] intro 는 지금 내용을 살려 2~4문장으로 다듬고, mistakes 3개(자주 하는 실수와 바로잡는 법), "
                 "storage 2~3개(남은 재료·남은 음식 보관과 다음 메뉴로 돌려 쓰기), faq 3개(검색하는 사람이 묻는 말). 재료 양·원가는 바꾸지 않는다.",
                 json.dumps({k2: r.get(k2) for k2 in ("name", "intro", "ingredients", "steps", "tips")}, ensure_ascii=False),
                 RECIPE_ADD, effort="medium", max_tokens=16000) for k, r in recs.items() if not r.get("mistakes")]
-    reqs += [Req(f"q:{q['slug']}", THIN_SYS + cj.ELECTRIC_RULE + "\n[계산기 질문 페이지] note 는 지금 설명을 살려 600~900자로(이 기기 전력이 "
+    reqs += [Req(f"q-{q['slug']}", THIN_SYS + cj.ELECTRIC_RULE + "\n[계산기 질문 페이지] note 는 지금 설명을 살려 600~900자로(이 기기 전력이 "
                  "언제 커지고 작아지는지, 계산 가정의 의미, 우리 집에 맞게 바꿔 보는 법), tips 는 지금 것 포함 5개, faq 는 지금 것 포함 5개"
                  "(새 답의 숫자는 params 로 위 기준에 따라 계산한 것만).",
                  json.dumps({k2: q.get(k2) for k2 in ("h1", "name", "kind", "params", "note", "tips", "faq")}, ensure_ascii=False),
@@ -315,7 +315,7 @@ def thin(today: dt.date | None = None) -> int:
     res = ask_many("thin", reqs, need_each=0.08)
     changed, notes = [], []
     for k, r in recs.items():
-        a = res.get(f"r:{k}")
+        a = res.get(f"r-{k}")
         if not a or len(a["mistakes"]) < 2 or len(a["faq"]) < 2:
             continue
         cand = {**r, "intro": a["intro"] or r["intro"], "mistakes": a["mistakes"], "storage": a["storage"],
@@ -327,7 +327,7 @@ def thin(today: dt.date | None = None) -> int:
         notes.append(f"- 레시피 `{k}`: 실수 {len(a['mistakes'])} · 보관 {len(a['storage'])} · 질문 {len(a['faq'])}")
     qn = 0
     for q in qs:
-        a = res.get(f"q:{q['slug']}")
+        a = res.get(f"q-{q['slug']}")
         if not a or len(a["note"]) <= len(q.get("note", "")) or "http" in json.dumps(a, ensure_ascii=False):
             continue
         q.update(note=a["note"], tips=a["tips"] or q["tips"], faq=[[f["q"], f["a"]] for f in a["faq"]] or q["faq"])
