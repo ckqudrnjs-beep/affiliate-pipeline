@@ -186,6 +186,12 @@ SAME_SENTENCE_MIN = 25      # 이 길이 이상 똑같은 문장이 두 글에 �
 STYLE_RULES_FROM = "2026-11-21"  # 아래 도입·말버릇 규칙은 이 날짜 이후 글부터
 CATCHPHRASES = ("저도 처음엔", "결론부터", "먼저 답부터", "먼저 결론", "요금만 보면")
 
+# 글 모양 돌려 쓰기 (2026-11-28 BK "동일한 틀의 글 양식 때문에 애드센스가… 다양한 조합으로"). 24편이 모두 소제목 5~9개·목록·표·
+# "오늘 할 일 하나" 끝맺음으로 굳어 있었다. 이 날짜 이후 글은 shape 를 적고, 최근 3편과 다른 모양을 쓴다.
+SHAPE_RULES_FROM = "2026-11-29"
+SHAPES = ("짧은답", "긴가이드", "질문모음", "에세이", "세집비교", "따라하기")
+ENDING_RE = re.compile(r"오늘.*(하나|한 가지)|한 줄로 정리|결국")  # 이런 끝 소제목은 최근 5편에 한 번만
+
 
 def _grams(t: str, n: int = 4) -> set[str]:
     t = re.sub(r"\s+", "", t)
@@ -204,6 +210,31 @@ def _sentences(t: str) -> set[str]:
 def _first_heading(body: str) -> str:
     m = re.search(r"^## (.+)$", body, re.M)
     return m.group(1).strip() if m else ""
+
+
+def _last_heading(body: str) -> str:
+    hs = re.findall(r"^## (.+)$", body, re.M)
+    return hs[-1].strip() if hs else ""
+
+
+def shape_problems(a: dict) -> list[str]:
+    """shape 에 맞는 겉모습인지(표·목록·소제목 수·길이). 빈 목록이면 통과."""
+    b, sh = a.get("body", ""), a.get("shape", "")
+    hs = re.findall(r"^## (.+)$", b, re.M)
+    tables = len(re.findall(r"^\|[-| ]+\|$", b, re.M))
+    lists = len(re.findall(r"^- ", b, re.M))
+    steps = len(re.findall(r"^\d+\. ", b, re.M))
+    bad = {
+        "짧은답": (not 800 <= len(b) <= 1700 or tables > 0 or len(hs) > 3, "800~1,700자, 표 없음, 소제목 3개 이하"),
+        "긴가이드": (len(b) < 3000 or tables < 2, "3,000자 이상, 표 2개 이상"),
+        "질문모음": (len(hs) < 5 or sum(h.endswith("?") for h in hs) < len(hs) - 1, "소제목 5개 이상, (마지막 하나 빼고) 모두 질문형"),
+        "에세이": (len(hs) > 2 or lists > 0 or tables > 0, "소제목 2개 이하, 목록·표 없음"),
+        "세집비교": (tables < 1 or not all(x in b for x in ("A집", "B집", "C집")), "A집·B집·C집 사례 + 표 1개 이상"),
+        "따라하기": (steps < 4, "번호 단계(1. 2. …) 4개 이상"),
+    }
+    if sh not in bad:
+        return [f"shape '{sh}' 없음 (가능: {', '.join(SHAPES)})"]
+    return [f"shape '{sh}' 조건 안 맞음: {bad[sh][1]}"] if bad[sh][0] else []
 
 
 def similarity_problems(arts: list[dict]) -> list[str]:
@@ -231,4 +262,18 @@ def similarity_problems(arts: list[dict]) -> list[str]:
         for w in CATCHPHRASES:
             if w in a.get("body", "") and any(w in p.get("body", "") for p in prev):
                 err.append(f"{a['slug']}: 말버릇 '{w}'를 최근 3편 안에서 또 씀")
+        tail = _last_heading(a.get("body", ""))
+        for p in arts[max(0, k - 5):k]:
+            pt = _last_heading(p.get("body", ""))
+            if tail.replace(" ", "")[:4] and tail.replace(" ", "")[:4] == pt.replace(" ", "")[:4]:
+                err.append(f"{a['slug']}: 끝 소제목 시작이 최근 5편({p['slug']})과 같음")
+            elif ENDING_RE.search(tail) and ENDING_RE.search(pt):
+                err.append(f"{a['slug']}: '오늘 할 일 하나'류 끝맺음을 최근 5편({p['slug']})에서 이미 씀")
+        if a.get("date", "") >= SHAPE_RULES_FROM:
+            err += [f"{a['slug']}: {e}" for e in shape_problems(a)]
+            for p in prev:
+                if p.get("shape") and p.get("shape") == a.get("shape"):
+                    err.append(f"{a['slug']}: 글 모양 '{a.get('shape')}'을 최근 3편({p['slug']})에서 이미 씀")
+            if a.get("products") and any(p.get("products") for p in arts[max(0, k - 2):k] if p.get("date", "") >= SHAPE_RULES_FROM):
+                err.append(f"{a['slug']}: 상품 카드는 3편에 1편만 (최근 2편에 이미 있음)")
     return err

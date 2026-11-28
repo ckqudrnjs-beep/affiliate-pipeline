@@ -304,6 +304,22 @@ class ArticleDataTest(unittest.TestCase):
         self.assertTrue(any("말버릇" in e for e in errs))
 
 
+    def test_shape_rotation_rules(self):  # 글 모양 돌려 쓰기 (2026-11-28 BK)
+        from pipeline import articles
+        essay = "## 겨울 저녁에 든 생각\n" + "창문 틈으로 들어오는 바람을 막는 데는 돈이 많이 들지 않아요. " * 30
+        self.assertEqual(articles.shape_problems({"shape": "에세이", "body": essay}), [])
+        self.assertTrue(articles.shape_problems({"shape": "에세이", "body": essay + "\n- 목록\n"}))
+        self.assertTrue(articles.shape_problems({"shape": "짧은답", "body": essay * 3}))
+        self.assertTrue(articles.shape_problems({"shape": "없는모양", "body": essay}))
+        a = {"slug": "a", "date": "2026-11-29", "shape": "에세이", "body": essay + "\n## 오늘 할 일 하나\n끝.", "products": ["x"]}
+        b = {"slug": "b", "date": "2026-11-30", "shape": "에세이", "products": ["y"],
+             "body": "## 다른 시작\n" + "보일러 배관 보온재는 겨울 전에 살펴보면 좋아요. " * 30 + "\n## 오늘 해 볼 한 가지\n끝."}
+        errs = articles.similarity_problems([a, b])
+        self.assertTrue(any("글 모양" in e for e in errs))
+        self.assertTrue(any("끝맺음" in e for e in errs))
+        self.assertTrue(any("상품 카드" in e for e in errs))
+
+
 class ImitationFilterTest(unittest.TestCase):
     def test_filter(self):
         from pipeline.curate import imitation_reason as r
