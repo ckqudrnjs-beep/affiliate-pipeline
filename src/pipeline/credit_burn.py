@@ -48,8 +48,13 @@ def ask_many(job: str, reqs: list[Req], need_each: float) -> dict[str, dict]:
     if not reqs:
         return {}
     d = cj.today_kst()
-    cj.check_budget(d, job, need_each * len(reqs))
     client = anthropic.Anthropic()
+    reuse = _REUSE.get(job, [])
+    if reuse:  # 이미 돈을 낸 배치 결과를 다시 읽는다(장부에 다시 적지 않음). REUSE_<JOB>=배치id,배치id (호출 순서대로)
+        bid = reuse.pop(0)
+        print(f"[{job}] 지난 배치 {bid} 결과 다시 읽기")
+        return _results(client, job, bid, {r.cid: r for r in reqs}, d, record=False)
+    cj.check_budget(d, job, need_each * len(reqs))
     b = client.beta.messages.batches.create(requests=[{"custom_id": r.cid, "params": r.params()} for r in reqs])
     print(f"[{job}] 배치 {b.id} 요청 {len(reqs)}개")
     deadline = time.monotonic() + WAIT_MIN * 60
@@ -60,14 +65,20 @@ def ask_many(job: str, reqs: list[Req], need_each: float) -> dict[str, dict]:
             time.sleep(60)
             break
         time.sleep(POLL_SEC)
-    by = {r.cid: r for r in reqs}
+    return _results(client, job, b.id, {r.cid: r for r in reqs}, d)
+
+
+_REUSE = {k[6:].lower(): [x.strip() for x in v.split(",") if x.strip()] for k, v in os.environ.items() if k.startswith("REUSE_")}
+
+
+def _results(client, job: str, bid: str, by: dict, d: dt.date, record: bool = True) -> dict[str, dict]:
     out: dict[str, dict] = {}
-    for e in client.beta.messages.batches.results(b.id):
-        if e.result.type != "succeeded":
+    for e in client.beta.messages.batches.results(bid):
+        if e.result.type != "succeeded" or e.custom_id not in by:
             print(f"[{job}] {e.custom_id}: {e.result.type}")
             continue
         m = e.result.message
-        usd = cj.record(d, job, by[e.custom_id].model, cj._usage(m), batch=True)
+        usd = cj.record(d, job, by[e.custom_id].model, cj._usage(m), batch=True) if record else 0.0
         if m.stop_reason != "end_turn":
             print(f"[{job}] {e.custom_id}: {m.stop_reason} (${usd}) → 버림")
             continue
@@ -184,7 +195,7 @@ def boost(today: dt.date | None = None) -> int:
 
 # ---------- 2. 12월 새 글 초안 ----------
 DRAFT_N = 14
-DRAFT_TASK = ("[이번 일] 아래 질문으로 새 글 초안을 쓴다. 형식(format)과 각도(angle)를 따른다. 본문 3,000~4,000자, 직접 계산한 표나 단계별 "
+DRAFT_TASK = ("[이번 일] 아래 질문으로 새 글 초안을 쓴다. 형식(format)과 각도(angle)를 따른다. 분량·표·소제목 수는 주어진 shape 의 글 규칙 표를 그대로 따르고(긴가이드면 3,000자 이상), 직접 계산한 표나 단계별 "
               "예시 1개 이상. 제목·desc 는 검색하는 사람이 쓰는 말로. 이미 있는 글과 같은 질문·같은 표를 쓰지 않고, 비슷하면 guide 링크 + 다른 "
               "각도. 날짜에 묶이는 말(오늘, 이번 주)은 쓰지 않는다(발행일이 아직 안 정해짐). summary 에 slug 로 쓸 영문 소문자-하이픈 주소 하나만.")
 
@@ -195,25 +206,45 @@ def drafts(today: dt.date | None = None) -> int:
     c = ctx()
     topics = cj.jload("data/article_topics.json")
     todo = [t for t in topics if not t.get("done") and not t.get("draft")][:DRAFT_N]
-    items = [(f"t{i}", DRAFT_TASK + "\n\n" + json.dumps({"질문": t, "이미 있는 글 제목": [a["title"] for a in c["arts"].values()]},
+    items = [(f"t{i}", DRAFT_TASK + "\n\n" + json.dumps({"질문": t, "shape(겉모습, 글 규칙 표대로)": articles.SHAPES[i % len(articles.SHAPES)], "이미 있는 글 제목": [a["title"] for a in c["arts"].values()]},
                                                        ensure_ascii=False)) for i, t in enumerate(todo)]
     res = two_pass("drafts", items, c, need=0.25)
     prods, calc_slugs = set(c["prods"]), set(c["calc"])
     pool = list(c["arts"].values())
     changed, notes, skipped = [], [], []
-    for i, t in enumerate(todo):
-        r = res.get(f"t{i}")
-        if not r:
-            continue
-        slug = re.sub(r"[^a-z0-9-]", "", r["summary"].strip().lower().replace(" ", "-"))[:60].strip("-")
-        if not slug or slug in c["arts"] or (ROOT / f"data/article_drafts/{slug}.json").exists():
-            skipped.append(f"- {t['q']}: 주소 '{slug}' 쓸 수 없음")
-            continue
+
+    def build(i: int, t: dict, r: dict) -> tuple[dict, list[str]]:
+        m = re.search(r"[a-z0-9]+(?:-[a-z0-9]+)+", r["summary"].lower())  # 11/29: 문장이 섞여도 주소 모양만 꺼낸다
+        slug = (m.group(0) if m else "")[:60].strip("-") or f"draft-{today:%m%d}-{i}"
+        if slug in c["arts"] or (ROOT / f"data/article_drafts/{slug}.json").exists():
+            slug = f"{slug[:52]}-{today:%m%d}"
         a = {"slug": slug, "date": (today + dt.timedelta(days=3 + i)).isoformat(), "title": r["title"], "desc": r["desc"],
              "keywords": [], "body": r["body"], "products": [], "status": "draft", "topic": t["q"], "format": t.get("format", ""),
-             "drafted": today.isoformat()}
-        errs = articles.validate(a, prods, calc_slugs, set(c["arts"]))
-        errs += articles.similarity_problems(pool + [a])
+             "drafted": today.isoformat(), "shape": articles.SHAPES[i % len(articles.SHAPES)]}  # PR #435 글 모양 돌려 쓰기
+        return a, articles.validate(a, prods, calc_slugs, set(c["arts"])) + articles.similarity_problems(pool + [a])
+
+    # 11/29 첫 실행: 14편 모두 검사에서 떨어졌는데 이유가 안 남았다 → 이유를 찍고, 떨어진 글은 이유를 주고 한 번 더 고친다
+    first = {i: build(i, t, res[f"t{i}"]) for i, t in enumerate(todo) if f"t{i}" in res}
+    for i, (a, errs) in first.items():
+        print(f"[drafts] {a['slug']}: {errs[:3] or '통과'}")
+    bad = {i: (a, e) for i, (a, e) in first.items() if e}
+    fixed = ask_many("drafts", [Req(f"f{i}", EDITOR_ROLE + (ROOT / EDITOR_RULES).read_text(encoding="utf-8") + "\n\n" + cj.ELECTRIC_RULE
+                                   + "\n\n" + links_text(c),
+                                   json.dumps({"자동 검사에서 걸린 점(모두 고칠 것)": e, "이 글의 shape(겉모습, 글 규칙 표대로)": a["shape"], "다른 글과 겹치면 그 문장·표를 새로 쓰거나 guide 링크로": True,
+                                               "후보": {k: a[k] for k in ("title", "desc", "body")}}, ensure_ascii=False), FIX)
+                               for i, (a, e) in bad.items()], need_each=0.2)
+    for i, t in enumerate(todo):
+        if i not in first:
+            continue
+        a, errs = first[i]
+        if errs and f"f{i}" in fixed:
+            f = fixed[f"f{i}"]
+            a, errs = build(i, t, {**res[f"t{i}"], "title": f["title"], "desc": f["desc"], "body": f["body"]})
+            print(f"[drafts] 고친 뒤 {a['slug']}: {errs[:3] or '통과'}")
+        else:
+            a, errs = build(i, t, res[f"t{i}"])  # pool 이 늘었으니 다시 검사
+        r = {"title": a["title"], "body": a["body"]}
+        slug = a["slug"]
         if errs:
             skipped.append(f"- {t['q']}: 검사 실패 {errs[:2]}")
             continue
@@ -303,11 +334,11 @@ def thin(today: dt.date | None = None) -> int:
     today = today or cj.today_kst()
     recs = {f.stem: json.loads(f.read_text(encoding="utf-8")) for f in sorted((ROOT / "data/recipes").glob("*.json"))}
     qs = cj.jload("data/calc_questions.json")
-    reqs = [Req(f"r:{k}", THIN_SYS + "[레시피] intro 는 지금 내용을 살려 2~4문장으로 다듬고, mistakes 3개(자주 하는 실수와 바로잡는 법), "
+    reqs = [Req(f"r-{k}", THIN_SYS + "[레시피] intro 는 지금 내용을 살려 2~4문장으로 다듬고, mistakes 3개(자주 하는 실수와 바로잡는 법), "
                 "storage 2~3개(남은 재료·남은 음식 보관과 다음 메뉴로 돌려 쓰기), faq 3개(검색하는 사람이 묻는 말). 재료 양·원가는 바꾸지 않는다.",
                 json.dumps({k2: r.get(k2) for k2 in ("name", "intro", "ingredients", "steps", "tips")}, ensure_ascii=False),
                 RECIPE_ADD, effort="medium", max_tokens=16000) for k, r in recs.items() if not r.get("mistakes")]
-    reqs += [Req(f"q:{q['slug']}", THIN_SYS + cj.ELECTRIC_RULE + "\n[계산기 질문 페이지] note 는 지금 설명을 살려 600~900자로(이 기기 전력이 "
+    reqs += [Req(f"q-{q['slug']}", THIN_SYS + cj.ELECTRIC_RULE + "\n[계산기 질문 페이지] note 는 지금 설명을 살려 600~900자로(이 기기 전력이 "
                  "언제 커지고 작아지는지, 계산 가정의 의미, 우리 집에 맞게 바꿔 보는 법), tips 는 지금 것 포함 5개, faq 는 지금 것 포함 5개"
                  "(새 답의 숫자는 params 로 위 기준에 따라 계산한 것만).",
                  json.dumps({k2: q.get(k2) for k2 in ("h1", "name", "kind", "params", "note", "tips", "faq")}, ensure_ascii=False),
@@ -315,7 +346,7 @@ def thin(today: dt.date | None = None) -> int:
     res = ask_many("thin", reqs, need_each=0.08)
     changed, notes = [], []
     for k, r in recs.items():
-        a = res.get(f"r:{k}")
+        a = res.get(f"r-{k}")
         if not a or len(a["mistakes"]) < 2 or len(a["faq"]) < 2:
             continue
         cand = {**r, "intro": a["intro"] or r["intro"], "mistakes": a["mistakes"], "storage": a["storage"],
@@ -327,7 +358,7 @@ def thin(today: dt.date | None = None) -> int:
         notes.append(f"- 레시피 `{k}`: 실수 {len(a['mistakes'])} · 보관 {len(a['storage'])} · 질문 {len(a['faq'])}")
     qn = 0
     for q in qs:
-        a = res.get(f"q:{q['slug']}")
+        a = res.get(f"q-{q['slug']}")
         if not a or len(a["note"]) <= len(q.get("note", "")) or "http" in json.dumps(a, ensure_ascii=False):
             continue
         q.update(note=a["note"], tips=a["tips"] or q["tips"], faq=[[f["q"], f["a"]] for f in a["faq"]] or q["faq"])
@@ -400,6 +431,7 @@ def raksilq(today: dt.date | None = None) -> int:
                 notes.append(f"- {day['date']}: " + " · ".join(f"{x['a']} vs {x['b']}" for x in added[-n:]))
     if not added:
         return 0
+    added.sort(key=lambda x: x["id"])
     jdump(path, qs + added)
     cj.open_pr(f"auto/raksilq-{today.isoformat()}", f"5락실 밸런스 질문 {added[0]['date']}~{added[-1]['date']} ({len(added)}개)",
                f"남은 크레딧으로 미리 만든 질문이에요(날짜마다 후보 {CANDS}개 → 편집장 채점 → {PER_DAY}개). 사이트는 그날이 돼야 보이고, 쇼츠는 그날 질문에서 골라요.\n\n"
