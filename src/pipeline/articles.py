@@ -169,7 +169,15 @@ def validate(a: dict, product_slugs: set[str], calc_slugs: set[str], article_slu
     for s in a.get("products", []):
         if s not in product_slugs:
             err.append(f"없는 상품: {s}")
+    if a.get("date", "") >= ASSUME_RULE_FROM and WON.search(a.get("title", "")) and not ASSUME_MARK.search(a.get("title", "")):
+        err.append("제목의 금액에 가정 조건이 없음: '○○이면 약 ○원'처럼 조건을 적거나 제목에서 숫자를 빼기")
     return err
+
+
+# 가정 계산 숫자를 제목에 실제 결과처럼 쓰지 않기 (정책 검사 2026-11-27 공기청정기, 11/28 장거리 운전 글)
+ASSUME_RULE_FROM = "2026-11-28"
+WON = re.compile(r"\d[\d,.]*\s*(?:만|천)?\s*원")
+ASSUME_MARK = re.compile(r"가정|기준|[면]\s|[면][)·,]|[면]$")
 
 
 # 자동 글이 서로 비슷해 보이지 않게 (2026-11-20 BK, 애드센스 심사 중 "비슷한 글 반복" 방지)
