@@ -1,4 +1,4 @@
-# 서치콘솔 현황 (2026-11-27 수집, 2026-10-28~2026-11-24)
+# 서치콘솔 현황 (2026-11-28 수집, 2026-10-29~2026-11-25)
 
 자동 생성: python -m pipeline.gsc_stats (읽기 전용). 데이터는 2~3일 늦게 확정된다.
 
@@ -6,7 +6,7 @@
 
 | 사이트 | 클릭 | 노출 | 평균 순위 | 사이트맵 제출 URL |
 |---|---|---|---|---|
-| sc-domain:5raksil.com | 3 | 60 | 11.0 | 73 |
+| sc-domain:5raksil.com | 4 | 73 | 11.3 | 73 |
 | sc-domain:don3chon.com | 1 | 38 | 18.2 | 115 |
 
 ## sc-domain:5raksil.com 상위 검색어
@@ -15,18 +15,19 @@
 | 락실 | 0 | 8 | 8.6 |
 | 어려운 초성퀴즈 | 0 | 2 | 54.5 |
 | 어려운 초성퀴즈 답 | 0 | 1 | 44.0 |
+| 초성체 | 0 | 1 | 67.0 |
 | 초성퀴즈 어려운거 | 0 | 1 | 46.0 |
 
 ## sc-domain:5raksil.com 상위 페이지
 | 페이지 | 클릭 | 노출 | 순위 |
 |---|---|---|---|
 | https://5raksil.com/ | 2 | 4 | 5.5 |
+| https://5raksil.com/en/guide/sky | 1 | 11 | 5.3 |
 | https://5raksil.com/games/pusher | 1 | 1 | 8.0 |
 | http://5raksil.com/ | 0 | 2 | 6.0 |
 | https://5raksil.com/about | 0 | 10 | 11.7 |
-| https://5raksil.com/en/guide/sky | 0 | 5 | 6.8 |
-| https://5raksil.com/en/sky | 0 | 7 | 6.7 |
-| https://5raksil.com/games/chosung | 0 | 5 | 21.8 |
+| https://5raksil.com/en/sky | 0 | 11 | 6.3 |
+| https://5raksil.com/games/chosung | 0 | 6 | 29.3 |
 | https://5raksil.com/games/dodge | 0 | 6 | 8.8 |
 | https://5raksil.com/games/hansang | 0 | 5 | 4.6 |
 | https://5raksil.com/games/lasso | 0 | 2 | 6.5 |
