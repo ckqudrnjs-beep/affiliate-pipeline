@@ -27,8 +27,8 @@ jobs:
       IG_USER_ID: ${{ vars.IG_USER_ID }}
       INSTAGRAM_ENABLED: ${{ vars.INSTAGRAM_ENABLED }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install
@@ -47,7 +47,7 @@ jobs:
           else echo "live=false" >> "$GITHUB_OUTPUT"; echo "::notice::IG_ACCESS_TOKEN 없음 또는 INSTAGRAM_ENABLED=false → 미리보기만 (게시 안 함)"; fi
       - name: Preview
         if: steps.prep.outputs.ready == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: instagram-preview
           path: static/ig/

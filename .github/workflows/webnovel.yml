@@ -31,11 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 최신 main 받기
         if: github.ref == 'refs/heads/main'
         run: git fetch -q origin main && git reset -q --hard FETCH_HEAD
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: 준비
@@ -60,7 +60,7 @@ jobs:
           D="${{ inputs.date }}"; D="${D:-$(TZ=Asia/Seoul date +%F)}"
           L=""; [ "${{ inputs.long }}" = "true" ] && L="--long"
           PYTHONPATH=src python -m pipeline.webnovel run "$D" $L
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: webnovel
