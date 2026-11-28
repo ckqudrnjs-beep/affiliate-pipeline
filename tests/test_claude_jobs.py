@@ -23,19 +23,21 @@ class CycleBudgetTest(unittest.TestCase):
         self.assertAlmostEqual(C.cost(C.HAIKU, {"input_tokens": 1_000_000}), 0.1)
 
     def test_caps_add_up(self):
-        fixed = sum(v for k, v in C.JOB_CAP.items() if k != "polish")
+        from pipeline import credit_burn
+        once = set(credit_burn.JOBS)  # 11/28 한 번만 돌리는 묶음 작업은 회차 전체 상한(95)이 막는다
+        fixed = sum(v for k, v in C.JOB_CAP.items() if k != "polish" and k not in once)
         self.assertLess(fixed, C.CAP_USD)  # 남는 돈은 polish 가 회차 끝에 쓴다
         self.assertLessEqual(C.CAP_USD, 100)
 
     def test_budget_guard(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.object(C, "USAGE_DIR", pathlib.Path(d)):
             day = dt.date(2026, 11, 20)
-            C.record(day, "toon", C.OPUS, {"input_tokens": 0, "output_tokens": 700_000})  # 14달러
-            self.assertAlmostEqual(C.spent(day), 14.0)
+            C.record(day, "toon", C.OPUS, {"input_tokens": 0, "output_tokens": 1_200_000})  # 24달러
+            self.assertAlmostEqual(C.spent(day), 24.0)
             C.check_budget(day, "toon", 0.5)
             with self.assertRaises(C.BudgetError):
-                C.check_budget(day, "toon", 1.5)  # toon 상한 15
-            C.record(day, "polish", C.OPUS, {"output_tokens": 4_000_000})  # +80 → 94
+                C.check_budget(day, "toon", 1.5)  # toon 상한 25 (11/28 15→25)
+            C.record(day, "polish", C.OPUS, {"output_tokens": 4_000_000})  # +80 → 104
             with self.assertRaises(C.BudgetError):
                 C.check_budget(day, "check", 1.5)  # 전체 상한 95
 
