@@ -10,6 +10,10 @@ on:
         description: "all 또는 하나만: boost / drafts / review / thin / raksilq / toon-2026-12-08 …"
         required: true
         default: all
+      reuse:
+        description: "(선택) only 로 고른 작업이 이미 돈을 낸 배치 id 들, 쉼표로 (다시 읽기만)"
+        required: false
+        default: ""
       reuse_drafts:
         description: "(선택) drafts 가 이미 돈을 낸 배치 id 들, 쉼표로 (다시 읽기만, 추가 비용 없음)"
         required: false
@@ -54,8 +58,10 @@ jobs:
           PYTHONPATH: src
           TASK: ${{ matrix.task }}
           REUSE_DRAFTS: ${{ inputs.reuse_drafts }}
+          REUSE: ${{ inputs.reuse }}
         run: |
           if [ "${{ inputs.only }}" != "all" ] && [ "${{ inputs.only }}" != "$TASK" ]; then echo "건너뜀"; exit 0; fi
+          case "$TASK" in toon-*) ;; *) if [ -n "$REUSE" ]; then export "REUSE_${TASK^^}=$REUSE"; fi ;; esac
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           case "$TASK" in

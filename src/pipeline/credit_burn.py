@@ -87,7 +87,7 @@ def _results(client, job: str, bid: str, by: dict, d: dt.date, record: bool = Tr
             out[e.custom_id] = json.loads(text)
         except json.JSONDecodeError:
             print(f"[{job}] {e.custom_id}: JSON 아님 → 버림")
-    print(f"[{job}] 성공 {len(out)}/{len(reqs)}, 이번 작업 누적 ${cj.spent(d, job)}")
+    print(f"[{job}] 성공 {len(out)}/{len(by)}, 이번 작업 누적 ${cj.spent(d, job)}")
     return out
 
 
