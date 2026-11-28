@@ -7141,5 +7141,115 @@
   "cache_w": 0,
   "batch": true,
   "usd": 0.0121
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 13944,
+  "out": 4996,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0778
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 13843,
+  "out": 5022,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0779
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 13946,
+  "out": 5130,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.0792
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 14031,
+  "out": 10272,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1308
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 13743,
+  "out": 8029,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1078
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 14035,
+  "out": 7852,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1066
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 14202,
+  "out": 8075,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1092
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 14094,
+  "out": 9132,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1195
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 14222,
+  "out": 9338,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1218
+ },
+ {
+  "date": "2026-11-29",
+  "job": "drafts",
+  "model": "claude-opus-5-5",
+  "in": 13897,
+  "out": 7743,
+  "cache": 0,
+  "cache_w": 0,
+  "batch": true,
+  "usd": 0.1052
  }
 ]
