@@ -34,6 +34,23 @@ class CreditBurnTest(unittest.TestCase):
         for slug in ("beef-radish-soup", "settop-box-standby-power"):
             self.assertRegex(f"q-{slug}", r"^[a-zA-Z0-9_-]{1,64}$")
 
+    def test_results_reads_batch(self):
+        # 11/29 thin: _results 안에서 없는 이름(reqs)을 써서 돈 낸 배치를 못 읽었다
+        import types
+        from unittest import mock
+        msg = types.SimpleNamespace(stop_reason="end_turn", usage={"input_tokens": 10, "output_tokens": 10},
+                                    content=[types.SimpleNamespace(type="text", text='{"x": 1}')])
+        ok = types.SimpleNamespace(custom_id="a", result=types.SimpleNamespace(type="succeeded", message=msg))
+        client = types.SimpleNamespace(beta=types.SimpleNamespace(messages=types.SimpleNamespace(
+            batches=types.SimpleNamespace(results=lambda bid: [ok]))))
+        with mock.patch.object(cj, "record", return_value=0.0) as rec, mock.patch.object(cj, "spent", return_value=0.0):
+            out = B._results(client, "thin", "b1", {"a": B.Req("a", "s", "u", B.ART)}, dt.date(2026, 11, 29))
+        self.assertEqual(out, {"a": {"x": 1}})
+        rec.assert_called_once()
+        with mock.patch.object(cj, "record") as rec, mock.patch.object(cj, "spent", return_value=0.0):
+            B._results(client, "thin", "b1", {"a": B.Req("a", "s", "u", B.ART)}, dt.date(2026, 11, 29), record=False)
+        rec.assert_not_called()
+
     def test_polish_does_not_shrink(self):
         import inspect
         self.assertNotIn("1,200~2,400", inspect.getsource(cj.polish))
