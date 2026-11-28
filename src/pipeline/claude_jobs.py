@@ -44,7 +44,9 @@ OPUS, SONNET, HAIKU = "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"
 CYCLE_DAY = 15          # 크레딧 회차 시작일(이번 회차 12/14 만료 → 15일 시작으로 본다)
 CAP_USD = 95.0          # 회차 전체 상한 (100달러 중 5달러 여유)
 # 작업별 회차 상한. 합계가 CAP 보다 작고, 남는 돈은 polish 가 회차 끝에 쓴다.
-JOB_CAP = {"toon": 15.0, "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 12.0, "early": 1.0, "polish": 95.0}
+# 11/28 BK '남은 크레딧 최대한, 12/1 전에': toon 15→25(12월 빈 편 후보 미리), 묶음 작업(credit_burn) 상한 추가
+JOB_CAP = {"toon": 25.0, "boost": 15.0, "drafts": 10.0, "review": 6.0, "thin": 6.0, "raksilq": 5.0,
+           "titles": 8.0, "adsense": 12.0, "shorts": 6.0, "naver": 8.0, "check": 3.0, "raksil": 12.0, "early": 1.0, "polish": 95.0}
 # 작업별 하루 상한 (11/27: raksil 회차 5달러가 11/22·11/24 다시 만들기 몇 번에 거의 다 써져 12일 만에 바닥 → 그날 편이 채점 못 해 쉼).
 # 하루에 쓰는 돈을 막아 회차 끝까지 매일 채점할 돈이 남게 한다. 다시 만들기 등 특별한 날만 CLAUDE_DAY_CAP_<JOB> 로 올린다.
 DAY_CAP = {"raksil": 0.5}
@@ -494,10 +496,11 @@ QUALITY_FLOOR = 48
 REPLAN_ROUNDS, REPLAN_N, QUALITY_SOFT = 2, 4, 44
 
 
-def toon(today: dt.date | None = None, n: int = 8) -> int:
+def toon(today: dt.date | None = None, n: int = 8, target: dt.date | None = None) -> int:
+    """target: 이 공개일 후보를 만든다(11/28 남은 크레딧으로 12월 빈 편 미리, credit_burn toon). 없으면 다음에 필요한 편."""
     from . import episodes
     today = today or today_kst()
-    info = episodes.info_short(today)
+    info = episodes.info_short(today, target)
     date = info["date"]
     out = ROOT / "data/toon/lab" / f"{date}.md"
     if out.exists() or sh("git", "ls-remote", "--heads", "origin", f"auto/toon-{date}", check=False):
@@ -951,7 +954,7 @@ def polish(today: dt.date | None = None, max_articles: int = 6) -> int:
         others = [json.loads(g.read_text(encoding="utf-8")) for g in (ROOT / "data/articles").glob("*.json") if g != f]
         system = ("너는 '돈 줍는 삼촌' 사이트 편집자다. 아래 글 규칙을 지키며 기존 글을 더 낫게 손질한다: 첫 문단에 바로 답, "
                   "기계적 표현 빼기, 다른 글과 겹치는 표·문장은 링크로 대체, 숫자는 본문·계산 기준 안에서만, 주소(slug)·내부 링크 형식 유지, "
-                  "본문 1,200~2,400자. summary 는 무엇을 고쳤는지 한 줄.\n\n" + rules + "\n\n" + ELECTRIC_RULE)
+                  "분량은 줄이지 않는다(본문 목표 2,500~3,500자, 11/24 애드센스 재신청 기준). summary 는 무엇을 고쳤는지 한 줄.\n\n" + rules + "\n\n" + ELECTRIC_RULE)
         user = json.dumps({"article": {k: a[k] for k in ("slug", "title", "desc", "body")},
                            "other_titles": [o["title"] for o in others]}, ensure_ascii=False)
         try:

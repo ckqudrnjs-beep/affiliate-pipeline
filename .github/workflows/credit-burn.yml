@@ -1,0 +1,64 @@
+name: credit-burn
+
+# 남은 Claude API 크레딧으로 한 번만 돌리는 묶음 작업 (2026-11-28 BK '최대한 활용하자, 12월 1일 전에 많이 해놓자').
+# 손으로만 실행(workflow_dispatch). 결과는 작업마다 PR 하나(병합 = 승인). 상한은 claude_jobs.JOB_CAP, 회차 전체 95달러.
+# 코드: src/pipeline/credit_burn.py · 계획: docs/CLAUDE_API_CREDIT.md '12/1 전 묶음 작업'
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "all 또는 하나만: boost / drafts / review / thin / raksilq / toon-2026-12-08 …"
+        required: true
+        default: all
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        task: [boost, drafts, review, thin, raksilq,
+               toon-2026-12-08, toon-2026-12-10, toon-2026-12-12, toon-2026-12-14, toon-2026-12-16, toon-2026-12-18]
+    concurrency:
+      group: credit-burn-${{ matrix.task }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 준비
+        run: pip install -q "anthropic>=2.11,<3" pillow kiwipiepy==0.25.1
+      - name: 실행
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ vars.TELEGRAM_ADMIN_CHAT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          YT_API_KEY: ${{ secrets.YOUTUBE_API_KEY || secrets.YT_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          PYTHONPATH: src
+          TASK: ${{ matrix.task }}
+        run: |
+          if [ "${{ inputs.only }}" != "all" ] && [ "${{ inputs.only }}" != "$TASK" ]; then echo "건너뜀"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          case "$TASK" in
+            toon-*) python -m pipeline.credit_burn toon "${TASK#toon-}" ;;
+            *) python -m pipeline.credit_burn "$TASK" ;;
+          esac
+      - name: 사용 금액 장부 저장
+        if: always()
+        env:
+          PYTHONPATH: src
+        run: python -m pipeline.ledger_push "API 사용 장부 (credit-burn ${{ matrix.task }})"

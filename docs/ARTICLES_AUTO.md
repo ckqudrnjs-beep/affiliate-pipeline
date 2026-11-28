@@ -5,6 +5,7 @@ BK 결정 2026-11-10: 하루 1편을 사람 승인 없이 main에 바로 올린�
 
 ## 순서 (예약 작업이 매일 그대로 따른다)
 1. `data/article_topics.json`에서 `done:false`인 질문 중 **아래 "글끼리 닮지 않게" 규칙을 지키는 첫 질문**을 고른다(형식은 `format`, `angle`이 있으면 그 각도로). 다 썼으면 기존 글·상품·계산기를 보고 검색 수요가 있는 새 질문을 하나 만든다(기존 글과 겹치지 않게).
+   - **초안이 있으면 (2026-11-28):** 고른 질문에 `"draft": "<slug>"`가 있으면 `data/article_drafts/<slug>.json`(남은 API 크레딧으로 미리 쓴 초안, 편집장 검토 거침)에서 시작한다. 숫자·가정 표기·최근 3편과 겹침(도입·말버릇·묶음)을 아래 규칙대로 다시 보고 고친 뒤 date 를 오늘로, status 를 "published"로, `topic`·`format`·`drafted` 칸은 빼고 2단계 파일로 옮긴다. 다 옮기면 초안 파일은 지운다.
 2. `data/articles/<slug>.json` 작성. 필드: slug(영문 소문자-하이픈), date(오늘 KST), title, desc(160자 안팎, 답이 들어간 한 문장), keywords, body, products(0~2개, data/products의 slug), status "published".
 3. `data/article_topics.json`의 해당 항목을 `done:true`, `slug` 추가.
 4. `PYTHONPATH=src python -m pipeline.seo og` 로 새 글 공유 썸네일(static/og/guide-<slug>.png)을 만들고(한글 글꼴 없으면 건너뜀, 기본 썸네일로 대체), `PYTHONPATH=src python -m unittest discover -s tests` 통과 + `PYTHONPATH=src python -m pipeline.site /tmp/site` 성공 확인 후 main에 커밋·푸시. 실패하면 고쳐서 다시, 그래도 안 되면 올리지 않는다.

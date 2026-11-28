@@ -180,8 +180,22 @@ def page_body(r: dict, others: list[dict]) -> str:
 <p class="small">삼촌 장보기 기준가({pd.year}년 {pd.month}월 {pd.day}일, 대형마트·온라인 장보기 흔한 가격대)로 큰 봉지 한 개 값을 쓴 양만큼 나눠 계산했어요. 실제 가격은 사는 곳과 시기에 따라 달라요. <a href="../recipe.html#pantry">기준가 전체 보기</a></p>
 <h2>만드는 법</h2><ol>{steps}</ol>
 <h2>삼촌의 아끼는 팁</h2><ul>{tips}</ul>
+{extra_sections(r)}
 <section class="related"><h2>{'다른 홈파티 레시피' if party else '다른 1인분 레시피'}</h2><ul class="rlist">{more}</ul></section>
 {shop_box(r["rows"])}</article>"""
+
+
+def extra_sections(r: dict) -> str:
+    """보강 칸 (2026-11-28 애드센스 재신청 준비): 자주 하는 실수·남은 재료 보관·자주 묻는 질문. 없으면 빈 문자열."""
+    e = html.escape
+    out = ""
+    if r.get("mistakes"):
+        out += "<h2>자주 하는 실수</h2><ul>" + "".join(f"<li>{e(s)}</li>" for s in r["mistakes"]) + "</ul>"
+    if r.get("storage"):
+        out += "<h2>남은 재료·남은 음식은 이렇게</h2><ul>" + "".join(f"<li>{e(s)}</li>" for s in r["storage"]) + "</ul>"
+    if r.get("faq"):
+        out += "<h2>자주 묻는 질문</h2>" + "".join(f"<h3>{e(q)}</h3><p>{e(a)}</p>" for q, a in r["faq"])
+    return out
 
 
 def list_body(recs: list[dict], pantry: dict[str, dict]) -> str:
@@ -252,7 +266,8 @@ def validate(r: dict, pantry: dict[str, dict]) -> list[str]:
         err.append(f"만드는 법 {MIN_STEPS}단계 이상 필요")
     if len(r.get("tips", [])) < MIN_TIPS:
         err.append(f"팁 {MIN_TIPS}개 이상 필요")
-    text = r.get("intro", "") + " ".join(r.get("steps", []) + r.get("tips", []))
+    text = r.get("intro", "") + " ".join(r.get("steps", []) + r.get("tips", []) + r.get("mistakes", []) + r.get("storage", [])
+                                          + [x for qa in r.get("faq", []) for x in qa])
     if "http" in text:
         err.append("본문에 링크 금지")
     return err

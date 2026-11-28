@@ -198,8 +198,8 @@ TOON_RULE = ("[동전이 만화 2026-11-20 BK, 11/28 바뀜] 동전이 상황극
              "숫자는 그 안의 숫자 상자·근거만. 쇼핑몰·브랜드 이름(알리·쿠팡·테무 등) 금지, '해외직구'처럼 일반 말로. 주말 공개 편은 실사 삼촌 특별편(주 1회, 단 config/shorts_lock.json 고정 기간 2026-11-23~12-13 엔 없음 — 그 안의 실사 편만): 실사 편이면 description 에 '실사 삼촌은 AI로 만든 가상 인물이에요' 표시. 바이블 config/toon_bible.md. ")
 
 
-def info_short(today: dt.date) -> dict:
-    d = next_short_date(today)
+def info_short(today: dt.date, target: dt.date | None = None) -> dict:
+    d = target or next_short_date(today)
     key, name, product, rules = SHORT_FORMATS[d.weekday()]
     if d >= TOON_FROM:
         key, name, product, rules = "toon", "동전이 만화", False, SKIT_RULE + TOON_RULE
